@@ -4,6 +4,7 @@ SET(NEKTAR_SOLVER_POROUSMEDIA ON CACHE BOOL
 IF( NEKTAR_SOLVER_POROUSMEDIA )
     SET(PorousMediaSolverSource 
        ./EquationSystems/PorousMediaSplittingScheme.cpp
+       ./EquationSystems/PorousMedia.cpp
        ./PorousMediaSolver.cpp 
        )
 

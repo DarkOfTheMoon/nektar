@@ -243,11 +243,6 @@ namespace Nektar
         return vChecks;
     }
     
-    int PorousMediaSplittingScheme::v_GetForceDimension()
-    {
-        return m_session->GetVariables().size() - 1;
-    }
-    
     void PorousMediaSplittingScheme::EvaluateAdvection_SetPressureBCs(
         const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
         Array<OneD, Array<OneD, NekDouble> > &outarray, 

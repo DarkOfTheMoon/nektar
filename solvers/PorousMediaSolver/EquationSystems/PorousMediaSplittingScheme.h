@@ -159,8 +159,6 @@ namespace Nektar
         virtual void v_DoInitialise(void);
         
         virtual Array<OneD, bool> v_GetSystemSingularChecks();
-        
-        virtual int v_GetForceDimension();
     };
     
     
