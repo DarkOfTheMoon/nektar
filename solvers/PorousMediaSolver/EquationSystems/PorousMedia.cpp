@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// File IncNavierStokes.cpp
+// File PorousMedia.cpp
 //
 // For more information, please see: http://www.nektar.info
 //
@@ -29,7 +29,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 //
-// Description: Incompressible Navier Stokes class definition built on
+// Description: Porous Media class definition built on
 // ADRBase class
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -162,16 +162,6 @@ namespace Nektar
         static int nchk = 0;
 		
         Timer timer;
-
-        if(m_HomogeneousType == eHomogeneous1D)
-        {
-            for(i = 0; i < n_fields; ++i)
-            {
-                m_fields[i]->HomogeneousFwdTrans(m_fields[i]->GetPhys(),m_fields[i]->UpdatePhys());
-                m_fields[i]->SetWaveSpace(true);
-                m_fields[i]->SetPhysState(false);
-            }
-        }
 	
         // Set up wrapper to fields data storage. 
         Array<OneD, Array<OneD, NekDouble> >  fields(m_nConvectiveFields);
@@ -381,6 +371,7 @@ namespace Nektar
     }
 
     // Evaluation -N(V) for all fields except pressure using m_velocity
+
     void PorousMedia::EvaluateAdvectionTerms(const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
                                                  Array<OneD, Array<OneD, NekDouble> > &outarray, 
                                                  Array<OneD, NekDouble> &wk)
