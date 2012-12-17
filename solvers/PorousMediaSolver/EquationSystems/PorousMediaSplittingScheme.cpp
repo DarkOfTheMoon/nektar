@@ -29,7 +29,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 //
-// Description: Correction Scheme for the Porous media
+// Description: Splitting Scheme for the Porous media
 ///////////////////////////////////////////////////////////////////////////////
 
 #include <PorousMediaSolver/EquationSystems/PorousMediaSplittingScheme.h>
@@ -85,7 +85,10 @@ namespace Nektar
 
         switch(intMethod)
         {
-        case LibUtilities::eIMEXOrder1: 
+            case LibUtilities::eBackwardEuler:
+            case LibUtilities::eDIRKOrder2:
+            case LibUtilities::eDIRKOrder3:
+            case LibUtilities::eIMEXOrder1: 
         {
             m_intSteps = 1;
             m_integrationScheme = Array<OneD, LibUtilities::TimeIntegrationSchemeSharedPtr> (m_intSteps);
@@ -121,7 +124,7 @@ namespace Nektar
         }        
         
         // set explicit time-intregration class operators
-        m_integrationOps.DefineOdeRhs(&PorousMediaSplittingScheme::EvaluateAdvection_SetPressureBCs, this);
+        //m_integrationOps.DefineOdeRhs(&PorousMediaSplittingScheme::EvaluateAdvection_SetPressureBCs, this);
             
         // Count number of HBC conditions
         Array<OneD, const SpatialDomains::BoundaryConditionShPtr > PBndConds = m_pressure->GetBndConditions();
@@ -167,7 +170,7 @@ namespace Nektar
     void PorousMediaSplittingScheme::v_PrintSummary(std::ostream &out)
     {
 
-        cout <<  "\tSolver Type     : Velocity Correction" <<endl;
+        cout <<  "\tSolver Type     : Splitting Scheme" <<endl;
         
         
         if(m_session->DefinesSolverInfo("EvolutionOperator"))
@@ -203,13 +206,15 @@ namespace Nektar
     {
         switch(m_equationType)
         {
-        case eUnsteadyPorousMedia:
-            // Integrate from start time to end time
-            AdvanceInTime(m_steps);
-            break;
-        case eNoEquationType:
-        default:
-            ASSERTL0(false,"Unknown or undefined equation type for PorousMediaSplittingScheme solver");
+            case eUnsteadyPorousMedia:
+            {
+                // Integrate from start time to end time
+                AdvanceInTime(m_steps);
+                break;
+            }
+            case eNoEquationType:
+            default:
+                ASSERTL0(false,"Unknown or undefined equation type for PorousMediaSplittingScheme solver");
         }
     }
     
@@ -249,10 +254,11 @@ namespace Nektar
         const NekDouble time)
     {
         int nqtot        = m_fields[0]->GetTotPoints();
+        int i;
         
         // evaluate convection terms
         m_advObject->DoAdvection(m_fields, m_nConvectiveFields, m_velocity,inarray,outarray,m_time);
-            
+
         //add the force
         if(m_session->DefinesFunction("BodyForce"))
         {
@@ -269,12 +275,13 @@ namespace Nektar
                 Vmath::Vadd(nqtot,outarray[i],1,(m_forces[i]->GetPhys()),1,outarray[i],1);
             }
         }
-        
+
         if(m_HBCnumber > 0)
         {
             // Set pressure BCs
             EvaluatePressureBCs(inarray, outarray);
         }
+
     }
     
     void PorousMediaSplittingScheme::SolveUnsteadyStokesSystem(
@@ -289,7 +296,11 @@ namespace Nektar
         Array<OneD, Array< OneD, NekDouble> > F(m_nConvectiveFields);
         StdRegions::ConstFactorMap factors;
         factors[StdRegions::eFactorLambda] = 0.0;
-        
+
+        // Added here instead of in DefineOdeRhs
+        // therefore not only IMEX time integration schemes can be used
+        EvaluateAdvection_SetPressureBCs(inarray, outarray, time);
+                
         for(n = 0; n < m_nConvectiveFields; ++n)
         {
             F[n] = Array<OneD, NekDouble> (phystot);
@@ -299,7 +310,7 @@ namespace Nektar
         
         // Pressure Forcing = Divergence Velocity; 
         SetUpPressureForcing(inarray, F, aii_Dt);
-        
+                    
         // Solver Pressure Poisson Equation 
 #ifdef UseContCoeffs
         FlagList flags;
@@ -473,7 +484,7 @@ namespace Nektar
                     
                     Nu = N[0] + offset;
                     Nv = N[1] + offset; 
-                    
+
                     // Evaluate [N - kinvis Curlx Curl V].n
                     // x-component (stored in Qy)
                     //Vmath::Zero(nq,Qy,1);
@@ -493,7 +504,7 @@ namespace Nektar
                     // Get edge values and put into Uy, Vx
                     elmt->GetEdgePhysVals(boundary,Pbc,Qy,Uy);
                     elmt->GetEdgePhysVals(boundary,Pbc,Qx,Vx);
-                    
+
                     // calcuate (phi, dp/dn = [N-kinvis curl x curl v].n) 
                     Pvals = PBndExp[n]->UpdateCoeffs()+PBndExp[n]->GetCoeff_Offset(i);
                     Pbc->NormVectorIProductWRTBase(Uy,Vx,Pvals); 
@@ -607,7 +618,7 @@ namespace Nektar
                     Nu = N[0] + offset;
                     Nv = N[1] + offset;
                     Nw = N[2] + offset;
-                        
+
                     // Evaluate [N - kinvis Curlx Curl V-k*V].n
                     // x-component (stored in Qx)
                     Vmath::Svtvp(nq,-m_kinvis,Qx,1,Nu,1,Qx,1);

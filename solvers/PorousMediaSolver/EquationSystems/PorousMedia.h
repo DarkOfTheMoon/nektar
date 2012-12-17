@@ -105,7 +105,7 @@ namespace Nektar
         MultiRegions::ExpListSharedPtr m_pressure;  
         
         NekDouble   m_kinvis;        ///< Kinematic viscosity
-        NekDouble   m_perm;        ///< Permeability
+        NekDouble   m_perm;          ///< Permeability
 
         int         m_energysteps;   ///< dump energy to file at steps time
         int         m_steadyStateSteps; ///< Check for steady state at step interval
