@@ -371,7 +371,7 @@ namespace Nektar
     }
 
     // Evaluation -N(V) for all fields except pressure using m_velocity
-    // will this be used in our case?
+
     void PorousMedia::EvaluateAdvectionTerms(const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
                                                  Array<OneD, Array<OneD, NekDouble> > &outarray, 
                                                  Array<OneD, NekDouble> &wk)

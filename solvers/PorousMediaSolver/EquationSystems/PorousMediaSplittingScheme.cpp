@@ -254,7 +254,6 @@ namespace Nektar
         const NekDouble time)
     {
         int nqtot        = m_fields[0]->GetTotPoints();
-        int i;
         
         // evaluate convection terms
         m_advObject->DoAdvection(m_fields, m_nConvectiveFields, m_velocity,inarray,outarray,m_time);
