@@ -57,10 +57,14 @@ namespace Nektar
         "UnsteadyPorousMedia",
     };
 
-
     enum AdvectionForm
     {
         eNoAdvectionForm,
+        eConvective,
+        eNonConservative,
+        eLinearised,
+        eAdjoint,
+        eSkewSymmetric,
         eNoAdvection,
         eAdvectionFormSize
     };
@@ -69,6 +73,11 @@ namespace Nektar
     const std::string kAdvectionFormStr[] = 
     {
         "NoType",
+        "Convective",
+        "NonConservative",
+        "Linearised",
+        "Adjoint",
+        "SkewSymmetric"
         "NoAdvection"
     };
 	
