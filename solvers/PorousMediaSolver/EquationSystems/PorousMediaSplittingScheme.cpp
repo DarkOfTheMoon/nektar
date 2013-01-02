@@ -156,6 +156,42 @@ namespace Nektar
                 m_pressureHBCs[n] = Array<OneD, NekDouble>(cnt);
             }
         }
+
+        // Load variable coefficients
+        /*StdRegions::VarCoeffType varCoeffEnum[3] = {
+                StdRegions::eVarCoeffK00,
+                StdRegions::eVarCoeffK11,
+                StdRegions::eVarCoeffK22
+        };
+        std::string varName = "Permeability";
+        std::string varCoeffs[3] = {
+            "AnisotropicPermeabilityX",
+            "AnisotropicPermeabilityY",
+            "AnisotropicPermeabitityZ"
+        };
+        int nq = m_fields[0]->GetNpoints();
+        Array<OneD, NekDouble> vTemp;
+        
+        if (m_session->DefinesFunction("IsotropicPermeability"))
+        {
+            EvaluateFunction(varName, vTemp, "IsotropicPermeability");
+            for (int i = 0; i < m_spacedim; ++i)
+            {
+                m_vardiff[varCoeffEnum[i]] = Array<OneD, NekDouble>(nq);
+                Vmath::Vcopy(nq, vTemp, 1, m_vardiff[varCoeffEnum[i]], 1);
+            }
+        }
+        else if (m_session->DefinesFunction(varCoeffs[0]))
+        {
+            for (int i = 0; i < m_spacedim; ++i)
+            {
+                ASSERTL0(m_session->DefinesFunction(varCoeffs[i], varName),
+                         "Function '" + varCoeffs[i] + "' not correctly defined.");
+                EvaluateFunction(varName, vTemp, varCoeffs[i]);
+                m_vardiff[varCoeffEnum[i]] = Array<OneD, NekDouble>(nq);
+                Vmath::Vcopy(nq, vTemp, 1, m_vardiff[varCoeffEnum[i]], 1);
+            }
+            }*/
         
         // set implicit time-intregration class operators
         m_integrationOps.DefineImplicitSolve(&PorousMediaSplittingScheme::SolveUnsteadyStokesSystem,this);
