@@ -1008,7 +1008,8 @@ namespace Nektar
                         
                         // calcuate (phi, dp/dn = [N-kinvis curl x curl v].n) 
                         Pvals = PBndExp[n]->UpdateCoeffs()+PBndExp[n]->GetCoeff_Offset(i);
-                        for (int n=0; n<Pvals.num_elements(); ++n)
+                        Pbc->NormVectorIProductWRTBase(Uy,Vx,Wx,Pvals);
+/*                        for (int n=0; n<Pvals.num_elements(); ++n)
                         {
                             cout<<Pvals[n]<<endl;
                         }
@@ -1031,6 +1032,7 @@ namespace Nektar
                             cout<<tmp[n]<<endl;
                         }
                         cout<<endl;
+*/
                     }
                 }
                 // setting if just standard BC no High order

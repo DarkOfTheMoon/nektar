@@ -85,9 +85,9 @@ namespace Nektar
 
         switch(intMethod)
         {
-            case LibUtilities::eBackwardEuler:
-            case LibUtilities::eDIRKOrder2:
-            case LibUtilities::eDIRKOrder3:
+            //case LibUtilities::eBackwardEuler:
+            //case LibUtilities::eDIRKOrder2:
+            //case LibUtilities::eDIRKOrder3:
             case LibUtilities::eIMEXOrder1: 
         {
             m_intSteps = 1;
@@ -124,7 +124,7 @@ namespace Nektar
         }        
         
         // set explicit time-intregration class operators
-        //m_integrationOps.DefineOdeRhs(&PorousMediaSplittingScheme::EvaluateAdvection_SetPressureBCs, this);
+        m_integrationOps.DefineOdeRhs(&PorousMediaSplittingScheme::EvaluateAdvection_SetPressureBCs, this);
             
         // Count number of HBC conditions
         Array<OneD, const SpatialDomains::BoundaryConditionShPtr > PBndConds = m_pressure->GetBndConditions();
@@ -290,11 +290,11 @@ namespace Nektar
         const NekDouble time)
     {
         int nqtot        = m_fields[0]->GetTotPoints();
-        
+         
         // evaluate convection terms
         m_advObject->DoAdvection(m_fields, m_nConvectiveFields, m_velocity,inarray,outarray,m_time);
 
-        //add the force
+        // add the force
         if(m_session->DefinesFunction("BodyForce"))
         {
             if(m_fields[0]->GetWaveSpace())
@@ -311,12 +311,32 @@ namespace Nektar
             }
         }
 
+        // add permeability term for explicit permeability
+        if (m_explicitPermeability)
+        {
+            for(int i = 0; i < m_nConvectiveFields; ++i)
+            {
+                Vmath::Svtvp(nqtot,-m_kinvis/m_perm,inarray[i],1,outarray[i],1,outarray[i],1);
+            }
+        }
+
+        for (int n=0; n<inarray[0].num_elements(); ++n)  
+        {  
+            cout<<inarray[0][n]<<endl;  
+        }
+
         if(m_HBCnumber > 0)
         {
             // Set pressure BCs
             EvaluatePressureBCs(inarray, outarray);
         }
 
+//        cout<<"after EvalPBCs"<<endl;  
+
+/*        for (int n=0; n<outarray[0].num_elements(); ++n)  
+        {  
+            cout<<outarray[0][n]<<endl;  
+            }*/
     }
     
     void PorousMediaSplittingScheme::SolveUnsteadyStokesSystem(
@@ -334,7 +354,7 @@ namespace Nektar
 
         // Added here instead of in DefineOdeRhs
         // therefore not only IMEX time integration schemes can be used
-        EvaluateAdvection_SetPressureBCs(inarray, outarray, time);
+        //EvaluateAdvection_SetPressureBCs(inarray, outarray, time);
                 
         for(n = 0; n < m_nConvectiveFields; ++n)
         {
@@ -358,8 +378,15 @@ namespace Nektar
             
         // Viscous Term forcing
         SetUpViscousForcing(inarray, F, aii_Dt);
-        
-        factors[StdRegions::eFactorLambda] = (1.0/m_perm)+(1.0/aii_Dt/m_kinvis);
+
+        if (m_explicitPermeability)
+        {
+            factors[StdRegions::eFactorLambda] = (1.0/aii_Dt/m_kinvis);
+        }
+        else
+        {
+            factors[StdRegions::eFactorLambda] = (1.0/m_perm)+(1.0/aii_Dt/m_kinvis);
+        }
         
         // Solve Helmholtz system and put in Physical space
         for(i = 0; i < m_nConvectiveFields; ++i)

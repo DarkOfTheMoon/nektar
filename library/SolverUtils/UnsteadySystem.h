@@ -73,6 +73,8 @@ namespace Nektar
             bool                                            m_explicitAdvection;
             /// Indicates if explicit or implicit treatment of reaction is used.
             bool                                            m_explicitReaction;
+            /// Indicates if explicit or implicit treatment of permeability is used.
+            bool                                            m_explicitPermeability;
 
             std::vector<int>                                m_intVariables;
 
