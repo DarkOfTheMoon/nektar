@@ -121,6 +121,9 @@ namespace Nektar
         Array<OneD, NekDouble> m_wavenumber;
         
         Array<OneD, NekDouble> m_beta;
+
+        /// Variable diffusivity
+        StdRegions::VarCoeffMap m_vardiff;
         
         /**  \brief This function evaluates the normal Neumann pressure boundary
          *  condition for the velocity correction scheme at the current time
