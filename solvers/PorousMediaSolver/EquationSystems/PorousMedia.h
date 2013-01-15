@@ -115,6 +115,7 @@ namespace Nektar
         
         NekDouble   m_kinvis;        ///< Kinematic viscosity
         NekDouble   m_perm;          ///< Permeability
+        Array<OneD, NekDouble>  m_anisoperm;  ///< anisotropic Permeability
 
         int         m_energysteps;   ///< dump energy to file at steps time
         int         m_steadyStateSteps; ///< Check for steady state at step interval

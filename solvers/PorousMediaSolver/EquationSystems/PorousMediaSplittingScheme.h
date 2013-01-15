@@ -97,7 +97,7 @@ namespace Nektar
             const NekDouble time,
             const NekDouble a_iixDt);
         
-        void EvaluateAdvection_SetPressureBCs(
+        void EvaluateAdvection_Permeability(
             const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
             Array<OneD, Array<OneD, NekDouble> > &outarray, 
             const NekDouble time);
@@ -123,7 +123,7 @@ namespace Nektar
         Array<OneD, NekDouble> m_beta;
 
         /// Variable diffusivity
-        StdRegions::VarCoeffMap m_vardiff;
+        StdRegions::VarCoeffMap m_varperm;
         
         /**  \brief This function evaluates the normal Neumann pressure boundary
          *  condition for the velocity correction scheme at the current time

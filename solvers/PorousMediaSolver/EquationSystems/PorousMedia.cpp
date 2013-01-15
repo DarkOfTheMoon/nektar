@@ -131,10 +131,19 @@ namespace Nektar
         default:
             ASSERTL0(false,"Unknown or undefined equation type");
         }
-        
+
         m_session->LoadParameter("Kinvis", m_kinvis);
         m_session->LoadParameter("Permeability", m_perm);
-		
+        m_anisoperm = Array<OneD, NekDouble>(m_spacedim);
+/*       
+        m_session->LoadParameter("kxx", m_anisoperm[0]);
+        m_session->LoadParameter("kyy", m_anisoperm[1]);
+        if(m_spacedim == 3)
+        {
+            m_session->LoadParameter("kzz", m_anisoperm[2]);
+	}
+ */
+	
         std::string vConvectiveType = "NoAdvection";
         m_advObject = GetAdvectionTermFactory().CreateInstance(vConvectiveType, m_session, m_graph);
 	
@@ -171,7 +180,7 @@ namespace Nektar
         }
 		
         // Initialise NS solver which is set up to use a GLM method
-        // with calls to EvaluateAdvection_SetPressureBCs and
+        // with calls to EvaluateAdvection_Permeability and
         // SolveUnsteadyStokesSystem
         m_integrationSoln = m_integrationScheme[m_intSteps-1]->InitializeScheme(m_timestep, fields, m_time, m_integrationOps);
 		

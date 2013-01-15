@@ -83,49 +83,73 @@ namespace Nektar
         
         ASSERTL0(i != (int) LibUtilities::SIZE_TimeIntegrationMethod, "Invalid time integration type.");
 
+        if(!m_explicitPermeability && (m_session->GetSolverInfo("AdvectionForm") == "NoAdvection"))
+        {
+            switch(intMethod)
+            {
+                case LibUtilities::eIMEXOrder1:
+                case LibUtilities::eIMEXOrder2:
+                case LibUtilities::eIMEXOrder3:
+                {
+                    ASSERTL0(0,"Integration method not suitable: replace IMEX scheme with an purely implicit scheme");
+                }
+                break;
+                default:
+                break;
+            }
+        }
+
         switch(intMethod)
         {
-            //case LibUtilities::eBackwardEuler:
-            //case LibUtilities::eDIRKOrder2:
-            //case LibUtilities::eDIRKOrder3:
+            case LibUtilities::eBackwardEuler:
+            case LibUtilities::eDIRKOrder2:
+            case LibUtilities::eDIRKOrder3:
+            {
+                ASSERTL0( !m_explicitPermeability && (m_session->GetSolverInfo("AdvectionForm") == "NoAdvection"),
+                          "Integration method not suitable: Options include IMEXOrder1, IMEXOrder2 or IMEXOrder3");
+                m_intSteps = 1;
+                m_integrationScheme = Array<OneD, LibUtilities::TimeIntegrationSchemeSharedPtr> (m_intSteps);
+                LibUtilities::TimeIntegrationSchemeKey       IntKey0(intMethod);
+                m_integrationScheme[0] = LibUtilities::TimeIntegrationSchemeManager()[IntKey0];
+            }
             case LibUtilities::eIMEXOrder1: 
-        {
-            m_intSteps = 1;
-            m_integrationScheme = Array<OneD, LibUtilities::TimeIntegrationSchemeSharedPtr> (m_intSteps);
-            LibUtilities::TimeIntegrationSchemeKey       IntKey0(intMethod);
-            m_integrationScheme[0] = LibUtilities::TimeIntegrationSchemeManager()[IntKey0];
-        }
-        break;
-        case LibUtilities::eIMEXOrder2: 
-        {
-            m_intSteps = 2;
-            m_integrationScheme = Array<OneD, LibUtilities::TimeIntegrationSchemeSharedPtr> (m_intSteps);
-            LibUtilities::TimeIntegrationSchemeKey       IntKey0(LibUtilities::eIMEXOrder1);
-            m_integrationScheme[0] = LibUtilities::TimeIntegrationSchemeManager()[IntKey0];
-            LibUtilities::TimeIntegrationSchemeKey       IntKey1(intMethod);
-            m_integrationScheme[1] = LibUtilities::TimeIntegrationSchemeManager()[IntKey1];
-        }
-        break;
-        case LibUtilities::eIMEXOrder3: 
-        {
-            m_intSteps = 3;
-            m_integrationScheme = Array<OneD, LibUtilities::TimeIntegrationSchemeSharedPtr> (m_intSteps);
-            LibUtilities::TimeIntegrationSchemeKey       IntKey0(LibUtilities::eIMEXdirk_3_4_3);
-            m_integrationScheme[0] = LibUtilities::TimeIntegrationSchemeManager()[IntKey0];
-            LibUtilities::TimeIntegrationSchemeKey       IntKey1(LibUtilities::eIMEXdirk_3_4_3);
-            m_integrationScheme[1] = LibUtilities::TimeIntegrationSchemeManager()[IntKey1];
-            LibUtilities::TimeIntegrationSchemeKey       IntKey2(intMethod);
-            m_integrationScheme[2] = LibUtilities::TimeIntegrationSchemeManager()[IntKey2];
-        }
-        break;
-        default:
-            ASSERTL0(0,"Integration method not suitable: Options include IMEXOrder1, IMEXOrder2 or IMEXOrder3");
+            {
+                m_intSteps = 1;
+                m_integrationScheme = Array<OneD, LibUtilities::TimeIntegrationSchemeSharedPtr> (m_intSteps);
+                LibUtilities::TimeIntegrationSchemeKey       IntKey0(intMethod);
+                m_integrationScheme[0] = LibUtilities::TimeIntegrationSchemeManager()[IntKey0];
+            }
+            break;
+            case LibUtilities::eIMEXOrder2: 
+            {
+                m_intSteps = 2;
+                m_integrationScheme = Array<OneD, LibUtilities::TimeIntegrationSchemeSharedPtr> (m_intSteps);
+                LibUtilities::TimeIntegrationSchemeKey       IntKey0(LibUtilities::eIMEXOrder1);
+                m_integrationScheme[0] = LibUtilities::TimeIntegrationSchemeManager()[IntKey0];
+                LibUtilities::TimeIntegrationSchemeKey       IntKey1(intMethod);
+                m_integrationScheme[1] = LibUtilities::TimeIntegrationSchemeManager()[IntKey1];
+            }
+            break;
+            case LibUtilities::eIMEXOrder3: 
+            {
+                m_intSteps = 3;
+                m_integrationScheme = Array<OneD, LibUtilities::TimeIntegrationSchemeSharedPtr> (m_intSteps);
+                LibUtilities::TimeIntegrationSchemeKey       IntKey0(LibUtilities::eIMEXdirk_3_4_3);
+                m_integrationScheme[0] = LibUtilities::TimeIntegrationSchemeManager()[IntKey0];
+                LibUtilities::TimeIntegrationSchemeKey       IntKey1(LibUtilities::eIMEXdirk_3_4_3);
+                m_integrationScheme[1] = LibUtilities::TimeIntegrationSchemeManager()[IntKey1];
+                LibUtilities::TimeIntegrationSchemeKey       IntKey2(intMethod);
+                m_integrationScheme[2] = LibUtilities::TimeIntegrationSchemeManager()[IntKey2];
+            }
+            break;
+            default:
+                ASSERTL0(0,"Integration method not suitable: Options include IMEXOrder1, IMEXOrder2 or IMEXOrder3");
             break;
         }        
         
         // set explicit time-intregration class operators
-        m_integrationOps.DefineOdeRhs(&PorousMediaSplittingScheme::EvaluateAdvection_SetPressureBCs, this);
-            
+        m_integrationOps.DefineOdeRhs(&PorousMediaSplittingScheme::EvaluateAdvection_Permeability,this);
+
         // Count number of HBC conditions
         Array<OneD, const SpatialDomains::BoundaryConditionShPtr > PBndConds = m_pressure->GetBndConditions();
         Array<OneD, MultiRegions::ExpListSharedPtr>  PBndExp = m_pressure->GetBndCondExpansions();
@@ -163,7 +187,7 @@ namespace Nektar
                 StdRegions::eVarCoeffD11,
                 StdRegions::eVarCoeffD22
         };
-        std::string varName = "AnisotropicPermeability";
+        std::string varName = "k";
         std::string varCoeffs[3] = {
                 "kx",
                 "ky",
@@ -174,23 +198,22 @@ namespace Nektar
 
         if (m_session->DefinesFunction("IsotropicPermeability"))
         {
-            EvaluateFunction(varName, vTemp, "IsotropicPermeability");
-            for (int i = 0; i < m_spacedim; ++i)
-            {
-                m_vardiff[varCoeffEnum[i]] = Array<OneD, NekDouble>(nq);
-                Vmath::Vcopy(nq, vTemp, 1, m_vardiff[varCoeffEnum[i]], 1);
-            }
+            m_perm = m_session->GetFunction("IsotropicPermeability", varName)->Evaluate();
         }
-        else if (m_session->DefinesFunction(varCoeffs[0]))
+        else if (m_session->DefinesFunction("AnisotropicPermeability"))
         {
             for (int i = 0; i < m_spacedim; ++i)
             {
-                ASSERTL0(m_session->DefinesFunction(varCoeffs[i], varName),
+                ASSERTL0(m_session->DefinesFunction("AnisotropicPermeability", varCoeffs[i]),
                     "Function '" + varCoeffs[i] + "' not correctly defined.");
-                EvaluateFunction(varName, vTemp, varCoeffs[i]);
-                m_vardiff[varCoeffEnum[i]] = Array<OneD, NekDouble>(nq);
-                Vmath::Vcopy(nq, vTemp, 1, m_vardiff[varCoeffEnum[i]], 1);
+                EvaluateFunction(varCoeffs[i], vTemp, "AnisotropicPermeability");
+                m_varperm[varCoeffEnum[i]] = Array<OneD, NekDouble>(nq);
+                Vmath::Vcopy(nq, vTemp, 1, m_varperm[varCoeffEnum[i]], 1);
             }
+        }
+        else
+        {
+            ASSERTL0(0,"Permeability not defined");
         }
         
         // set implicit time-intregration class operators
@@ -284,7 +307,7 @@ namespace Nektar
         return vChecks;
     }
     
-    void PorousMediaSplittingScheme::EvaluateAdvection_SetPressureBCs(
+    void PorousMediaSplittingScheme::EvaluateAdvection_Permeability(
         const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
         Array<OneD, Array<OneD, NekDouble> > &outarray, 
         const NekDouble time)
@@ -320,23 +343,11 @@ namespace Nektar
             }
         }
 
-        for (int n=0; n<inarray[0].num_elements(); ++n)  
-        {  
-            cout<<inarray[0][n]<<endl;  
-        }
-
         if(m_HBCnumber > 0)
         {
             // Set pressure BCs
             EvaluatePressureBCs(inarray, outarray);
         }
-
-//        cout<<"after EvalPBCs"<<endl;  
-
-/*        for (int n=0; n<outarray[0].num_elements(); ++n)  
-        {  
-            cout<<outarray[0][n]<<endl;  
-            }*/
     }
     
     void PorousMediaSplittingScheme::SolveUnsteadyStokesSystem(
@@ -354,7 +365,10 @@ namespace Nektar
 
         // Added here instead of in DefineOdeRhs
         // therefore not only IMEX time integration schemes can be used
-        //EvaluateAdvection_SetPressureBCs(inarray, outarray, time);
+        if( !m_explicitPermeability && (m_session->GetSolverInfo("AdvectionForm") == "NoAdvection") )
+        {
+            EvaluateAdvection_Permeability(inarray, outarray, time);
+        }
                 
         for(n = 0; n < m_nConvectiveFields; ++n)
         {
@@ -385,6 +399,7 @@ namespace Nektar
         }
         else
         {
+            // needs to be changed so that permeability is updated in the same way as anisotropic diffusivity
             factors[StdRegions::eFactorLambda] = (1.0/m_perm)+(1.0/aii_Dt/m_kinvis);
         }
         
@@ -469,7 +484,7 @@ namespace Nektar
         switch(m_velocity.num_elements())
         {
         case 1:
-            ASSERTL0(false,"Velocity correction scheme not designed to have just one velocity component");
+            ASSERTL0(false,"Porous media splitting scheme not designed to have just one velocity component");
             break;
         case 2:
             CalcPressureBCs2D(fields,N);
@@ -556,8 +571,11 @@ namespace Nektar
                     //Vmath::Zero(nq,Qx,1);
                     Vmath::Svtvp(nq,m_kinvis,Qx,1,Nv,1,Qx,1);
                     
-                    Vmath::Svtvp(nq,-m_kinvis/m_perm,U,1,Qy,1,Qy,1);
-                    Vmath::Svtvp(nq,-m_kinvis/m_perm,V,1,Qx,1,Qx,1);
+                    if (!m_explicitPermeability)
+                    {
+                        Vmath::Svtvp(nq,-m_kinvis/m_perm,U,1,Qy,1,Qy,1);
+                        Vmath::Svtvp(nq,-m_kinvis/m_perm,V,1,Qx,1,Qx,1);
+                    }
                     
                     Pbc =  boost::dynamic_pointer_cast<StdRegions::StdExpansion1D> (PBndExp[n]->GetExp(i));
                         
@@ -689,9 +707,12 @@ namespace Nektar
                     // z-component (stored in Qz)
                     Vmath::Svtvp(nq,-m_kinvis,Qz,1,Nw,1,Qz,1);
                     
-                    Vmath::Svtvp(nq,-m_kinvis/m_perm,U,1,Qy,1,Qy,1);
-                    Vmath::Svtvp(nq,-m_kinvis/m_perm,V,1,Qx,1,Qx,1);
-                    Vmath::Svtvp(nq,-m_kinvis/m_perm,W,1,Qz,1,Qz,1);
+                    if (!m_explicitPermeability)
+                    {
+                        Vmath::Svtvp(nq,-m_kinvis/m_perm,U,1,Qy,1,Qy,1);
+                        Vmath::Svtvp(nq,-m_kinvis/m_perm,V,1,Qx,1,Qx,1);
+                        Vmath::Svtvp(nq,-m_kinvis/m_perm,W,1,Qz,1,Qz,1);
+                    }
                             
                     Pbc =  boost::dynamic_pointer_cast<StdRegions::StdExpansion2D> (PBndExp[n]->GetExp(i));
                     
