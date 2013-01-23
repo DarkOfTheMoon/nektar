@@ -1,3 +1,5 @@
+ADD_UTILITIES_EXECUTABLE(PermAddBC          util PermAddBC.cpp)
+
 # Generate list of available solvers
 FILE(GLOB dir_list "*")
 LIST(REMOVE_ITEM dir_list "${CMAKE_SOURCE_DIR}/PreProcessing/.svn")

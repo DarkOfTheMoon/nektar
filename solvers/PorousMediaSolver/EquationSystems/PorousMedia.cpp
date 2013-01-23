@@ -133,17 +133,133 @@ namespace Nektar
         }
 
         m_session->LoadParameter("Kinvis", m_kinvis);
-        m_session->LoadParameter("Permeability", m_perm);
-        m_anisoperm = Array<OneD, NekDouble>(m_spacedim);
-/*       
-        m_session->LoadParameter("kxx", m_anisoperm[0]);
-        m_session->LoadParameter("kyy", m_anisoperm[1]);
-        if(m_spacedim == 3)
+
+        // Load variable coefficients
+        m_perm = Array<OneD, NekDouble> (3*(m_spacedim-1));
+
+        if (m_session->DefinesFunction("AnisotropicPermeability"))
         {
-            m_session->LoadParameter("kzz", m_anisoperm[2]);
-	}
- */
-	
+
+            int nq = m_fields[0]->GetNpoints();
+            
+            if (m_spacedim == 2)
+            {
+                StdRegions::VarCoeffType varCoeffEnum[3] = {
+                    StdRegions::eVarCoeffD00,
+                    StdRegions::eVarCoeffD11,
+                    StdRegions::eVarCoeffD01
+                };
+                std::string varCoeffs[3] = {
+                    "kxx",
+                    "kyy",
+                    "kxy"
+                };
+                for (int i = 0; i < (3*(m_spacedim-1)); ++i)
+                {
+                    ASSERTL0(m_session->DefinesFunction("AnisotropicPermeability", varCoeffs[i]),
+                             "Function '" + varCoeffs[i] + "' not correctly defined.");
+                    m_perm[i] = m_session->GetFunction("AnisotropicPermeability", varCoeffs[i])->Evaluate();
+                }
+                if (!m_explicitPermeability)
+                {
+                    Array<OneD, NekDouble> vTemp;
+                    for (int i = 0; i < (3*(m_spacedim-1)); ++i)
+                    {
+                        EvaluateFunction(varCoeffs[i], vTemp, "AnisotropicPermeability");
+                        m_varperm[varCoeffEnum[i]] = Array<OneD, NekDouble>(nq);
+                        Vmath::Vcopy(nq, vTemp, 1, m_varperm[varCoeffEnum[i]], 1);
+                    }
+                    for (int i = 0; i < (3*(m_spacedim-1)); ++i)
+                    {
+                        cout << m_varperm[varCoeffEnum[i]][0] << endl;
+                    }
+                }
+            }
+            else
+            {
+                StdRegions::VarCoeffType varCoeffEnum[6] = {
+                    StdRegions::eVarCoeffD00,
+                    StdRegions::eVarCoeffD11,
+                    StdRegions::eVarCoeffD22,
+                    StdRegions::eVarCoeffD01,
+                    StdRegions::eVarCoeffD02,
+                    StdRegions::eVarCoeffD12
+                };
+                //std::string varName = "k";
+                std::string varCoeffs[6] = {
+                    "kxx",
+                    "kyy",
+                    "kzz",
+                    "kxy",
+                    "kxz",
+                    "kyz"
+                };                
+                for (int i = 0; i < (3*(m_spacedim-1)); ++i)
+                {
+                    ASSERTL0(m_session->DefinesFunction("AnisotropicPermeability", varCoeffs[i]),
+                             "Function '" + varCoeffs[i] + "' not correctly defined.");
+                    m_perm[i] = m_session->GetFunction("AnisotropicPermeability", varCoeffs[i])->Evaluate();
+                }
+                if (!m_explicitPermeability)
+                {
+                    Array<OneD, NekDouble> vTemp;
+                    for (int i = 0; i < (3*(m_spacedim-1)); ++i)
+                    {
+                        EvaluateFunction(varCoeffs[i], vTemp, "AnisotropicPermeability");
+                        m_varperm[varCoeffEnum[i]] = Array<OneD, NekDouble>(nq);
+                        Vmath::Vcopy(nq, vTemp, 1, m_varperm[varCoeffEnum[i]], 1);
+                    }
+                    for (int i = 0; i < (3*(m_spacedim-1)); ++i)
+                    {
+                        cout << m_varperm[varCoeffEnum[i]][0] << endl;
+                    }
+                }
+            }
+        }
+        else if (m_session->DefinesParameter("Permeability"))
+        {
+            NekDouble kTemp;
+            m_session->LoadParameter("Permeability", kTemp);
+
+            for (int i = 0; i < m_spacedim; ++i)
+            {
+                m_perm[i] = kTemp;
+            }
+            for (int i = (m_spacedim+1); i < (3*(m_spacedim-1)); ++i)
+            {
+                m_perm[i] = 0;
+            }
+         }
+        else
+        {
+            ASSERTL0(0,"Permeability not defined");
+        }
+
+        // Inverting Permeability Matrix
+        m_perm_inv = Array<OneD, NekDouble> (3*(m_spacedim-1));
+
+        if (m_spacedim == 2)
+        {
+            NekDouble detTemp = m_perm[0]*m_perm[1]-m_perm[2]*m_perm[2];
+            m_perm_inv[0] = m_perm[1];
+            m_perm_inv[1] = m_perm[0];
+            m_perm_inv[2] = -m_perm[2];
+            Vmath::Smul(3, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
+        }
+        else
+        {
+            NekDouble detTemp = m_perm[0]*(m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5])
+                               -m_perm[3]*(m_perm[2]*m_perm[3]-m_perm[4]*m_perm[5])
+                               +m_perm[4]*(m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4]);
+            m_perm_inv[0] = m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5];
+            m_perm_inv[1] = m_perm[0]*m_perm[2]-m_perm[4]*m_perm[4];
+            m_perm_inv[2] = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
+            m_perm_inv[3] = m_perm[4]*m_perm[5]-m_perm[2]*m_perm[3];
+            m_perm_inv[4] = m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4];
+            m_perm_inv[5] = m_perm[3]*m_perm[4]-m_perm[0]*m_perm[5];
+            Vmath::Smul(6, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
+        }
+ 
         std::string vConvectiveType = "NoAdvection";
         m_advObject = GetAdvectionTermFactory().CreateInstance(vConvectiveType, m_session, m_graph);
 	
