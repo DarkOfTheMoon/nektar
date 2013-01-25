@@ -2,12 +2,8 @@
 #include <cstdlib>
 
 #include <MultiRegions/ExpList.h>
-#include <MultiRegions/ExpList1D.h>
 #include <MultiRegions/ExpList2D.h>
 #include <MultiRegions/ExpList3D.h>
-#include <MultiRegions/ExpList2DHomogeneous1D.h>
-#include <MultiRegions/ExpList3DHomogeneous1D.h>
-#include <MultiRegions/ExpList3DHomogeneous2D.h>
 
 using namespace Nektar;
 
@@ -15,15 +11,14 @@ int main(int argc, char *argv[])
 {
     int i,j;
 
-    if(argc != 4)
+    if(argc != 3)
     {
-        fprintf(stderr,"Usage: FldAddVort  meshfile infld outfld\n");
+        fprintf(stderr,"Usage: CalcEffPerm  meshfile first_fld second_fld\n");
         exit(1);
     }
 
     LibUtilities::SessionReaderSharedPtr vSession
             = LibUtilities::SessionReader::CreateInstance(argc, argv);
-
 
     //----------------------------------------------
     // Read in mesh from input file
@@ -45,7 +40,7 @@ int main(int argc, char *argv[])
     // Define Expansion
     int expdim  = graphShPt->GetMeshDimension();
     int nfields = fielddef[0]->m_fields.size();
-    int addfields = (nfields == 3)? 3:1;
+    int addfields = (nfields == 3)? 3:1;           //<-- nfields in 3D is 4, since pressure is field as well
     Array<OneD, MultiRegions::ExpListSharedPtr> Exp(nfields + addfields);
 	
     switch(expdim)
@@ -116,95 +111,167 @@ int main(int argc, char *argv[])
     // Initialise fields 
     ASSERTL0(nfields >= 2, "Need two fields (u,v) to add reentricity");
     int nq = Exp[0]->GetNpoints();
-    Array<OneD, Array<OneD, NekDouble> > integral(nfields);
-    Array<OneD, Array<OneD, NekDouble> > grad(nfields*nfields);
-    Array<OneD, Array<OneD, NekDouble> > forc(nfields);
-    Array<OneD, NekDouble> avvel(nfields);
-    Array<OneD, NekDouble> avforc(nfields);
+    Array<OneD, Array<OneD, NekDouble> > grad(nfields*expdim);
+    Array<OneD, Array<OneD, NekDouble> > forc(expdim);
+    Array<OneD, NekDouble> avvel(expdim);
+    Array<OneD, NekDouble> avforc(expdim);
     
-    for(i = 0; i < nfields; ++i)
+    for(i = 0; i < expdim; ++i)
     {
-        integral[i] = Array<OneD, NekDouble>(nq);
-        grad[i] = Array<OneD, NekDouble>(nq);
         forc[i] = Array<OneD, NekDouble>(nq);
     }
-
-    // Calculate average Velocity
     
-
-/*    // Calculate Gradient & Vorticity
-    if(nfields == 2)
+    for(i = 0; i < nfields*expdim; ++i)
     {
-        for(i = 0; i < nfields; ++i)
+        grad[i] = Array<OneD, NekDouble>(nq);
+    }
+    //----------------------------------------------
+
+    //----------------------------------------------
+    // Extracting extend for reduced "cube"
+    
+    int err;
+    SpatialDomains::Composite comp_it;
+    Array <OneD, vector<NekDouble> > extend(expdim);
+    Array <OneD, Array <OneD, NekDouble> > tmp_Vcoords(expdim);
+    for (i=0; i<expdim; ++i)
+    {
+        tmp_Vcoords[i] = Array <OneD, NekDouble>(3);
+    }
+    NekDouble tol = 1e-06;
+    NekDouble vol = 0;
+    
+    // looping over all 6 walls
+    // assumming:
+    // C[0]:   tets
+    // C[1]:   prisms
+    // C[2-7]: outer walls
+    // C[8]:   inner walls (SMC walls)
+    // C[9]:   all faces, that have to be assigned
+    for (j=1; j<7; ++j) // <-- needs to be changed back to "for (j=2; j<8; ++j)"
+    {
+        comp_it = graphShPt->GetComposite(j);
+        
+        for (i=0; i<3; ++i)
         {
-            Exp[i]->PhysDeriv(Exp[i]->GetPhys(), grad[i*nfields], grad[i*nfields+1]);
-            Exp[i]->PhysDeriv(MultiRegions::DirCartesianMap[0], grad[i], grad[i]);
-            Exp[i]->PhysDeriv(MultiRegions::DirCartesianMap[1], grad[i], grad[i]);
+            graphShPt
+                ->GetVertex((*comp_it)[0]->GetVid(i))
+                ->GetCoords(tmp_Vcoords[0][i],
+                            tmp_Vcoords[1][i],
+                            tmp_Vcoords[2][i]);
         }
-        // Ux.Vy - Uy.Vx
-        Vmath::Vmul (nq,grad[1],1,grad[nfields],1,outfield[0],1);
-        Vmath::Vvtvm(nq,grad[0],1,grad[nfields+1],1,outfield[0],1,outfield[0],1);
-    }
-    else
-    {
-        for(i = 0; i < nfields; ++i)
-        {
-            Exp[i]->PhysDeriv(Exp[i]->GetPhys(), grad[i*nfields],grad[i*nfields+1],grad[i*nfields+2]);
-        }
 
-        // W_x = Vy.Wz - Vz.Wy
-        Vmath::Vmul (nq,grad[nfields+2],1,grad[2*nfields+1],1,outfield[0],1);
-        Vmath::Vvtvm(nq,grad[nfields+1],1,grad[2*nfields+2],1,outfield[0],1,outfield[0],1);
-        // W_y = Wx.Uz - Ux.Wz
-        Vmath::Vmul (nq,grad[0],1,grad[2*nfields+2],1,outfield[1],1);
-        Vmath::Vvtvm(nq,grad[2*nfields],1,grad[2],1,outfield[1],1,outfield[1],1);
-        // W_z = Ux.Vy - Uy.Vx
-        Vmath::Vmul (nq,grad[1],1,grad[nfields],1,outfield[2],1);
-        Vmath::Vvtvm(nq,grad[0],1,grad[nfields+1],1,outfield[2],1,outfield[2],1);
-    }
-    
-    for (i = 0; i < addfields; ++i)
-    {
-        Exp[nfields + i]->FwdTrans(outfield[i], Exp[nfields+i]->UpdateCoeffs());
-    }
-*/    
-    //-----------------------------------------------
-    // Write solution to file with additional computed fields
-/*    string   out(argv[argc-1]);
-    std::vector<SpatialDomains::FieldDefinitionsSharedPtr> FieldDef
-                                                = Exp[0]->GetFieldDefinitions();
-    std::vector<std::vector<NekDouble> > FieldData(FieldDef.size());
-    
-    vector<string > outname;
-    
-    if(addfields == 1)
-    {
-        outname.push_back("W_z");
-    }
-    else
-    {
-        outname.push_back("W_x");
-        outname.push_back("W_y");
-        outname.push_back("W_z");
-    }
-
-    for(j = 0; j < nfields + addfields; ++j)
-    {
-        for(i = 0; i < FieldDef.size(); ++i)
+        err = 0;
+        for (i=0; i<3; ++i)
         {
-            if (j >= nfields)
+            if ( abs( tmp_Vcoords[i][0] - tmp_Vcoords[i][1] ) < tol )
             {
-                FieldDef[i]->m_fields.push_back(outname[j-nfields]);
+                if ( abs( tmp_Vcoords[i][0] - tmp_Vcoords[i][2] ) < tol )
+                {
+                    extend[i].push_back(tmp_Vcoords[i][0]);
+                }
+                else
+                {
+                    err++;
+                }
             }
             else
             {
-                FieldDef[i]->m_fields.push_back(fielddef[i]->m_fields[j]);
+                err++;
             }
-            Exp[j]->AppendFieldData(FieldDef[i], FieldData[i]);
+        }
+        ASSERTL0(err < 3, "Extend of the geometry could not be calculated. Outer walls appear not to be in spatial planes.");
+    }
+
+    vol = abs( ( extend[0][0] - extend[0][1] )
+              *( extend[1][0] - extend[1][1] )
+              *( extend[2][0] - extend[2][1] ) );
+    //----------------------------------------------
+
+    //----------------------------------------------
+    // Calculate average Velocity
+
+    for (i=0; i<expdim; ++i)
+    {
+        avvel[i] = (Exp[i]->PhysIntegral())/vol;
+    }
+    //----------------------------------------------
+
+    //----------------------------------------------
+    // Calculate average forcing term
+
+    NekDouble m_kinvis;
+    vSession->LoadParameter("Kinvis", m_kinvis);
+
+    // calculating first deriv of velocity and pressure
+    for(i = 0; i < nfields; ++i)
+    {
+        Exp[i]->PhysDeriv(Exp[i]->GetPhys(), grad[i*expdim], grad[i*expdim+1], grad[i*expdim+2]);
+    }
+    
+    // calculating second deriv of verlocity
+    for(i = 0; i < expdim; ++i)
+    {
+        for(j = 0; j < expdim; ++j)
+        {
+            Exp[i]->PhysDeriv(MultiRegions::DirCartesianMap[j], grad[expdim*i+j], grad[expdim*i+j]);
         }
     }
-    graphShPt->Write(out, FieldDef, FieldData);
-*/    //-----------------------------------------------
+    
+    // evaluate force function
+    std::string forc_var[3] = {
+        "u",
+        "v",
+        "w"
+    };
+// Read in of 'Body Force' needs to be done correctly... or at all
+//    for(i = 0; i < expdim; ++i)
+//    {
+//        EvaluateFunction(forc_var[i], forc[i], "BodyForce");
+//    }
+    // f
+    Vmath::Fill(nq, 2.0, forc[0], 1);
+    Vmath::Fill(nq, 1.0, forc[1], 1);
+    Vmath::Fill(nq, 0.0, forc[2], 1);
+
+    for (i=0; i<expdim; ++i)
+    {
+        // f - grad*p
+        Vmath::Vsub(nq, forc[i], 1, grad[expdim*expdim+i], 1, forc[i], 1);
+        for (j=0; j<expdim; ++j)
+        {
+            // f - grad*p + kinvis*grad^2*u
+            Vmath::Svtvp(nq, m_kinvis, grad[expdim*i+j], 1, forc[i], 1, forc[i], 1);
+        }
+    }
+ 
+    // writing forcing term to m_phys
+    for (i=0; i<expdim; ++i)
+    {
+        Vmath::Vcopy(nq, forc[i], 1, Exp[i]->UpdatePhys(), 1);
+    }
+    
+    // calculating average over domain
+    for (i=0; i<expdim; ++i)
+    {
+        avforc[i] = (Exp[i]->PhysIntegral())/(vol*m_kinvis);
+    }
+    //----------------------------------------------
+
+    //----------------------------------------------
+    // basic calculation for Permeability Matrix
+    // without off-diagonal entries
+    
+    NekDouble K_xx, K_yy, K_zz;
+    K_xx = avvel[0]/avforc[0];
+    K_yy = avvel[1]/avforc[1];
+    K_zz = avvel[2]/avforc[2];
+    
+    // output
+    cout << "K_xx = " << K_xx << endl;
+    cout << "K_yy = " << K_yy << endl;
+    cout << "K_zz = " << K_zz << endl;
+    //----------------------------------------------
 
     return 0;
 }
