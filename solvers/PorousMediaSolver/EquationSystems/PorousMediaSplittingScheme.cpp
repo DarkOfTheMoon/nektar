@@ -287,27 +287,26 @@ namespace Nektar
         // evaluate convection terms
         m_advObject->DoAdvection(m_fields, m_nConvectiveFields, m_velocity,inarray,outarray,m_time);
 
-        // add the force
-        if(m_session->DefinesFunction("BodyForce"))
-        {
-            if(m_fields[0]->GetWaveSpace())
-            {
-                for(int i = 0; i < m_nConvectiveFields; ++i)
-                {
-                    m_forces[i]->SetWaveSpace(true);					
-                    m_forces[i]->BwdTrans(m_forces[i]->GetCoeffs(),m_forces[i]->UpdatePhys());
-                }
-            }
-            for(int i = 0; i < m_nConvectiveFields; ++i)
-            {
-                Vmath::Vadd(nqtot,outarray[i],1,(m_forces[i]->GetPhys()),1,outarray[i],1);
-            }
-        }
-
-        // add permeability term for explicit permeability
         if (m_explicitPermeability)
         {
-  
+            // add the force
+            if(m_session->DefinesFunction("BodyForce"))
+            {
+                if(m_fields[0]->GetWaveSpace())
+                {
+                    for(int i = 0; i < m_nConvectiveFields; ++i)
+                    {
+                        m_forces[i]->SetWaveSpace(true);					
+                        m_forces[i]->BwdTrans(m_forces[i]->GetCoeffs(),m_forces[i]->UpdatePhys());
+                    }
+                }
+                for(int i = 0; i < m_nConvectiveFields; ++i)
+                {
+                    Vmath::Vadd(nqtot,outarray[i],1,(m_forces[i]->GetPhys()),1,outarray[i],1);
+                }
+            }
+
+            // add permeability term for explicit permeability
             if (m_nConvectiveFields == 2)
             {
                 Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[0],inarray[0],1,outarray[0],1,outarray[0],1);
@@ -382,40 +381,40 @@ namespace Nektar
         // Viscous Term forcing
         SetUpViscousForcing(inarray, F, aii_Dt);
 
-        if (!m_explicitPermeability && !(m_session->DefinesFunction("AnisotropicPermeability")))
-        {
-            factors[StdRegions::eFactorLambda] = (m_perm_inv[0])+(1.0/aii_Dt/m_kinvis);
-        }    
-        else
+        if (m_explicitPermeability)
         {
             factors[StdRegions::eFactorLambda] = (1.0/aii_Dt/m_kinvis);
-            // needs to be changed so that permeability is updated in the same way as anisotropic diffusivity
-            // is wrong for anisotropic permeability at the moment! (isotropic works)
-            //factors[StdRegions::eFactorLambda] = (m_perm_inv[0])+(1.0/aii_Dt/m_kinvis);
         }
         
         // Solve Helmholtz system and put in Physical space
         for(i = 0; i < m_nConvectiveFields; ++i)
         {
+            // needs to be changed
+            // is wrong for anisotropic permeability with off-diagonal entries! (isotropic works)
+            if (!m_explicitPermeability)// && !(m_session->DefinesFunction("AnisotropicPermeability")))
+            {
+                factors[StdRegions::eFactorLambda] = (m_perm_inv[i])+(1.0/aii_Dt/m_kinvis);
+            }    
+
 #ifdef UseContCoeffs
-/*            if (!m_explicitPermeability && m_session->DefinesFunction("AnisotropicPermeability"))
-            {
-                m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateContCoeffs(),flags,factors,m_varperm);
-            }
-            else
-            {
-*/                m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateContCoeffs(),flags,factors,m_varperm);            
-//            }
+            // if (!m_explicitPermeability && m_session->DefinesFunction("AnisotropicPermeability"))
+            // {
+            //     m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateContCoeffs(),flags,factors,m_varperm);
+            // }
+            // else
+            // {
+                m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateContCoeffs(),flags,factors);            
+            // }
             m_fields[i]->BwdTrans(m_fields[i]->GetContCoeffs(),outarray[i],true);
 #else
-/*            if (!m_explicitPermeability && m_session->DefinesFunction("AnisotropicPermeability"))
-            {
-                m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateCoeffs(), NullFlagList, factors, m_varperm);
-            }
-            else
-            {
-*/                m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateCoeffs(), NullFlagList, factors,m_varperm);
-//            }
+            // if (!m_explicitPermeability && m_session->DefinesFunction("AnisotropicPermeability"))
+            // {
+            //     m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateCoeffs(), NullFlagList, factors, m_varperm);
+            // }
+            // else
+            // {
+                m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateCoeffs(), NullFlagList, factors);
+            // }
             m_fields[i]->BwdTrans(m_fields[i]->GetCoeffs(),outarray[i]);
 #endif
         }
@@ -801,6 +800,7 @@ namespace Nektar
             m_pressure->PhysDeriv(m_pressure->GetPhys(), Forcing[0], Forcing[1],Forcing[2]);
         }
         
+
         // Subtract inarray/(aii_dt) and divide by kinvis. Kinvis will
         // need to be updated for the convected fields.
         for(int i = 0; i < m_nConvectiveFields; ++i)
@@ -808,42 +808,63 @@ namespace Nektar
             Blas::Daxpy(phystot,-aii_dtinv,inarray[i],1,Forcing[i],1);
             Blas::Dscal(phystot,1.0/m_kinvis,&(Forcing[i])[0],1);
         }
-        if (!m_explicitPermeability && m_session->DefinesFunction("AnisotropicPermeability"))
+
+        if(!m_explicitPermeability)
         {
-            Array<OneD, Array< OneD, NekDouble> > tempF(m_nConvectiveFields);
-            for (int i = 0; i < m_nConvectiveFields; ++i)
+            // add the force
+            if(m_session->DefinesFunction("BodyForce"))
             {
-                tempF[i] = Array<OneD, NekDouble> (phystot);
-            }
-
-            if(m_nConvectiveFields == 2)
-            {
-                Vmath::Smul(phystot,m_perm[0],Forcing[0],1,tempF[0],1);
-                Vmath::Smul(phystot,m_perm[2],Forcing[0],1,tempF[1],1);
-                
-                Vmath::Svtvp(phystot,m_perm[2],Forcing[1],1,tempF[0],1,tempF[0],1);
-                Vmath::Svtvp(phystot,m_perm[1],Forcing[1],1,tempF[1],1,tempF[1],1);
-            }
-            else
-            {
-                Vmath::Smul(phystot,m_perm[0],Forcing[0],1,tempF[0],1);
-                Vmath::Smul(phystot,m_perm[3],Forcing[0],1,tempF[1],1);
-                Vmath::Smul(phystot,m_perm[4],Forcing[0],1,tempF[2],1);
-
-                Vmath::Svtvp(phystot,m_perm[3],Forcing[1],1,tempF[0],1,tempF[0],1);
-                Vmath::Svtvp(phystot,m_perm[1],Forcing[1],1,tempF[1],1,tempF[1],1);
-                Vmath::Svtvp(phystot,m_perm[5],Forcing[1],1,tempF[2],1,tempF[2],1);
-
-                Vmath::Svtvp(phystot,m_perm[4],Forcing[2],1,tempF[0],1,tempF[0],1);
-                Vmath::Svtvp(phystot,m_perm[5],Forcing[2],1,tempF[1],1,tempF[1],1);
-                Vmath::Svtvp(phystot,m_perm[2],Forcing[2],1,tempF[2],1,tempF[2],1);
-            }
-
-            for (int i = 0; i < m_nConvectiveFields; ++i)
-            {
-                Forcing[i] = tempF[i];
+                if(m_fields[0]->GetWaveSpace())
+                {
+                    for(int i = 0; i < m_nConvectiveFields; ++i)
+                    {
+                        m_forces[i]->SetWaveSpace(true);					
+                        m_forces[i]->BwdTrans(m_forces[i]->GetCoeffs(),m_forces[i]->UpdatePhys());
+                    }
+                }
+                for(int i = 0; i < m_nConvectiveFields; ++i)
+                {
+                    Vmath::Vsub(phystot,Forcing[i],1,(m_forces[i]->GetPhys()),1,Forcing[i],1);
+                }
             }
         }
+        
+        // if (!m_explicitPermeability && m_session->DefinesFunction("AnisotropicPermeability"))
+        // {
+        //     Array<OneD, Array< OneD, NekDouble> > tempF(m_nConvectiveFields);
+        //     for (int i = 0; i < m_nConvectiveFields; ++i)
+        //     {
+        //         tempF[i] = Array<OneD, NekDouble> (phystot);
+        //     }
+
+        //     if(m_nConvectiveFields == 2)
+        //     {
+        //         Vmath::Smul(phystot,m_perm[0],Forcing[0],1,tempF[0],1);
+        //         Vmath::Smul(phystot,m_perm[2],Forcing[0],1,tempF[1],1);
+                
+        //         Vmath::Svtvp(phystot,m_perm[2],Forcing[1],1,tempF[0],1,tempF[0],1);
+        //         Vmath::Svtvp(phystot,m_perm[1],Forcing[1],1,tempF[1],1,tempF[1],1);
+        //     }
+        //     else
+        //     {
+        //         Vmath::Smul(phystot,m_perm[0],Forcing[0],1,tempF[0],1);
+        //         Vmath::Smul(phystot,m_perm[3],Forcing[0],1,tempF[1],1);
+        //         Vmath::Smul(phystot,m_perm[4],Forcing[0],1,tempF[2],1);
+
+        //         Vmath::Svtvp(phystot,m_perm[3],Forcing[1],1,tempF[0],1,tempF[0],1);
+        //         Vmath::Svtvp(phystot,m_perm[1],Forcing[1],1,tempF[1],1,tempF[1],1);
+        //         Vmath::Svtvp(phystot,m_perm[5],Forcing[1],1,tempF[2],1,tempF[2],1);
+
+        //         Vmath::Svtvp(phystot,m_perm[4],Forcing[2],1,tempF[0],1,tempF[0],1);
+        //         Vmath::Svtvp(phystot,m_perm[5],Forcing[2],1,tempF[1],1,tempF[1],1);
+        //         Vmath::Svtvp(phystot,m_perm[2],Forcing[2],1,tempF[2],1,tempF[2],1);
+        //     }
+
+        //     for (int i = 0; i < m_nConvectiveFields; ++i)
+        //     {
+        //         Forcing[i] = tempF[i];
+        //     }
+        // }
     }
         
 } //end of namespace

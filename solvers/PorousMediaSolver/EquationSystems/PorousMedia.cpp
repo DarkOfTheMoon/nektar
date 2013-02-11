@@ -209,10 +209,11 @@ namespace Nektar
                         m_varperm[varCoeffEnum[i]] = Array<OneD, NekDouble>(nq);
                         Vmath::Vcopy(nq, vTemp, 1, m_varperm[varCoeffEnum[i]], 1);
                     }
-                    for (int i = 0; i < (3*(m_spacedim-1)); ++i)
-                    {
-                        cout << m_varperm[varCoeffEnum[i]][0] << endl;
-                    }
+
+                    // for (int i = 0; i < (3*(m_spacedim-1)); ++i)
+                    // {
+                    //     cout << m_varperm[varCoeffEnum[i]][0] << endl;
+                    // }
                 }
             }
         }
@@ -241,6 +242,11 @@ namespace Nektar
         if (m_spacedim == 2)
         {
             NekDouble detTemp = m_perm[0]*m_perm[1]-m_perm[2]*m_perm[2];
+            
+            // Check if permeability matrix is positive definite
+            ASSERTL0(m_perm[0] > 0,"Permeability Matrix is not positive definite");
+            ASSERTL0(detTemp > 0,"Permeability Matrix is not positive definite");
+            
             m_perm_inv[0] = m_perm[1];
             m_perm_inv[1] = m_perm[0];
             m_perm_inv[2] = -m_perm[2];
@@ -251,6 +257,13 @@ namespace Nektar
             NekDouble detTemp = m_perm[0]*(m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5])
                                -m_perm[3]*(m_perm[2]*m_perm[3]-m_perm[4]*m_perm[5])
                                +m_perm[4]*(m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4]);
+
+            // Check if permeability matrix is positive definite
+            ASSERTL0(m_perm[0] > 0,"Permeability Matrix is not positive definite");
+            NekDouble pd_chk = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
+            ASSERTL0(pd_chk > 0,"Permeability Matrix is not positive definite");
+            ASSERTL0(detTemp > 0,"Permeability Matrix is not positive definite");
+
             m_perm_inv[0] = m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5];
             m_perm_inv[1] = m_perm[0]*m_perm[2]-m_perm[4]*m_perm[4];
             m_perm_inv[2] = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
