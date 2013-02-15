@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <math.h>
 
+#include <StdRegions/StdExpansion3D.h>
 #include <LocalRegions/HexExp.h>
 #include <LocalRegions/PrismExp.h>
 #include <LocalRegions/TetExp.h>
@@ -534,8 +535,6 @@ SpatialDomains::PrismGeomSharedPtr CreatePrismGeom(int argc, char *argv[])
     
     // ////////////////////////////////////////////////////////////////////
     // Set up Prism faces
-    const int nQFaces = 3;
-    const int nTFaces = 2;
     const int nFaces  = 5;
     const int edgeConnectivity[][4] = {
         {0,1,2,3}, 

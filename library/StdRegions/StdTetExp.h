@@ -95,8 +95,8 @@ namespace Nektar
                 const LibUtilities::BasisKey &Ba,
                 const LibUtilities::BasisKey &Bb,
                 const LibUtilities::BasisKey &Bc, 
-                double *coeffs,
-                double *phys);
+                NekDouble *coeffs,
+                NekDouble *phys);
             STD_REGIONS_EXPORT StdTetExp(const StdTetExp &T);
             STD_REGIONS_EXPORT ~StdTetExp();
 
@@ -149,10 +149,6 @@ namespace Nektar
             STD_REGIONS_EXPORT virtual void v_PhysDeriv(
                 const int dir,
                 const Array<OneD, const NekDouble>& inarray,
-                      Array<OneD,       NekDouble>& outarray);
-            STD_REGIONS_EXPORT virtual void v_PhysDirectionalDeriv(
-                const Array<OneD, const NekDouble>& inarray,
-                const Array<OneD, const NekDouble>& direction,
                       Array<OneD,       NekDouble>& outarray);
             STD_REGIONS_EXPORT virtual void v_StdPhysDeriv(
                 const Array<OneD, const NekDouble>& inarray,
@@ -305,15 +301,15 @@ namespace Nektar
             STD_REGIONS_EXPORT virtual DNekMatSharedPtr v_CreateStdMatrix(
                 const StdMatrixKey &mkey);
 
+            STD_REGIONS_EXPORT void MultiplyByQuadratureMetric(
+                const Array<OneD, const NekDouble>& inarray,
+                      Array<OneD,       NekDouble>& outarray);
 
         private:
             //---------------------------------------
             // Private helper functions
             //---------------------------------------
             STD_REGIONS_EXPORT int  GetMode(const int i, const int j, const int k);
-            STD_REGIONS_EXPORT void MultiplyByQuadratureMetric(
-                const Array<OneD, const NekDouble>& inarray,
-                      Array<OneD,       NekDouble>& outarray);
         };
 
         typedef boost::shared_ptr<StdTetExp> StdTetExpSharedPtr;

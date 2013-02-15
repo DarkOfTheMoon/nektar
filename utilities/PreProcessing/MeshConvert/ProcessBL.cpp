@@ -73,7 +73,7 @@ namespace Nektar
             config["rho"]        = ConfigOption(false, "1.205",
                 "Density (kg/m^3).");
             config["mu"]         = ConfigOption(false, "1.82e-5",
-                "Dynamic viscosity (kg\(m*s)).");
+                "Dynamic viscosity (kg/(m*s)).");
 	    config["TetsOff"]    = ConfigOption(true,  "0",
                 "Use this option to turn off splitting prisms into tetrahedra");
         }
@@ -85,6 +85,12 @@ namespace Nektar
         
         void ProcessBL::Process()
         {
+            if (m->verbose)
+            {
+                cout << "ProcessBL: Refining prismatic boundary layer..."
+                     << endl;
+            }
+
 	    // Initialisation of parameters and settings.
 
             // Physical problem parameters.

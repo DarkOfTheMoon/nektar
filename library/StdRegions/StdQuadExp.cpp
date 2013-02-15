@@ -140,13 +140,6 @@ namespace Nektar
         }
 
 
-        void StdQuadExp::v_PhysDirectionalDeriv(const Array<OneD, const NekDouble>& inarray,
-                                                const Array<OneD, const NekDouble>& direction,
-                                                Array<OneD, NekDouble> &outarray)
-        {
-            ASSERTL0(false,"This method is not defined or valid for this class type");
-        }
-
         ////////////////
         // Transforms //
         ////////////////
@@ -715,10 +708,12 @@ namespace Nektar
         int StdQuadExp::v_NumDGBndryCoeffs() const
         {
             ASSERTL1(GetBasisType(0) == LibUtilities::eModified_A ||
-                     GetBasisType(0) == LibUtilities::eGLL_Lagrange,
+                     GetBasisType(0) == LibUtilities::eGLL_Lagrange ||
+                     GetBasisType(0) == LibUtilities::eGauss_Lagrange,
                      "BasisType is not a boundary interior form");
             ASSERTL1(GetBasisType(1) == LibUtilities::eModified_A ||
-                     GetBasisType(1) == LibUtilities::eGLL_Lagrange,
+                     GetBasisType(1) == LibUtilities::eGLL_Lagrange ||
+                     GetBasisType(0) == LibUtilities::eGauss_Lagrange,
                      "BasisType is not a boundary interior form");
 
             return  2*GetBasisNumModes(0) + 2*GetBasisNumModes(1);
@@ -768,23 +763,6 @@ namespace Nektar
             }
         }
 
-        void StdQuadExp::v_GetEdgePhysVals(const int edge,  StdExpansion1DSharedPtr &EdgeExp, const Array<OneD, const NekDouble> &inarray, Array<OneD,NekDouble> &outarray)
-        {
-            NEKERROR(ErrorUtil::efatal,"Method does not exist for this shape or library" );
-        }    
-        
-        
-        
-        void StdQuadExp::v_GetEdgeQFactors(
-                const int edge,  
-                Array<OneD, NekDouble> &outarray)
-        {
-            NEKERROR(ErrorUtil::efatal,
-                     "Method does not exist for this shape or library" );
-        }
-
-        
-        
         //////////////
         // Mappings //
         //////////////
@@ -1217,7 +1195,8 @@ namespace Nektar
                     break;
                 }
             }
-            else if(bType == LibUtilities::eGLL_Lagrange)
+            else if(bType == LibUtilities::eGLL_Lagrange ||
+                    bType == LibUtilities::eGauss_Lagrange)
             {
                 switch(eid)
                 {
@@ -1284,30 +1263,30 @@ namespace Nektar
             switch(mtype)
             {
             case eMass:
-				{
-					Mat = StdExpansion::CreateGeneralMatrix(mkey);
-					// For Fourier basis set the imaginary component of mean mode
-					// to have a unit diagonal component in mass matrix 
-					if(m_base[0]->GetBasisType() == LibUtilities::eFourier)
-					{
-						for(i = 0; i < order1; ++i)
-						{
-							(*Mat)(order0*i+1,i*order0+1) = 1.0;
-						}
-					}
-                
-					if(m_base[1]->GetBasisType() == LibUtilities::eFourier)
-					{
-						for(i = 0; i < order0; ++i)
-						{
-							(*Mat)(order0+i ,order0+i) = 1.0;
-						}
-					}
-				}
-				break;
-			case eFwdTrans:
-				{
-					Mat = MemoryManager<DNekMat>::AllocateSharedPtr(m_ncoeffs,m_ncoeffs);
+                {
+                    Mat = StdExpansion::CreateGeneralMatrix(mkey);
+                    // For Fourier basis set the imaginary component of mean mode
+                    // to have a unit diagonal component in mass matrix 
+                    if(m_base[0]->GetBasisType() == LibUtilities::eFourier)
+                    {
+                        for(i = 0; i < order1; ++i)
+                        {
+                            (*Mat)(order0*i+1,i*order0+1) = 1.0;
+                        }
+                    }
+                    
+                    if(m_base[1]->GetBasisType() == LibUtilities::eFourier)
+                    {
+                        for(i = 0; i < order0; ++i)
+                        {
+                            (*Mat)(order0+i ,order0+i) = 1.0;
+                        }
+                    }
+                }
+                break;
+            case eFwdTrans:
+                {
+                    Mat = MemoryManager<DNekMat>::AllocateSharedPtr(m_ncoeffs,m_ncoeffs);
                     StdMatrixKey iprodkey(eIProductWRTBase,DetExpansionType(),*this);
                     DNekMat &Iprod = *GetStdMatrix(iprodkey);
                     StdMatrixKey imasskey(eInvMass,DetExpansionType(),*this);
@@ -1319,8 +1298,8 @@ namespace Nektar
 			default:
                 {
                     Mat = StdExpansion::CreateGeneralMatrix(mkey);
-				}
-				break;
+                }
+                break;
             }
 	
             return Mat;
@@ -1520,15 +1499,14 @@ namespace Nektar
             StdQuadExp::v_HelmholtzMatrixOp_MatFree(inarray,outarray,mkey);
         }
         
-      //up to here
-        
+        //up to here
         void StdQuadExp::MultiplyByQuadratureMetric(
-                            const Array<OneD, const NekDouble>& inarray,
-                            Array<OneD, NekDouble> &outarray)
+            const Array<OneD, const NekDouble> &inarray,
+                  Array<OneD,       NekDouble> &outarray)
         {         
             int i; 
-            int    nquad0 = m_base[0]->GetNumPoints();
-            int    nquad1 = m_base[1]->GetNumPoints();
+            int nquad0 = m_base[0]->GetNumPoints();
+            int nquad1 = m_base[1]->GetNumPoints();
                 
             const Array<OneD, const NekDouble>& w0 = m_base[0]->GetW();
             const Array<OneD, const NekDouble>& w1 = m_base[1]->GetW();
@@ -1544,7 +1522,7 @@ namespace Nektar
             {
                 Vmath::Vmul(nquad1,outarray.get()+i,nquad0,w1.get(),1,
                             outarray.get()+i,nquad0);
-            }                
+            }
         }
 
 

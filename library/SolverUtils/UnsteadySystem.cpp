@@ -171,9 +171,7 @@ namespace Nektar
          */
         void UnsteadySystem::v_DoSolve()
         {
-            int i, n, nchk = 1;
-            int ncoeffs    = m_fields[0]->GetNcoeffs();
-            int npoints    = m_fields[0]->GetNpoints();
+            int i, nchk = 1;
             int nvariables = 0;
 
             if (m_intVariables.empty())
@@ -193,10 +191,10 @@ namespace Nektar
             Array<OneD, Array<OneD, NekDouble> > fields(nvariables);
             Array<OneD, Array<OneD, NekDouble> > tmp   (nvariables);
             
-            // Reorder storage to list time-integrated fields first.
+            // Order storage to list time-integrated fields first.
             for(i = 0; i < nvariables; ++i)
             {
-                fields[i] = m_fields[m_intVariables[i]]->UpdatePhys();
+                fields[i] = m_fields[m_intVariables[i]]->GetPhys();
                 m_fields[m_intVariables[i]]->SetPhysState(false);
             }
             
@@ -253,6 +251,32 @@ namespace Nektar
                 }
                 case LibUtilities::eAdamsBashforthOrder2:
                 case LibUtilities::eAdamsBashforthOrder3:	  
+                {
+                    numMultiSteps = 2;
+
+                    IntScheme = Array<OneD, LibUtilities::
+                        TimeIntegrationSchemeSharedPtr>(numMultiSteps);
+
+                    // Used in the first time step to initalize the scheme
+                    LibUtilities::
+                        TimeIntegrationSchemeKey IntKey0(
+                                                    LibUtilities::
+                                                    eForwardEuler);
+
+                    // Used for all other time steps
+                    LibUtilities::
+                        TimeIntegrationSchemeKey IntKey1(m_timeIntMethod);
+                    IntScheme[0] = LibUtilities::
+                        TimeIntegrationSchemeManager()[IntKey0];
+                    IntScheme[1] = LibUtilities::
+                        TimeIntegrationSchemeManager()[IntKey1];
+
+                    // Initialise the scheme for actual time integration scheme
+                    u = IntScheme[1]->InitializeScheme(
+                        m_timestep, fields, m_time, m_ode);
+
+                    break;
+                }
                 case LibUtilities::eBDFImplicitOrder2:
                 {
                     numMultiSteps = 2;
@@ -264,7 +288,7 @@ namespace Nektar
                     LibUtilities::
                         TimeIntegrationSchemeKey IntKey0(
                                                     LibUtilities::
-                                                    eForwardEuler);
+                                                    eBackwardEuler);
 
                     // Used for all other time steps
                     LibUtilities::
@@ -393,9 +417,9 @@ namespace Nektar
             }
 
             // Check uniqueness of checkpoint output
-            ASSERTL0(m_checktime == 0.0 && m_checksteps == 0 ||
-                     m_checktime >  0.0 && m_checksteps == 0 || 
-                     m_checktime == 0.0 && m_checksteps >  0,
+            ASSERTL0((m_checktime == 0.0 && m_checksteps == 0) ||
+                     (m_checktime >  0.0 && m_checksteps == 0) || 
+                     (m_checktime == 0.0 && m_checksteps >  0),
                      "Only one of IO_CheckTime and IO_CheckSteps "
                      "should be set!");
 
@@ -584,8 +608,8 @@ namespace Nektar
         }
 
         void UnsteadySystem::v_NumFluxforScalar(
-            Array<OneD, Array<OneD,             NekDouble> >   &ufield,
-            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &uflux)
+            const Array<OneD, Array<OneD, NekDouble> >               &ufield,
+                  Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &uflux)
         {
             int i, j;
             int nTraceNumPoints = GetTraceNpoints();
@@ -654,9 +678,9 @@ namespace Nektar
         
         
         void UnsteadySystem::v_NumFluxforVector(
-            Array<OneD, Array<OneD,             NekDouble> >    &ufield,
-            Array<OneD, Array<OneD, Array<OneD, NekDouble> > >  &qfield,
-            Array<OneD, Array<OneD,             NekDouble> >    &qflux)
+            const Array<OneD, Array<OneD, NekDouble> >               &ufield,
+                  Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &qfield,
+                  Array<OneD, Array<OneD, NekDouble> >               &qflux)
         {
             int nTraceNumPoints = GetTraceNpoints();
             int nvariables = m_fields.num_elements();
@@ -741,29 +765,13 @@ namespace Nektar
             }
         }
 
-        
-        
-        void UnsteadySystem::v_GetFluxVector(
-            const int i, const int j,
-            Array<OneD, Array<OneD, NekDouble> > &physfield,
-            Array<OneD, Array<OneD, NekDouble> > &flux)
-        {
-            for(int k = 0; k < flux.num_elements(); ++k)
-            {
-                Vmath::Zero(GetNpoints(),flux[k],1);
-            }
-            Vmath::Vcopy(GetNpoints(),physfield[i],1,flux[j],1);
-        }
-
-        
-        
         void UnsteadySystem::WeakPenaltyforScalar(
             const int var,
             const Array<OneD, const NekDouble> &physfield,
                   Array<OneD,       NekDouble> &penaltyflux,
             NekDouble time)
         {
-            int i, j, e, npoints, id1, id2;
+            int i, e, npoints, id1, id2;
             
             // Number of boundary regions
             int nbnd = m_fields[var]->GetBndCondExpansions().num_elements();
@@ -842,7 +850,7 @@ namespace Nektar
             NekDouble C11,
             NekDouble time)
         {
-            int i, j, e, npoints, id1, id2;
+            int i, e, npoints, id1, id2;
             int nbnd = m_fields[var]->GetBndCondExpansions().num_elements();
             int numBDEdge, Nfps;
             int nTraceNumPoints = GetTraceNpoints();

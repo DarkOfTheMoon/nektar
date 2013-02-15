@@ -127,7 +127,6 @@ namespace Nektar
             bool dirForcCalculated = (bool) pDirForcing.num_elements();
             int nDirDofs  = pLocToGloMap->GetNumGlobalDirBndCoeffs();
             int nGlobDofs = pLocToGloMap->GetNumGlobalCoeffs();
-            int nLocDofs  = pLocToGloMap->GetNumLocalCoeffs();
             int nDirTotal = nDirDofs;
             
             expList->GetComm()->AllReduce(nDirTotal, LibUtilities::ReduceSum);
@@ -157,7 +156,7 @@ namespace Nektar
                 if (vCG)
                 {
                     SolveLinearSystem(
-                        nGlobDofs, tmp, tmp, pLocToGloMap, nDirDofs);
+                        nGlobDofs, tmp, pOutput, pLocToGloMap, nDirDofs);
                 }
                 else
                 {
@@ -166,12 +165,9 @@ namespace Nektar
             }
             else
             {
-                SolveLinearSystem(nGlobDofs, tmp, tmp, pLocToGloMap);
+                Vmath::Vcopy(nGlobDofs, pInput, 1, tmp, 1);
+                SolveLinearSystem(nGlobDofs, tmp, pOutput, pLocToGloMap);
             }
-            
-            Array<OneD, NekDouble> tmp2 = pOutput + nDirDofs;
-            Vmath::Vadd(nGlobDofs - nDirDofs, 
-                        tmp + nDirDofs, 1, tmp2, 1, tmp2, 1);
         }
 
 
@@ -201,7 +197,9 @@ namespace Nektar
                 int nNonDir = nGlobal - nDir;
                 Array<OneD, NekDouble> robin_A(nGlobal, 0.0);
                 Array<OneD, NekDouble> robin_l(nLocal,  0.0);
-                NekVector<NekDouble> robin(nNonDir,robin_A + nDir, eWrapper);
+                Array<OneD, NekDouble> tmp;
+                NekVector<NekDouble> robin(nNonDir,
+                                           tmp = robin_A + nDir, eWrapper);
 
                 // Operation: p_A = A * d_A
                 // First map d_A to local solution

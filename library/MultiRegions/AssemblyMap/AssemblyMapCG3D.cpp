@@ -172,7 +172,7 @@ namespace Nektar
             const map<int,pair<int, StdRegions::Orientation> >& periodicFacesId)
         {
             int i,j,k,l;
-            int cnt = 0,cnt1=0;
+            int cnt = 0;
             int intDofCnt;
             int meshVertId;
             int meshVertId2;
@@ -1093,6 +1093,8 @@ namespace Nektar
                 case eDirectFullMatrix:
                 case eIterativeFull:
                 case eIterativeStaticCond:
+                case eXxtFullMatrix:
+                case eXxtStaticCond:
                     {
                         NoReordering(boostGraphObj,perm,iperm);
                     }
@@ -1104,6 +1106,7 @@ namespace Nektar
                     break;
                 case eDirectMultiLevelStaticCond:
                 case eIterativeMultiLevelStaticCond:
+                case eXxtMultiLevelStaticCond:
                     {
                         int mdswitch = 1;
                         MultiLevelBisectionReordering(boostGraphObj,perm,iperm,bottomUpGraph,mdswitch,partVerts);

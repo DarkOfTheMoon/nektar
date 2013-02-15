@@ -88,14 +88,6 @@ namespace Nektar
           return v_GetFaceOrient(i);
       }
 
-      /**
-       * @brief Return the ID of face i in this element.
-       */
-      int Geometry3D::GetFid(int i) const
-      {
-          return v_GetFid(i);
-      }
-
 
       //---------------------------------------
       // 3D Geometry Methods
@@ -150,7 +142,7 @@ namespace Nektar
               //Interpolate derivative metric at Lcoords
               der1_x = m_xmap[0]->PhysEvaluate(Lcoords, D1Dx);
               der2_x = m_xmap[0]->PhysEvaluate(Lcoords, D1Dy);
-              der3_z = m_xmap[0]->PhysEvaluate(Lcoords, D1Dz);
+              der3_x = m_xmap[0]->PhysEvaluate(Lcoords, D1Dz);
               der1_y = m_xmap[1]->PhysEvaluate(Lcoords, D2Dx);
               der2_y = m_xmap[1]->PhysEvaluate(Lcoords, D2Dy);                  
               der3_y = m_xmap[1]->PhysEvaluate(Lcoords, D2Dz);          
@@ -218,7 +210,7 @@ namespace Nektar
 
                   for(k = 0; k < nFaceCoeffs; k++)
                   {
-                      double v = signArray[k] * coeffs[k];
+                      NekDouble v = signArray[k] * coeffs[k];
                       (m_xmap[j]->UpdateCoeffs())[mapArray[k]] = v;
                   }
               }
@@ -233,31 +225,35 @@ namespace Nektar
           m_state = ePtsFilled;
       }
 
-      /**
-       * Generate the geometry factors for this element.
-       */
-      void Geometry3D::v_GenGeomFactors(
-          const Array<OneD, const LibUtilities::BasisSharedPtr> &tbasis)
-      {
-            GeomType      Gtype  = eRegular;
-            GeomShapeType GSType = eQuadrilateral;
-
-            v_FillGeom();
-
-            // check to see if expansions are linear
-            for(int i = 0; i < m_coordim; ++i)
+        /**
+         * Generate the geometry factors for this element.
+         */
+        void Geometry3D::v_GenGeomFactors(
+                const Array<OneD, const LibUtilities::BasisSharedPtr> &tbasis)
+        {
+            if (m_geomFactorsState != ePtsFilled)
             {
-                if (m_xmap[i]->GetBasisNumModes(0) != 2 ||
-                    m_xmap[i]->GetBasisNumModes(1) != 2 ||
-                    m_xmap[i]->GetBasisNumModes(2) != 2)
-                {
-                    Gtype = eDeformed;
-                }
-            }
+                GeomType      Gtype  = eRegular;
 
-            m_geomFactors = MemoryManager<GeomFactors3D>::AllocateSharedPtr(
-                Gtype, m_coordim, m_xmap, tbasis);
-      }
+                v_FillGeom();
+
+                // check to see if expansions are linear
+                for(int i = 0; i < m_coordim; ++i)
+                {
+                    if (m_xmap[i]->GetBasisNumModes(0) != 2 ||
+                        m_xmap[i]->GetBasisNumModes(1) != 2 ||
+                        m_xmap[i]->GetBasisNumModes(2) != 2)
+                    {
+                        Gtype = eDeformed;
+                    }
+                }
+
+                m_geomFactors = MemoryManager<GeomFactors3D>::AllocateSharedPtr(
+                    Gtype, m_coordim, m_xmap, tbasis, true);
+
+                m_geomFactorsState = ePtsFilled;
+            }
+        }
 
       /** 
        * @brief Given local collapsed coordinate Lcoord return the value of
@@ -300,9 +296,9 @@ namespace Nektar
        */
       int Geometry3D::v_GetVid(const int i) const
       {
-          ASSERTL2(i >= 0 && i <= m_verts.num_elements()-1, 
+          ASSERTL2(i >= 0 && i <= m_verts.size() - 1,
                    "Vertex ID must be between 0 and "+
-                   boost::lexical_cast<string>(m_verts.num_elements()-1));
+                   boost::lexical_cast<string>(m_verts.size() - 1));
           return m_verts[i]->GetVid();
       }
 
@@ -311,9 +307,9 @@ namespace Nektar
        */
       const SegGeomSharedPtr Geometry3D::v_GetEdge(int i) const
       {
-          ASSERTL2(i >= 0 && i <= m_edges.num_elements()-1, 
+          ASSERTL2(i >= 0 && i <= m_edges.size() - 1,
                    "Edge ID must be between 0 and "+
-                   boost::lexical_cast<string>(m_edges.num_elements()-1));
+                   boost::lexical_cast<string>(m_edges.size() - 1));
           return m_edges[i];
       }
 
@@ -323,9 +319,9 @@ namespace Nektar
       inline StdRegions::Orientation Geometry3D::v_GetEorient(
           const int i) const
       {
-          ASSERTL2(i >= 0 && i <= m_edges.num_elements()-1, 
+          ASSERTL2(i >= 0 && i <= m_edges.size() - 1,
                    "Edge ID must be between 0 and "+
-                   boost::lexical_cast<string>(m_edges.num_elements()-1));
+                   boost::lexical_cast<string>(m_edges.size() - 1));
           return m_eorient[i];
       }
 
@@ -334,9 +330,9 @@ namespace Nektar
        */
       int Geometry3D::v_GetEid(int i) const
       {
-          ASSERTL2(i >= 0 && i <= m_edges.num_elements()-1, 
+          ASSERTL2(i >= 0 && i <= m_edges.size() - 1,
                    "Edge ID must be between 0 and "+
-                   boost::lexical_cast<string>(m_edges.num_elements()-1));
+                   boost::lexical_cast<string>(m_edges.size() - 1));
           return m_edges[i]->GetEid();
       }
 
@@ -345,7 +341,7 @@ namespace Nektar
        */
       const Geometry2DSharedPtr Geometry3D::v_GetFace(int i) const
       {
-          ASSERTL2((i >=0) && (i <= 4),"Edge id must be between 0 and 4");
+          ASSERTL2((i >=0) && (i <= 5),"Edge id must be between 0 and 4");
           return m_faces[i];
       }
 
@@ -354,9 +350,9 @@ namespace Nektar
        */
       StdRegions::Orientation Geometry3D::v_GetFaceOrient(const int i) const
       {
-          ASSERTL2(i >= 0 && i <= m_faces.num_elements()-1, 
+          ASSERTL2(i >= 0 && i <= m_faces.size() - 1,
                    "Face ID must be between 0 and "+
-                   boost::lexical_cast<string>(m_faces.num_elements()-1));
+                   boost::lexical_cast<string>(m_faces.size() - 1));
           return m_forient[i];
       }
 
@@ -365,9 +361,9 @@ namespace Nektar
        */
       int Geometry3D::v_GetFid(int i) const
       {
-          ASSERTL2(i >= 0 && i <= m_faces.num_elements()-1, 
+          ASSERTL2(i >= 0 && i <= m_faces.size() - 1,
                    "Face ID must be between 0 and "+
-                   boost::lexical_cast<string>(m_faces.num_elements()-1));
+                   boost::lexical_cast<string>(m_faces.size() - 1));
           return m_faces[i]->GetFid();
       }
 

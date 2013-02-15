@@ -63,8 +63,8 @@ namespace Nektar
         StdHexExp::StdHexExp(const  LibUtilities::BasisKey &Ba,
                         const  LibUtilities::BasisKey &Bb,
                         const  LibUtilities::BasisKey &Bc,
-                        double *coeffs,
-                        double *phys)
+                        NekDouble *coeffs,
+                        NekDouble *phys)
         {
         }
 
@@ -373,22 +373,11 @@ namespace Nektar
             }
         }
 
-
-        void StdHexExp::v_PhysDirectionalDeriv(
-                                const Array<OneD, const NekDouble>& inarray,
-                                const Array<OneD, const NekDouble>& direction,
-                                      Array<OneD, NekDouble> &outarray)
-        {
-            ASSERTL0(false,"This method is not defined or valid for this class "
-                            "type");
-        }
-
-
         void StdHexExp::v_StdPhysDeriv(
-                                const Array<OneD, const NekDouble>& inarray,
-                                      Array<OneD, NekDouble> &out_d0,
-                                      Array<OneD, NekDouble> &out_d1,
-                                      Array<OneD, NekDouble> &out_d2)
+            const Array<OneD, const NekDouble> &inarray,
+                  Array<OneD,       NekDouble> &out_d0,
+                  Array<OneD,       NekDouble> &out_d1,
+                  Array<OneD,       NekDouble> &out_d2)
         {
             StdHexExp::v_PhysDeriv(inarray, out_d0, out_d1, out_d2);
         }
@@ -566,18 +555,6 @@ namespace Nektar
             }
         }
 
-
-        void StdHexExp::v_IProductWRTBase(
-                const Array<OneD, const NekDouble>& inarray,
-                      Array<OneD, NekDouble> &outarray)
-        {
-            StdHexExp::v_IProductWRTBase(m_base[0]->GetBdata(),
-                            m_base[1]->GetBdata(),
-                            m_base[2]->GetBdata(),
-                            inarray,outarray,1);
-        }
-
-
         /**
          * \f$
          * \begin{array}{rcl}
@@ -605,21 +582,16 @@ namespace Nektar
          *  = \sum_{k=0}^{nq_0} \psi_{p}^a (\xi_{3k})  g_{q} (\xi_{3k})
          *  = {\bf B_1 G} \f$
          *
-         * @param   bx          ?
-         * @param   by          ?
-         * @param   bz          ?
          * @param   inarray     ?
          * @param   outarray    ?
          */
         void StdHexExp::v_IProductWRTBase(
-                    const Array<OneD, const NekDouble>& bx,
-                    const Array<OneD, const NekDouble>& by,
-                    const Array<OneD, const NekDouble>& bz,
-                    const Array<OneD, const NekDouble>& inarray,
-                          Array<OneD, NekDouble> & outarray,
-                    int coll_check)
+                const Array<OneD, const NekDouble> &inarray,
+                      Array<OneD,       NekDouble> &outarray)
         {
-            if(m_base[0]->Collocation() && m_base[1]->Collocation())
+            if(m_base[0]->Collocation() && 
+               m_base[1]->Collocation() && 
+               m_base[2]->Collocation())
             {
                 MultiplyByQuadratureMetric(inarray,outarray);
             }
@@ -628,7 +600,6 @@ namespace Nektar
                 StdHexExp::v_IProductWRTBase_SumFac(inarray,outarray);
             }
         }
-
 
         /**
          * Implementation of the local matrix inner product operation.
@@ -644,12 +615,12 @@ namespace Nektar
                         m_ncoeffs, inarray.get(), 1, 0.0, outarray.get(), 1);
         }
 
-
         /**
          * Implementation of the sum-factorization inner product operation.
          */
-        void StdHexExp::v_IProductWRTBase_SumFac(const Array<OneD, const NekDouble>& inarray,
-                                        Array<OneD, NekDouble> &outarray)
+        void StdHexExp::v_IProductWRTBase_SumFac(
+            const Array<OneD, const NekDouble>& inarray,
+                  Array<OneD, NekDouble> &outarray)
         {
             int    nquad0 = m_base[0]->GetNumPoints();
             int    nquad1 = m_base[1]->GetNumPoints();
@@ -658,7 +629,8 @@ namespace Nektar
             int    order1 = m_base[1]->GetNumModes();
 
             Array<OneD, NekDouble> tmp(inarray.num_elements());
-            Array<OneD, NekDouble> wsp(nquad0*nquad1*(nquad2+order0) + order0*order1*nquad2);
+            Array<OneD, NekDouble> wsp(nquad0*nquad1*(nquad2+order0) + 
+                                       order0*order1*nquad2);
 
             MultiplyByQuadratureMetric(inarray,tmp);
 
@@ -861,7 +833,7 @@ namespace Nektar
 
             for(i = 0; i < nquad1*nquad2; ++i)
             {
-                Vmath::Vcopy(nquad0,(double *)(base0.get() + mode0*nquad0),1,
+                Vmath::Vcopy(nquad0,(NekDouble *)(base0.get() + mode0*nquad0),1,
                              &outarray[0]+i*nquad0, 1);
             }
 
@@ -869,7 +841,7 @@ namespace Nektar
             {
                 for(i = 0; i < nquad0; ++i)
                 {
-                    Vmath::Vmul(nquad1,(double *)(base1.get() + mode1*nquad1),1,
+                    Vmath::Vmul(nquad1,(NekDouble *)(base1.get() + mode1*nquad1),1,
                                 &outarray[0]+i+j*nquad0*nquad1, nquad0,
                                 &outarray[0]+i+j*nquad0*nquad1, nquad0);
                 }
@@ -1240,7 +1212,7 @@ namespace Nektar
          */
         void StdHexExp::v_GetFaceToElementMap(
             const int                  fid,
-            const Orientation      faceOrient,
+            const Orientation          faceOrient,
             Array<OneD, unsigned int> &maparray,
             Array<OneD,          int> &signarray,
             int                        nummodesA,
@@ -1251,14 +1223,11 @@ namespace Nektar
             const int nummodes1 = m_base[1]->GetNumModes();
             const int nummodes2 = m_base[2]->GetNumModes();
 
-            const LibUtilities::BasisType bType0 = GetEdgeBasisType(0);
-            const LibUtilities::BasisType bType1 = GetEdgeBasisType(1);
-            const LibUtilities::BasisType bType2 = GetEdgeBasisType(2);
-
-            ASSERTL1( (bType0==bType1) && (bType0==bType2),
-                      "Method only implemented if BasisType is indentical in "
-                      "all directions");
-            ASSERTL1( bType0==LibUtilities::eModified_A,
+            ASSERTL1(GetEdgeBasisType(0) == GetEdgeBasisType(1) &&
+                     GetEdgeBasisType(0) == GetEdgeBasisType(2),
+                     "Method only implemented if BasisType is indentical in "
+                     "all directions");
+            ASSERTL1(GetEdgeBasisType(0) == LibUtilities::eModified_A,
                       "Method only implemented for Modified_A BasisType");
 
             if (nummodesA == -1)
@@ -1910,8 +1879,6 @@ namespace Nektar
                 }
             }
 
-            bool signChange = false;
-
             int IdxRange [3][2];
             int Incr[3];
 
@@ -2529,7 +2496,6 @@ namespace Nektar
             int    nquad0 = m_base[0]->GetNumPoints();
             int    nquad1 = m_base[1]->GetNumPoints();
             int    nquad2 = m_base[2]->GetNumPoints();
-            int    nqtot  = nquad0*nquad1*nquad2;
 
             const Array<OneD, const NekDouble>& w0 = m_base[0]->GetW();
             const Array<OneD, const NekDouble>& w1 = m_base[1]->GetW();
