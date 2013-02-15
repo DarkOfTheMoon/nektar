@@ -582,6 +582,20 @@ namespace Nektar
 
                         Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[2],V,1,Qy,1,Qy,1);
                         Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[1],V,1,Qx,1,Qx,1);
+
+                        if(m_session->DefinesFunction("BodyForce"))
+                        {
+                            if(m_fields[0]->GetWaveSpace())
+                            {
+                                for(int i = 0; i < m_nConvectiveFields; ++i)
+                                {
+                                    m_forces[i]->SetWaveSpace(true);					
+                                    m_forces[i]->BwdTrans(m_forces[i]->GetCoeffs(),m_forces[i]->UpdatePhys());
+                                }
+                            }
+                            Vmath::Vadd(nq,Qy,1,(m_forces[0]->GetPhys()),1,Qy,1);
+                            Vmath::Vadd(nq,Qx,1,(m_forces[1]->GetPhys()),1,Qx,1);
+                        }
                     }
                     
                     Pbc =  boost::dynamic_pointer_cast<StdRegions::StdExpansion1D> (PBndExp[n]->GetExp(i));
@@ -716,17 +730,32 @@ namespace Nektar
                     
                     if (!m_explicitPermeability)
                     {
-                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[0],U,1,Qy,1,Qy,1);
-                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[3],U,1,Qx,1,Qx,1);
+                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[0],U,1,Qx,1,Qx,1);
+                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[3],U,1,Qy,1,Qy,1);
                         Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[4],U,1,Qz,1,Qz,1);
 
-                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[3],V,1,Qy,1,Qy,1);
-                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[1],V,1,Qx,1,Qx,1);
+                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[3],V,1,Qx,1,Qx,1);
+                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[1],V,1,Qy,1,Qy,1);
                         Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[5],V,1,Qz,1,Qz,1);
 
-                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[4],W,1,Qy,1,Qy,1);
-                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[5],W,1,Qx,1,Qx,1);
+                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[4],W,1,Qx,1,Qx,1);
+                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[5],W,1,Qy,1,Qy,1);
                         Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[2],W,1,Qz,1,Qz,1);
+
+                        if(m_session->DefinesFunction("BodyForce"))
+                        {
+                            if(m_fields[0]->GetWaveSpace())
+                            {
+                                for(int i = 0; i < m_nConvectiveFields; ++i)
+                                {
+                                    m_forces[i]->SetWaveSpace(true);					
+                                    m_forces[i]->BwdTrans(m_forces[i]->GetCoeffs(),m_forces[i]->UpdatePhys());
+                                }
+                            }
+                            Vmath::Vadd(nq,Qx,1,(m_forces[0]->GetPhys()),1,Qx,1);
+                            Vmath::Vadd(nq,Qy,1,(m_forces[1]->GetPhys()),1,Qy,1);
+                            Vmath::Vadd(nq,Qz,1,(m_forces[2]->GetPhys()),1,Qz,1);
+                        }
                     }
                             
                     Pbc =  boost::dynamic_pointer_cast<StdRegions::StdExpansion2D> (PBndExp[n]->GetExp(i));
@@ -741,7 +770,7 @@ namespace Nektar
                     Pvals = PBndExp[n]->UpdateCoeffs()+PBndExp[n]->GetCoeff_Offset(i);
                     Pbc->NormVectorIProductWRTBase(Uy,Vx,Wx,Pvals); 
                 }
-                }
+            }
             // setting if just standard BC no High order
             else if(type == SpatialDomains::eNoUserDefined || type == SpatialDomains::eTimeDependent)
             {
@@ -799,14 +828,14 @@ namespace Nektar
         {
             m_pressure->PhysDeriv(m_pressure->GetPhys(), Forcing[0], Forcing[1],Forcing[2]);
         }
-        
 
         // Subtract inarray/(aii_dt) and divide by kinvis. Kinvis will
         // need to be updated for the convected fields.
         for(int i = 0; i < m_nConvectiveFields; ++i)
         {
-            Blas::Daxpy(phystot,-aii_dtinv,inarray[i],1,Forcing[i],1);
-            Blas::Dscal(phystot,1.0/m_kinvis,&(Forcing[i])[0],1);
+            Vmath::Svtvp(phystot,-aii_dtinv,inarray[i],1,Forcing[i],1,Forcing[i],1);
+            //Blas::Daxpy(phystot,-aii_dtinv,inarray[i],1,Forcing[i],1);
+            //Blas::Dscal(phystot,1.0/m_kinvis,&(Forcing[i])[0],1);
         }
 
         if(!m_explicitPermeability)
@@ -829,6 +858,11 @@ namespace Nektar
             }
         }
         
+        for(int i = 0; i < m_nConvectiveFields; ++i)
+        {
+            Vmath::Smul(phystot,1.0/m_kinvis,Forcing[i],1,Forcing[i],1);
+        }
+
         // if (!m_explicitPermeability && m_session->DefinesFunction("AnisotropicPermeability"))
         // {
         //     Array<OneD, Array< OneD, NekDouble> > tempF(m_nConvectiveFields);

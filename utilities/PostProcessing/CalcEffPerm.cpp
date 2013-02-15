@@ -85,7 +85,9 @@ int main(int argc, char *argv[])
 
     // Initialise fields 
     Array<OneD, Array<OneD, NekDouble> > grad(nfields*expdim);
+    //Array<OneD, Array<OneD, NekDouble> > grad2(2*expdim);
     Array<OneD, Array<OneD, NekDouble> > forc(expdim);
+    //Array<OneD, Array<OneD, NekDouble> > visc(expdim);
     Array<OneD, NekDouble> avvel(nrows);
     Array<OneD, NekDouble> avforc(nrows);
 
@@ -200,6 +202,7 @@ int main(int argc, char *argv[])
         for(i = 0; i < nfields*expdim; ++i)
         {
             grad[i] = Array<OneD, NekDouble>(nq);
+            //grad2[i] = Array<OneD, NekDouble>(nq);
         }
         //----------------------------------------------
         
@@ -237,7 +240,7 @@ int main(int argc, char *argv[])
             }
         }
     
-        // calculating second deriv of verlocity
+        // calculating second deriv of velocity
         for(i = 0; i < expdim; ++i)
         {
             for(j = 0; j < expdim; ++j)
@@ -245,6 +248,25 @@ int main(int argc, char *argv[])
                 Exp[n][i]->PhysDeriv(MultiRegions::DirCartesianMap[j], grad[expdim*i+j], grad[expdim*i+j]);
             }
         }
+
+        // added
+        // ux,0,vy,0,wz,0
+        // for(i = 0; i < nfields; ++i)
+        // {
+        //     Exp[n][i]->PhysDeriv(MultiRegions::DirCartesianMap[i], Exp[n][i]->GetPhys(), grad2[2*i]);
+        // }
+        
+        // Exp[n][0]->PhysDeriv(MultiRegions::DirCartesianMap[2], grad2[0], grad2[1]);
+        // Exp[n][0]->PhysDeriv(MultiRegions::DirCartesianMap[1], grad2[0], grad2[0]);
+        // Exp[n][1]->PhysDeriv(MultiRegions::DirCartesianMap[2], grad2[2], grad2[3]);
+        // Exp[n][1]->PhysDeriv(MultiRegions::DirCartesianMap[0], grad2[2], grad2[2]);
+        // Exp[n][2]->PhysDeriv(MultiRegions::DirCartesianMap[1], grad2[4], grad2[5]);
+        // Exp[n][2]->PhysDeriv(MultiRegions::DirCartesianMap[0], grad2[4], grad2[4]);
+        // uxy,uxz,vyx,vyz,wzx,wzy
+        
+        //Vmath::Vcopy(nq, grad[], 1, viscExp[n][i]->UpdatePhys(), 1);
+
+        // added
     
         // evaluate force function
         x = Array<OneD, NekDouble >(nq);
