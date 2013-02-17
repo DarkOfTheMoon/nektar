@@ -8,6 +8,7 @@ SET(SOLVER_UTILS_SOURCES
   DriverModifiedArnoldi.cpp
   DriverStandard.cpp
   DriverSteadyState.cpp	
+  DriverMultiDomain.cpp	
   EquationSystem.cpp
   Filters/Filter.cpp
   Filters/FilterCheckpoint.cpp
@@ -28,6 +29,7 @@ SET(SOLVER_UTILS_HEADERS
   DriverModifiedArnoldi.h
   DriverStandard.h
   DriverSteadyState.h
+  DriverMultiDomain.h
   EquationSystem.h
   Filters/Filter.h
   Filters/FilterCheckpoint.h
