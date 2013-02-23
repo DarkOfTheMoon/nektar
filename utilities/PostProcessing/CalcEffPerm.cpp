@@ -68,8 +68,6 @@ int main(int argc, char *argv[])
     {
         graphShPt->Import(fieldfile[i],fielddef[i],fielddata[i]);
     }
-	bool useFFT = false;
-	bool dealiasing = false;
     //----------------------------------------------
 
     //----------------------------------------------
@@ -184,7 +182,8 @@ int main(int argc, char *argv[])
             {
                 Exp[n][j]->ExtractDataToCoeffs(fielddef [n][i],
                                                fielddata[n][i],
-                                               fielddef [n][i]->m_fields[j]);
+                                               fielddef [n][i]->m_fields[j],
+                                               Exp[n][j]->UpdateCoeffs());
             }
             Exp[n][j]->BwdTrans(Exp[n][j]->GetCoeffs(),Exp[n][j]->UpdatePhys());
         }
