@@ -83,49 +83,73 @@ namespace Nektar
         
         ASSERTL0(i != (int) LibUtilities::SIZE_TimeIntegrationMethod, "Invalid time integration type.");
 
+        if(!m_explicitPermeability && (m_session->GetSolverInfo("AdvectionForm") == "NoAdvection"))
+        {
+            switch(intMethod)
+            {
+                case LibUtilities::eIMEXOrder1:
+                case LibUtilities::eIMEXOrder2:
+                case LibUtilities::eIMEXOrder3:
+                {
+                    ASSERTL0(0,"Integration method not suitable: replace IMEX scheme with an purely implicit scheme");
+                }
+                break;
+                default:
+                break;
+            }
+        }
+
         switch(intMethod)
         {
             case LibUtilities::eBackwardEuler:
             case LibUtilities::eDIRKOrder2:
             case LibUtilities::eDIRKOrder3:
+            {
+                ASSERTL0( !m_explicitPermeability && (m_session->GetSolverInfo("AdvectionForm") == "NoAdvection"),
+                          "Integration method not suitable: Options include IMEXOrder1, IMEXOrder2 or IMEXOrder3");
+                m_intSteps = 1;
+                m_integrationScheme = Array<OneD, LibUtilities::TimeIntegrationSchemeSharedPtr> (m_intSteps);
+                LibUtilities::TimeIntegrationSchemeKey       IntKey0(intMethod);
+                m_integrationScheme[0] = LibUtilities::TimeIntegrationSchemeManager()[IntKey0];
+            }
             case LibUtilities::eIMEXOrder1: 
-        {
-            m_intSteps = 1;
-            m_integrationScheme = Array<OneD, LibUtilities::TimeIntegrationSchemeSharedPtr> (m_intSteps);
-            LibUtilities::TimeIntegrationSchemeKey       IntKey0(intMethod);
-            m_integrationScheme[0] = LibUtilities::TimeIntegrationSchemeManager()[IntKey0];
-        }
-        break;
-        case LibUtilities::eIMEXOrder2: 
-        {
-            m_intSteps = 2;
-            m_integrationScheme = Array<OneD, LibUtilities::TimeIntegrationSchemeSharedPtr> (m_intSteps);
-            LibUtilities::TimeIntegrationSchemeKey       IntKey0(LibUtilities::eIMEXOrder1);
-            m_integrationScheme[0] = LibUtilities::TimeIntegrationSchemeManager()[IntKey0];
-            LibUtilities::TimeIntegrationSchemeKey       IntKey1(intMethod);
-            m_integrationScheme[1] = LibUtilities::TimeIntegrationSchemeManager()[IntKey1];
-        }
-        break;
-        case LibUtilities::eIMEXOrder3: 
-        {
-            m_intSteps = 3;
-            m_integrationScheme = Array<OneD, LibUtilities::TimeIntegrationSchemeSharedPtr> (m_intSteps);
-            LibUtilities::TimeIntegrationSchemeKey       IntKey0(LibUtilities::eIMEXdirk_3_4_3);
-            m_integrationScheme[0] = LibUtilities::TimeIntegrationSchemeManager()[IntKey0];
-            LibUtilities::TimeIntegrationSchemeKey       IntKey1(LibUtilities::eIMEXdirk_3_4_3);
-            m_integrationScheme[1] = LibUtilities::TimeIntegrationSchemeManager()[IntKey1];
-            LibUtilities::TimeIntegrationSchemeKey       IntKey2(intMethod);
-            m_integrationScheme[2] = LibUtilities::TimeIntegrationSchemeManager()[IntKey2];
-        }
-        break;
-        default:
-            ASSERTL0(0,"Integration method not suitable: Options include IMEXOrder1, IMEXOrder2 or IMEXOrder3");
+            {
+                m_intSteps = 1;
+                m_integrationScheme = Array<OneD, LibUtilities::TimeIntegrationSchemeSharedPtr> (m_intSteps);
+                LibUtilities::TimeIntegrationSchemeKey       IntKey0(intMethod);
+                m_integrationScheme[0] = LibUtilities::TimeIntegrationSchemeManager()[IntKey0];
+            }
+            break;
+            case LibUtilities::eIMEXOrder2: 
+            {
+                m_intSteps = 2;
+                m_integrationScheme = Array<OneD, LibUtilities::TimeIntegrationSchemeSharedPtr> (m_intSteps);
+                LibUtilities::TimeIntegrationSchemeKey       IntKey0(LibUtilities::eIMEXOrder1);
+                m_integrationScheme[0] = LibUtilities::TimeIntegrationSchemeManager()[IntKey0];
+                LibUtilities::TimeIntegrationSchemeKey       IntKey1(intMethod);
+                m_integrationScheme[1] = LibUtilities::TimeIntegrationSchemeManager()[IntKey1];
+            }
+            break;
+            case LibUtilities::eIMEXOrder3: 
+            {
+                m_intSteps = 3;
+                m_integrationScheme = Array<OneD, LibUtilities::TimeIntegrationSchemeSharedPtr> (m_intSteps);
+                LibUtilities::TimeIntegrationSchemeKey       IntKey0(LibUtilities::eIMEXdirk_3_4_3);
+                m_integrationScheme[0] = LibUtilities::TimeIntegrationSchemeManager()[IntKey0];
+                LibUtilities::TimeIntegrationSchemeKey       IntKey1(LibUtilities::eIMEXdirk_3_4_3);
+                m_integrationScheme[1] = LibUtilities::TimeIntegrationSchemeManager()[IntKey1];
+                LibUtilities::TimeIntegrationSchemeKey       IntKey2(intMethod);
+                m_integrationScheme[2] = LibUtilities::TimeIntegrationSchemeManager()[IntKey2];
+            }
+            break;
+            default:
+                ASSERTL0(0,"Integration method not suitable: Options include IMEXOrder1, IMEXOrder2 or IMEXOrder3");
             break;
         }        
         
         // set explicit time-intregration class operators
-        //m_integrationOps.DefineOdeRhs(&PorousMediaSplittingScheme::EvaluateAdvection_SetPressureBCs, this);
-            
+        m_integrationOps.DefineOdeRhs(&PorousMediaSplittingScheme::EvaluateAdvection_Permeability,this);
+
         // Count number of HBC conditions
         Array<OneD, const SpatialDomains::BoundaryConditionShPtr > PBndConds = m_pressure->GetBndConditions();
         Array<OneD, MultiRegions::ExpListSharedPtr>  PBndExp = m_pressure->GetBndCondExpansions();
@@ -154,42 +178,6 @@ namespace Nektar
             for(n = 0; n < m_intSteps; ++n)
             {
                 m_pressureHBCs[n] = Array<OneD, NekDouble>(cnt);
-            }
-        }
-
-        // Load variable coefficients
-        StdRegions::VarCoeffType varCoeffEnum[3] = {
-                StdRegions::eVarCoeffD00,
-                StdRegions::eVarCoeffD11,
-                StdRegions::eVarCoeffD22
-        };
-        std::string varName = "AnisotropicPermeability";
-        std::string varCoeffs[3] = {
-                "kx",
-                "ky",
-                "kz"
-        };
-        int nq = m_fields[0]->GetNpoints();
-        Array<OneD, NekDouble> vTemp;
-
-        if (m_session->DefinesFunction("IsotropicPermeability"))
-        {
-            EvaluateFunction(varName, vTemp, "IsotropicPermeability");
-            for (int i = 0; i < m_spacedim; ++i)
-            {
-                m_vardiff[varCoeffEnum[i]] = Array<OneD, NekDouble>(nq);
-                Vmath::Vcopy(nq, vTemp, 1, m_vardiff[varCoeffEnum[i]], 1);
-            }
-        }
-        else if (m_session->DefinesFunction(varCoeffs[0]))
-        {
-            for (int i = 0; i < m_spacedim; ++i)
-            {
-                ASSERTL0(m_session->DefinesFunction(varCoeffs[i], varName),
-                    "Function '" + varCoeffs[i] + "' not correctly defined.");
-                EvaluateFunction(varName, vTemp, varCoeffs[i]);
-                m_vardiff[varCoeffEnum[i]] = Array<OneD, NekDouble>(nq);
-                Vmath::Vcopy(nq, vTemp, 1, m_vardiff[varCoeffEnum[i]], 1);
             }
         }
         
@@ -283,31 +271,63 @@ namespace Nektar
         vChecks[vVar-1] = true;
         return vChecks;
     }
+
+    int PorousMediaSplittingScheme::v_GetForceDimension()
+    {
+        return m_session->GetVariables().size() - 1;
+    }
     
-    void PorousMediaSplittingScheme::EvaluateAdvection_SetPressureBCs(
+    void PorousMediaSplittingScheme::EvaluateAdvection_Permeability(
         const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
         Array<OneD, Array<OneD, NekDouble> > &outarray, 
         const NekDouble time)
     {
         int nqtot        = m_fields[0]->GetTotPoints();
-        
+         
         // evaluate convection terms
         m_advObject->DoAdvection(m_fields, m_nConvectiveFields, m_velocity,inarray,outarray,m_time);
 
-        //add the force
-        if(m_session->DefinesFunction("BodyForce"))
+        if (m_explicitPermeability)
         {
-            if(m_fields[0]->GetWaveSpace())
+            // add the force
+            if(m_session->DefinesFunction("BodyForce"))
             {
+                if(m_fields[0]->GetWaveSpace())
+                {
+                    for(int i = 0; i < m_nConvectiveFields; ++i)
+                    {
+                        m_forces[i]->SetWaveSpace(true);					
+                        m_forces[i]->BwdTrans(m_forces[i]->GetCoeffs(),m_forces[i]->UpdatePhys());
+                    }
+                }
                 for(int i = 0; i < m_nConvectiveFields; ++i)
                 {
-                    m_forces[i]->SetWaveSpace(true);					
-                    m_forces[i]->BwdTrans(m_forces[i]->GetCoeffs(),m_forces[i]->UpdatePhys());
+                    Vmath::Vadd(nqtot,outarray[i],1,(m_forces[i]->GetPhys()),1,outarray[i],1);
                 }
             }
-            for(int i = 0; i < m_nConvectiveFields; ++i)
+
+            // add permeability term for explicit permeability
+            if (m_nConvectiveFields == 2)
             {
-                Vmath::Vadd(nqtot,outarray[i],1,(m_forces[i]->GetPhys()),1,outarray[i],1);
+                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[0],inarray[0],1,outarray[0],1,outarray[0],1);
+                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[2],inarray[0],1,outarray[1],1,outarray[1],1);
+
+                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[2],inarray[1],1,outarray[0],1,outarray[0],1);
+                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[1],inarray[1],1,outarray[1],1,outarray[1],1);
+            }
+            else
+            {
+                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[0],inarray[0],1,outarray[0],1,outarray[0],1);
+                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[3],inarray[0],1,outarray[1],1,outarray[1],1);
+                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[4],inarray[0],1,outarray[2],1,outarray[2],1);
+
+                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[3],inarray[1],1,outarray[0],1,outarray[0],1);
+                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[1],inarray[1],1,outarray[1],1,outarray[1],1);
+                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[5],inarray[1],1,outarray[2],1,outarray[2],1);
+
+                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[4],inarray[2],1,outarray[0],1,outarray[0],1);
+                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[5],inarray[2],1,outarray[1],1,outarray[1],1);
+                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[2],inarray[2],1,outarray[2],1,outarray[2],1);
             }
         }
 
@@ -316,7 +336,6 @@ namespace Nektar
             // Set pressure BCs
             EvaluatePressureBCs(inarray, outarray);
         }
-
     }
     
     void PorousMediaSplittingScheme::SolveUnsteadyStokesSystem(
@@ -334,7 +353,10 @@ namespace Nektar
 
         // Added here instead of in DefineOdeRhs
         // therefore not only IMEX time integration schemes can be used
-        EvaluateAdvection_SetPressureBCs(inarray, outarray, time);
+        if( !m_explicitPermeability && (m_session->GetSolverInfo("AdvectionForm") == "NoAdvection") )
+        {
+            EvaluateAdvection_Permeability(inarray, outarray, time);
+        }
                 
         for(n = 0; n < m_nConvectiveFields; ++n)
         {
@@ -358,17 +380,41 @@ namespace Nektar
             
         // Viscous Term forcing
         SetUpViscousForcing(inarray, F, aii_Dt);
-        
-        factors[StdRegions::eFactorLambda] = (1.0/m_perm)+(1.0/aii_Dt/m_kinvis);
+
+        if (m_explicitPermeability)
+        {
+            factors[StdRegions::eFactorLambda] = (1.0/aii_Dt/m_kinvis);
+        }
         
         // Solve Helmholtz system and put in Physical space
         for(i = 0; i < m_nConvectiveFields; ++i)
         {
+            // needs to be changed
+            // is wrong for anisotropic permeability with off-diagonal entries! (isotropic works)
+            if (!m_explicitPermeability)// && !(m_session->DefinesFunction("AnisotropicPermeability")))
+            {
+                factors[StdRegions::eFactorLambda] = (m_perm_inv[i])+(1.0/aii_Dt/m_kinvis);
+            }    
+
 #ifdef UseContCoeffs
-            m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateContCoeffs(),flags,factors);
+            // if (!m_explicitPermeability && m_session->DefinesFunction("AnisotropicPermeability"))
+            // {
+            //     m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateContCoeffs(),flags,factors,m_varperm);
+            // }
+            // else
+            // {
+                m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateContCoeffs(),flags,factors);            
+            // }
             m_fields[i]->BwdTrans(m_fields[i]->GetContCoeffs(),outarray[i],true);
 #else
-            m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateCoeffs(), NullFlagList, factors);            
+            // if (!m_explicitPermeability && m_session->DefinesFunction("AnisotropicPermeability"))
+            // {
+            //     m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateCoeffs(), NullFlagList, factors, m_varperm);
+            // }
+            // else
+            // {
+                m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateCoeffs(), NullFlagList, factors);
+            // }
             m_fields[i]->BwdTrans(m_fields[i]->GetCoeffs(),outarray[i]);
 #endif
         }
@@ -442,7 +488,7 @@ namespace Nektar
         switch(m_velocity.num_elements())
         {
         case 1:
-            ASSERTL0(false,"Velocity correction scheme not designed to have just one velocity component");
+            ASSERTL0(false,"Porous media splitting scheme not designed to have just one velocity component");
             break;
         case 2:
             CalcPressureBCs2D(fields,N);
@@ -529,8 +575,28 @@ namespace Nektar
                     //Vmath::Zero(nq,Qx,1);
                     Vmath::Svtvp(nq,m_kinvis,Qx,1,Nv,1,Qx,1);
                     
-                    Vmath::Svtvp(nq,-m_kinvis/m_perm,U,1,Qy,1,Qy,1);
-                    Vmath::Svtvp(nq,-m_kinvis/m_perm,V,1,Qx,1,Qx,1);
+                    if (!m_explicitPermeability)
+                    {
+                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[0],U,1,Qy,1,Qy,1);
+                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[2],U,1,Qx,1,Qx,1);
+
+                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[2],V,1,Qy,1,Qy,1);
+                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[1],V,1,Qx,1,Qx,1);
+
+                        if(m_session->DefinesFunction("BodyForce"))
+                        {
+                            if(m_fields[0]->GetWaveSpace())
+                            {
+                                for(int i = 0; i < m_nConvectiveFields; ++i)
+                                {
+                                    m_forces[i]->SetWaveSpace(true);					
+                                    m_forces[i]->BwdTrans(m_forces[i]->GetCoeffs(),m_forces[i]->UpdatePhys());
+                                }
+                            }
+                            Vmath::Vadd(nq,Qy,1,(m_forces[0]->GetPhys()),1,Qy,1);
+                            Vmath::Vadd(nq,Qx,1,(m_forces[1]->GetPhys()),1,Qx,1);
+                        }
+                    }
                     
                     Pbc =  boost::dynamic_pointer_cast<StdRegions::StdExpansion1D> (PBndExp[n]->GetExp(i));
                         
@@ -662,9 +728,35 @@ namespace Nektar
                     // z-component (stored in Qz)
                     Vmath::Svtvp(nq,-m_kinvis,Qz,1,Nw,1,Qz,1);
                     
-                    Vmath::Svtvp(nq,-m_kinvis/m_perm,U,1,Qy,1,Qy,1);
-                    Vmath::Svtvp(nq,-m_kinvis/m_perm,V,1,Qx,1,Qx,1);
-                    Vmath::Svtvp(nq,-m_kinvis/m_perm,W,1,Qz,1,Qz,1);
+                    if (!m_explicitPermeability)
+                    {
+                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[0],U,1,Qx,1,Qx,1);
+                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[3],U,1,Qy,1,Qy,1);
+                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[4],U,1,Qz,1,Qz,1);
+
+                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[3],V,1,Qx,1,Qx,1);
+                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[1],V,1,Qy,1,Qy,1);
+                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[5],V,1,Qz,1,Qz,1);
+
+                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[4],W,1,Qx,1,Qx,1);
+                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[5],W,1,Qy,1,Qy,1);
+                        Vmath::Svtvp(nq,-m_kinvis*m_perm_inv[2],W,1,Qz,1,Qz,1);
+
+                        if(m_session->DefinesFunction("BodyForce"))
+                        {
+                            if(m_fields[0]->GetWaveSpace())
+                            {
+                                for(int i = 0; i < m_nConvectiveFields; ++i)
+                                {
+                                    m_forces[i]->SetWaveSpace(true);					
+                                    m_forces[i]->BwdTrans(m_forces[i]->GetCoeffs(),m_forces[i]->UpdatePhys());
+                                }
+                            }
+                            Vmath::Vadd(nq,Qx,1,(m_forces[0]->GetPhys()),1,Qx,1);
+                            Vmath::Vadd(nq,Qy,1,(m_forces[1]->GetPhys()),1,Qy,1);
+                            Vmath::Vadd(nq,Qz,1,(m_forces[2]->GetPhys()),1,Qz,1);
+                        }
+                    }
                             
                     Pbc =  boost::dynamic_pointer_cast<StdRegions::StdExpansion2D> (PBndExp[n]->GetExp(i));
                     
@@ -678,7 +770,7 @@ namespace Nektar
                     Pvals = PBndExp[n]->UpdateCoeffs()+PBndExp[n]->GetCoeff_Offset(i);
                     Pbc->NormVectorIProductWRTBase(Uy,Vx,Wx,Pvals); 
                 }
-                }
+            }
             // setting if just standard BC no High order
             else if(type == SpatialDomains::eNoUserDefined || type == SpatialDomains::eTimeDependent)
             {
@@ -736,14 +828,77 @@ namespace Nektar
         {
             m_pressure->PhysDeriv(m_pressure->GetPhys(), Forcing[0], Forcing[1],Forcing[2]);
         }
-        
+
         // Subtract inarray/(aii_dt) and divide by kinvis. Kinvis will
         // need to be updated for the convected fields.
         for(int i = 0; i < m_nConvectiveFields; ++i)
         {
-            Blas::Daxpy(phystot,-aii_dtinv,inarray[i],1,Forcing[i],1);
-            Blas::Dscal(phystot,1.0/m_kinvis,&(Forcing[i])[0],1);
+            Vmath::Svtvp(phystot,-aii_dtinv,inarray[i],1,Forcing[i],1,Forcing[i],1);
+            //Blas::Daxpy(phystot,-aii_dtinv,inarray[i],1,Forcing[i],1);
+            //Blas::Dscal(phystot,1.0/m_kinvis,&(Forcing[i])[0],1);
         }
+
+        if(!m_explicitPermeability)
+        {
+            // add the force
+            if(m_session->DefinesFunction("BodyForce"))
+            {
+                if(m_fields[0]->GetWaveSpace())
+                {
+                    for(int i = 0; i < m_nConvectiveFields; ++i)
+                    {
+                        m_forces[i]->SetWaveSpace(true);					
+                        m_forces[i]->BwdTrans(m_forces[i]->GetCoeffs(),m_forces[i]->UpdatePhys());
+                    }
+                }
+                for(int i = 0; i < m_nConvectiveFields; ++i)
+                {
+                    Vmath::Vsub(phystot,Forcing[i],1,(m_forces[i]->GetPhys()),1,Forcing[i],1);
+                }
+            }
+        }
+        
+        for(int i = 0; i < m_nConvectiveFields; ++i)
+        {
+            Vmath::Smul(phystot,1.0/m_kinvis,Forcing[i],1,Forcing[i],1);
+        }
+
+        // if (!m_explicitPermeability && m_session->DefinesFunction("AnisotropicPermeability"))
+        // {
+        //     Array<OneD, Array< OneD, NekDouble> > tempF(m_nConvectiveFields);
+        //     for (int i = 0; i < m_nConvectiveFields; ++i)
+        //     {
+        //         tempF[i] = Array<OneD, NekDouble> (phystot);
+        //     }
+
+        //     if(m_nConvectiveFields == 2)
+        //     {
+        //         Vmath::Smul(phystot,m_perm[0],Forcing[0],1,tempF[0],1);
+        //         Vmath::Smul(phystot,m_perm[2],Forcing[0],1,tempF[1],1);
+                
+        //         Vmath::Svtvp(phystot,m_perm[2],Forcing[1],1,tempF[0],1,tempF[0],1);
+        //         Vmath::Svtvp(phystot,m_perm[1],Forcing[1],1,tempF[1],1,tempF[1],1);
+        //     }
+        //     else
+        //     {
+        //         Vmath::Smul(phystot,m_perm[0],Forcing[0],1,tempF[0],1);
+        //         Vmath::Smul(phystot,m_perm[3],Forcing[0],1,tempF[1],1);
+        //         Vmath::Smul(phystot,m_perm[4],Forcing[0],1,tempF[2],1);
+
+        //         Vmath::Svtvp(phystot,m_perm[3],Forcing[1],1,tempF[0],1,tempF[0],1);
+        //         Vmath::Svtvp(phystot,m_perm[1],Forcing[1],1,tempF[1],1,tempF[1],1);
+        //         Vmath::Svtvp(phystot,m_perm[5],Forcing[1],1,tempF[2],1,tempF[2],1);
+
+        //         Vmath::Svtvp(phystot,m_perm[4],Forcing[2],1,tempF[0],1,tempF[0],1);
+        //         Vmath::Svtvp(phystot,m_perm[5],Forcing[2],1,tempF[1],1,tempF[1],1);
+        //         Vmath::Svtvp(phystot,m_perm[2],Forcing[2],1,tempF[2],1,tempF[2],1);
+        //     }
+
+        //     for (int i = 0; i < m_nConvectiveFields; ++i)
+        //     {
+        //         Forcing[i] = tempF[i];
+        //     }
+        // }
     }
         
 } //end of namespace

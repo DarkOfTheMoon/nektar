@@ -83,6 +83,8 @@ namespace Nektar
                                        m_explicitAdvection,true);
             m_session->MatchSolverInfo("REACTIONADVANCEMENT", "Explicit",
                                        m_explicitReaction, true);
+            m_session->MatchSolverInfo("PERMEABILITYADVANCEMENT", "Explicit",
+                                       m_explicitPermeability, true);
 
             // Determine TimeIntegrationMethod to use
             ASSERTL0(m_session->DefinesSolverInfo("TIMEINTEGRATIONMETHOD"),
