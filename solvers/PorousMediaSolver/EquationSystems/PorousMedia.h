@@ -114,14 +114,14 @@ namespace Nektar
         MultiRegions::ExpListSharedPtr m_pressure;  
         
         NekDouble   m_kinvis;        ///< Kinematic viscosity
-        //NekDouble   m_perm;          ///< Permeability
+
         Array<OneD, NekDouble>  m_perm;  ///< Permeability matrix
+        Array<OneD, Array<OneD, NekDouble> >  m_spatialperm;  ///< Permeability matrix
         Array<OneD, NekDouble>  m_perm_inv;  ///< inverse Permeability matrix
 
         /// Variable permeability
         StdRegions::VarCoeffMap m_varperm;
 
-        int         m_energysteps;   ///< dump energy to file at steps time
         int         m_steadyStateSteps; ///< Check for steady state at step interval
         NekDouble   m_steadyStateTol; ///< Tolerance to which steady state should be evaluated at
 

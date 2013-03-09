@@ -309,11 +309,25 @@ namespace Nektar
             // add permeability term for explicit permeability
             if (m_nConvectiveFields == 2)
             {
-                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[0],inarray[0],1,outarray[0],1,outarray[0],1);
-                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[2],inarray[0],1,outarray[1],1,outarray[1],1);
+                if(m_session->DefinesFunction("SpatialAnisotropicPermeability"))
+                {
+                    Array <OneD, NekDouble> tmp(nqtot);
+                    Vmath::Smul(nqtot,-m_kinvis,m_spatialperm[0],1,tmp,1);
+                    Vmath::Vvtvp(nqtot,tmp,1,inarray[0],1,outarray[0],1,outarray[0],1);
 
-                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[2],inarray[1],1,outarray[0],1,outarray[0],1);
-                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[1],inarray[1],1,outarray[1],1,outarray[1],1);
+                    //Get coordinate of quadrature points
+
+                    Vmath::Smul(nqtot,-m_kinvis,m_spatialperm[1],1,tmp,1);
+                    Vmath::Vvtvp(nqtot,tmp,1,inarray[1],1,outarray[1],1,outarray[1],1);
+                }
+                else
+                {
+                    Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[0],inarray[0],1,outarray[0],1,outarray[0],1);
+                    Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[2],inarray[0],1,outarray[1],1,outarray[1],1);
+
+                    Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[2],inarray[1],1,outarray[0],1,outarray[0],1);
+                    Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[1],inarray[1],1,outarray[1],1,outarray[1],1);
+                }
             }
             else
             {
@@ -381,7 +395,7 @@ namespace Nektar
         // Viscous Term forcing
         SetUpViscousForcing(inarray, F, aii_Dt);
 
-        if (m_explicitPermeability)
+        if (m_explicitPermeability || m_session->DefinesFunction("SpatialAnisotropicPermeability"))
         {
             factors[StdRegions::eFactorLambda] = (1.0/aii_Dt/m_kinvis);
         }
@@ -391,30 +405,16 @@ namespace Nektar
         {
             // needs to be changed
             // is wrong for anisotropic permeability with off-diagonal entries! (isotropic works)
-            if (!m_explicitPermeability)// && !(m_session->DefinesFunction("AnisotropicPermeability")))
+            if (!m_explicitPermeability)
             {
                 factors[StdRegions::eFactorLambda] = (m_perm_inv[i])+(1.0/aii_Dt/m_kinvis);
             }    
 
 #ifdef UseContCoeffs
-            // if (!m_explicitPermeability && m_session->DefinesFunction("AnisotropicPermeability"))
-            // {
-            //     m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateContCoeffs(),flags,factors,m_varperm);
-            // }
-            // else
-            // {
-                m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateContCoeffs(),flags,factors);            
-            // }
+            m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateContCoeffs(),flags,factors);            
             m_fields[i]->BwdTrans(m_fields[i]->GetContCoeffs(),outarray[i],true);
 #else
-            // if (!m_explicitPermeability && m_session->DefinesFunction("AnisotropicPermeability"))
-            // {
-            //     m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateCoeffs(), NullFlagList, factors, m_varperm);
-            // }
-            // else
-            // {
-                m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateCoeffs(), NullFlagList, factors);
-            // }
+            m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateCoeffs(), NullFlagList, factors, m_varperm);
             m_fields[i]->BwdTrans(m_fields[i]->GetCoeffs(),outarray[i]);
 #endif
         }

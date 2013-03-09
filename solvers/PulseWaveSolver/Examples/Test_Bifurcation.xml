@@ -69,7 +69,7 @@
 
         <PARAMETERS>
 			<P> TimeStep       = 10e-4             </P> 
-            <P> FinTime        = 0.2             </P>
+            <P> FinTime        = 10             </P>
             <P> NumSteps       = FinTime/TimeStep   </P>
             <P> IO_CheckSteps  = NumSteps/50        </P>
             <P> IO_InfoSteps   = 100                </P>
@@ -162,6 +162,16 @@
             <E VAR="A" VALUE="0" />
             <E VAR="u" VALUE="0" />
         </FUNCTION>
+
+        <FILTERS>
+        <FILTER TYPE="HistoryPoints">
+          <PARAM NAME="OutputFile">test.his</PARAM>
+          <PARAM NAME="OutputFrequency">1</PARAM>
+          <PARAM NAME="Points">
+            4 0 0
+          </PARAM>
+        </FILTER>
+        </FILTERS>
 
     </CONDITIONS>
 

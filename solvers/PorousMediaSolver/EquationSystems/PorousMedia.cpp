@@ -104,7 +104,6 @@ namespace Nektar
         {
         case eUnsteadyPorousMedia:
             m_session->LoadParameter("IO_InfoSteps", m_infosteps, 0);
-            m_session->LoadParameter("IO_EnergySteps", m_energysteps, 0);
             m_session->LoadParameter("SteadyStateSteps", m_steadyStateSteps, 0);
             m_session->LoadParameter("SteadyStateTol", m_steadyStateTol, 1e-6);
             
@@ -136,19 +135,90 @@ namespace Nektar
 
         // Load variable coefficients
         m_perm = Array<OneD, NekDouble> (3*(m_spacedim-1));
+        m_spatialperm = Array<OneD, Array<OneD, NekDouble> > (m_spacedim);
 
-        if (m_session->DefinesFunction("AnisotropicPermeability"))
+        // Inverting Permeability Matrix
+        m_perm_inv = Array<OneD, NekDouble> (3*(m_spacedim-1));
+
+        //Setup of spatially varying anisotropic permeability
+        if(m_session->DefinesFunction("SpatialAnisotropicPermeability"))
         {
+            if (!m_explicitPermeability)
+            {
+                ASSERTL0(0,"not yet implemented");
+            }
 
             int nq = m_fields[0]->GetNpoints();
             
             if (m_spacedim == 2)
             {
-                StdRegions::VarCoeffType varCoeffEnum[3] = {
-                    StdRegions::eVarCoeffD00,
-                    StdRegions::eVarCoeffD11,
-                    StdRegions::eVarCoeffD01
+                std::string varCoeffs[2] = {
+                    "kxx",
+                    "kyy",
                 };
+
+                Array<OneD, NekDouble> vTemp;
+                for (int i = 0; i < m_spacedim; ++i)
+                {
+                    EvaluateFunction(varCoeffs[i], vTemp, "SpatialAnisotropicPermeability");
+                    m_spatialperm[i] = Array<OneD, NekDouble>(nq);
+                    Vmath::Sdiv(nq,1.0,vTemp,1,m_spatialperm[i],1);
+                }
+                
+                Array<OneD,NekDouble> x0(nq);
+                Array<OneD,NekDouble> x1(nq);
+                Array<OneD,NekDouble> x2(nq);
+                
+                // Get the coordinates (assuming all fields have the same
+                // discretisation)
+                NekDouble scalefac = 10;
+                m_fields[0]->GetCoords(x0,x1,x2);
+                for(int j=0; j<nq; ++j)
+                {
+                    NekDouble radius = (x0[j]-0.5)*(x0[j]-0.5)+(x1[j]-0.5)*(x1[j]-0.5);
+                    if(radius <0.005)
+                    {
+                        cout<<"x: "<<x0[j]<<" y: "<<x1[j]<<endl;
+                        m_spatialperm[0][j]=m_spatialperm[0][j]*scalefac;
+                        m_spatialperm[1][j]=m_spatialperm[1][j]*scalefac;
+                    }
+                }
+
+                // Transform variable coefficient and write out to file.
+                m_fields[0]->FwdTrans_IterPerExp(m_spatialperm[i],
+                                                 m_fields[0]->UpdateCoeffs());
+                std::stringstream filename;
+                filename << "AnisotropicPerm_" << varCoeffs[i];
+                if (m_comm->GetSize() > 1)
+                {
+                    filename << "_P" << m_comm->GetRank();
+                }
+                filename << ".fld";
+                WriteFld(filename.str());
+            }
+            if(m_spacedim == 3)
+            {
+                //std::string varName = "k";
+                std::string varCoeffs[3] = {
+                    "kxx",
+                    "kyy",
+                    "kzz",
+                }; 
+
+                //Explicit implementation
+                Array<OneD, NekDouble> vTemp;
+                for (int i = 0; i < m_spacedim; ++i)
+                {
+                    EvaluateFunction(varCoeffs[i], vTemp, "SpatialAnisotropicPermeability");
+                    m_spatialperm[i] = Array<OneD, NekDouble>(nq);
+                    Vmath::Sdiv(nq,1.0,vTemp,1,m_spatialperm[i],1);
+                }
+            }
+        }
+        else if (m_session->DefinesFunction("AnisotropicPermeability"))
+        {
+            if (m_spacedim == 2)
+            {
                 std::string varCoeffs[3] = {
                     "kxx",
                     "kyy",
@@ -160,31 +230,20 @@ namespace Nektar
                              "Function '" + varCoeffs[i] + "' not correctly defined.");
                     m_perm[i] = m_session->GetFunction("AnisotropicPermeability", varCoeffs[i])->Evaluate();
                 }
-                if (!m_explicitPermeability)
-                {
-                    Array<OneD, NekDouble> vTemp;
-                    for (int i = 0; i < (3*(m_spacedim-1)); ++i)
-                    {
-                        EvaluateFunction(varCoeffs[i], vTemp, "AnisotropicPermeability");
-                        m_varperm[varCoeffEnum[i]] = Array<OneD, NekDouble>(nq);
-                        Vmath::Vcopy(nq, vTemp, 1, m_varperm[varCoeffEnum[i]], 1);
-                    }
-                    for (int i = 0; i < (3*(m_spacedim-1)); ++i)
-                    {
-                        cout << m_varperm[varCoeffEnum[i]][0] << endl;
-                    }
-                }
+
+                NekDouble detTemp = m_perm[0]*m_perm[1]-m_perm[2]*m_perm[2];
+                
+                // Check if permeability matrix is positive definite
+                ASSERTL0(m_perm[0] > 0,"Permeability Matrix is not positive definite");
+                ASSERTL0(detTemp > 0,"Permeability Matrix is not positive definite");
+            
+                m_perm_inv[0] = m_perm[1];
+                m_perm_inv[1] = m_perm[0];
+                m_perm_inv[2] = -m_perm[2];
+                Vmath::Smul(3, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
             }
             else
             {
-                StdRegions::VarCoeffType varCoeffEnum[6] = {
-                    StdRegions::eVarCoeffD00,
-                    StdRegions::eVarCoeffD11,
-                    StdRegions::eVarCoeffD22,
-                    StdRegions::eVarCoeffD01,
-                    StdRegions::eVarCoeffD02,
-                    StdRegions::eVarCoeffD12
-                };
                 //std::string varName = "k";
                 std::string varCoeffs[6] = {
                     "kxx",
@@ -200,28 +259,32 @@ namespace Nektar
                              "Function '" + varCoeffs[i] + "' not correctly defined.");
                     m_perm[i] = m_session->GetFunction("AnisotropicPermeability", varCoeffs[i])->Evaluate();
                 }
-                if (!m_explicitPermeability)
-                {
-                    Array<OneD, NekDouble> vTemp;
-                    for (int i = 0; i < (3*(m_spacedim-1)); ++i)
-                    {
-                        EvaluateFunction(varCoeffs[i], vTemp, "AnisotropicPermeability");
-                        m_varperm[varCoeffEnum[i]] = Array<OneD, NekDouble>(nq);
-                        Vmath::Vcopy(nq, vTemp, 1, m_varperm[varCoeffEnum[i]], 1);
-                    }
 
-                    // for (int i = 0; i < (3*(m_spacedim-1)); ++i)
-                    // {
-                    //     cout << m_varperm[varCoeffEnum[i]][0] << endl;
-                    // }
-                }
+                NekDouble detTemp = m_perm[0]*(m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5])
+                    -m_perm[3]*(m_perm[2]*m_perm[3]-m_perm[4]*m_perm[5])
+                    +m_perm[4]*(m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4]);
+                
+                // Check if permeability matrix is positive definite
+                ASSERTL0(m_perm[0] > 0,"Permeability Matrix is not positive definite");
+                NekDouble pd_chk = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
+                ASSERTL0(pd_chk > 0,"Permeability Matrix is not positive definite");
+                ASSERTL0(detTemp > 0,"Permeability Matrix is not positive definite");
+
+                m_perm_inv[0] = m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5];
+                m_perm_inv[1] = m_perm[0]*m_perm[2]-m_perm[4]*m_perm[4];
+                m_perm_inv[2] = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
+                m_perm_inv[3] = m_perm[4]*m_perm[5]-m_perm[2]*m_perm[3];
+                m_perm_inv[4] = m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4];
+                m_perm_inv[5] = m_perm[3]*m_perm[4]-m_perm[0]*m_perm[5];
+                
+                Vmath::Smul(6, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
             }
         }
         else if (m_session->DefinesParameter("Permeability"))
         {
             NekDouble kTemp;
             m_session->LoadParameter("Permeability", kTemp);
-
+            
             for (int i = 0; i < m_spacedim; ++i)
             {
                 m_perm[i] = kTemp;
@@ -230,49 +293,31 @@ namespace Nektar
             {
                 m_perm[i] = 0;
             }
-         }
-        else
-        {
-            ASSERTL0(0,"Permeability not defined");
-        }
 
-        // Inverting Permeability Matrix
-        m_perm_inv = Array<OneD, NekDouble> (3*(m_spacedim-1));
-
-        if (m_spacedim == 2)
-        {
-            NekDouble detTemp = m_perm[0]*m_perm[1]-m_perm[2]*m_perm[2];
-            
-            // Check if permeability matrix is positive definite
-            ASSERTL0(m_perm[0] > 0,"Permeability Matrix is not positive definite");
-            ASSERTL0(detTemp > 0,"Permeability Matrix is not positive definite");
-            
-            m_perm_inv[0] = m_perm[1];
-            m_perm_inv[1] = m_perm[0];
-            m_perm_inv[2] = -m_perm[2];
-            Vmath::Smul(3, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
-        }
-        else
-        {
             NekDouble detTemp = m_perm[0]*(m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5])
-                               -m_perm[3]*(m_perm[2]*m_perm[3]-m_perm[4]*m_perm[5])
-                               +m_perm[4]*(m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4]);
-
+                -m_perm[3]*(m_perm[2]*m_perm[3]-m_perm[4]*m_perm[5])
+                +m_perm[4]*(m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4]);
+            
             // Check if permeability matrix is positive definite
             ASSERTL0(m_perm[0] > 0,"Permeability Matrix is not positive definite");
             NekDouble pd_chk = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
             ASSERTL0(pd_chk > 0,"Permeability Matrix is not positive definite");
             ASSERTL0(detTemp > 0,"Permeability Matrix is not positive definite");
-
+            
             m_perm_inv[0] = m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5];
             m_perm_inv[1] = m_perm[0]*m_perm[2]-m_perm[4]*m_perm[4];
             m_perm_inv[2] = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
             m_perm_inv[3] = m_perm[4]*m_perm[5]-m_perm[2]*m_perm[3];
             m_perm_inv[4] = m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4];
             m_perm_inv[5] = m_perm[3]*m_perm[4]-m_perm[0]*m_perm[5];
+            
             Vmath::Smul(6, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
         }
- 
+        else
+        {
+            ASSERTL0(0,"Permeability not defined");
+        }
+
         std::string vConvectiveType = "NoAdvection";
         m_advObject = GetAdvectionTermFactory().CreateInstance(vConvectiveType, m_session, m_graph);
 	
@@ -295,8 +340,6 @@ namespace Nektar
     void PorousMedia::AdvanceInTime(int nsteps)
     {
         int i,n;
-        int phystot  = m_fields[0]->GetTotPoints();
-        int n_fields = m_fields.num_elements();
         static int nchk = 0;
 		
         Timer timer;
@@ -316,10 +359,6 @@ namespace Nektar
         std::string   mdlname = m_session->GetSessionName() + ".mdl";
         std::ofstream mdlFile;
 
-        if (m_energysteps && m_comm->GetRank() == 0)
-        {
-            mdlFile.open(mdlname.c_str());
-        }
         
         std::vector<SolverUtils::FilterSharedPtr>::iterator x;
         for (x = m_filters.begin(); x != m_filters.end(); ++x)
@@ -345,108 +384,17 @@ namespace Nektar
             {
                 cout << "Step: " << n+1 << "  Time: " << m_time << " CPU-Time: " << timer.TimePerTest(1) << " s" << endl;
             }
-
-            // Write out energy data to file
-            if(m_energysteps && !((n+1)%m_energysteps))
-            {
-                if(m_HomogeneousType != eNotHomogeneous)
-                {
-                    if(m_HomogeneousType == eHomogeneous1D)
-                    {
-                        int colrank = m_comm->GetColumnComm()->GetRank();
-                        int nproc   = m_comm->GetColumnComm()->GetSize();
-                        int locsize = m_npointsZ/nproc/2;
-                        int ensize  = m_npointsZ/nproc/2;
-                        
-                        Array<OneD, NekDouble> energy    (locsize,0.0);
-                        Array<OneD, NekDouble> energy_tmp(locsize,0.0);
-                        Array<OneD, NekDouble> tmp;
-			
-                        // Calculate modal energies.
-                        for(i = 0; i < m_nConvectiveFields; ++i)
-                        {
-                            energy_tmp = m_fields[i]->HomogeneousEnergy();
-                            Vmath::Vadd(locsize,energy_tmp,1,energy,1,energy,1);
-                        }
-                        
-                        // Send to root process.
-                        if (colrank == 0)
-                        {
-                            int j, m = 0;
-                            
-                            for (j = 0; j < energy.num_elements(); ++j, ++m)
-                            {
-                                mdlFile << setw(10) << m_time 
-                                        << setw(5)  << m
-                                        << setw(18) << energy[j] << endl;
-                            }
-                            
-                            for (i = 1; i < nproc; ++i)
-                            {
-                                m_comm->GetColumnComm()->Recv(i, energy);
-                                for (j = 0; j < energy.num_elements(); ++j, ++m)
-                                {
-                                    mdlFile << setw(10) << m_time 
-                                            << setw(5)  << m
-                                            << setw(18) << energy[j] << endl;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            m_comm->GetColumnComm()->Send(0, energy);
-                        }
-                    }
-                    else
-                    {
-                        ASSERTL0(false,"3D Homogeneous 2D energy dumping not implemented yet");
-                    }
-                }
-                else
-                {
-                    NekDouble energy = 0.0;
-                    for(i = 0; i < m_nConvectiveFields; ++i)
-                    {
-                        m_fields[i]->SetPhys(fields[i]);
-                        m_fields[i]->SetPhysState(true);
-                        NekDouble norm = L2Error(i, true);
-                        energy += norm*norm;
-                    }
-                    mdlFile << m_time << "   " << 0.5*energy << endl;
-                }
-                
-            }
             
             // dump data in m_fields->m_coeffs to file. 
             if(m_checksteps && n&&(!((n+1)%m_checksteps)))
             {
-                if(m_HomogeneousType == eHomogeneous1D)
+                for(i = 0; i < m_nConvectiveFields; ++i)
                 {
-                    for(i = 0; i< n_fields; i++)
-                    {
-                        m_fields[i]->SetWaveSpace(false);
-                        m_fields[i]->BwdTrans(m_fields[i]->GetCoeffs(),m_fields[i]->UpdatePhys());
-                        m_fields[i]->SetPhysState(true);
-                    }
-                    nchk++;
-                    Checkpoint_Output(nchk);
-                    for(i = 0; i< n_fields; i++)
-                    {
-                        m_fields[i]->SetWaveSpace(true);
-                        m_fields[i]->HomogeneousFwdTrans(m_fields[i]->GetPhys(),m_fields[i]->UpdatePhys());
-                        m_fields[i]->SetPhysState(false);
-                    }
+                    m_fields[i]->SetPhys(fields[i]);
+                    m_fields[i]->SetPhysState(true);
                 }
-                else
-                {
-                    for(i = 0; i < m_nConvectiveFields; ++i)
-                    {
-                        m_fields[i]->SetPhys(fields[i]);
-                        m_fields[i]->SetPhysState(true);
-                    }
-                    nchk++;
-                    Checkpoint_Output(nchk);
-                }
+                nchk++;
+                Checkpoint_Output(nchk);
             }
             
             
@@ -478,29 +426,12 @@ namespace Nektar
 
         }
 	
-        if(m_HomogeneousType == eHomogeneous1D)
+        for(i = 0; i < m_nConvectiveFields; ++i)
         {
-            for(i = 0 ; i< n_fields ; i++)
-            {
-                m_fields[i]->SetWaveSpace(false);
-				m_fields[i]->BwdTrans(m_fields[i]->GetCoeffs(),m_fields[i]->UpdatePhys());
-                m_fields[i]->SetPhysState(true);
-            }
+            m_fields[i]->SetPhys(fields[i]);
+            m_fields[i]->SetPhysState(true);
         }
-        else 
-        {
-            for(i = 0; i < m_nConvectiveFields; ++i)
-            {
-                m_fields[i]->SetPhys(fields[i]);
-                m_fields[i]->SetPhysState(true);
-            }
-        }
-	
         
-        if (m_energysteps)
-        {
-            mdlFile.close();
-        }
         
         for (x = m_filters.begin(); x != m_filters.end(); ++x)
         {
@@ -515,7 +446,6 @@ namespace Nektar
                                                  Array<OneD, NekDouble> &wk)
     {
         int i;
-        int nvariables = inarray.num_elements();
         int nqtot      = m_fields[0]->GetTotPoints();
         int VelDim     = m_velocity.num_elements();
         Array<OneD, Array<OneD, NekDouble> > velocity(VelDim);
@@ -539,8 +469,7 @@ namespace Nektar
                                  m_velocity,inarray,outarray,m_time,Deriv);
     }
     
-    //time dependent boundary conditions updating
-    
+    //time dependent boundary conditions updating    
     void PorousMedia::SetBoundaryConditions(NekDouble time)
     {
         int  nvariables = m_fields.num_elements();
