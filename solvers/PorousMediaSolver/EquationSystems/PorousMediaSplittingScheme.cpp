@@ -331,17 +331,32 @@ namespace Nektar
             }
             else
             {
-                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[0],inarray[0],1,outarray[0],1,outarray[0],1);
-                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[3],inarray[0],1,outarray[1],1,outarray[1],1);
-                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[4],inarray[0],1,outarray[2],1,outarray[2],1);
+                if(m_session->DefinesFunction("SpatialAnisotropicPermeability"))
+                {
+                    Array <OneD, NekDouble> tmp(nqtot);
+                    Vmath::Smul(nqtot,-m_kinvis,m_spatialperm[0],1,tmp,1);
+                    Vmath::Vvtvp(nqtot,tmp,1,inarray[0],1,outarray[0],1,outarray[0],1);
 
-                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[3],inarray[1],1,outarray[0],1,outarray[0],1);
-                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[1],inarray[1],1,outarray[1],1,outarray[1],1);
-                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[5],inarray[1],1,outarray[2],1,outarray[2],1);
+                    Vmath::Smul(nqtot,-m_kinvis,m_spatialperm[1],1,tmp,1);
+                    Vmath::Vvtvp(nqtot,tmp,1,inarray[1],1,outarray[1],1,outarray[1],1);
 
-                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[4],inarray[2],1,outarray[0],1,outarray[0],1);
-                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[5],inarray[2],1,outarray[1],1,outarray[1],1);
-                Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[2],inarray[2],1,outarray[2],1,outarray[2],1);
+                    Vmath::Smul(nqtot,-m_kinvis,m_spatialperm[2],1,tmp,1);
+                    Vmath::Vvtvp(nqtot,tmp,1,inarray[2],1,outarray[2],1,outarray[2],1);
+                }
+                else
+                {
+                    Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[0],inarray[0],1,outarray[0],1,outarray[0],1);
+                    Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[3],inarray[0],1,outarray[1],1,outarray[1],1);
+                    Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[4],inarray[0],1,outarray[2],1,outarray[2],1);
+                    
+                    Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[3],inarray[1],1,outarray[0],1,outarray[0],1);
+                    Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[1],inarray[1],1,outarray[1],1,outarray[1],1);
+                    Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[5],inarray[1],1,outarray[2],1,outarray[2],1);
+                    
+                    Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[4],inarray[2],1,outarray[0],1,outarray[0],1);
+                    Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[5],inarray[2],1,outarray[1],1,outarray[1],1);
+                    Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[2],inarray[2],1,outarray[2],1,outarray[2],1);
+                }
             }
         }
 
