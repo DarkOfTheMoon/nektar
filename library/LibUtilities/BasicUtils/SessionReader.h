@@ -44,6 +44,7 @@
 #include <LibUtilities/LibUtilitiesDeclspec.h>
 #include <LibUtilities/Interpreter/AnalyticExpressionEvaluator.hpp>
 #include <LibUtilities/BasicUtils/Thread.h>
+#include <LibUtilities/BasicUtils/MeshPartition.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/enable_shared_from_this.hpp>
@@ -115,6 +116,8 @@ namespace Nektar
         public:
             /// Support creation through MemoryManager only.
             friend class MemoryManager<SessionReader>;
+            /// Allow access from thread class
+            friend class SessionJob;
 
             /**
              * @brief Creates an instance of the SessionReader class.
@@ -367,11 +370,15 @@ namespace Nektar
             /// Communication object.
             CommSharedPtr                             m_comm;
             /// Filename of the loaded XML document.
-            std::string                               m_filename;
+            //std::string                               m_filename;
+            std::vector<std::string>				  m_filename;
             /// Session name of the loaded XML document (filename minus ext).
             std::string                               m_sessionName;
             /// Pointer to the loaded XML document.
-            TiXmlDocument*                            m_xmlDoc;
+            //TiXmlDocument*                            m_xmlDoc;
+            std::vector<TiXmlDocument*>				  m_xmlDoc;
+            // Partitioner for threads
+            MeshPartition*							  m_meshPartition;
             /// Parameters.
             ParameterMap                              m_parameters;
             /// Solver information properties.

@@ -176,6 +176,27 @@ namespace Nektar
         	 */
         	virtual unsigned int GetNumWorkers() = 0;
         	/**
+        	 * @brief Returns the worker number of the executing thread.
+        	 *
+        	 * Returns an unsigned int between 0 and N-1 where N is the
+        	 * number of active worker threads.  Repeated calls from within
+        	 * this thread will always return the same value and the value
+        	 * will be the same as returned from ThreadJob.GetWorkerNum().
+        	 * The same thread will run a job until it finishes.
+        	 *
+        	 * Although if there are active threads then thread 0 is always
+        	 * one of them, it is possible that thread 0 does not run for
+        	 * a given set of jobs.  For example, if there are 4 active threads
+        	 * and 3 jobs are submitted with a e_static scheduling strategy
+        	 * and a chunksize of 1, then it is possible that threads 1,2,
+        	 * and 3 pick up the jobs and thread 0 remains idle.
+        	 *
+        	 * Returns 0 if called by non-thread.
+        	 *
+        	 *
+        	 */
+        	virtual unsigned int GetWorkerNum() = 0;
+        	/**
         	 * @brief Sets the number of active workers.
         	 * @param num The number of active workers.
         	 *
@@ -242,6 +263,21 @@ namespace Nektar
         	 */
         	virtual bool InThread() = 0;
         	/**
+        	 * @brief A calling threads holds until all active threads call this method.
+        	 *
+        	 * When called, the calling thread will sleep until all active workers have called
+        	 * this method.  Once all have done so all threads awake and continue execution.
+        	 *
+        	 * @note Behaviour is likely to undefined if the number of active workers
+        	 * is altered after a thread has called this method.  It is only safe to
+        	 * call SetNumWorkers() when no threads are holding.
+        	 */
+        	virtual void Hold() = 0;
+        	/**
+        	 * @brief Returns a description of the type of threading.
+        	 */
+        	virtual const std::string& GetType() const = 0;
+        	/**
         	 * @brief Returns pointer to the single instance.
         	 * @return Pointer to the single instance.
         	 */
@@ -249,6 +285,20 @@ namespace Nektar
         	{
         		return m_instance;
         	}
+            inline int GetThrFromPartition(int pPartition)
+            {
+            	return pPartition % GetMaxNumWorkers();
+            }
+
+            inline int GetRankFromPartition(int pPartition)
+            {
+            	return pPartition / GetMaxNumWorkers();
+            }
+
+            inline int GetPartitionFromRankThr(int pRank, unsigned int pThr)
+            {
+            	return pRank * GetMaxNumWorkers() + pThr;
+            }
 
         protected:
         	/**
@@ -332,6 +382,10 @@ namespace Nektar
         		{
         			return m_tm->GetNumWorkers();
         		}
+         		unsigned int GetWorkerNum()
+         		{
+         			return m_tm->GetWorkerNum();
+         		}
          		void SetNumWorkers(const unsigned int num)
         		{
         			m_tm->SetNumWorkers(num);
@@ -360,6 +414,15 @@ namespace Nektar
         		{
         			return m_tm->InThread();
         		}
+        		void Hold()
+        		{
+        			m_tm->Hold();
+        		}
+            	const std::string& GetType() const
+            	{
+            		return m_tm->GetType();
+            	}
+
 
         	private:
         		ThreadManagerSharedPtr m_tm;

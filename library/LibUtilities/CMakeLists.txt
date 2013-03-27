@@ -129,6 +129,7 @@ SET(BasicUtilsHeaders
     ./BasicUtils/SharedArray.hpp
     ./BasicUtils/Thread.h
     ./BasicUtils/ThreadBoost.h
+    ./BasicUtils/ThreadedComm.h
     ./BasicUtils/Vmath.hpp
     ./BasicUtils/VmathArray.hpp
     ./BasicUtils/Metis.hpp
@@ -142,6 +143,7 @@ SET(BasicUtilsSources
     ./BasicUtils/SessionReader.cpp
     ./BasicUtils/Thread.cpp
     ./BasicUtils/ThreadBoost.cpp
+    ./BasicUtils/ThreadedComm.cpp
     ./BasicUtils/Vmath.cpp
 )
 

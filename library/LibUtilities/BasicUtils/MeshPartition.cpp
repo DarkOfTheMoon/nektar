@@ -62,7 +62,9 @@ namespace Nektar
     namespace LibUtilities
     {
         MeshPartition::MeshPartition(const LibUtilities::SessionReaderSharedPtr& pSession) :
-                m_comm(pSession->GetComm()->GetRowComm())
+                m_comm(pSession->GetComm()->GetRowComm()),
+                m_threadManager(pSession->GetThreadManager()),
+                m_localPartition(m_threadManager->GetMaxNumWorkers())
         {
             ReadMesh(pSession);
         }
@@ -72,32 +74,38 @@ namespace Nektar
 
         }
 
-        void MeshPartition::PartitionMesh()
+        void MeshPartition::PartitionMesh(int pNumPartitions)
         {
-            ASSERTL0(m_comm->GetSize() > 1,
-                     "Partitioning only necessary in parallel case.");
-            ASSERTL0(m_meshElements.size() >= m_comm->GetSize(),
-                     "Too few elements for this many processes.");
+            //ASSERTL0(m_comm->GetSize() > 1,
+            //         "Partitioning only necessary in parallel case.");
+            //ASSERTL0(m_meshElements.size() >= m_comm->GetSize(),
+            //         "Too few elements for this many processes.");
 
             CreateGraph(m_mesh);
-            PartitionGraph(m_mesh, m_localPartition);
+            PartitionGraph(m_mesh, pNumPartitions);
         }
 
         void MeshPartition::WriteLocalPartition(LibUtilities::SessionReaderSharedPtr& pSession)
         {
-            TiXmlDocument vNew;
-            TiXmlDeclaration * decl = new TiXmlDeclaration("1.0", "utf-8", "");
-            vNew.LinkEndChild(decl);
+        	for (unsigned int thr=0; thr < m_threadManager->GetMaxNumWorkers(); ++thr)
+        	{
+				TiXmlDocument vNew;
+				TiXmlDeclaration * decl = new TiXmlDeclaration("1.0", "utf-8", "");
+				vNew.LinkEndChild(decl);
 
-            TiXmlElement* vElmtNektar;
-            vElmtNektar = new TiXmlElement("NEKTAR");
+				TiXmlElement* vElmtNektar;
+				vElmtNektar = new TiXmlElement("NEKTAR");
 
-            OutputPartition(pSession, m_localPartition, vElmtNektar);
+				OutputPartition(pSession, m_localPartition[thr], vElmtNektar);
 
-            vNew.LinkEndChild(vElmtNektar);
+				vNew.LinkEndChild(vElmtNektar);
 
-            std::string vFilename = pSession->GetSessionName() + "_P" + boost::lexical_cast<std::string>(m_comm->GetRank()) + ".xml";
-            vNew.SaveFile(vFilename.c_str());
+				//std::string vFilename = pSession->GetSessionName() + "_P" + boost::lexical_cast<std::string>(m_comm->GetRank()) + ".xml";
+				std::string vFilename = pSession->GetSessionName() + "_P" + boost::lexical_cast<std::string>(m_comm->GetRank())
+						+ "_T" + boost::lexical_cast<std::string>(thr) + ".xml";
+				//std::string vFilename = pSession->GetSessionNameRank() + ".xml";
+				vNew.SaveFile(vFilename.c_str());
+        	}
         }
 
         void MeshPartition::ReadMesh(const LibUtilities::SessionReaderSharedPtr& pSession)
@@ -302,7 +310,7 @@ namespace Nektar
         }
 
         void MeshPartition::PartitionGraph(BoostSubGraph& pGraph,
-                                           BoostSubGraph& pLocalPartition)
+                                           int pNumPartitions)
         {
             int i;
             int nGraphVerts = boost::num_vertices(pGraph);
@@ -336,12 +344,12 @@ namespace Nektar
                 }
 
                 // Call Metis and partition graph
-                int npart = m_comm->GetSize();
+//                int npart = m_comm->GetSize();
                 int vol = 0;
 
                 try
                 {
-                    Metis::PartGraphVKway(nGraphVerts, xadj, adjncy, vwgt, vsize, npart, vol, part);
+                    Metis::PartGraphVKway(nGraphVerts, xadj, adjncy, vwgt, vsize, pNumPartitions, vol, part);
                     for (i = 1; i < m_comm->GetSize(); ++i)
                     {
                         m_comm->Send(i, part);
@@ -359,7 +367,10 @@ namespace Nektar
             }
 
             // Create boost subgraph for this process's partitions
-            pLocalPartition = pGraph.create_subgraph();
+            for (unsigned int thr=0; thr < m_threadManager->GetMaxNumWorkers(); ++thr)
+            {
+                m_localPartition[thr] = pGraph.create_subgraph();
+            }
 
             // Populate subgraph
             i = 0;
@@ -367,18 +378,19 @@ namespace Nektar
                   vertit != vertit_end;
                   ++vertit, ++i)
             {
-                if (part[i] == m_comm->GetRank())
+            	if (m_threadManager->GetRankFromPartition(part[i]) == m_comm->GetRank())
                 {
+            		unsigned int vThr = m_threadManager->GetThrFromPartition(part[i]);
                     pGraph[*vertit].partition = part[i];
-                    pGraph[*vertit].partid = boost::num_vertices(pLocalPartition);
-                    BoostVertex v = boost::add_vertex(i, pLocalPartition);
+                    pGraph[*vertit].partid = boost::num_vertices(m_localPartition[vThr]);
+                    BoostVertex v = boost::add_vertex(i, m_localPartition[vThr]);
                 }
             }
         }
 
         void MeshPartition::OutputPartition(
                 LibUtilities::SessionReaderSharedPtr& pSession,
-                BoostSubGraph& pGraph,
+                const BoostSubGraph& pGraph,
                 TiXmlElement* pNektar)
         {
             // Write Geometry data

@@ -9,10 +9,12 @@
 #include "Thread.h"
 #include <queue>
 #include <vector>
+#include <map>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/locks.hpp>
 #include <boost/thread/condition_variable.hpp>
 #include <boost/thread/thread.hpp>
+#include <boost/thread/barrier.hpp>
 
 #include "LibUtilities/Memory/NekMemoryManager.hpp"
 
@@ -53,6 +55,7 @@ namespace Nektar
         	virtual void QueueJobs(std::vector<ThreadJob*>& joblist);
         	virtual void QueueJob(ThreadJob* job);
         	virtual unsigned int GetNumWorkers();
+        	virtual unsigned int GetWorkerNum();
         	virtual void SetNumWorkers(const unsigned int num);
         	virtual void SetNumWorkers();
         	virtual unsigned int GetMaxNumWorkers();
@@ -60,6 +63,9 @@ namespace Nektar
         	virtual void SetChunkSize(unsigned int chnk);
         	virtual void SetSchedType(SchedType s);
         	virtual bool InThread();
+        	virtual void Hold();
+        	virtual const std::string& GetType() const;
+
 
         	/**
         	 * @brief Called by the factory method.
@@ -94,7 +100,10 @@ namespace Nektar
         	bool* m_threadActiveList;
         	unsigned int m_chunkSize;
         	SchedType m_schedType;
+        	boost::barrier *m_barrier;
+        	std::map<boost::thread::id, unsigned int> m_threadMap;
         	static std::string className;
+        	std::string m_type;
         };
 
         /**
