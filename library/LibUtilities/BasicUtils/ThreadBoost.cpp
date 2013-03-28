@@ -41,8 +41,9 @@ namespace Nektar
         
         ThreadManagerBoost::ThreadManagerBoost(unsigned int numT) :
                 m_numThreads(numT), m_numWorkers(numT-1), m_masterQueue(), m_masterQueueMutex(),
-                m_masterActiveMutex(), m_masterQueueCondVar(), m_masterActiveCondVar(),
-                m_chunkSize(1), m_schedType(e_dynamic), m_threadMap()
+                m_masterActiveMutex(), m_masterHoldForMutex(), m_masterQueueCondVar(), m_masterActiveCondVar(),
+                m_masterHoldForCondVar(),
+                m_chunkSize(1), m_schedType(e_dynamic), m_threadMap(), m_holdingFor(numT, numT)
         {
             using namespace std;
             try {
@@ -200,6 +201,20 @@ namespace Nektar
         void ThreadManagerBoost::Hold()
         {
         	m_barrier->wait();
+        }
+
+        void ThreadManagerBoost::HoldFor(unsigned int p_proc)
+        {
+        	Lock masterHoldForLock(m_masterHoldForMutex); // locks the HoldFor
+        	unsigned int vThr = GetWorkerNum();
+        	m_holdingFor[vThr] = p_proc;
+        	while(m_holdingFor[p_proc] != vThr)
+        	{
+                m_masterHoldForCondVar.wait(masterHoldForLock);
+        	}
+        	// reset the other guy's value
+        	m_holdingFor[p_proc] = m_numWorkers; // impossible value
+        	m_masterHoldForCondVar.notify_all();
         }
 
     	const std::string& ThreadManagerBoost::GetType() const

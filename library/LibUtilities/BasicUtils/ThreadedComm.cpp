@@ -28,7 +28,7 @@ namespace Nektar
 				m_tmpRecvOffsetArr(m_numworkers * m_numworkers * m_numMPI + 1)
 		{
 			ASSERTL0(m_numworkers > 1, "ThreadedComm cannot be used unless there is more than 1 thread");
-            m_size = m_comm->GetSize();
+            m_size = m_comm->GetSize() * m_numworkers;
 
             m_type = m_comm->GetType() + " + " + m_tm->GetType();
 
@@ -41,75 +41,109 @@ namespace Nektar
 
 		void ThreadedComm::v_Finalise()
 		{
-			m_comm->Finalise();
+			if (m_tm->GetWorkerNum() == 0 || !m_tm->InThread())
+			{
+				m_comm->Finalise();
+			}
 		}
 
 		int ThreadedComm::v_GetRank()
 		{
-			return m_comm->GetRank();
+			return m_comm->GetRank() * m_numworkers + m_tm->GetWorkerNum();
 		}
 
 		void ThreadedComm::v_Block()
 		{
-			m_comm->Block();
+			if (m_tm->InThread())
+			{
+				m_tm->Hold();
+			}
+			if (m_tm->GetWorkerNum() == 0 || !m_tm->InThread())
+			{
+				m_comm->Block();
+			}
 		}
 
 		void ThreadedComm::v_Send(int pProc, Array<OneD, NekDouble>& pData)
 		{
+			ASSERTL1(m_tm->GetThrFromPartition(pProc) == 0 && m_tm->GetWorkerNum() == 0,
+					"Cannot use Comm->Send() with threaded parallelism except between master threads");
+			pProc = m_tm->GetRankFromPartition(pProc);
 			m_comm->Send(pProc, pData);
 		}
 
 		void ThreadedComm::v_Send(int pProc, Array<OneD, int>& pData)
 		{
+			ASSERTL1(m_tm->GetThrFromPartition(pProc) == 0 && m_tm->GetWorkerNum() == 0,
+					"Cannot use Comm->Send() with threaded parallelism except between master threads");
+			pProc = m_tm->GetRankFromPartition(pProc);
 			m_comm->Send(pProc, pData);
 		}
 
 		void ThreadedComm::v_Recv(int pProc, Array<OneD, NekDouble>& pData)
 		{
+			ASSERTL1(m_tm->GetThrFromPartition(pProc) == 0 && m_tm->GetWorkerNum() == 0,
+					"Cannot use Comm->Recv() with threaded parallelism except between master threads");
+			pProc = m_tm->GetRankFromPartition(pProc);
 			m_comm->Recv(pProc, pData);
 		}
 
 		void ThreadedComm::v_Recv(int pProc, Array<OneD, int>& pData)
 		{
+			ASSERTL1(m_tm->GetThrFromPartition(pProc) == 0 && m_tm->GetWorkerNum() == 0,
+					"Cannot use Comm->Recv() with threaded parallelism except between master threads");
+			pProc = m_tm->GetRankFromPartition(pProc);
 			m_comm->Recv(pProc, pData);
 		}
 
 		void ThreadedComm::v_SendRecv(int pSendProc, Array<OneD, NekDouble>& pSendData,
 				int pRecvProc, Array<OneD, NekDouble>& pRecvData)
 		{
+			ASSERTL1(m_tm->GetThrFromPartition(pSendProc) == 0 && m_tm->GetThrFromPartition(pRecvProc) == 0 && m_tm->GetWorkerNum() == 0,
+					"Cannot use Comm->SendRecv() with threaded parallelism except between master threads");
 			m_comm->SendRecv(pSendProc, pSendData, pRecvProc, pRecvData);
 		}
 
 		void ThreadedComm::v_SendRecv(int pSendProc, Array<OneD, int>& pSendData,
 				int pRecvProc, Array<OneD, int>& pRecvData)
 		{
+			ASSERTL1(m_tm->GetThrFromPartition(pSendProc) == 0 && m_tm->GetThrFromPartition(pRecvProc) == 0 && m_tm->GetWorkerNum() == 0,
+					"Cannot use Comm->SendRecv() with threaded parallelism except between master threads");
 			m_comm->SendRecv(pSendProc, pSendData, pRecvProc, pRecvData);
 		}
 
 		void ThreadedComm::v_SendRecvReplace(int pSendProc, int pRecvProc,
 				Array<OneD, NekDouble>& pSendData)
 		{
+			ASSERTL1(m_tm->GetThrFromPartition(pSendProc) == 0 && m_tm->GetThrFromPartition(pRecvProc) == 0 && m_tm->GetWorkerNum() == 0,
+					"Cannot use Comm->SendRecvReplace() with threaded parallelism except between master threads");
+			pSendProc = m_tm->GetRankFromPartition(pSendProc);
+			pRecvProc = m_tm->GetRankFromPartition(pRecvProc);
 			m_comm->SendRecvReplace(pSendProc, pRecvProc, pSendData);
 		}
 
 		void ThreadedComm::v_SendRecvReplace(int pSendProc, int pRecvProc,
 				Array<OneD, int>& pSendData)
 		{
+			ASSERTL1(m_tm->GetThrFromPartition(pSendProc) == 0 && m_tm->GetThrFromPartition(pRecvProc) == 0 && m_tm->GetWorkerNum() == 0,
+					"Cannot use Comm->SendRecvReplace() with threaded parallelism except between master threads");
+			pSendProc = m_tm->GetRankFromPartition(pSendProc);
+			pRecvProc = m_tm->GetRankFromPartition(pRecvProc);
 			m_comm->SendRecvReplace(pSendProc, pRecvProc, pSendData);
 		}
 
 		void ThreadedComm::v_AllReduce(NekDouble& pData, enum ReduceOperator pOp)
 		{
-			GenAllReduce(pData, pOp, m_resDbl);
+			GenericAllReduce(pData, pOp, m_resDbl);
 		}
 
 		void ThreadedComm::v_AllReduce(int& pData, enum ReduceOperator pOp)
 		{
-			GenAllReduce(pData, pOp, m_resInt);
+			GenericAllReduce(pData, pOp, m_resInt);
 		}
 
 		template <typename DataType>
-		void ThreadedComm::GenAllReduce(DataType& pData, enum ReduceOperator pOp,
+		void ThreadedComm::GenericAllReduce(DataType& pData, enum ReduceOperator pOp,
 				std::vector<DataType>& pRes)
 		{
 			unsigned int vThr = m_tm->GetWorkerNum();
@@ -148,84 +182,120 @@ namespace Nektar
 		void ThreadedComm::v_AllReduce(Array<OneD, NekDouble>& pData,
 				enum ReduceOperator pOp)
 		{
-			GenAllReduce(pData, pOp, m_ListOfThrSendDataDbl);
+			GenericAllReduce(pData, pOp, m_ListOfThrSendDataDbl);
 		}
 
 		void ThreadedComm::v_AllReduce(Array<OneD, int>& pData, enum ReduceOperator pOp)
 		{
-			GenAllReduce(pData, pOp, m_ListOfThrSendDataInt);
+			GenericAllReduce(pData, pOp, m_ListOfThrSendDataInt);
 		}
 
 		template <typename DataType>
-        void ThreadedComm::GenAllReduce(Array<OneD,DataType>& pData, enum ReduceOperator pOp,
+        void ThreadedComm::GenericAllReduce(Array<OneD,DataType>& pData, enum ReduceOperator pOp,
         		std::vector<Array<OneD, DataType>*>& pRes)
         {
-			DataType* vArrThr;
 			unsigned int vThr = m_tm->GetWorkerNum();
 			pRes[vThr] = &pData;
 			m_tm->Hold();
+			int vSize = pRes[0]->num_elements();
+			ASSERTL1(pRes[vThr]->num_elements() == vSize, "Arrays of different length.");
 			DataType* vZero = pRes[0]->data();
+
+			int vNpp = vSize / m_numworkers;
+			if (vNpp > 32) // completely pulled out of the air
+			{
+				// Each thread will work on a part of the array.
+				int vRem = vSize - vNpp * m_numworkers;
+				int vOffset = vThr * vNpp;
+				if (vThr < vRem)
+				{
+					vOffset += vThr;
+					++vNpp;
+				}
+				else
+				{
+					vOffset += vRem;
+				}
+				DoReduction(pOp, pRes, vOffset, vNpp);
+			}
+			else // job too small to bother parallelising
+			{
+				if (vThr == 0)
+				{
+					DoReduction(pOp, pRes, 0, vSize);
+				}
+			}
+
+			m_tm->Hold();
 			if (vThr == 0)
 			{
-				switch (pOp)
-				{
-				case ReduceSum:
-					for (unsigned int thr=1; thr < m_numworkers; ++thr)
-					{
-						vArrThr = pRes[thr]->data();
-						for (unsigned int i=0; i != pData.num_elements(); ++i)
-						{
-							*(vZero + i) += *(vArrThr + i);
-						}
-					}
-					break;
-				case ReduceMax:
-					for (unsigned int thr=1; thr < m_numworkers; ++thr)
-					{
-						vArrThr = pRes[thr]->data();
-						for (unsigned int i=0; i != pData.num_elements(); ++i)
-						{
-							*(vZero + i) = std::max(*(vZero + i), *(vArrThr + i));
-						}
-					}
-					break;
-				case ReduceMin:
-					for (unsigned int thr=1; thr < m_numworkers; ++thr)
-					{
-						vArrThr = pRes[thr]->data();
-						for (unsigned int i=0; i != pData.num_elements(); ++i)
-						{
-							*(vZero + i) = std::min(*(vZero + i), *(vArrThr + i));
-						}
-					}
-					break;
-				}
 				m_comm->AllReduce(*pRes[0], pOp);
 			}
 			m_tm->Hold();
-			for (unsigned int i=0; i != pData.num_elements(); ++i)
+			for (unsigned int i=0; i < vSize; ++i)
 			{
 				pData[i] = *(vZero + i);
 			}
 			m_tm->Hold();
         }
 
+		template <typename DataType>
+		void ThreadedComm::DoReduction(enum ReduceOperator pOp,
+				std::vector<Array<OneD, DataType>*>& pRes, int pOffset, int pNpp)
+		{
+			DataType* vArrThr;
+			DataType* vZero = pRes[0]->data() + pOffset;
+			switch (pOp)
+			{
+			case ReduceSum:
+				for (unsigned int thr=1; thr < m_numworkers; ++thr)
+				{
+					vArrThr = pRes[thr]->data() + pOffset;
+					for (unsigned int i=0; i < pNpp; ++i)
+					{
+						*(vZero + i) += *(vArrThr + i);
+					}
+				}
+				break;
+			case ReduceMax:
+				for (unsigned int thr=1; thr < m_numworkers; ++thr)
+				{
+					vArrThr = pRes[thr]->data() + pOffset;
+					for (unsigned int i=0; i < pNpp; ++i)
+					{
+						*(vZero + i) = std::max(*(vZero + i), *(vArrThr + i));
+					}
+				}
+				break;
+			case ReduceMin:
+				for (unsigned int thr=1; thr < m_numworkers; ++thr)
+				{
+					vArrThr = pRes[thr]->data() + pOffset;
+					for (unsigned int i=0; i < pNpp; ++i)
+					{
+						*(vZero + i) = std::min(*(vZero + i), *(vArrThr + i));
+					}
+				}
+				break;
+			}
+		}
+
 		void ThreadedComm::v_AlltoAll(Array<OneD, int>& pSendData,
 				Array<OneD, int>& pRecvData)
 		{
-			GenAlltoAll(pSendData, pRecvData, m_tmpSendArrInt, m_tmpRecvArrInt,
+			GenericAlltoAll(pSendData, pRecvData, m_tmpSendArrInt, m_tmpRecvArrInt,
 					m_ListOfThrSendDataInt);
 		}
 
 		void ThreadedComm::v_AlltoAll(Array<OneD, NekDouble>& pSendData,
 											Array<OneD, NekDouble>& pRecvData)
 		{
-			GenAlltoAll(pSendData, pRecvData, m_tmpSendArrDbl, m_tmpRecvArrDbl,
+			GenericAlltoAll(pSendData, pRecvData, m_tmpSendArrDbl, m_tmpRecvArrDbl,
 					m_ListOfThrSendDataDbl);
 		}
 
 		template <typename DataType>
-		void ThreadedComm::GenAlltoAll(Array<OneD, DataType>& pSendData,
+		void ThreadedComm::GenericAlltoAll(Array<OneD, DataType>& pSendData,
 				Array<OneD, DataType>& pRecvData,
 				Array<OneD, DataType>& pTmpSend,
 				Array<OneD, DataType>& pTmpRecv,
@@ -355,7 +425,7 @@ namespace Nektar
 				Array<OneD, int>& pRecvDataOffsetMap)
 		{
 
-			GenAlltoAllv(pSendData,
+			GenericAlltoAllv(pSendData,
 					pSendDataSizeMap,
 					pSendDataOffsetMap,
 					pRecvData,
@@ -372,7 +442,7 @@ namespace Nektar
 				Array<OneD, int>& pRecvDataSizeMap,
 				Array<OneD, int>& pRecvDataOffsetMap)
 		{
-			GenAlltoAllv(pSendData,
+			GenericAlltoAllv(pSendData,
 					pSendDataSizeMap,
 					pSendDataOffsetMap,
 					pRecvData,
@@ -392,7 +462,7 @@ namespace Nektar
 		 *
 		 */
 		template <typename DataType>
-		void ThreadedComm::GenAlltoAllv(Array<OneD, DataType>& pSendData,
+		void ThreadedComm::GenericAlltoAllv(Array<OneD, DataType>& pSendData,
 				Array<OneD, int>& pSendDataSizeMap,
 				Array<OneD, int>& pSendDataOffsetMap,
 				Array<OneD, DataType>& pRecvData,
@@ -531,7 +601,7 @@ namespace Nektar
 						Array<OneD, int>& vOffArr = *m_ListOfThrSendOffsets[thr];
 						Array<OneD, int>& vSizArr = *m_ListOfThrSendSizes[thr];
 
-						ASSERTL0(pRecvDataSizeMap[vRecvPartition] == vSizArr[vSendPartition],
+						ASSERTL1(pRecvDataSizeMap[vRecvPartition] == vSizArr[vSendPartition],
 								"Mismatch in sizes");
 //						std::cerr << "vThr: " << vThr << " vRecvPartition: " << vRecvPartition <<
 //								" vSendPartition: " << vSendPartition <<

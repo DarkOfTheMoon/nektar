@@ -64,6 +64,7 @@ namespace Nektar
         	virtual void SetSchedType(SchedType s);
         	virtual bool InThread();
         	virtual void Hold();
+        	virtual void HoldFor(unsigned int p_proc);
         	virtual const std::string& GetType() const;
 
 
@@ -91,8 +92,10 @@ namespace Nektar
         	std::queue<ThreadJob*> m_masterQueue;
         	boost::mutex m_masterQueueMutex;
         	boost::mutex m_masterActiveMutex;
+        	boost::mutex m_masterHoldForMutex;
         	boost::condition_variable m_masterQueueCondVar;
         	boost::condition_variable m_masterActiveCondVar;
+        	boost::condition_variable m_masterHoldForCondVar;
         	ThreadWorkerBoost** m_threadList;
         	boost::thread** m_threadThreadList;
         	boost::thread::id m_masterThreadId;
@@ -102,6 +105,7 @@ namespace Nektar
         	SchedType m_schedType;
         	boost::barrier *m_barrier;
         	std::map<boost::thread::id, unsigned int> m_threadMap;
+        	std::vector<unsigned int> m_holdingFor;
         	static std::string className;
         	std::string m_type;
         };

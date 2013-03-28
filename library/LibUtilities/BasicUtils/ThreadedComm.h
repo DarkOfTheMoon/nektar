@@ -142,19 +142,22 @@ namespace Nektar
             virtual void v_SplitComm(int pRows, int pColumns);
         private:
             template <typename DataType>
-            void GenAllReduce(DataType& pData, enum ReduceOperator pOp,
+            void GenericAllReduce(DataType& pData, enum ReduceOperator pOp,
             		std::vector<DataType>& pRes);
             template <typename DataType>
-            void GenAllReduce(Array<OneD,DataType>& pData, enum ReduceOperator pOp,
+            void GenericAllReduce(Array<OneD,DataType>& pData, enum ReduceOperator pOp,
             		std::vector<Array<OneD, DataType>*>& pRes);
+            template <typename DataType>
+            void DoReduction(enum ReduceOperator pOp, std::vector<Array<OneD, DataType>*>& pRes, int pOffset,
+            		int pNpp);
     		template <typename DataType>
-    		void GenAlltoAll(Array<OneD, DataType>& pSendData,
+    		void GenericAlltoAll(Array<OneD, DataType>& pSendData,
     				Array<OneD, DataType>& pRecvData,
     				Array<OneD, DataType>& pTmpSend,
     				Array<OneD, DataType>& pTmpRecv,
     				std::vector<Array<OneD, DataType>*>& pRes);
     		template <typename DataType>
-    		void GenAlltoAllv(Array<OneD, DataType>& pSendData,
+    		void GenericAlltoAllv(Array<OneD, DataType>& pSendData,
 					Array<OneD, int>& pSendDataSizeMap,
 					Array<OneD, int>& pSendDataOffsetMap,
     				Array<OneD, DataType>& pRecvData,

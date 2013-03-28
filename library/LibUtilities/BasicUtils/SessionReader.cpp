@@ -218,6 +218,21 @@ namespace Nektar
         	{
 
         		std::cerr << "Running in thread " << GetWorkerNum() << std::endl;
+
+    			unsigned int vThr = m_session->m_comm->GetRank();
+                Array<OneD, int> poop(1000,vThr);
+                m_session->m_comm->AllReduce(poop, ReduceSum);
+                std::cerr << "Thr: " << vThr << " has at 0: " << poop[0] << std::endl;
+                std::cerr << "Thr: " << vThr << " has at 999: " << poop[999] << std::endl;
+                for (int i=0; i < poop.num_elements(); ++i)
+                {
+                	if (poop[i] != poop[0])
+                	{
+                		std::cerr << "oops at i: " << i << std::endl;
+                	}
+                }
+
+
             	// Partition mesh
             	m_session->PartitionMesh();
 
@@ -1243,11 +1258,9 @@ namespace Nektar
 					vPartitioner->PartitionMesh(numPartitions);
 					vPartitioner->WriteLocalPartition(vSession);
 
-					vCommMesh->Block();
 
 //					m_filename = GetSessionNameRank() + ".xml";
 
-					delete m_xmlDoc[0];
 //					m_xmlDoc = new TiXmlDocument(m_filename);
 //					ASSERTL0(m_xmlDoc, "Failed to create XML document object.");
 //
@@ -1258,7 +1271,9 @@ namespace Nektar
 
             	}
 
-            	m_threadManager->Hold();
+				vCommMesh->Block();
+				if (vThr == 0) delete m_xmlDoc[0];
+
             	m_filename[vThr] = GetSessionNameRank() + ".xml";
 
             	m_xmlDoc[vThr] = new TiXmlDocument(m_filename[vThr]);
@@ -1270,8 +1285,6 @@ namespace Nektar
             			boost::lexical_cast<std::string>(m_xmlDoc[vThr]->Row()));
 
             }
-
-
 
         }
 
