@@ -467,9 +467,17 @@ namespace Nektar
                 const std::string &line,
                       std::string &lhs,
                       std::string &rhs);
+
+            class SessionJob: public Nektar::Thread::ThreadJob
+            {
+            private:
+            	SessionReaderSharedPtr m_session;
+            public:
+            	SessionJob(SessionReaderSharedPtr psession);
+            	virtual ~SessionJob();
+            	virtual void Run();
+            };
         };
-
-
         /**
          *
          */

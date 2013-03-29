@@ -200,52 +200,34 @@ namespace Nektar
 
         }
 
-        class SessionJob : public Nektar::Thread::ThreadJob
+        SessionReader::SessionJob::SessionJob(SessionReaderSharedPtr psession) :
+					m_session(psession)
         {
-        private:
-        	SessionReaderSharedPtr m_session;
-        public:
-        	SessionJob(SessionReaderSharedPtr psession) :
-			m_session(psession)
-			{
-        		// empty
-			}
-        	~SessionJob()
-        	{
-        		// empty
-        	}
-        	void Run()
-        	{
+        	// empty
+        }
+        SessionReader::SessionJob::~SessionJob()
+        {
+        	// empty
+        }
+        void SessionReader::SessionJob::Run()
+        {
 
-        		std::cerr << "Running in thread " << GetWorkerNum() << std::endl;
+        	std::cerr << "Running in thread " << GetWorkerNum() << std::endl;
 
-    			unsigned int vThr = m_session->m_comm->GetRank();
-                Array<OneD, int> poop(1000,vThr);
-                m_session->m_comm->AllReduce(poop, ReduceSum);
-                std::cerr << "Thr: " << vThr << " has at 0: " << poop[0] << std::endl;
-                std::cerr << "Thr: " << vThr << " has at 999: " << poop[999] << std::endl;
-                for (int i=0; i < poop.num_elements(); ++i)
-                {
-                	if (poop[i] != poop[0])
-                	{
-                		std::cerr << "oops at i: " << i << std::endl;
-                	}
-                }
+        	unsigned int vThr = m_session->m_comm->GetRank();
+
+        	// Partition mesh
+        	m_session->PartitionMesh();
+
+        	// Parse the XML data in #m_xmlDoc
+        	m_session->ParseDocument();
 
 
-            	// Partition mesh
-            	m_session->PartitionMesh();
+        	// Override SOLVERINFO and parameters with any specified on the
+        	// command line.
+        	m_session->CmdLineOverride();
 
-            	// Parse the XML data in #m_xmlDoc
-            	m_session->ParseDocument();
-
-
-            	// Override SOLVERINFO and parameters with any specified on the
-            	// command line.
-            	//m_session->CmdLineOverride();
-
-        	}
-        };
+        }
         /**
          * Performs the main initialisation of the object. The XML file provided
          * on the command-line is loaded and any mesh partitioning is done. The
@@ -281,7 +263,7 @@ namespace Nektar
             m_filename.resize(vNumWorkers, m_filename[0]);
             for (unsigned int i=0; i < vNumWorkers; i++)
             {
-            	m_threadManager->QueueJob(new SessionJob(GetSharedThisPtr()));
+            	m_threadManager->QueueJob(new SessionReader::SessionJob(GetSharedThisPtr()));
             }
 
             m_threadManager->Wait();
