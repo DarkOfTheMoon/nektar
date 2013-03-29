@@ -55,6 +55,11 @@ namespace Nektar
 
         }
 
+        CommSharedPtr Comm::v_GetComm()
+        {
+        	return shared_from_this();
+        }
+
         CommFactory& GetCommFactory()
         {
             typedef Loki::SingletonHolder<CommFactory,

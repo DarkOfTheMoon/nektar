@@ -127,6 +127,7 @@ namespace Nektar
                 LIB_UTILITIES_EXPORT inline void SplitComm(int pRows, int pColumns);
                 LIB_UTILITIES_EXPORT inline CommSharedPtr GetRowComm();
                 LIB_UTILITIES_EXPORT inline CommSharedPtr GetColumnComm();
+                LIB_UTILITIES_EXPORT CommSharedPtr inline GetComm();
 
             protected:
                 int m_size;                 ///< Number of processes
@@ -182,6 +183,7 @@ namespace Nektar
 										Array<OneD, int>& pRecvDataSizeMap,
 										Array<OneD, int>& pRecvDataOffsetMap) = 0;
                 virtual void v_SplitComm(int pRows, int pColumns) = 0;
+                virtual CommSharedPtr v_GetComm();
         };
 
 
@@ -425,6 +427,23 @@ namespace Nektar
             {
                 return m_commColumn;
             }
+        }
+
+        /**
+         * @brief Returns the true Comm object.
+         *
+         * Returns the Comm object being used to implement parallelism.
+         * If no threading is being used this will simply be this concrete
+         * Comm object.  Otherwise it may return a different Comm object.
+         *
+         * @warning Do not use unless you are sure this is what you want.
+         * This is intended for those rare occasions when the underlying
+         * implementation (e.g. CommMPI) is neeeded in an otherwise
+         * threaded class (e.g. ThreadedComm).
+         */
+        inline CommSharedPtr Comm::GetComm()
+        {
+        	return v_GetComm();
         }
 
     }

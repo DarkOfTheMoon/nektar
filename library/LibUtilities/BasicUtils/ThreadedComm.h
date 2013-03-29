@@ -140,6 +140,7 @@ namespace Nektar
 									Array<OneD, int>& pRecvDataSizeMap,
 									Array<OneD, int>& pRecvDataOffsetMap);
             virtual void v_SplitComm(int pRows, int pColumns);
+            virtual CommSharedPtr v_GetComm();
         private:
             template <typename DataType>
             void GenericAllReduce(DataType& pData, enum ReduceOperator pOp,

@@ -503,12 +503,8 @@ namespace Nektar
          */
         const std::string SessionReader::GetSessionNameRank() const
         {
-//            return m_sessionName + "_P" + boost::lexical_cast<std::string>(
-//                m_comm->GetRowComm()->GetRank());
-        	std::string tmp = m_sessionName + "_P" + boost::lexical_cast<std::string>(
-                    m_comm->GetRowComm()->GetRank());
-        	tmp += "_T" + boost::lexical_cast<std::string>(m_threadManager->GetWorkerNum());
-            return tmp;
+            return m_sessionName + "_P" + boost::lexical_cast<std::string>(
+                m_comm->GetRowComm()->GetRank());
         }
 
 
@@ -1238,7 +1234,7 @@ namespace Nektar
             CommSharedPtr vCommMesh = m_comm->GetRowComm();
 
             // Number of partitions needed
-            unsigned int numPartitions = vCommMesh->GetSize() * m_threadManager->GetMaxNumWorkers();
+            unsigned int numPartitions = vCommMesh->GetSize();
             unsigned int vThr = m_threadManager->GetWorkerNum();
 
 			std::cerr << "Entered SessionReader PartitionMesh" << std::endl;

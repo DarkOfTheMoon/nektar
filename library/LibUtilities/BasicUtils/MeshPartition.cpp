@@ -100,10 +100,9 @@ namespace Nektar
 
 				vNew.LinkEndChild(vElmtNektar);
 
-				//std::string vFilename = pSession->GetSessionName() + "_P" + boost::lexical_cast<std::string>(m_comm->GetRank()) + ".xml";
-				std::string vFilename = pSession->GetSessionName() + "_P" + boost::lexical_cast<std::string>(m_comm->GetRank())
-						+ "_T" + boost::lexical_cast<std::string>(thr) + ".xml";
-				//std::string vFilename = pSession->GetSessionNameRank() + ".xml";
+//				std::string vFilename = pSession->GetSessionName() + "_P" + boost::lexical_cast<std::string>(m_comm->GetRank()) + ".xml";
+				std::string vFilename = pSession->GetSessionName() + "_P" + boost::lexical_cast<std::string>(
+						m_comm->GetRank() + thr) + ".xml";
 				vNew.SaveFile(vFilename.c_str());
         	}
         }
@@ -350,9 +349,12 @@ namespace Nektar
                 try
                 {
                     Metis::PartGraphVKway(nGraphVerts, xadj, adjncy, vwgt, vsize, pNumPartitions, vol, part);
+                    // Send data to master threads on MPI processes only.
                     for (i = 1; i < m_comm->GetSize(); ++i)
                     {
-                        m_comm->Send(i, part);
+						if (m_threadManager->GetThrFromPartition(i) == 0) {
+							m_comm->Send(i, part);
+						}
                     }
                 }
                 catch (...)
@@ -378,7 +380,7 @@ namespace Nektar
                   vertit != vertit_end;
                   ++vertit, ++i)
             {
-            	if (m_threadManager->GetRankFromPartition(part[i]) == m_comm->GetRank())
+            	if (m_threadManager->GetRankFromPartition(part[i]) == m_comm->GetComm()->GetRank())
                 {
             		unsigned int vThr = m_threadManager->GetThrFromPartition(part[i]);
                     pGraph[*vertit].partition = part[i];

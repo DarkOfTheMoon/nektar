@@ -722,6 +722,11 @@ namespace Nektar
 			m_commColumn = vTmpColumn;
 			m_commRow= vTmpRow;
 		}
+
+		CommSharedPtr ThreadedComm::v_GetComm()
+		{
+			return m_comm;
+		}
 	}
 	/*
 	            unsigned int vnumworkers = m_threadManager->GetMaxNumWorkers();
