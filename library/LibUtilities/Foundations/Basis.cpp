@@ -657,6 +657,43 @@ namespace Nektar
                                 m_dbdata.data(),numPoints);
                 }//end scope
                 break;
+
+			case eBernstein:
+				{
+					//points z[] are in (-1,1) so we have to rescale to (0,1) on
+					//which Bernstein polynomials are defined:
+					//b(x,P,p) = binom_coeff(P,p) * (x)^p * (1-x)^(P-p)
+					//P is polynomial degree, p is in (0,1,..,n)
+					//We are going to used Legendre-type ordering (in terms of mapping): vertex modes are first and last
+
+					int P = numModes - 1;//Bernstein polynomial degree
+					NekDouble b_coeff_num = 1.0;//binomial coefficient numerator
+					NekDouble b_coeff_den = 1.0;//binomial coefficient denomiantor
+					for(i = 0; i < numPoints; ++i)
+					{
+						m_bdata[i] = pow(0.5*(1-z[i]), P);// "left" vertex mode, p=0
+						m_bdata[P*numPoints + i] = pow(0.5*(1+z[i]), P); // "right" vertex mode, p=P
+					}
+
+					mode = m_bdata.data() + numPoints;
+
+					for(p = 1; p < P; ++p, mode += numPoints)
+					{
+						//using multiplicative formula for binomial coefficients
+						b_coeff_num *= (P + 1 - p);
+						b_coeff_den *= p;
+						for(i = 0; i < numPoints; ++i)
+						{
+							mode[i] = b_coeff_num / b_coeff_den * pow(0.5*(1+z[i]),p) * pow(0.5*(1-z[i]), P-p);
+						}
+					}
+
+					// define derivative basis (have to check if alpha should be 0.5 or 1 as it is now...)
+					Blas::Dgemm('n','n',numPoints,numModes,numPoints,1.0,D,
+							numPoints,m_bdata.data(),numPoints,0.0,m_dbdata.data(),
+							numPoints);
+				}
+                break;
             default:
                 ASSERTL0(false, "Basis Type not known or "
                                 "not implemented at this time.");

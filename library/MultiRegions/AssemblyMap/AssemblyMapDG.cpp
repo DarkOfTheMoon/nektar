@@ -550,6 +550,15 @@ namespace Nektar
                                 }
                                 break;
                             }
+                            case LibUtilities::eBernstein:
+                            {
+                                // reverse  order
+                                for(k = 0; k < order_e; ++k)
+                                {
+                                    m_localToGlobalBndMap[cnt+order_e-k-1] = gid + k;
+                                }
+                                break;
+                            }   
                             default:
                             {
                                 ASSERTL0(false,"Boundary type not permitted");

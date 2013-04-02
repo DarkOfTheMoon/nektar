@@ -2577,6 +2577,34 @@ namespace Nektar
                 }
             }
             break;
+            
+			case eBernstein:
+			{
+				switch (shape)
+				{
+					case LibUtilities::eSegment:
+						{
+							const LibUtilities::PointsKey pkey(nummodes+quadoffset, LibUtilities::eGaussLobattoLegendre);
+							LibUtilities::BasisKey bkey(LibUtilities::eBernstein, nummodes, pkey);
+							returnval.push_back(bkey);
+						}
+						break;
+					case LibUtilities::eQuadrilateral:
+						{
+							const LibUtilities::PointsKey pkey(nummodes+quadoffset, LibUtilities::eGaussLobattoLegendre);
+							LibUtilities::BasisKey bkey(LibUtilities::eBernstein, nummodes, pkey);
+							returnval.push_back(bkey);
+							returnval.push_back(bkey);
+						}
+						break;
+					default:
+						{
+							ASSERTL0(false,"Expansion not defined in switch for this shape");
+						}
+						break;
+				}
+			}
+			break;
 
             default:
             {

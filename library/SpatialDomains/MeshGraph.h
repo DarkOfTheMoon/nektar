@@ -76,6 +76,7 @@ namespace Nektar
             eFourierChebyshev,
             eChebyshevFourier,
             eFourierModified,
+			eBernstein,
             eExpansionTypeSize
         };
 
@@ -99,7 +100,8 @@ namespace Nektar
             "CHEBYSHEV",
             "FOURIER-CHEBYSHEV",
             "CHEBYSHEV-FOURIER",
-            "FOURIER-MODIFIED"
+            "FOURIER-MODIFIED",
+			"BERNSTEIN"
         };
 
         class InterfaceComponent;

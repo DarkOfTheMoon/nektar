@@ -136,6 +136,7 @@ int main(int argc, char *argv[])
         Fce->SetPhys(fce);
         cout << "L infinity error: " << Exp->Linf(Fce->GetPhys()) << endl;
         cout << "L 2 error:        " << Exp->L2  (Fce->GetPhys()) << endl;
+		cout << "H 1 error:        " << Exp->H1  (Fce->GetPhys()) << endl;
         //--------------------------------------------
     }
     //----------------------------------------------

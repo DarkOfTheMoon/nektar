@@ -97,6 +97,11 @@ namespace Nektar
             {
                 returnval = true;
             }
+            
+			if(m_base[0]->GetBasisType() == LibUtilities::eBernstein)
+            {
+                returnval = true;
+            }
 
             return returnval;
         }
@@ -299,6 +304,7 @@ namespace Nektar
                 switch(m_base[0]->GetBasisType())
                 {
                 case LibUtilities::eGLL_Lagrange:
+				case LibUtilities::eBernstein:
                     {
                         offset = 1;
                     }
@@ -681,6 +687,7 @@ namespace Nektar
             case LibUtilities::eGauss_Lagrange:
             case LibUtilities::eChebyshev:
             case LibUtilities::eFourier:
+			case LibUtilities::eBernstein:
                 outarray[1]= nummodes-1;
                 break;
             case LibUtilities::eModified_A:
@@ -708,6 +715,7 @@ namespace Nektar
             case LibUtilities::eGauss_Lagrange:
             case LibUtilities::eChebyshev:
             case LibUtilities::eFourier:
+			case LibUtilities::eBernstein:
                 for(i = 0 ; i < GetNcoeffs()-2;i++)
                 {
                     outarray[i] = i+1;
@@ -733,8 +741,9 @@ namespace Nektar
 
             int localDOF = localVertexId;
 
-            if( (m_base[0]->GetBasisType()==LibUtilities::eGLL_Lagrange) &&
-                (localVertexId==1) )
+            if( ( (m_base[0]->GetBasisType()==LibUtilities::eGLL_Lagrange) ||
+				  (m_base[0]->GetBasisType()==LibUtilities::eBernstein) )  &&
+                  (localVertexId==1) )
             {
                 localDOF = m_base[0]->GetNumModes()-1;
             }

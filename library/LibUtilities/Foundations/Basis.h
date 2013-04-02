@@ -114,6 +114,7 @@ namespace Nektar
                 case eFourierSingleMode:
                 case eFourierHalfModeRe:
                 case eFourierHalfModeIm:
+				case eBernstein:
                     value = m_nummodes;
                     break;
                     

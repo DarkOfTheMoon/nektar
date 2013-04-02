@@ -415,6 +415,7 @@ cout<<"deps/dx ="<<inarray_d0[i]<<"  deps/dy="<<inarray_d1[i]<<endl;
                 {
                 case LibUtilities::eGauss_Lagrange:
                 case LibUtilities::eGLL_Lagrange:
+				case LibUtilities::eBernstein:
                     {
                         offset = 1;
                     }
@@ -1659,6 +1660,7 @@ cout<<"deps/dx ="<<inarray_d0[i]<<"  deps/dy="<<inarray_d1[i]<<endl;
                 }
                 break;
             case LibUtilities::eGLL_Lagrange:
+			case LibUtilities::eBernstein:
 
                 for(m = 0; m < m_ncoeffs; ++m)
                 {

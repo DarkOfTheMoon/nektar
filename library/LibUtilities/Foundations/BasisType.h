@@ -58,6 +58,7 @@ namespace Nektar
             eFourierSingleMode, //!< Fourier ModifiedExpansion with just the first mode   \f$ \exp(i \pi  z_i)\f$
             eFourierHalfModeRe, //!< Fourier Modified expansions with just the real part of the first mode  \f$ Re[\exp(i \pi  z_i)]\f$    
             eFourierHalfModeIm, //!< Fourier Modified expansions with just the imaginary part of the first mode  \f$ Im[\exp(i \pi  z_i)]\f$    
+			eBernstein,			//!< Bernstein polynomials
             SIZE_BasisType		//!< Length of enum list
         };
     }

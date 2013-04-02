@@ -696,10 +696,12 @@ namespace Nektar
         int StdQuadExp::v_NumBndryCoeffs() const
         {
             ASSERTL1(GetBasisType(0) == LibUtilities::eModified_A ||
-                     GetBasisType(0) == LibUtilities::eGLL_Lagrange,
+                     GetBasisType(0) == LibUtilities::eGLL_Lagrange ||
+                     GetBasisType(0) == LibUtilities::eBernstein,
                      "BasisType is not a boundary interior form");
             ASSERTL1(GetBasisType(1) == LibUtilities::eModified_A ||
-                     GetBasisType(1) == LibUtilities::eGLL_Lagrange,
+                     GetBasisType(1) == LibUtilities::eGLL_Lagrange ||
+                     GetBasisType(1) == LibUtilities::eBernstein,
                       "BasisType is not a boundary interior form");
 
             return 4 + 2*(GetBasisNumModes(0)-2) + 2*(GetBasisNumModes(1)-2);
@@ -709,11 +711,13 @@ namespace Nektar
         {
             ASSERTL1(GetBasisType(0) == LibUtilities::eModified_A ||
                      GetBasisType(0) == LibUtilities::eGLL_Lagrange ||
-                     GetBasisType(0) == LibUtilities::eGauss_Lagrange,
+                     GetBasisType(0) == LibUtilities::eGauss_Lagrange ||
+                     GetBasisType(0) == LibUtilities::eBernstein,
                      "BasisType is not a boundary interior form");
             ASSERTL1(GetBasisType(1) == LibUtilities::eModified_A ||
                      GetBasisType(1) == LibUtilities::eGLL_Lagrange ||
-                     GetBasisType(0) == LibUtilities::eGauss_Lagrange,
+                     GetBasisType(1) == LibUtilities::eGauss_Lagrange ||
+                     GetBasisType(1) == LibUtilities::eBernstein,
                      "BasisType is not a boundary interior form");
 
             return  2*GetBasisNumModes(0) + 2*GetBasisNumModes(1);
@@ -734,10 +738,12 @@ namespace Nektar
             bool returnval = false;
                 
             if((m_base[0]->GetBasisType() == LibUtilities::eModified_A)
-               ||(m_base[0]->GetBasisType() == LibUtilities::eGLL_Lagrange))
+               ||(m_base[0]->GetBasisType() == LibUtilities::eGLL_Lagrange)
+			   ||(m_base[0]->GetBasisType() == LibUtilities::eBernstein))
             {
                 if((m_base[1]->GetBasisType() == LibUtilities::eModified_A)
-                   ||(m_base[1]->GetBasisType() == LibUtilities::eGLL_Lagrange))
+                   ||(m_base[1]->GetBasisType() == LibUtilities::eGLL_Lagrange)
+				   ||(m_base[1]->GetBasisType() == LibUtilities::eBernstein))
                 {
                     returnval = true;
                 }
@@ -787,6 +793,7 @@ namespace Nektar
             switch(Btype1)
             {
             case LibUtilities::eGLL_Lagrange:
+			case LibUtilities::eBernstein:
                 value1 = nummodes0;
                 break;
             case LibUtilities::eModified_A:
@@ -806,6 +813,7 @@ namespace Nektar
             switch(Btype0)
             {
             case LibUtilities::eGLL_Lagrange:
+			case LibUtilities::eBernstein:
                 value2 = value1+nummodes0-1;
                 break;
             case LibUtilities::eModified_A:
@@ -823,7 +831,8 @@ namespace Nektar
             }
 
 
-            if(Btype1 == LibUtilities::eGLL_Lagrange)
+            if( (Btype1 == LibUtilities::eGLL_Lagrange)
+				||(Btype1 == LibUtilities::eBernstein) )	
             {
                 for(i = nummodes0*(nummodes1-1);i < GetNcoeffs(); i++)
                 { 
@@ -852,6 +861,7 @@ namespace Nektar
             switch(Btype1)
             {
             case LibUtilities::eGLL_Lagrange:
+			case LibUtilities::eBernstein:
                 startvalue = nummodes0;
                 break;
             case LibUtilities::eModified_A:
@@ -865,6 +875,7 @@ namespace Nektar
             switch(Btype0)
             {
             case LibUtilities::eGLL_Lagrange:
+			case LibUtilities::eBernstein:
                 startvalue++;
                 break;
             case LibUtilities::eModified_A:
@@ -897,7 +908,8 @@ namespace Nektar
                 break;
             case 1:
                 {              
-                    if(m_base[0]->GetBasisType()==LibUtilities::eGLL_Lagrange)
+                    if( (m_base[0]->GetBasisType()==LibUtilities::eGLL_Lagrange)
+						||(m_base[0]->GetBasisType()==LibUtilities::eBernstein) )
                     {
                         localDOF = m_base[0]->GetNumModes()-1;
                     }
@@ -909,7 +921,8 @@ namespace Nektar
                 break;
             case 2:
                 {   
-                    if(m_base[0]->GetBasisType()==LibUtilities::eGLL_Lagrange)
+                    if( (m_base[0]->GetBasisType()==LibUtilities::eGLL_Lagrange)
+						||(m_base[0]->GetBasisType()==LibUtilities::eBernstein) )
                     {
                         localDOF = m_base[0]->GetNumModes()*m_base[1]->GetNumModes()-1;
                     }
@@ -921,7 +934,8 @@ namespace Nektar
                 break;
             case 3:
                 { 
-                    if(m_base[0]->GetBasisType()==LibUtilities::eGLL_Lagrange)
+                    if( (m_base[0]->GetBasisType()==LibUtilities::eGLL_Lagrange)
+						||(m_base[0]->GetBasisType()==LibUtilities::eBernstein) )
                     {
                         localDOF = m_base[0]->GetNumModes() * (m_base[1]->GetNumModes()-1);
                     }
@@ -1037,7 +1051,8 @@ namespace Nektar
                     break;
                 }  
             }
-            else if(bType == LibUtilities::eGLL_Lagrange)
+            else if( bType == LibUtilities::eGLL_Lagrange ||
+				     bType == LibUtilities::eBernstein )
             {
                 switch(eid)
                 {
@@ -1196,7 +1211,8 @@ namespace Nektar
                 }
             }
             else if(bType == LibUtilities::eGLL_Lagrange ||
-                    bType == LibUtilities::eGauss_Lagrange)
+                    bType == LibUtilities::eGauss_Lagrange ||
+					bType == LibUtilities::eBernstein)
             {
                 switch(eid)
                 {
