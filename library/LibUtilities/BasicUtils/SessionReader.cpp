@@ -147,15 +147,70 @@ namespace Nektar
         SessionReader::SessionReader(int argc, char *argv[]) :
         		m_filename(1), m_xmlDoc(1)
         {
+            std::vector<std::string> vFilenames =
+                ParseCommandLineArguments(argc, argv);
+
+            ASSERTL0(vFilenames.size() > 0, "No session file(s) given.");
+
+            // threads not initialised yet
+            m_filename[0]    = vFilenames[0];
+            m_sessionName = m_filename[0].substr(0, m_filename[0].find_last_of('.'));
+            m_xmlDoc[0]      = MergeDoc(vFilenames);
+            // Create communicator
+            CreateComm(argc, argv, m_filename[0]);
+        }
+
+
+        /**
+         *
+         */
+        SessionReader::SessionReader(
+            int                             argc,
+            char                           *argv[],
+            const std::vector<std::string> &pFilenames,
+            const CommSharedPtr            &pComm) :
+    			m_filename(1), m_xmlDoc(1)
+        {
+            ASSERTL0(pFilenames.size() > 0, "No filenames specified.");
+
+            std::vector<std::string> vFilenames =
+                ParseCommandLineArguments(argc, argv);
+
+            m_filename[0]    = pFilenames[0];
+            m_sessionName = m_filename[0].substr(0, m_filename[0].find_last_of('.'));
+            m_xmlDoc[0]      = MergeDoc(pFilenames); // threads not initialised yet
+
+            // Create communicator
+            if (!pComm.get())
+            {
+                CreateComm(argc, argv, m_filename[0]);
+            }
+            else
+            {
+                m_comm = pComm;
+            }
+        }
+
+       /**
+         * This constructor parses the command-line arguments given to the user
+         * application to set up any MPI communication, read supplied XML
+         * session files, and partition meshes where necessary.
+         *
+         * @param   argc        Number of command-line arguments
+         * @param   argv        Array of command-line arguments
+         */
+        SessionReader::SessionReader(int argc, char *argv[], void (*pMainFunc)(SessionReaderSharedPtr)) :
+        		m_filename(1), m_xmlDoc(1), m_mainFunc(pMainFunc)
+        {
             std::vector<std::string> vFilenames = 
                 ParseCommandLineArguments(argc, argv);
 
             ASSERTL0(vFilenames.size() > 0, "No session file(s) given.");
 
+            // threads not initialised yet
             m_filename[0]    = vFilenames[0];
             m_sessionName = m_filename[0].substr(0, m_filename[0].find_last_of('.'));
-            m_xmlDoc[0]      = MergeDoc(vFilenames); // threads not initialised yet
-
+            m_xmlDoc[0]      = MergeDoc(vFilenames);
             // Create communicator
             CreateComm(argc, argv, m_filename[0]);
         }
@@ -168,8 +223,9 @@ namespace Nektar
             int                             argc, 
             char                           *argv[], 
             const std::vector<std::string> &pFilenames, 
-            const CommSharedPtr            &pComm) :
-    			m_filename(1), m_xmlDoc(1)
+            const CommSharedPtr            &pComm,
+            void (*pMainFunc)(SessionReaderSharedPtr)) :
+    			m_filename(1), m_xmlDoc(1), m_mainFunc(pMainFunc)
         {
             ASSERTL0(pFilenames.size() > 0, "No filenames specified.");
 
@@ -227,7 +283,12 @@ namespace Nektar
         	// command line.
         	m_session->CmdLineOverride();
 
+        	// DoMain()
+        	std::cerr << "Doing main " << std::endl;
+        	m_session->m_mainFunc(m_session);
+
         }
+
         /**
          * Performs the main initialisation of the object. The XML file provided
          * on the command-line is loaded and any mesh partitioning is done. The

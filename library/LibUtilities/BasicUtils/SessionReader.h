@@ -149,9 +149,9 @@ namespace Nektar
              * of the object.
              */
             LIB_UTILITIES_EXPORT static SessionReaderSharedPtr CreateInstance(
-                int                       argc, 
-                char                     *argv[], 
-                std::vector<std::string> &pFilenames, 
+                int                       argc,
+                char                     *argv[],
+                std::vector<std::string> &pFilenames,
                 const CommSharedPtr      &pComm = CommSharedPtr())
             {
                 SessionReaderSharedPtr p = MemoryManager<
@@ -160,6 +160,51 @@ namespace Nektar
                 p->InitSession();
                 return p;
             }
+
+            /**
+             * @brief Creates an instance of the SessionReader class.
+             *
+             * This function should be used by an application to instantiate the
+             * session reader. It should be called at the very beginning of the
+             * application before any other processing of command-line
+             * arguments. After instantiating the class and setting up any
+             * parallel communication, it also calls the main initialisation
+             * of the object.
+             */
+            LIB_UTILITIES_EXPORT static SessionReaderSharedPtr CreateInstance(
+                int argc, char *argv[], void (*pMainFunc)(SessionReaderSharedPtr))
+            {
+                SessionReaderSharedPtr p = MemoryManager<
+                    LibUtilities::SessionReader>::AllocateSharedPtr(argc, argv, pMainFunc);
+                p->InitSession();
+                return p;
+            }
+
+            /**
+             * @brief Creates an instance of the SessionReader class initialised
+             *        using a separate list of XML documents.
+             *
+             * This function should be used by an application to instantiate the
+             * session reader. It may be called after processing of command-line
+             * arguments. After instantiating the class and setting up any
+             * parallel communication, it also calls the main initialisation
+             * of the object.
+             */
+            LIB_UTILITIES_EXPORT static SessionReaderSharedPtr CreateInstance(
+            		int                       argc,
+            		char                     *argv[],
+            		std::vector<std::string> &pFilenames,
+            		void (*pMainFunc)(SessionReaderSharedPtr),
+            		const CommSharedPtr      &pComm = CommSharedPtr()
+            		)
+            {
+            	SessionReaderSharedPtr p = MemoryManager<
+            			LibUtilities::SessionReader>
+            	::AllocateSharedPtr(argc, argv, pFilenames, pComm, pMainFunc);
+            	p->InitSession();
+            	return p;
+            }
+
 
             /// Destructor
             LIB_UTILITIES_EXPORT ~SessionReader();
@@ -411,13 +456,25 @@ namespace Nektar
 
             /// Main constructor
             LIB_UTILITIES_EXPORT SessionReader(
-                int                             argc, 
+                int                             argc,
                 char                           *argv[]);
+            LIB_UTILITIES_EXPORT SessionReader(
+                int                             argc,
+                char                           *argv[],
+                const std::vector<std::string> &pFilenames,
+                const CommSharedPtr            &pComm);
+
+            /// Main constructor
+            LIB_UTILITIES_EXPORT SessionReader(
+                int                             argc, 
+                char                           *argv[],
+                void (*pMainFunc)(SessionReaderSharedPtr));
             LIB_UTILITIES_EXPORT SessionReader(
                 int                             argc, 
                 char                           *argv[], 
                 const std::vector<std::string> &pFilenames, 
-                const CommSharedPtr            &pComm);
+                const CommSharedPtr            &pComm,
+                void (*pMainFunc)(SessionReaderSharedPtr));
             LIB_UTILITIES_EXPORT void InitSession();
 
             /// Returns a shared pointer to the current object.
@@ -477,6 +534,8 @@ namespace Nektar
             	virtual ~SessionJob();
             	virtual void Run();
             };
+            // Holds the function that will be run after Session is initialised.
+            LIB_UTILITIES_EXPORT void (*m_mainFunc)(SessionReaderSharedPtr);
         };
         /**
          *

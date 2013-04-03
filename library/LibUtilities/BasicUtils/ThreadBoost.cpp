@@ -332,6 +332,7 @@ namespace Nektar
                 {
                     // something bad happened, probably time to die
                     // maybe signal ThreadManager
+                	throw;
                 }
             }
         }

@@ -39,24 +39,26 @@
 using namespace Nektar;
 using namespace Nektar::SolverUtils;
 
+void MainFunc(LibUtilities::SessionReaderSharedPtr pSession);
+
 int main(int argc, char *argv[])
 {
     LibUtilities::SessionReaderSharedPtr session;
-    string vDriverModule;
-    DriverSharedPtr drv;
+//    string vDriverModule;
+//    DriverSharedPtr drv;
 
     try
     {
         // Create session reader.
-        session = LibUtilities::SessionReader::CreateInstance(argc, argv);
+        session = LibUtilities::SessionReader::CreateInstance(argc, argv, MainFunc);
 
-        // Create driver
-        session->LoadSolverInfo("Driver", vDriverModule, "Standard");
-        drv = GetDriverFactory().CreateInstance(vDriverModule, session);
-
-        // Execute driver
-        drv->Execute();
-
+//        // Create driver
+//        session->LoadSolverInfo("Driver", vDriverModule, "Standard");
+//        drv = GetDriverFactory().CreateInstance(vDriverModule, session);
+//
+//        // Execute driver
+//        drv->Execute();
+//
         // Finalise communications
         session->Finalise();
     }
@@ -70,4 +72,30 @@ int main(int argc, char *argv[])
     }
 
     return 0;
+}
+
+void MainFunc(LibUtilities::SessionReaderSharedPtr pSession)
+{
+	std::cerr << "Entered main" << std::endl;
+
+    string vDriverModule;
+    DriverSharedPtr drv;
+
+    // Create driver
+	std::cerr << "Loading solverinfo" << std::endl;
+
+    pSession->LoadSolverInfo("Driver", vDriverModule, "Standard");
+	std::cerr << "Getting driver" << std::endl;
+
+	int i=1;
+	while(i==0)
+	{
+
+	}
+    drv = GetDriverFactory().CreateInstance(vDriverModule, pSession);
+
+	std::cerr << "Executing driver" << std::endl;
+    // Execute driver
+    drv->Execute();
+
 }
