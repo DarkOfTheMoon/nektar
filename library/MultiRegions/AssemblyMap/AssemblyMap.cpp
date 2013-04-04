@@ -955,7 +955,8 @@ namespace Nektar
         {
             ASSERTL1(pGlobal.num_elements() == m_numGlobalBndCoeffs,
                      "Wrong size.");
-            Gs::Gather(pGlobal, Gs::gs_add, m_bndGsh);
+//            Gs::Gather(pGlobal, Gs::gs_add, m_bndGsh);
+            m_comm->GsGather(pGlobal, Gs::gs_add, m_bndGsh);
         }
 
         const void AssemblyMap::UniversalAssembleBnd(

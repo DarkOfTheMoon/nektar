@@ -544,5 +544,62 @@ namespace Nektar
             MPI_Comm_split(m_comm, myCol, myRow, &newComm);
             m_commColumn = boost::shared_ptr<Comm>(new CommMpi(newComm));
         }
+
+        using namespace Gs;
+        Gs::gs_data* CommMpi::v_GsInit(const Array<OneD, long> pId)
+        {
+        	if (m_size == 1)
+        	{
+        		return 0;
+        	}
+            comm vComm;
+            MPI_Comm_dup(m_comm, &vComm.c);
+            vComm.id = GetRank();
+            vComm.np = GetSize();
+            return nektar_gs_setup(&pId[0], pId.num_elements(), &vComm);
+        }
+
+        void CommMpi::v_GsFinalise(Gs::gs_data *pGsh)
+        {
+            if (pGsh)
+            {
+                nektar_gs_free(pGsh);
+            }
+        }
+
+        void CommMpi::v_GsUnique(const Array<OneD, long> pId)
+        {
+            if (m_size == 1)
+            {
+                return;
+            }
+            comm vComm;
+            vComm.c  = m_comm;
+            vComm.id = GetRank();
+            vComm.np = GetSize();
+            nektar_gs_unique(&pId[0], pId.num_elements(), &vComm);
+        }
+
+        void CommMpi::v_GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
+                Gs::gs_data *pGsh, Array<OneD, NekDouble> pBuffer)
+        {
+            if (!pGsh)
+            {
+                return;
+            }
+            if (pBuffer.num_elements() == 0)
+            {
+                nektar_gs(&pU[0], gs_double, pOp, false, pGsh, 0);
+            }
+            else
+            {
+                array buf;
+                buf.ptr = &pBuffer[0];
+                buf.n = pBuffer.num_elements();
+                nektar_gs(&pU[0], gs_double, pOp, false, pGsh, &buf);
+            }
+        }
+
+
     }
 }

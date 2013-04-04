@@ -140,7 +140,14 @@ namespace Nektar
 									Array<OneD, int>& pRecvDataSizeMap,
 									Array<OneD, int>& pRecvDataOffsetMap);
             virtual void v_SplitComm(int pRows, int pColumns);
-            virtual CommSharedPtr v_GetComm();
+            virtual CommSharedPtr v_GetTrueComm();
+            virtual Gs::gs_data* v_GsInit(const Array<OneD, long> pId);
+            virtual void v_GsFinalise(Gs::gs_data *pGsh);
+            virtual void v_GsUnique(const Array<OneD, long> pId);
+            virtual void v_GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
+                    Gs::gs_data *pGsh, Array<OneD, NekDouble> pBuffer
+                                                     = NullNekDouble1DArray);
+
         private:
             template <typename DataType>
             void GenericAllReduce(DataType& pData, enum ReduceOperator pOp,

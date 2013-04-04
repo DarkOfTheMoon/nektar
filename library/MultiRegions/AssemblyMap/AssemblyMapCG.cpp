@@ -252,9 +252,12 @@ namespace Nektar
                 tmp[i] = m_globalToUniversalMap[i];
             }
 
-            m_gsh = Gs::Init(tmp, vCommRow);
-            m_bndGsh = Gs::Init(tmp2, vCommRow);
-            Gs::Unique(tmp, vCommRow);
+//            m_gsh = Gs::Init(tmp, vCommRow);
+//            m_bndGsh = Gs::Init(tmp2, vCommRow);
+//            Gs::Unique(tmp, vCommRow);
+            m_gsh = vCommRow->GsInit(tmp);
+            m_bndGsh = vCommRow->GsInit(tmp2);
+            vCommRow->GsUnique(tmp);
             for (unsigned int i = 0; i < m_numGlobalCoeffs; ++i)
             {
                 m_globalToUniversalMapUnique[i] = (tmp[i] >= 0 ? 1 : 0);
@@ -468,7 +471,8 @@ namespace Nektar
         const void AssemblyMapCG::v_UniversalAssemble(
                       Array<OneD,     NekDouble>& pGlobal) const
         {
-            Gs::Gather(pGlobal, Gs::gs_add, m_gsh);
+//            Gs::Gather(pGlobal, Gs::gs_add, m_gsh);
+        	m_comm->GsGather(pGlobal,  Gs::gs_add, m_gsh);
         }
 
         const void AssemblyMapCG::v_UniversalAssemble(

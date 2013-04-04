@@ -114,6 +114,13 @@ namespace Nektar
 													     Array<OneD, int>& pRecvDataSizeMap,
 													     Array<OneD, int>& pRecvDataOffsetMap);
             LIB_UTILITIES_EXPORT virtual void v_SplitComm(int pRows, int pColumns);
+            LIB_UTILITIES_EXPORT virtual Gs::gs_data* v_GsInit(const Array<OneD, long> pId);
+            LIB_UTILITIES_EXPORT virtual void v_GsFinalise(Gs::gs_data *pGsh);
+            LIB_UTILITIES_EXPORT virtual void v_GsUnique(const Array<OneD, long> pId);
+            LIB_UTILITIES_EXPORT virtual void v_GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
+                    Gs::gs_data *pGsh, Array<OneD, NekDouble> pBuffer
+                                                     = NullNekDouble1DArray);
+
 			
         };
 

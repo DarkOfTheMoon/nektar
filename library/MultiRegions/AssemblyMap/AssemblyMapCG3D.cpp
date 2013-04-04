@@ -1026,15 +1026,21 @@ namespace Nektar
                 Array<OneD, long> vertArray(unique_verts, &procVerts[0]);
                 Array<OneD, long> edgeArray(unique_edges, &procEdges[0]);
                 Array<OneD, long> faceArray(unique_faces, &procFaces[0]);
-                Gs::gs_data *tmp1 = Gs::Init(vertArray, m_comm);
-                Gs::gs_data *tmp2 = Gs::Init(edgeArray, m_comm);
-                Gs::gs_data *tmp3 = Gs::Init(faceArray, m_comm);
+                Gs::gs_data *tmp1 = m_comm->GsInit(vertArray);
+                Gs::gs_data *tmp2 = m_comm->GsInit(edgeArray);
+                Gs::gs_data *tmp3 = m_comm->GsInit(faceArray);
+//                Gs::gs_data *tmp1 = Gs::Init(vertArray, m_comm);
+//                Gs::gs_data *tmp2 = Gs::Init(edgeArray, m_comm);
+//                Gs::gs_data *tmp3 = Gs::Init(faceArray, m_comm);
                 Array<OneD, NekDouble> tmp4(unique_verts, 1.0);
                 Array<OneD, NekDouble> tmp5(unique_edges, 1.0);
                 Array<OneD, NekDouble> tmp6(unique_faces, 1.0);
-                Gs::Gather(tmp4, Gs::gs_add, tmp1);
-                Gs::Gather(tmp5, Gs::gs_add, tmp2);
-                Gs::Gather(tmp6, Gs::gs_add, tmp3);
+                m_comm->GsGather(tmp4, Gs::gs_add, tmp1);
+                m_comm->GsGather(tmp5, Gs::gs_add, tmp2);
+                m_comm->GsGather(tmp6, Gs::gs_add, tmp3);
+//                Gs::Gather(tmp4, Gs::gs_add, tmp1);
+//                Gs::Gather(tmp5, Gs::gs_add, tmp2);
+//                Gs::Gather(tmp6, Gs::gs_add, tmp3);
 
                 // Finally, fill the partVerts set with all non-Dirichlet
                 // vertices which lie on a partition boundary.

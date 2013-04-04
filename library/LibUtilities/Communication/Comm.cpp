@@ -55,7 +55,7 @@ namespace Nektar
 
         }
 
-        CommSharedPtr Comm::v_GetComm()
+        CommSharedPtr Comm::v_GetTrueComm()
         {
         	return shared_from_this();
         }

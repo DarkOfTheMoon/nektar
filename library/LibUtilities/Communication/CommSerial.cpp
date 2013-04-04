@@ -244,5 +244,27 @@ namespace Nektar
         {
             ASSERTL0(false, "Cannot split a serial process.");
         }
+
+        Gs::gs_data* CommSerial::v_GsInit(const Array<OneD, long> pId)
+        {
+        	return 0;
+        }
+
+        void CommSerial::v_GsFinalise(Gs::gs_data *pGsh)
+        {
+        	return;
+        }
+
+        void CommSerial::v_GsUnique(const Array<OneD, long> pId)
+        {
+        	return;
+        }
+
+        void CommSerial::v_GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
+                Gs::gs_data *pGsh, Array<OneD, NekDouble> pBuffer)
+        {
+        	return;
+        }
+
     }
 }

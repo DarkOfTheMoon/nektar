@@ -38,10 +38,9 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <LibUtilities/BasicUtils/NekFactory.hpp>
 #include <LibUtilities/LibUtilitiesDeclspec.h>
-
+#include <LibUtilities/Communication/GsLib.hpp>
 #include <LibUtilities/BasicConst/NektarUnivTypeDefs.hpp>
 namespace Nektar { template <typename Dim, typename DataType> class Array; }
-
 
 namespace Nektar
 {
@@ -127,7 +126,13 @@ namespace Nektar
                 LIB_UTILITIES_EXPORT inline void SplitComm(int pRows, int pColumns);
                 LIB_UTILITIES_EXPORT inline CommSharedPtr GetRowComm();
                 LIB_UTILITIES_EXPORT inline CommSharedPtr GetColumnComm();
-                LIB_UTILITIES_EXPORT CommSharedPtr inline GetComm();
+                LIB_UTILITIES_EXPORT CommSharedPtr inline GetTrueComm();
+                LIB_UTILITIES_EXPORT inline Gs::gs_data* GsInit(const Array<OneD, long> pId);
+                LIB_UTILITIES_EXPORT inline void GsFinalise(Gs::gs_data *pGsh);
+                LIB_UTILITIES_EXPORT inline void GsUnique(const Array<OneD, long> pId);
+                LIB_UTILITIES_EXPORT inline void GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
+                        Gs::gs_data *pGsh, Array<OneD, NekDouble> pBuffer
+                                                         = NullNekDouble1DArray);
 
             protected:
                 int m_size;                 ///< Number of processes
@@ -183,7 +188,14 @@ namespace Nektar
 										Array<OneD, int>& pRecvDataSizeMap,
 										Array<OneD, int>& pRecvDataOffsetMap) = 0;
                 virtual void v_SplitComm(int pRows, int pColumns) = 0;
-                virtual CommSharedPtr v_GetComm();
+                virtual CommSharedPtr v_GetTrueComm();
+                virtual Gs::gs_data* v_GsInit(const Array<OneD, long> pId) = 0;
+                virtual void v_GsFinalise(Gs::gs_data *pGsh) = 0;
+                virtual void v_GsUnique(const Array<OneD, long> pId) = 0;
+                virtual void v_GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
+                        Gs::gs_data *pGsh, Array<OneD, NekDouble> pBuffer
+                                                         = NullNekDouble1DArray) = 0;
+
         };
 
 
@@ -441,10 +453,32 @@ namespace Nektar
          * implementation (e.g. CommMPI) is neeeded in an otherwise
          * threaded class (e.g. ThreadedComm).
          */
-        inline CommSharedPtr Comm::GetComm()
+        inline CommSharedPtr Comm::GetTrueComm()
         {
-        	return v_GetComm();
+        	return v_GetTrueComm();
         }
+
+        inline Gs::gs_data* Comm::GsInit(const Array<OneD, long> pId)
+        {
+        	return v_GsInit(pId);
+        }
+
+        inline void Comm::GsFinalise(Gs::gs_data *pGsh)
+        {
+        	v_GsFinalise(pGsh);
+        }
+
+        inline void Comm::GsUnique(const Array<OneD, long> pId)
+        {
+        	v_GsUnique(pId);
+        }
+
+        inline void Comm::GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
+                Gs::gs_data *pGsh, Array<OneD, NekDouble> pBuffer)
+        {
+        	v_GsGather(pU, pOp, pGsh, pBuffer);
+        }
+
 
     }
 }

@@ -1145,12 +1145,16 @@ namespace Nektar
                 // vertices and edges which are located on partition boundary.
                 Array<OneD, long> vertArray(unique_verts, &procVerts[0]);
                 Array<OneD, long> edgeArray(unique_edges, &procEdges[0]);
-                Gs::gs_data *tmp1 = Gs::Init(vertArray, m_comm);
-                Gs::gs_data *tmp2 = Gs::Init(edgeArray, m_comm);
+//                Gs::gs_data *tmp1 = Gs::Init(vertArray, m_comm);
+//                Gs::gs_data *tmp2 = Gs::Init(edgeArray, m_comm);
+                Gs::gs_data *tmp1 = m_comm->GsInit(vertArray);
+                Gs::gs_data *tmp2 = m_comm->GsInit(edgeArray);
                 Array<OneD, NekDouble> tmp3(unique_verts, 1.0);
                 Array<OneD, NekDouble> tmp4(unique_edges, 1.0);
-                Gs::Gather(tmp3, Gs::gs_add, tmp1);
-                Gs::Gather(tmp4, Gs::gs_add, tmp2);
+//                Gs::Gather(tmp3, Gs::gs_add, tmp1);
+//                Gs::Gather(tmp4, Gs::gs_add, tmp2);
+                m_comm->GsGather(tmp3, Gs::gs_add, tmp1);
+                m_comm->GsGather(tmp4, Gs::gs_add, tmp2);
 
                 // Finally, fill the partVerts set with all non-Dirichlet
                 // vertices which lie on a partition boundary.

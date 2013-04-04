@@ -84,6 +84,7 @@ SET(CommunicationHeaders
     ./Communication/Comm.h
     ./Communication/CommSerial.h
     ./Communication/GsLib.hpp
+    ./Communication/GsMpiLib.hpp
     ./Communication/Transposition.h
     ./Communication/Xxt.hpp
 )

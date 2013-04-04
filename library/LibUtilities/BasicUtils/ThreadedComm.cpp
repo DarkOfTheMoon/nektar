@@ -723,10 +723,29 @@ namespace Nektar
 			m_commRow= vTmpRow;
 		}
 
-		CommSharedPtr ThreadedComm::v_GetComm()
+		CommSharedPtr ThreadedComm::v_GetTrueComm()
 		{
 			return m_comm;
 		}
+
+        Gs::gs_data* ThreadedComm::v_GsInit(const Array<OneD, long> pId)
+        {
+        	return 0;
+        }
+        void ThreadedComm::v_GsFinalise(Gs::gs_data *pGsh)
+        {
+
+        }
+        void ThreadedComm::v_GsUnique(const Array<OneD, long> pId)
+        {
+
+        }
+        void ThreadedComm::v_GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
+                Gs::gs_data *pGsh, Array<OneD, NekDouble> pBuffer)
+        {
+
+        }
+
 	}
 	/*
 	            unsigned int vnumworkers = m_threadManager->GetMaxNumWorkers();

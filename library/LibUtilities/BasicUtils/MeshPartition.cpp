@@ -380,7 +380,7 @@ namespace Nektar
                   vertit != vertit_end;
                   ++vertit, ++i)
             {
-            	if (m_threadManager->GetRankFromPartition(part[i]) == m_comm->GetComm()->GetRank())
+            	if (m_threadManager->GetRankFromPartition(part[i]) == m_comm->GetTrueComm()->GetRank())
                 {
             		unsigned int vThr = m_threadManager->GetThrFromPartition(part[i]);
                     pGraph[*vertit].partition = part[i];
