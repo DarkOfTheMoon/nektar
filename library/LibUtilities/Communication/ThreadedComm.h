@@ -15,9 +15,9 @@
 
 namespace Nektar
 {
-	namespace Thread
+	namespace LibUtilities
 	{
-	using namespace LibUtilities;
+		using namespace Thread;
 		class ThreadedComm: public Comm
 		{
 		public:

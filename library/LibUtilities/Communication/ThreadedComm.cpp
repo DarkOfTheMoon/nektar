@@ -5,15 +5,15 @@
  *      Author: simon
  */
 
-#include <LibUtilities/BasicUtils/ThreadedComm.h>
+#include <LibUtilities/Communication/ThreadedComm.h>
 #include <LibUtilities/BasicUtils/SharedArray.hpp>
 
 
 namespace Nektar
 {
-	namespace Thread
+	namespace LibUtilities
 	{
-
+		using namespace Thread;
 		ThreadedComm::ThreadedComm(CommSharedPtr comm, ThreadManagerSharedPtr tm) :
 				m_comm(comm), m_tm(tm), m_numworkers(m_tm->GetMaxNumWorkers()),
 				m_numMPI(m_comm->GetSize()), m_resDbl(m_numworkers),

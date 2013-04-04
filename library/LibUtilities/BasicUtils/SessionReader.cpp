@@ -50,7 +50,7 @@ using namespace std;
 #include <LibUtilities/Memory/NekMemoryManager.hpp>
 #include <LibUtilities/BasicUtils/ParseUtils.hpp>
 #include <LibUtilities/BasicUtils/Thread.h>
-#include <LibUtilities/BasicUtils/ThreadedComm.h>
+#include <LibUtilities/Communication/ThreadedComm.h>
 
 #include <boost/program_options.hpp>
 
@@ -316,7 +316,7 @@ namespace Nektar
             // If we've got more than 1 thread, attach a ThreadedComm
             // to the existing Comm
 			if (vNumWorkers > 1) {
-				CommSharedPtr vTmpComm(new Thread::ThreadedComm(m_comm, m_threadManager));
+				CommSharedPtr vTmpComm(new ThreadedComm(m_comm, m_threadManager));
 				m_comm = vTmpComm;
 			}
 

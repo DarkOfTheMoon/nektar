@@ -84,7 +84,7 @@ SET(CommunicationHeaders
     ./Communication/Comm.h
     ./Communication/CommSerial.h
     ./Communication/GsLib.hpp
-    ./Communication/GsMpiLib.hpp
+    ./Communication/ThreadedComm.h
     ./Communication/Transposition.h
     ./Communication/Xxt.hpp
 )
@@ -130,7 +130,6 @@ SET(BasicUtilsHeaders
     ./BasicUtils/SharedArray.hpp
     ./BasicUtils/Thread.h
     ./BasicUtils/ThreadBoost.h
-    ./BasicUtils/ThreadedComm.h
     ./BasicUtils/Vmath.hpp
     ./BasicUtils/VmathArray.hpp
     ./BasicUtils/Metis.hpp
@@ -144,7 +143,6 @@ SET(BasicUtilsSources
     ./BasicUtils/SessionReader.cpp
     ./BasicUtils/Thread.cpp
     ./BasicUtils/ThreadBoost.cpp
-    ./BasicUtils/ThreadedComm.cpp
     ./BasicUtils/Vmath.cpp
 )
 
@@ -188,12 +186,14 @@ SET(PolylibSources
 SET(CommunicationSources
     ./Communication/Comm.cpp
     ./Communication/CommSerial.cpp
+    ./Communication/ThreadedComm.cpp
     ./Communication/Transposition.cpp
 )
 
 IF(NEKTAR_USE_MPI)
     SET(CommunicationHeaders ${CommunicationHeaders} 
-        ./Communication/CommMpi.h)
+        ./Communication/CommMpi.h
+        ./Communication/GsMpiLib.hpp)
     SET(CommunicationSources ${CommunicationSources}
         ./Communication/CommMpi.cpp)
 ENDIF(NEKTAR_USE_MPI)
