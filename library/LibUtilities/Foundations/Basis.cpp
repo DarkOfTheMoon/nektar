@@ -32,7 +32,6 @@
 // Description: Basis definition
 //
 ///////////////////////////////////////////////////////////////////////////////
-
 #include <LibUtilities/Foundations/Basis.h>
 #include <LibUtilities/Foundations/ManagerAccess.h>
 #include <LibUtilities/Foundations/Points.h>
@@ -666,25 +665,43 @@ namespace Nektar
 					//P is polynomial degree, p is in (0,1,..,n)
 					//We are going to used Legendre-type ordering (in terms of mapping): vertex modes are first and last
 
+					int nu;//lower number in the binomial coefficient binom_coeff(P, nu)
 					int P = numModes - 1;//Bernstein polynomial degree
-					NekDouble b_coeff_num = 1.0;//binomial coefficient numerator
-					NekDouble b_coeff_den = 1.0;//binomial coefficient denomiantor
-					for(i = 0; i < numPoints; ++i)
+					
+					//array containing binomial coefficients, first and last are 1s
+                    Array<OneD, NekDouble> b_coeffs(numModes, 1.0);
+					//compute array midpoint, the values after midpoint will be mirrored
+					int mid_array = (numModes%2 == 1) ? numModes/2 + 1 : numModes/2;
+
+					if(numModes > 2)
 					{
-						m_bdata[i] = pow(0.5*(1-z[i]), P);// "left" vertex mode, p=0
-						m_bdata[P*numPoints + i] = pow(0.5*(1+z[i]), P); // "right" vertex mode, p=P
+						//auxillary variables used in multiplicative binomial coefficient formula
+						//after all the cancellation is done
+						unsigned long b_coeff_num = P;//binomial coefficient numerator
+						unsigned long b_coeff_den = 1;//binomial coefficient denomiantor
+						unsigned long num_mult = b_coeff_num;
+						unsigned long den_mult = b_coeff_den;
+					
+						for(nu = 1; nu < mid_array; ++nu)
+						{
+							b_coeffs[nu] = (NekDouble)b_coeff_num / (NekDouble)b_coeff_den;
+							b_coeffs[P-nu] = b_coeffs[nu];
+							//decrementing numerator and incrementing denominator
+							num_mult--;
+							den_mult++;
+							b_coeff_num *= num_mult;
+							b_coeff_den *= den_mult;
+						}
 					}
+					
+					mode = m_bdata.data();
 
-					mode = m_bdata.data() + numPoints;
-
-					for(p = 1; p < P; ++p, mode += numPoints)
+					for(p = 0; p <= P; ++p, mode += numPoints)
 					{
 						//using multiplicative formula for binomial coefficients
-						b_coeff_num *= (P + 1 - p);
-						b_coeff_den *= p;
 						for(i = 0; i < numPoints; ++i)
 						{
-							mode[i] = b_coeff_num / b_coeff_den * pow(0.5*(1+z[i]),p) * pow(0.5*(1-z[i]), P-p);
+							mode[i] = b_coeffs[p] * pow(0.5+0.5*z[i],p) * pow(0.5-0.5*z[i], P-p);
 						}
 					}
 
