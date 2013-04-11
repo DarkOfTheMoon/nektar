@@ -62,11 +62,11 @@ int main(int argc, char *argv[])
     {
         fieldfile[i] = string(argv[2+i]);
     }
-    Array<OneD, vector<SpatialDomains::FieldDefinitionsSharedPtr> > fielddef(num_fld);
+    Array<OneD, vector<LibUtilities::FieldDefinitionsSharedPtr> > fielddef(num_fld);
     Array<OneD, vector<vector<NekDouble> > > fielddata(num_fld);
     for(i = 0; i < num_fld; ++i)
     {
-        graphShPt->Import(fieldfile[i],fielddef[i],fielddata[i]);
+        LibUtilities::Import(fieldfile[i],fielddef[i],fielddata[i]);
     }
     //----------------------------------------------
 
@@ -282,7 +282,7 @@ int main(int argc, char *argv[])
         for (i=0; i<expdim; ++i)
         {
             // f - grad*p
-            Vmath::Vsub(nq, forc[i], 1, grad[expdim*expdim+i], 1, forc[i], 1);
+            //Vmath::Vsub(nq, forc[i], 1, grad[expdim*expdim+i], 1, forc[i], 1);
             for (j=0; j<expdim; ++j)
             {
                 // f - grad*p + kinvis*grad^2*u

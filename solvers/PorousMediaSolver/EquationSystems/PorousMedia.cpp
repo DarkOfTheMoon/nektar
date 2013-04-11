@@ -29,8 +29,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 //
-// Description: Porous Media class definition built on
-// ADRBase class
+// Description: Porous Media class definition
 //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -135,7 +134,6 @@ namespace Nektar
             
             // check to see if any user defined boundary condition is
             // indeed implemented
-            
             for(int n = 0; n < m_fields[0]->GetBndConditions().num_elements(); ++n)
             {	
                 // Time Dependent Boundary Condition (if no user
@@ -157,22 +155,20 @@ namespace Nektar
             ASSERTL0(false,"Unknown or undefined equation type");
         }
 
+        //Kinematic viscosity
         m_session->LoadParameter("Kinvis", m_kinvis);
 
         // Load variable coefficients
         m_perm = Array<OneD, NekDouble> (3*(m_spacedim-1));
         m_spatialperm = Array<OneD, Array<OneD, NekDouble> > (m_spacedim);
 
-        // Inverting Permeability Matrix
+        // Inverted Permeability Matrix
         m_perm_inv = Array<OneD, NekDouble> (3*(m_spacedim-1));
 
         //Setup of spatially varying anisotropic permeability
         if(m_session->DefinesFunction("SpatialAnisotropicPermeability"))
         {
-            if (!m_explicitPermeability)
-            {
-                ASSERTL0(0,"not yet implemented");
-            }
+            ASSERTL0(!m_explicitPermeability,"implicit spatially varying permeability not implemented");
 
             int nq = m_fields[0]->GetNpoints();
             
@@ -189,7 +185,39 @@ namespace Nektar
                     EvaluateFunction(varCoeffs[i], vTemp, "SpatialAnisotropicPermeability");
                     m_spatialperm[i] = Array<OneD, NekDouble>(nq);
                     Vmath::Sdiv(nq,1.0,vTemp,1,m_spatialperm[i],1);
-                }                
+                }
+                Array<OneD,NekDouble> x0(nq);
+                Array<OneD,NekDouble> x1(nq);
+                Array<OneD,NekDouble> x2(nq);
+                
+                // Get the coordinates (assuming all fields have the same
+                // discretisation)
+                NekDouble scalefac = 10;
+                m_fields[0]->GetCoords(x0,x1,x2);
+                for(int j=0; j<nq; ++j)
+                {
+                    NekDouble x = x0[j];
+                    NekDouble y = x1[j];
+                    if(x > 0.375 && x <0.625)
+                    {
+                        //cout<<"x: "<<x0[j]<<" y: "<<x1[j]<<" z: "<<x2[j]<<endl;
+                        m_spatialperm[0][j]=m_spatialperm[0][j]*scalefac;
+                        m_spatialperm[1][j]=m_spatialperm[1][j]*scalefac;
+                    }
+                }
+
+                // Transform variable coefficient and write out to file.
+                m_fields[0]->FwdTrans_IterPerExp(m_spatialperm[i],
+                                                 m_fields[0]->UpdateCoeffs());
+                std::stringstream filename;
+                filename << "AnisotropicPerm_" << varCoeffs[i];
+                if (m_comm->GetSize() > 1)
+                {
+                    filename << "_P" << m_comm->GetRank();
+                }
+                filename << ".fld";
+                WriteFld(filename.str());
+                
             }
             if(m_spacedim == 3)
             {
@@ -208,50 +236,6 @@ namespace Nektar
                     m_spatialperm[i] = Array<OneD, NekDouble>(nq);
                     Vmath::Sdiv(nq,1.0,vTemp,1,m_spatialperm[i],1);
                 }
-
-                Array<OneD,NekDouble> x0(nq);
-                Array<OneD,NekDouble> x1(nq);
-                Array<OneD,NekDouble> x2(nq);
-                
-                // Get the coordinates (assuming all fields have the same
-                // discretisation)
-                NekDouble scalefac = 100;
-                m_fields[0]->GetCoords(x0,x1,x2);
-                for(int j=0; j<nq; ++j)
-                {
-                    NekDouble bound1 = x0[j];
-                    NekDouble bound2 = x1[j];
-                    NekDouble bound3 = x2[j];
-
-                    if(bound3 > 0.45 && bound3 <0.55 && bound2 > 0.25 && bound2 <0.75)
-                    {
-                        //cout<<"x: "<<x0[j]<<" y: "<<x1[j]<<" z: "<<x2[j]<<endl;
-                        m_spatialperm[0][j]=m_spatialperm[0][j]*scalefac;
-                        m_spatialperm[1][j]=m_spatialperm[1][j]*scalefac;
-                        m_spatialperm[2][j]=m_spatialperm[2][j]*scalefac;
-                    }
-
-                    if(bound3 > 0.65 && bound3 <0.75 && bound2 < 0.25 || bound2 >0.75)
-                    {
-                        //cout<<"x: "<<x0[j]<<" y: "<<x1[j]<<" z: "<<x2[j]<<endl;
-                        m_spatialperm[0][j]=m_spatialperm[0][j]*scalefac;
-                        m_spatialperm[1][j]=m_spatialperm[1][j]*scalefac;
-                        m_spatialperm[2][j]=m_spatialperm[2][j]*scalefac;
-                    }
-                }
-
-                // Transform variable coefficient and write out to file.
-                m_fields[0]->FwdTrans_IterPerExp(m_spatialperm[i],
-                                                 m_fields[0]->UpdateCoeffs());
-                std::stringstream filename;
-                filename << "AnisotropicPerm_" << varCoeffs[i];
-                if (m_comm->GetSize() > 1)
-                {
-                    filename << "_P" << m_comm->GetRank();
-                }
-                filename << ".fld";
-                WriteFld(filename.str());
-
             }
         }
         else if (m_session->DefinesFunction("AnisotropicPermeability"))
@@ -283,7 +267,6 @@ namespace Nektar
             }
             else
             {
-                //std::string varName = "k";
                 std::string varCoeffs[6] = {
                     "kxx",
                     "kyy",
