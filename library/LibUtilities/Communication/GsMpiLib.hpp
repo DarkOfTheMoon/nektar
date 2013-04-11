@@ -116,7 +116,7 @@ namespace Gs
                 gs_data *gsh, buffer *buf);
         gs_data *nektar_gs_setup(const long *id, unsigned int n, const struct comm *comm);
         void nektar_gs_free(gs_data *gsh);
-        void nektar_gs_unique(const long *id, unsigned int n, const struct comm *comm);
+        void nektar_gs_unique(long *id, unsigned int n, const struct comm *comm);
     }
 
 

@@ -548,10 +548,10 @@ namespace Nektar
         using namespace Gs;
         Gs::gs_data* CommMpi::v_GsInit(const Array<OneD, long> pId)
         {
-        	if (m_size == 1)
-        	{
-        		return 0;
-        	}
+//        	if (m_size == 1)
+//        	{
+//        		return 0;
+//        	}
             comm vComm;
             MPI_Comm_dup(m_comm, &vComm.c);
             vComm.id = GetRank();
@@ -567,12 +567,12 @@ namespace Nektar
             }
         }
 
-        void CommMpi::v_GsUnique(const Array<OneD, long> pId)
+        void CommMpi::v_GsUnique(Array<OneD, long> pId)
         {
-            if (m_size == 1)
-            {
-                return;
-            }
+//            if (m_size == 1)
+//            {
+//                return;
+//            }
             comm vComm;
             vComm.c  = m_comm;
             vComm.id = GetRank();

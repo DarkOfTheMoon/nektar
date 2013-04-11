@@ -255,7 +255,7 @@ namespace Nektar
         	return;
         }
 
-        void CommSerial::v_GsUnique(const Array<OneD, long> pId)
+        void CommSerial::v_GsUnique(Array<OneD, long> pId)
         {
         	return;
         }

@@ -129,7 +129,7 @@ namespace Nektar
                 LIB_UTILITIES_EXPORT CommSharedPtr inline GetTrueComm();
                 LIB_UTILITIES_EXPORT inline Gs::gs_data* GsInit(const Array<OneD, long> pId);
                 LIB_UTILITIES_EXPORT inline void GsFinalise(Gs::gs_data *pGsh);
-                LIB_UTILITIES_EXPORT inline void GsUnique(const Array<OneD, long> pId);
+                LIB_UTILITIES_EXPORT inline void GsUnique(Array<OneD, long> pId);
                 LIB_UTILITIES_EXPORT inline void GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
                         Gs::gs_data *pGsh, Array<OneD, NekDouble> pBuffer
                                                          = NullNekDouble1DArray);
@@ -191,7 +191,7 @@ namespace Nektar
                 virtual CommSharedPtr v_GetTrueComm();
                 virtual Gs::gs_data* v_GsInit(const Array<OneD, long> pId) = 0;
                 virtual void v_GsFinalise(Gs::gs_data *pGsh) = 0;
-                virtual void v_GsUnique(const Array<OneD, long> pId) = 0;
+                virtual void v_GsUnique(Array<OneD, long> pId) = 0;
                 virtual void v_GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
                         Gs::gs_data *pGsh, Array<OneD, NekDouble> pBuffer
                                                          = NullNekDouble1DArray) = 0;
@@ -468,7 +468,7 @@ namespace Nektar
         	v_GsFinalise(pGsh);
         }
 
-        inline void Comm::GsUnique(const Array<OneD, long> pId)
+        inline void Comm::GsUnique(Array<OneD, long> pId)
         {
         	v_GsUnique(pId);
         }

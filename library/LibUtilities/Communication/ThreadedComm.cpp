@@ -18,7 +18,10 @@ namespace Nektar
 				m_comm(comm), m_tm(tm), m_numworkers(m_tm->GetMaxNumWorkers()),
 				m_numMPI(m_comm->GetSize()), m_resDbl(m_numworkers),
 				m_resInt(m_numworkers), m_ListOfThrSendDataDbl(m_numworkers),
-				m_ListOfThrSendDataInt(m_numworkers), m_SendOffsetArr(m_numMPI),
+				m_ListOfConstThrSendDataDbl(m_numworkers),
+				m_ListOfThrSendDataInt(m_numworkers),
+				m_ListOfConstThrSendDataLon(m_numworkers),
+				m_SendOffsetArr(m_numMPI),
 				m_SendSizeArr(m_numMPI),
 				m_RecvOffsetArr(m_numMPI), m_RecvSizeArr(m_numMPI),
 				m_ListOfThrSendOffsets(m_numworkers),
@@ -54,13 +57,13 @@ namespace Nektar
 
 		void ThreadedComm::v_Block()
 		{
-			if (m_tm->InThread())
-			{
-				m_tm->Hold();
-			}
 			if (m_tm->GetWorkerNum() == 0 || !m_tm->InThread())
 			{
 				m_comm->Block();
+			}
+			if (m_tm->InThread())
+			{
+				m_tm->Hold();
 			}
 		}
 
@@ -716,11 +719,13 @@ namespace Nektar
 
 		void ThreadedComm::v_SplitComm(int pRows, int pColumns)
 		{
-			m_comm->SplitComm(pRows, pColumns);
-			CommSharedPtr vTmpColumn(new ThreadedComm(m_comm->GetColumnComm(), m_tm));
-			CommSharedPtr vTmpRow(new ThreadedComm(m_comm->GetRowComm(), m_tm));
-			m_commColumn = vTmpColumn;
-			m_commRow= vTmpRow;
+			if (m_tm->GetWorkerNum() == 0) {
+				m_comm->SplitComm(pRows, pColumns);
+				CommSharedPtr vTmpColumn(new ThreadedComm(m_comm->GetColumnComm(), m_tm));
+				CommSharedPtr vTmpRow(new ThreadedComm(m_comm->GetRowComm(), m_tm));
+				m_commColumn = vTmpColumn;
+				m_commRow= vTmpRow;
+			}
 		}
 
 		CommSharedPtr ThreadedComm::v_GetTrueComm()
@@ -730,20 +735,133 @@ namespace Nektar
 
         Gs::gs_data* ThreadedComm::v_GsInit(const Array<OneD, long> pId)
         {
-        	return 0;
+			unsigned int vThr = m_tm->GetWorkerNum();
+			Pack(vThr, m_ListOfConstThrSendDataLon, pId, m_tmpSendArrLon);
+			m_tm->Hold();
+			if (vThr == 0)
+			{
+				return m_comm->GsInit(m_tmpSendArrLon);
+			}
+			else
+			{
+	        	return 0;
+			}
         }
+
         void ThreadedComm::v_GsFinalise(Gs::gs_data *pGsh)
         {
-
+        	if (m_tm->GetWorkerNum() == 0)
+        	{
+        		m_comm->GsFinalise(pGsh);
+        	}
         }
-        void ThreadedComm::v_GsUnique(const Array<OneD, long> pId)
+
+        void ThreadedComm::v_GsUnique(Array<OneD, long> pId)
         {
+			unsigned int vThr = m_tm->GetWorkerNum();
+			Pack(vThr, m_ListOfConstThrSendDataLon, pId, m_tmpSendArrLon);
+			m_tm->Hold();
 
+			if (vThr == 0)
+			{
+//				std::cerr << "m_tmpSendArrLon before" << std::endl;
+//				for (int i=0; i < m_tmpSendArrLon.num_elements(); ++i)
+//				{
+//					std::cerr << "m_tmpSendArrLon[" << i << "] = " << m_tmpSendArrLon[i] << std::endl;
+//				}
+				m_comm->GsUnique(m_tmpSendArrLon);
+//				std::cerr << "m_tmpSendArrLon before" << std::endl;
+//				for (int i=0; i < m_tmpSendArrLon.num_elements(); ++i)
+//				{
+//					std::cerr << "m_tmpSendArrLon[" << i << "] = " << m_tmpSendArrLon[i] << std::endl;
+//				}
+			}
+			m_tm->Hold();
+			UnPack(vThr, m_ListOfConstThrSendDataLon, pId, m_tmpSendArrLon);
+			m_tm->Hold();
         }
+
         void ThreadedComm::v_GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
                 Gs::gs_data *pGsh, Array<OneD, NekDouble> pBuffer)
         {
+        	unsigned int vThr = m_tm->GetWorkerNum();
+        	Pack(vThr, m_ListOfConstThrSendDataDbl, pU, m_tmpSendArrDbl);
+			m_tm->Hold();
 
+			if (vThr == 0)
+			{
+//				std::cerr << "m_tmpSendArrDbl before" << std::endl;
+//				for (int i=0; i < m_tmpSendArrDbl.num_elements(); ++i)
+//				{
+//					std::cerr << "m_tmpSendArrDbl[" << i << "] = " << m_tmpSendArrDbl[i] << std::endl;
+//				}
+				m_comm->GsGather(m_tmpSendArrDbl, pOp, pGsh, pBuffer);
+//				std::cerr << "m_tmpSendArrDbl before" << std::endl;
+//				for (int i=0; i < m_tmpSendArrDbl.num_elements(); ++i)
+//				{
+//					std::cerr << "m_tmpSendArrDbl[" << i << "] = " << m_tmpSendArrDbl[i] << std::endl;
+//				}
+			}
+			m_tm->Hold();
+			UnPack(vThr, m_ListOfConstThrSendDataDbl, pU, m_tmpSendArrDbl);
+			m_tm->Hold();
+        }
+
+        template<class DataType>
+        void ThreadedComm::Pack(unsigned int pThr,
+        		std::vector<Array<OneD, DataType> const *> &pRes, const Array<OneD, DataType> &pIn,
+        		Array<OneD, DataType> &pPck)
+        {
+        	int vOff = 0;
+        	const DataType* vInOff = pIn.data();
+        	int vSize = 0;
+        	int vNumElements = pIn.num_elements();
+			pRes[pThr] = &pIn;
+			m_tm->Hold();
+
+			for (int i=0; i < m_numworkers; ++i)
+			{
+				int vNum = pRes[i]->num_elements();
+				if (i < pThr) vOff += vNum;
+				vSize += vNum;
+			}
+
+			if (pThr == 0)
+			{
+				pPck = Array<OneD, DataType>(vSize);
+			}
+			m_tm->Hold();
+
+        	DataType* vPckOff = pPck.data() + vOff;
+			for (int i=0; i < vNumElements; ++i)
+			{
+				*vPckOff = *vInOff;
+				++vPckOff;
+				++vInOff;
+			}
+        }
+
+        template<class DataType>
+        void ThreadedComm::UnPack(unsigned int pThr,
+        		std::vector<Array<OneD, DataType> const*> &pRes, Array<OneD, DataType> &pOut,
+        		Array<OneD, DataType> &pPck)
+        {
+        	DataType* vPckOff = pPck.data();
+        	DataType* vOutOff = pOut.data();
+        	int vNumElements = pOut.num_elements();
+			pRes[pThr] = &pOut;
+			m_tm->Hold();
+
+			for (int i=1; i <= pThr; ++i)
+			{
+				vPckOff += pRes[i-1]->num_elements();
+			}
+			for (int i=0; i < vNumElements; ++i)
+			{
+				*vOutOff = *vPckOff;
+				++vPckOff;
+				++vOutOff;
+			}
         }
 
 	}

@@ -31,11 +31,14 @@ namespace Nektar
 			std::vector<NekDouble> 					m_resDbl;
 			std::vector<int>	 					m_resInt;
 			std::vector<Array<OneD, NekDouble>*>	m_ListOfThrSendDataDbl;
+			std::vector<Array<OneD, NekDouble> const*>	m_ListOfConstThrSendDataDbl;
 			std::vector<Array<OneD, int>*>			m_ListOfThrSendDataInt;
+			std::vector<Array<OneD, long> const *>	m_ListOfConstThrSendDataLon;
 			Array<OneD, NekDouble>					m_tmpSendArrDbl;
 			Array<OneD, NekDouble>					m_tmpRecvArrDbl;
 			Array<OneD, int>						m_tmpSendArrInt;
 			Array<OneD, int>						m_tmpRecvArrInt;
+			Array<OneD, long>						m_tmpSendArrLon;
 			Array<OneD, int>						m_tmpArrInt;
 			/**
 			 * Holds offsets for MPI AlltoAllv call.
@@ -79,12 +82,6 @@ namespace Nektar
 			 * Offsets are for thread boundaries.
 			 */
 			std::vector<int>						m_tmpSendOffsetArr;
-			/**
-			 * Holds sizes for temporary send Array to help with
-			 * its construction by master thread to send over MPI.
-			 * Sizes are for thread boundaries.
-			 */
-			std::vector<int>						m_tmpSendSizeArr;
 			/**
 			 * Holds offsets for temporary recv Array to help with
 			 * its deconstruction by threads after it's been sent over MPI.
@@ -143,7 +140,7 @@ namespace Nektar
             virtual CommSharedPtr v_GetTrueComm();
             virtual Gs::gs_data* v_GsInit(const Array<OneD, long> pId);
             virtual void v_GsFinalise(Gs::gs_data *pGsh);
-            virtual void v_GsUnique(const Array<OneD, long> pId);
+            virtual void v_GsUnique(Array<OneD, long> pId);
             virtual void v_GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
                     Gs::gs_data *pGsh, Array<OneD, NekDouble> pBuffer
                                                      = NullNekDouble1DArray);
@@ -176,6 +173,16 @@ namespace Nektar
     				std::vector<Array<OneD, DataType>*>& pRes);
     		void PopulateOffsets(int pRank, std::vector<int>& pTmpOffsetArr, Array<OneD, int>& pOffsetArr,
     				std::vector<Array<OneD, int>* >& pSizeThrArr, Array<OneD, int>& pSizeArr, bool isRecv);
+    		template<typename DataType>
+    		void Pack(unsigned int pThr, std::vector<Array<OneD, DataType> const *> &pRes,
+    				const Array<OneD, DataType>& pIn, Array<OneD, DataType>& pPck);
+    		template<typename DataType, typename ArrayType>
+    		void UnPack(unsigned int pThr, std::vector<Array<OneD, DataType> *> &pRes,
+    				Array<OneD, DataType>& pOut, Array<OneD, DataType>& pPck);
+    		template<typename DataType>
+    		void UnPack(unsigned int pThr, std::vector<Array<OneD, DataType> const *> &pRes,
+    				Array<OneD, DataType>& pOut, Array<OneD, DataType>& pPck);
+
 
 		};
 
