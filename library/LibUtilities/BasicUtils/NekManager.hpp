@@ -41,9 +41,12 @@
 #include <boost/function.hpp>
 #include <boost/call_traits.hpp>
 #include <boost/concept_check.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/locks.hpp>
 
 #include <boost/shared_ptr.hpp>
 #include <LibUtilities/BasicUtils/ErrorUtil.hpp>
+#include <LibUtilities/BasicUtils/Thread.h>
 
 using namespace std;
 
@@ -74,78 +77,80 @@ namespace Nektar
                 typedef std::map<std::string, boost::shared_ptr<ValueContainer> > ValueContainerPool;
                 typedef boost::shared_ptr<bool> BoolSharedPtr;
                 typedef std::map<std::string, BoolSharedPtr> FlagContainerPool;
+            	typedef boost::unique_lock<boost::mutex> Lock;
 
                 NekManager(std::string whichPool="") :
-                    m_values(), 
+                    m_values(),
                     m_globalCreateFunc(),
                     m_keySpecificCreateFuncs()
+
                 {
-                    if (!whichPool.empty())
-                    {
-                        typename ValueContainerPool::iterator iter = m_ValueContainerPool.find(whichPool);
-                        if (iter != m_ValueContainerPool.end())
-                        {
-                            m_values = iter->second;
-                            m_managementEnabled = m_managementEnabledContainerPool[whichPool];
-                        }
-                        else
-                        {
-                            m_values = ValueContainerShPtr(new ValueContainer);
-                            m_ValueContainerPool[whichPool] = m_values;
-                            if (m_managementEnabledContainerPool.find(whichPool) == m_managementEnabledContainerPool.end())
-                            {
-                                m_managementEnabledContainerPool[whichPool] = BoolSharedPtr(new bool(true));
-                            }
-                            m_managementEnabled = m_managementEnabledContainerPool[whichPool];
-                        }
-                    }
-                    else
-                    {
-                        m_values = ValueContainerShPtr(new ValueContainer);
-                        m_managementEnabled = BoolSharedPtr(new bool(true));
-                    }
-                };
+//                	std::cerr << "Called regular constructor" << std::endl;
+                	Init(whichPool);
+                }
 
+//                NekManager(NekManager<KeyType, ValueType, opLessCreator> * rhs, unsigned int pThr) :
+//                	m_values(),
+//                    m_globalCreateFunc(rhs->m_globalCreateFunc),
+//                    m_keySpecificCreateFuncs(rhs->m_keySpecificCreateFuncs)
+//                {
+//                	std::cerr << "Called pointer copy constructor with rsh: " << &rhs << " from thr: " << pThr << std::endl;
+//                	Init();
+//                }
+//
 
-                explicit NekManager(CreateFuncType f, std::string whichPool="") :
+                NekManager(CreateFuncType f, std::string whichPool="") :
                     m_values(),
                     m_globalCreateFunc(f),
                     m_keySpecificCreateFuncs()
                 {
-                    if (!whichPool.empty())
-                    {
-                        typename ValueContainerPool::iterator iter = m_ValueContainerPool.find(whichPool);
-                        if (iter != m_ValueContainerPool.end())
-                        {
-                            m_values = iter->second;
-                            m_managementEnabled = m_managementEnabledContainerPool[whichPool];
-                        }
-                        else
-                        {
-                            m_values = ValueContainerShPtr(new ValueContainer);
-                            m_ValueContainerPool[whichPool] = m_values;
-                            if (m_managementEnabledContainerPool.find(whichPool) == m_managementEnabledContainerPool.end())
-                            {
-                                m_managementEnabledContainerPool[whichPool] = BoolSharedPtr(new bool(true));
-                            }
-                            m_managementEnabled = m_managementEnabledContainerPool[whichPool];
-                        }
-
-                    }
-                    else
-                    {
-                        m_values = ValueContainerShPtr(new ValueContainer);
-                        m_managementEnabled = BoolSharedPtr(new bool(true));
-                    }
+//                	std::cerr << "Called regular createfunctype constructor" << std::endl;
+                	Init(whichPool);
                 }
-                
+
+                void Init(std::string& whichPool = "")
+                {
+                	if (!whichPool.empty())
+                	{
+            			Lock v_lock(m_mutex);
+
+                		Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+                		ASSERTL1(vThrMan, "Cannot construct a NekManager with a pool before threading is inititialised");
+                		unsigned int vThr = vThrMan->GetWorkerNum();
+                		whichPool.append(boost::lexical_cast<std::string>(vThr));
+
+                		typename ValueContainerPool::iterator iter = m_ValueContainerPool.find(whichPool);
+                		if (iter != m_ValueContainerPool.end())
+                		{
+                			m_values = iter->second;
+                			m_managementEnabled = m_managementEnabledContainerPool[whichPool];
+                		}
+                		else
+                		{
+                			m_values = ValueContainerShPtr(new ValueContainer);
+                			m_ValueContainerPool[whichPool] = m_values;
+                			if (m_managementEnabledContainerPool.find(whichPool) == m_managementEnabledContainerPool.end())
+                			{
+                				m_managementEnabledContainerPool[whichPool] = BoolSharedPtr(new bool(true));
+                			}
+                			m_managementEnabled = m_managementEnabledContainerPool[whichPool];
+                		}
+
+                	}
+                	else
+                	{
+                		m_values = ValueContainerShPtr(new ValueContainer);
+                		m_managementEnabled = BoolSharedPtr(new bool(true));
+                	}
+                }
+
                 ~NekManager()
                 {
                 }
-            
+
                 /// Register the given function and associate it with the key.
                 /// The return value is just to facilitate calling statically.
-                bool RegisterCreator(typename boost::call_traits<KeyType>::const_reference key, 
+                bool RegisterCreator(typename boost::call_traits<KeyType>::const_reference key,
                                      const CreateFuncType& createFunc)
                 {
                     m_keySpecificCreateFuncs[key] = createFunc;
@@ -170,16 +175,21 @@ namespace Nektar
                     {
                         value = true;
                     }
-                    
+
                     return value;
                 }
 
                 ValueType operator[](typename boost::call_traits<KeyType>::const_reference key)
                 {
+//            		Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+//            		ASSERTL1(vThrMan, "Cannot construct a NekManager with a pool before threading is inititialised");
+//            		unsigned int vThr = vThrMan->GetWorkerNum();
+
                     typename ValueContainer::iterator found = m_values->find(key);
 
                     if( found != m_values->end() )
                     {
+//                    	std::cerr << "Thr: " << vThr << " found: " << ((*found).second).get() << std::endl;
                         return (*found).second;
                     }
                     else
@@ -199,6 +209,7 @@ namespace Nektar
                             {
                                 (*m_values)[key] = v;
                             }
+//                        	std::cerr << "Thr: " << vThr << " made: " << v.get() << std::endl;
                             return v;
                         }
                         else
@@ -211,12 +222,27 @@ namespace Nektar
                         }
                     }
                 }
-                
+
+                void Clone(const NekManager<KeyType, ValueT, opLessCreator> &c)
+                {
+                	m_globalCreateFunc = c.m_globalCreateFunc;
+
+                	m_keySpecificCreateFuncs.insert(c.m_keySpecificCreateFuncs.begin(),
+                			c.m_keySpecificCreateFuncs.end());
+                }
+
                 static void ClearManager(std::string whichPool = "")
                 {
+                	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
                     typename ValueContainerPool::iterator x;
                     if (!whichPool.empty())
                     {
+                    	Lock v_lock(m_mutex);
+
+                    	ASSERTL1(vThrMan, "Cannot clear a NekManager with a pool before threading is inititialised");
+                    	unsigned int vThr = vThrMan->GetWorkerNum();
+                    	whichPool.append(boost::lexical_cast<std::string>(vThr));
+
                         x = m_ValueContainerPool.find(whichPool);
                         ASSERTL1(x != m_ValueContainerPool.end(),
                                 "Could not find pool " + whichPool);
@@ -224,9 +250,20 @@ namespace Nektar
                     }
                     else
                     {
+                    	Lock v_lock(m_mutex);
+
+                    	std::string vAppend;
+                    	if (vThrMan)
+                    	{
+                        	unsigned int vThr = vThrMan->GetWorkerNum();
+                        	vAppend.append(boost::lexical_cast<std::string>(vThr));
+                    	}
                         for (x = m_ValueContainerPool.begin(); x != m_ValueContainerPool.end(); ++x)
                         {
-                            x->second->clear();
+                            if (x->first.rfind(vAppend) == x->first.length() - vAppend.length())
+                            {
+                            	x->second->clear();
+                            }
                         }
                     }
                 }
@@ -236,6 +273,13 @@ namespace Nektar
                     typename FlagContainerPool::iterator x;
                     if (!whichPool.empty())
                     {
+                    	Lock v_lock(m_mutex);
+
+                    	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+                    	ASSERTL1(vThrMan, "Cannot enable a NekManager with a pool before threading is inititialised");
+                    	unsigned int vThr = vThrMan->GetWorkerNum();
+                    	whichPool.append(boost::lexical_cast<std::string>(vThr));
+
                         x = m_managementEnabledContainerPool.find(whichPool);
                         if (x != m_managementEnabledContainerPool.end())
                         {
@@ -253,6 +297,13 @@ namespace Nektar
                     typename FlagContainerPool::iterator x;
                     if (!whichPool.empty())
                     {
+                    	Lock v_lock(m_mutex);
+
+                    	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+                    	ASSERTL1(vThrMan, "Cannot disable a NekManager with a pool before threading is inititialised");
+                    	unsigned int vThr = vThrMan->GetWorkerNum();
+                    	whichPool.append(boost::lexical_cast<std::string>(vThr));
+
                         x = m_managementEnabledContainerPool.find(whichPool);
                         if (x != m_managementEnabledContainerPool.end())
                         {
@@ -266,8 +317,8 @@ namespace Nektar
                 }
 
             private:
-                NekManager(const NekManager<KeyType, ValueType, opLessCreator>& rhs);
                 NekManager<KeyType, ValueType, opLessCreator>& operator=(const NekManager<KeyType, ValueType, opLessCreator>& rhs);
+                NekManager(const NekManager<KeyType, ValueType, opLessCreator>& rhs);
 
                 ValueContainerShPtr m_values;
                 BoolSharedPtr m_managementEnabled;
@@ -275,9 +326,14 @@ namespace Nektar
                 static FlagContainerPool m_managementEnabledContainerPool;
                 CreateFuncType m_globalCreateFunc;
                 CreateFuncContainer m_keySpecificCreateFuncs;
+                static boost::mutex m_mutex;
         };
-        template <typename KeyType, typename ValueT, typename opLessCreator> typename NekManager<KeyType, ValueT, opLessCreator>::ValueContainerPool NekManager<KeyType, ValueT, opLessCreator>::m_ValueContainerPool;
-        template <typename KeyType, typename ValueT, typename opLessCreator> typename NekManager<KeyType, ValueT, opLessCreator>::FlagContainerPool NekManager<KeyType, ValueT, opLessCreator>::m_managementEnabledContainerPool;
+        template <typename KeyType, typename ValueT, typename opLessCreator>
+        typename NekManager<KeyType, ValueT, opLessCreator>::ValueContainerPool NekManager<KeyType, ValueT, opLessCreator>::m_ValueContainerPool;
+        template <typename KeyType, typename ValueT, typename opLessCreator>
+        typename NekManager<KeyType, ValueT, opLessCreator>::FlagContainerPool NekManager<KeyType, ValueT, opLessCreator>::m_managementEnabledContainerPool;
+        template <typename KeyType, typename ValueT, typename opLessCreator>
+        typename boost::mutex NekManager<KeyType, ValueT, opLessCreator>::m_mutex;
     }
 }
 

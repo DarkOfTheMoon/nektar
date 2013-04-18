@@ -48,6 +48,9 @@
 #include <LibUtilities/Foundations/Basis.h>
 #include <LibUtilities/Foundations/Foundations.hpp>
 #include <LibUtilities/Foundations/ManagerAccess.h>
+#include <LibUtilities/BasicUtils/Thread.h>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/locks.hpp>
 
 namespace Nektar
 {
@@ -90,12 +93,48 @@ namespace Nektar
 
         PointsManagerT &PointsManager(void)
         {
-            return Loki::SingletonHolder<PointsManagerT>::Instance();
+//            return Loki::SingletonHolder<PointsManagerT>::Instance();
+        	static std::map<unsigned int, PointsManagerT *> s_threadPointMan;
+        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+        	if (s_threadPointMan.count(vThr) == 0)
+        	{
+        		if (!vThrMan || vThr == 0)
+        		{
+        			s_threadPointMan[vThr] = new PointsManagerT();
+        		}
+        		else
+        		{
+        			ASSERTL0(s_threadPointMan.count(0) != 0, "argh");
+        			PointsManagerT *vtmpPM = new PointsManagerT();
+        			vtmpPM->Clone(*(s_threadPointMan[0]));
+        			s_threadPointMan[vThr] = vtmpPM;
+        		}
+        	}
+        	return *(s_threadPointMan[vThr]);
         }
 
         BasisManagerT &BasisManager(void)
         {
-            return Loki::SingletonHolder<BasisManagerT>::Instance();
+//            return Loki::SingletonHolder<BasisManagerT>::Instance();
+        	static std::map<unsigned int, BasisManagerT *> s_threadBasisMan;
+        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+        	if (s_threadBasisMan.count(vThr) == 0)
+        	{
+        		if (!vThrMan || vThr == 0)
+        		{
+        			s_threadBasisMan[vThr] = new BasisManagerT();
+        		}
+        		else
+        		{
+        			ASSERTL0(s_threadBasisMan.count(0) != 0, "argh");
+        			BasisManagerT *vtmpBM = new BasisManagerT();
+        			vtmpBM->Clone(*(s_threadBasisMan[0]));
+        			s_threadBasisMan[vThr] = vtmpBM;
+        		}
+        	}
+        	return *(s_threadBasisMan[vThr]);
         }
 
     } // end of namespace LibUtilities

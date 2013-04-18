@@ -64,7 +64,8 @@ namespace Nektar
         {
             typedef Loki::SingletonHolder<CommFactory,
                 Loki::CreateUsingNew,
-                Loki::NoDestroy > Type;
+                Loki::NoDestroy,
+                Loki::ClassLevelLockable> Type;
             return Type::Instance();
         }
     }

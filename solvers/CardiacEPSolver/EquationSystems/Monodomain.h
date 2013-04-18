@@ -39,6 +39,7 @@
 #include <SolverUtils/UnsteadySystem.h>
 #include <CardiacEPSolver/CellModels/CellModel.h>
 #include <CardiacEPSolver/Stimuli/Stimulus.h>
+#include <LibUtilities/BasicUtils/Thread.h>
 
 using namespace Nektar::SolverUtils;
 
@@ -57,6 +58,8 @@ namespace Nektar
                 const LibUtilities::SessionReaderSharedPtr& pSession)
         {
             EquationSystemSharedPtr p = MemoryManager<Monodomain>::AllocateSharedPtr(pSession);
+            unsigned int vThr = Nektar::Thread::ThreadManager::GetInstance()->GetWorkerNum();
+        	std::cerr << "Thread: " << vThr << " creating " << p.get() << std::endl;
             p->InitObject();
             return p;
         }

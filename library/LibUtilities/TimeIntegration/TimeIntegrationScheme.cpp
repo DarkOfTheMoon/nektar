@@ -44,9 +44,22 @@ namespace Nektar
     {  
         TimeIntegrationSchemeManagerT &TimeIntegrationSchemeManager(void)
         {
-            TimeIntegrationSchemeManagerT& m = Loki::SingletonHolder<TimeIntegrationSchemeManagerT>::Instance();
-            static bool reg = m.RegisterGlobalCreator(TimeIntegrationScheme::Create);
-            return m;
+//        	TimeIntegrationSchemeManagerT& m = Loki::SingletonHolder<TimeIntegrationSchemeManagerT>::Instance();
+//        	static bool reg = m.RegisterGlobalCreator(TimeIntegrationScheme::Create);
+//        	return m;
+
+//        	static boost::mutex mutex;
+//        	typedef boost::unique_lock<boost::mutex> Lock;
+//        	Lock vLock(mutex);
+        	static std::map<unsigned int,  TimeIntegrationSchemeManagerT *> s_threadTSScheme;
+        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+        	if (s_threadTSScheme.count(vThr) == 0)
+        	{
+        		s_threadTSScheme[vThr] = new (TimeIntegrationSchemeManagerT);
+        		bool reg = s_threadTSScheme[vThr]->RegisterGlobalCreator(TimeIntegrationScheme::Create);
+        	}
+        	return *(s_threadTSScheme[vThr]);
         }
         
 

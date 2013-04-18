@@ -50,6 +50,7 @@
 
 #include <string>
 
+#define LOKI_CLASS_LEVEL_THREADING
 
 using std::string;
 
@@ -75,7 +76,8 @@ namespace Nektar
         {
             typedef Loki::SingletonHolder<EquationSystemFactory,
                                           Loki::CreateUsingNew,
-                                          Loki::NoDestroy > Type;
+                                          Loki::NoDestroy,
+                                          Loki::ClassLevelLockable> Type;
             return Type::Instance();
         }
 

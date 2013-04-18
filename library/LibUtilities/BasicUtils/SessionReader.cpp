@@ -278,6 +278,35 @@ namespace Nektar
         	// Parse the XML data in #m_xmlDoc
         	m_session->ParseDocument();
 
+        	std::cerr << "Starting testing" << std::endl;
+        	std::cerr << "Comm type is" << m_session->m_comm->GetType() << std::endl;
+        	int testlen = 10;
+        	Array<OneD, long> testme(testlen);
+        	Array<OneD, NekDouble> testdb(testlen);
+        	for (int i=0; i<testlen; ++i)
+        	{
+        		testme[i] = i + vThr * 10;
+        		testdb[i] = i + vThr * 10;
+        	}
+        	testme[5] = 4;
+        	for (int i=0; i<testlen; ++i)
+        	{
+        		std::cerr << "i(" << i << "): " << testme[i] << " = " << testdb[i] << std::endl;
+        	}
+
+//        	m_session->m_comm->GsUnique(testme);
+        	Gs::gs_data *poop = m_session->m_comm->GsInit(testme);
+        	m_session->m_comm->GsGather(testdb, Gs::gs_add, poop);
+        	for (int i=0; i<testlen; ++i)
+        	{
+        		std::cerr << "i(" << i << "): " << testme[i] << " = " << testdb[i] << std::endl;
+        	}
+
+        	m_session->m_comm->AllReduce(testdb, ReduceSum);
+        	for (int i=0; i<testlen; ++i)
+        	{
+        		std::cerr << "i(" << i << "): " << testme[i] << " = " << testdb[i] << std::endl;
+        	}
 
         	// Override SOLVERINFO and parameters with any specified on the
         	// command line.
@@ -1248,12 +1277,15 @@ namespace Nektar
 
                 ReadSolverInfo(e);
 
+                int nthreads;
+                LoadParameter("NThreads", nthreads, 1);
+
                 string vCommModule("Serial");
                 if (e && DefinesSolverInfo("Communication"))
                 {
                     vCommModule = GetSolverInfo("Communication");
                 }
-                else if (GetCommFactory().ModuleExists("ParallelMPI"))
+                else if (GetCommFactory().ModuleExists("ParallelMPI")  || nthreads > 1)
                 {
                     vCommModule = "ParallelMPI";
                 }
@@ -2065,6 +2097,7 @@ namespace Nektar
             int nthreads;
             LoadParameter("NThreads", nthreads, 1);
             cerr << "Number of threads will be: " << nthreads << endl;
+            // Decide what implementation of ThreadManager you want here.
             m_threadManager = Thread::GetThreadManager().CreateInstance("ThreadManagerBoost", nthreads);
 
         }

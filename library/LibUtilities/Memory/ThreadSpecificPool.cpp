@@ -31,14 +31,32 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <LibUtilities/Memory/ThreadSpecificPool.hpp>
+#include <LibUtilities/BasicUtils/Thread.h>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/locks.hpp>
 
 namespace Nektar
 {
+
     MemPool& GetMemoryPool()
     {
-        typedef Loki::SingletonHolder<MemPool ,
-                Loki::CreateUsingNew,
-                Loki::NoDestroy > Type;
-        return Type::Instance();
+//        typedef Loki::SingletonHolder<MemPool ,
+//                Loki::CreateUsingNew,
+//                Loki::NoDestroy > Type;
+//        return Type::Instance();
+
+    	static boost::mutex mutex;
+    	typedef boost::unique_lock<boost::mutex> Lock;
+    	Lock vLock(mutex);
+    	static std::map<unsigned int, MemPool *> s_threadPools;
+//    	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+//    	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+    	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+    	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+    	if (s_threadPools.count(vThr) == 0)
+    	{
+    		s_threadPools[vThr] = new MemPool();
+    	}
+    	return *(s_threadPools[vThr]);
     }
 }
