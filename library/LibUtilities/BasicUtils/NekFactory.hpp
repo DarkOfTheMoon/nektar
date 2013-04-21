@@ -43,7 +43,7 @@
     #include <boost/preprocessor/arithmetic/sub.hpp>
     #include <boost/preprocessor/punctuation/comma_if.hpp>
     #include <boost/preprocessor/iteration/iterate.hpp>
-    #include <boost/thread/mutex.hpp>
+    #include <boost/thread/shared_mutex.hpp>
     #include <boost/thread/locks.hpp>
 
     #include <boost/shared_ptr.hpp>
@@ -67,7 +67,8 @@ namespace Nektar
 
         // Generate parameter typenames with default type of 'none'
         #define FACTORY_print(z, n, data) BOOST_PP_CAT(data, n) = none
-    	typedef boost::unique_lock<boost::mutex> Lock;
+    	typedef boost::unique_lock<boost::shared_mutex> WriteLock;
+    	typedef boost::shared_lock<boost::shared_mutex> ReadLock;
 
         /**
          * @class NekFactory
@@ -162,7 +163,7 @@ namespace Nektar
                             BOOST_PP_ENUM_BINARY_PARAMS(MAX_PARAM, tParam, x))
                 {
 
-//                	Lock vLock(m_mutex);
+                	ReadLock vReadLock(m_mutex);
 
                     // Now try and find the key in the map.
                     TMapFactoryIterator it = getMapFactory()->find(idKey);
@@ -172,7 +173,7 @@ namespace Nektar
                     if (it != getMapFactory()->end())
                     {
                     	ModuleEntry *tmp = &(it->second);
-//                    	vLock.~unique_lock();
+                    	vReadLock.unlock();
 
                         if (tmp->m_func)
                         {
@@ -214,7 +215,7 @@ namespace Nektar
                 tKey RegisterCreatorFunction(tKey idKey, CreatorFunction classCreator,
                                              tDescription pDesc = "") 
                 {
-                	Lock vLock(m_mutex);
+                	WriteLock vWriteLock(m_mutex);
 
                     ModuleEntry e(classCreator, pDesc);
                     getMapFactory()->insert(std::pair<tKey,ModuleEntry>(idKey, e));
@@ -227,7 +228,7 @@ namespace Nektar
              */
             bool ModuleExists(tKey idKey)
             {
-            	Lock vLock(m_mutex);
+            	ReadLock vReadLock(m_mutex);
 
                 // Now try and find the key in the map.
                 TMapFactoryIterator it = getMapFactory()->find(idKey);
@@ -245,6 +246,8 @@ namespace Nektar
              */
             void PrintAvailableClasses(std::ostream& pOut = std::cout)
             {
+            	ReadLock vReadLock(m_mutex);
+
                 pOut << std::endl << "Available classes: " << std::endl;
                 TMapFactoryIterator it;
                 for (it = getMapFactory()->begin(); it != getMapFactory()->end(); ++it)
@@ -283,7 +286,7 @@ namespace Nektar
 
                 TMapFactory mMapFactory;
 
-                boost::mutex m_mutex;
+                boost::shared_mutex m_mutex;
 
         };
 
@@ -305,10 +308,11 @@ namespace Nektar
     #define n BOOST_PP_ITERATION()
     // Define macro for printing the non-required template parameters
     #define FACTORY_print(z, n, data) data
-	#include <boost/thread/mutex.hpp>
+    #include <boost/thread/shared_mutex.hpp>
 	#include <boost/thread/locks.hpp>
 
-	typedef boost::unique_lock<boost::mutex> Lock;
+typedef boost::unique_lock<boost::shared_mutex> WriteLock;
+typedef boost::shared_lock<boost::shared_mutex> ReadLock;
 
     template < typename tKey,
                typename tBase BOOST_PP_COMMA_IF(n)
@@ -341,13 +345,13 @@ namespace Nektar
         tBaseSharedPtr CreateInstance(tKey idKey BOOST_PP_COMMA_IF(n)
                 BOOST_PP_ENUM_BINARY_PARAMS(n, tParam, x))
         {
-        	Lock vLock(m_mutex);
+        	ReadLock vReadLock(m_mutex);
 
             TMapFactoryIterator it = getMapFactory()->find(idKey);
             if (it != getMapFactory()->end())
             {
             	ModuleEntry *tmp = &(it->second);
-            	vLock.~unique_lock();
+            	vReadLock.unlock();
 
                 if (tmp->m_func)
                 {
@@ -374,7 +378,7 @@ namespace Nektar
         tKey RegisterCreatorFunction(tKey idKey,
                                             CreatorFunction classCreator,
                                             tDescription pDesc = "") {
-        	Lock vLock(m_mutex);
+        	WriteLock vWriteLock(m_mutex);
 
             ModuleEntry e(classCreator, pDesc);
             getMapFactory()->insert(std::pair<tKey,ModuleEntry>(idKey, e));
@@ -383,7 +387,7 @@ namespace Nektar
 
         bool ModuleExists(tKey idKey)
         {
-        	Lock vLock(m_mutex);
+        	ReadLock vReadLock(m_mutex);
 
             // Now try and find the key in the map.
             TMapFactoryIterator it = getMapFactory()->find(idKey);
@@ -397,6 +401,8 @@ namespace Nektar
 
         void PrintAvailableClasses(std::ostream& pOut = std::cout)
         {
+        	ReadLock vReadLock(m_mutex);
+
             pOut << std::endl << "Available classes: " << std::endl;
             TMapFactoryIterator it;
             for (it = getMapFactory()->begin(); it != getMapFactory()->end(); ++it)
@@ -416,7 +422,7 @@ namespace Nektar
 
         tKey GetKey(tDescription pDesc)
         {
-        	Lock vLock(m_mutex);
+        	ReadLock vReadLock(m_mutex);
 
             TMapFactoryIterator it;
             for (it = getMapFactory()->begin(); it != getMapFactory()->end(); ++it)
@@ -442,7 +448,7 @@ namespace Nektar
         NekFactory& operator=(const NekFactory& rhs);
 
         TMapFactory mMapFactory;
-        boost::mutex m_mutex;
+        boost::shared_mutex m_mutex;
 
     };
     #undef n

@@ -274,13 +274,6 @@ namespace Nektar
         	 */
         	virtual void Hold() = 0;
         	/**
-        	 * @brief A calling thread i holds until thread p_proc calls HoldFor(i)
-        	 *
-        	 * The calling thread sleeps until the thread p_proc calls this method with
-        	 * this thread's id.
-        	 */
-        	virtual void HoldFor(unsigned int p_proc) = 0;
-        	/**
         	 * @brief Returns a description of the type of threading.
         	 */
         	virtual const std::string& GetType() const = 0;
@@ -424,10 +417,6 @@ namespace Nektar
         		void Hold()
         		{
         			m_tm->Hold();
-        		}
-        		void HoldFor(unsigned int p_proc)
-        		{
-        			m_tm->HoldFor(p_proc);
         		}
             	const std::string& GetType() const
             	{

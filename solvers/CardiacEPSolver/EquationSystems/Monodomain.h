@@ -58,8 +58,6 @@ namespace Nektar
                 const LibUtilities::SessionReaderSharedPtr& pSession)
         {
             EquationSystemSharedPtr p = MemoryManager<Monodomain>::AllocateSharedPtr(pSession);
-            unsigned int vThr = Nektar::Thread::ThreadManager::GetInstance()->GetWorkerNum();
-        	std::cerr << "Thread: " << vThr << " creating " << p.get() << std::endl;
             p->InitObject();
             return p;
         }

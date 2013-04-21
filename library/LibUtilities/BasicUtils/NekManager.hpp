@@ -41,7 +41,7 @@
 #include <boost/function.hpp>
 #include <boost/call_traits.hpp>
 #include <boost/concept_check.hpp>
-#include <boost/thread/mutex.hpp>
+#include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/locks.hpp>
 
 #include <boost/shared_ptr.hpp>
@@ -63,6 +63,9 @@ namespace Nektar
             }
         };
 
+    	typedef boost::unique_lock<boost::shared_mutex> WriteLock;
+    	typedef boost::shared_lock<boost::shared_mutex> ReadLock;
+
         template <typename KeyType, typename ValueT, typename opLessCreator = defOpLessCreator<KeyType> >
         class NekManager
         {
@@ -77,7 +80,6 @@ namespace Nektar
                 typedef std::map<std::string, boost::shared_ptr<ValueContainer> > ValueContainerPool;
                 typedef boost::shared_ptr<bool> BoolSharedPtr;
                 typedef std::map<std::string, BoolSharedPtr> FlagContainerPool;
-            	typedef boost::unique_lock<boost::mutex> Lock;
 
                 NekManager(std::string whichPool="") :
                     m_values(),
@@ -112,13 +114,12 @@ namespace Nektar
                 {
                 	if (!whichPool.empty())
                 	{
-            			Lock v_lock(m_mutex);
-
                 		Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
                 		ASSERTL1(vThrMan, "Cannot construct a NekManager with a pool before threading is inititialised");
                 		unsigned int vThr = vThrMan->GetWorkerNum();
                 		whichPool.append(boost::lexical_cast<std::string>(vThr));
 
+            			ReadLock v_rlock(m_mutex); // reading static members
                 		typename ValueContainerPool::iterator iter = m_ValueContainerPool.find(whichPool);
                 		if (iter != m_ValueContainerPool.end())
                 		{
@@ -127,6 +128,12 @@ namespace Nektar
                 		}
                 		else
                 		{
+                			v_rlock.unlock();
+                			// now writing static members.  Apparently upgrade_lock has less desirable properties
+                			// than just dropping read lock, grabbing write lock.
+                			// write will block until all reads are done, but reads cannot be acquired if write
+                			// lock is blocking.  In this context writes are supposed to be rare.
+                			WriteLock v_wlock(m_mutex);
                 			m_values = ValueContainerShPtr(new ValueContainer);
                 			m_ValueContainerPool[whichPool] = m_values;
                 			if (m_managementEnabledContainerPool.find(whichPool) == m_managementEnabledContainerPool.end())
@@ -237,7 +244,7 @@ namespace Nektar
                     typename ValueContainerPool::iterator x;
                     if (!whichPool.empty())
                     {
-                    	Lock v_lock(m_mutex);
+                    	WriteLock v_wlock(m_mutex);
 
                     	ASSERTL1(vThrMan, "Cannot clear a NekManager with a pool before threading is inititialised");
                     	unsigned int vThr = vThrMan->GetWorkerNum();
@@ -250,7 +257,7 @@ namespace Nektar
                     }
                     else
                     {
-                    	Lock v_lock(m_mutex);
+                    	WriteLock v_wlock(m_mutex);
 
                     	std::string vAppend;
                     	if (vThrMan)
@@ -273,7 +280,7 @@ namespace Nektar
                     typename FlagContainerPool::iterator x;
                     if (!whichPool.empty())
                     {
-                    	Lock v_lock(m_mutex);
+                    	WriteLock v_wlock(m_mutex);
 
                     	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
                     	ASSERTL1(vThrMan, "Cannot enable a NekManager with a pool before threading is inititialised");
@@ -297,7 +304,7 @@ namespace Nektar
                     typename FlagContainerPool::iterator x;
                     if (!whichPool.empty())
                     {
-                    	Lock v_lock(m_mutex);
+                    	WriteLock v_wlock(m_mutex);
 
                     	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
                     	ASSERTL1(vThrMan, "Cannot disable a NekManager with a pool before threading is inititialised");
@@ -326,14 +333,14 @@ namespace Nektar
                 static FlagContainerPool m_managementEnabledContainerPool;
                 CreateFuncType m_globalCreateFunc;
                 CreateFuncContainer m_keySpecificCreateFuncs;
-                static boost::mutex m_mutex;
+                static boost::shared_mutex m_mutex;
         };
         template <typename KeyType, typename ValueT, typename opLessCreator>
         typename NekManager<KeyType, ValueT, opLessCreator>::ValueContainerPool NekManager<KeyType, ValueT, opLessCreator>::m_ValueContainerPool;
         template <typename KeyType, typename ValueT, typename opLessCreator>
         typename NekManager<KeyType, ValueT, opLessCreator>::FlagContainerPool NekManager<KeyType, ValueT, opLessCreator>::m_managementEnabledContainerPool;
         template <typename KeyType, typename ValueT, typename opLessCreator>
-        typename boost::mutex NekManager<KeyType, ValueT, opLessCreator>::m_mutex;
+        typename boost::shared_mutex NekManager<KeyType, ValueT, opLessCreator>::m_mutex;
     }
 }
 

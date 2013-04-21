@@ -76,25 +76,14 @@ int main(int argc, char *argv[])
 
 void MainFunc(LibUtilities::SessionReaderSharedPtr pSession)
 {
-	std::cerr << "Entered main" << std::endl;
-
     string vDriverModule;
     DriverSharedPtr drv;
 
     // Create driver
-	std::cerr << "Loading solverinfo" << std::endl;
-
     pSession->LoadSolverInfo("Driver", vDriverModule, "Standard");
-	std::cerr << "Getting driver" << std::endl;
 
-	int i=1;
-	while(i==0)
-	{
-
-	}
     drv = GetDriverFactory().CreateInstance(vDriverModule, pSession);
 
-	std::cerr << "Executing driver" << std::endl;
     // Execute driver
     drv->Execute();
 

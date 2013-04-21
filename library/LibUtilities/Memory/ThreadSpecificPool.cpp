@@ -32,7 +32,7 @@
 
 #include <LibUtilities/Memory/ThreadSpecificPool.hpp>
 #include <LibUtilities/BasicUtils/Thread.h>
-#include <boost/thread/mutex.hpp>
+#include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/locks.hpp>
 
 namespace Nektar
@@ -45,17 +45,31 @@ namespace Nektar
 //                Loki::NoDestroy > Type;
 //        return Type::Instance();
 
-    	static boost::mutex mutex;
-    	typedef boost::unique_lock<boost::mutex> Lock;
-    	Lock vLock(mutex);
+    	/*
+    	 * Now have a single MemPool per thread (because MemPool is *not* thread safe).
+    	 * Should not need locking here because std::map is supposed to be thread safe
+    	 * when used this way.  Locking here slows things down, too.
+    	 *
+    	 * HOWEVER!  It seems std::map isn't behaving (or I'm misreading the docs).
+    	 * Occasionally get crashes without the locks.
+    	 */
+    	static boost::shared_mutex mutex;
     	static std::map<unsigned int, MemPool *> s_threadPools;
-//    	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-//    	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+    	static Nektar::Thread::ThreadManagerSharedPtr sThrMan; // stored to prevent ThreadManager from
+    														   // going out of scope while it's still needed.
     	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
     	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+		if (vThrMan)
+		{
+			sThrMan = vThrMan;
+		}
+		boost::shared_lock<boost::shared_mutex> RLock(mutex);
     	if (s_threadPools.count(vThr) == 0)
     	{
+    		RLock.unlock();
+    		boost::unique_lock<boost::shared_mutex> WLock(mutex);
     		s_threadPools[vThr] = new MemPool();
+        	return *(s_threadPools[vThr]);
     	}
     	return *(s_threadPools[vThr]);
     }

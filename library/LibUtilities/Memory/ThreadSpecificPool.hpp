@@ -164,13 +164,6 @@ namespace Nektar
                 m_pools.insert(PairType(256, boost::shared_ptr<detail::ThreadSpecificPool>(new detail::ThreadSpecificPool(256))));
                 m_pools.insert(PairType(512, boost::shared_ptr<detail::ThreadSpecificPool>(new detail::ThreadSpecificPool(512))));
                 m_pools.insert(PairType(1024, boost::shared_ptr<detail::ThreadSpecificPool>(new detail::ThreadSpecificPool(1024))));
-
-                std::cerr << "Constructing MemPool: " << this << " with the following:" << std::endl;
-                std::map<size_t, boost::shared_ptr<detail::ThreadSpecificPool> >::const_iterator it;
-                for (it = m_pools.begin(); it != m_pools.end(); ++it)
-                {
-                	std::cerr << " TSPool: " << (it->second).get() << std::endl;
-                }
             }
             
             ~MemPool()

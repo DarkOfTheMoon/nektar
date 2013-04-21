@@ -49,7 +49,7 @@
 #include <LibUtilities/Foundations/Foundations.hpp>
 #include <LibUtilities/Foundations/ManagerAccess.h>
 #include <LibUtilities/BasicUtils/Thread.h>
-#include <boost/thread/mutex.hpp>
+#include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/locks.hpp>
 
 namespace Nektar
@@ -94,23 +94,34 @@ namespace Nektar
         PointsManagerT &PointsManager(void)
         {
 //            return Loki::SingletonHolder<PointsManagerT>::Instance();
+
+//			Should be thread safe: std::map says concurrent access and entry creation is OK
+//        	static boost::shared_mutex s_PMmutex;
         	static std::map<unsigned int, PointsManagerT *> s_threadPointMan;
         	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
         	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+//        	std::cerr << "Thr: " << vThr << " vThrMan: " << vThrMan << std::endl;
+//        	boost::shared_lock<boost::shared_mutex> ReadLock(s_PMmutex);
         	if (s_threadPointMan.count(vThr) == 0)
         	{
         		if (!vThrMan || vThr == 0)
         		{
+//                	std::cerr << "Thr: " << vThr << " creating 0" << std::endl;
         			s_threadPointMan[vThr] = new PointsManagerT();
         		}
         		else
         		{
+//        			ReadLock.unlock();
+//        			boost::unique_lock<boost::shared_mutex> WriteLock(s_PMmutex);
+//                	std::cerr << "Thr: " << vThr << " creating non-zero" << std::endl;
         			ASSERTL0(s_threadPointMan.count(0) != 0, "argh");
         			PointsManagerT *vtmpPM = new PointsManagerT();
         			vtmpPM->Clone(*(s_threadPointMan[0]));
         			s_threadPointMan[vThr] = vtmpPM;
+                	return *(s_threadPointMan[vThr]);
         		}
         	}
+//        	std::cerr << "Thr: " << vThr << " returns with " << (s_threadPointMan[vThr]) << std::endl;
         	return *(s_threadPointMan[vThr]);
         }
 
@@ -118,8 +129,10 @@ namespace Nektar
         {
 //            return Loki::SingletonHolder<BasisManagerT>::Instance();
         	static std::map<unsigned int, BasisManagerT *> s_threadBasisMan;
+//        	static boost::shared_mutex s_BMmutex;
         	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
         	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+//        	boost::shared_lock<boost::shared_mutex> ReadLock(s_BMmutex);
         	if (s_threadBasisMan.count(vThr) == 0)
         	{
         		if (!vThrMan || vThr == 0)
@@ -128,10 +141,13 @@ namespace Nektar
         		}
         		else
         		{
+//        			ReadLock.unlock();
+//        			boost::unique_lock<boost::shared_mutex> WriteLock(s_BMmutex);
         			ASSERTL0(s_threadBasisMan.count(0) != 0, "argh");
         			BasisManagerT *vtmpBM = new BasisManagerT();
         			vtmpBM->Clone(*(s_threadBasisMan[0]));
         			s_threadBasisMan[vThr] = vtmpBM;
+                	return *(s_threadBasisMan[vThr]);
         		}
         	}
         	return *(s_threadBasisMan[vThr]);

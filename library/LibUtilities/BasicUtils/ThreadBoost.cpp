@@ -37,13 +37,14 @@ namespace Nektar
             delete []m_threadThreadList;
             delete []m_threadActiveList;
             delete []m_threadBusyList;
+            delete m_barrier;
         }
         
         ThreadManagerBoost::ThreadManagerBoost(unsigned int numT) :
                 m_numThreads(numT), m_numWorkers(numT-1), m_masterQueue(), m_masterQueueMutex(),
-                m_masterActiveMutex(), m_masterHoldForMutex(), m_masterQueueCondVar(), m_masterActiveCondVar(),
-                m_masterHoldForCondVar(),
-                m_chunkSize(1), m_schedType(e_dynamic), m_threadMap(), m_holdingFor(numT, numT)
+                m_masterActiveMutex(), m_masterQueueCondVar(), m_masterActiveCondVar(),
+                m_chunkSize(1), m_schedType(e_dynamic),
+                m_threadMap()
         {
             using namespace std;
             try {
@@ -84,6 +85,7 @@ namespace Nektar
             }
             m_threadActiveList[m_numThreads-1] = false;
             m_masterThreadId = boost::this_thread::get_id();
+            m_barrier = new boost::barrier(m_numWorkers > 0 ? m_numWorkers : 1);
             m_type = "Threading with Boost";
         }
         
@@ -177,7 +179,7 @@ namespace Nektar
         	m_masterActiveCondVar.notify_all();
 
         	delete m_barrier;
-        	m_barrier = new boost::barrier(m_numWorkers);
+            m_barrier = new boost::barrier(m_numWorkers > 0 ? m_numWorkers : 1);
         } // Lock on active released here
 
         void ThreadManagerBoost::SetNumWorkers(unsigned int num)
@@ -200,21 +202,7 @@ namespace Nektar
         
         void ThreadManagerBoost::Hold()
         {
-        	m_barrier->wait();
-        }
-
-        void ThreadManagerBoost::HoldFor(unsigned int p_proc)
-        {
-        	Lock masterHoldForLock(m_masterHoldForMutex); // locks the HoldFor
-        	unsigned int vThr = GetWorkerNum();
-        	m_holdingFor[vThr] = p_proc;
-        	while(m_holdingFor[p_proc] != vThr)
-        	{
-                m_masterHoldForCondVar.wait(masterHoldForLock);
-        	}
-        	// reset the other guy's value
-        	m_holdingFor[p_proc] = m_numWorkers; // impossible value
-        	m_masterHoldForCondVar.notify_all();
+        		m_barrier->wait();
         }
 
     	const std::string& ThreadManagerBoost::GetType() const

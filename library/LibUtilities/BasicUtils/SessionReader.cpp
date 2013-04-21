@@ -268,9 +268,7 @@ namespace Nektar
         void SessionReader::SessionJob::Run()
         {
 
-        	std::cerr << "Running in thread " << GetWorkerNum() << std::endl;
-
-        	unsigned int vThr = m_session->m_comm->GetRank();
+        	unsigned int vRank = m_session->m_comm->GetRank();
 
         	// Partition mesh
         	m_session->PartitionMesh();
@@ -278,42 +276,11 @@ namespace Nektar
         	// Parse the XML data in #m_xmlDoc
         	m_session->ParseDocument();
 
-        	std::cerr << "Starting testing" << std::endl;
-        	std::cerr << "Comm type is" << m_session->m_comm->GetType() << std::endl;
-        	int testlen = 10;
-        	Array<OneD, long> testme(testlen);
-        	Array<OneD, NekDouble> testdb(testlen);
-        	for (int i=0; i<testlen; ++i)
-        	{
-        		testme[i] = i + vThr * 10;
-        		testdb[i] = i + vThr * 10;
-        	}
-        	testme[5] = 4;
-        	for (int i=0; i<testlen; ++i)
-        	{
-        		std::cerr << "i(" << i << "): " << testme[i] << " = " << testdb[i] << std::endl;
-        	}
-
-//        	m_session->m_comm->GsUnique(testme);
-        	Gs::gs_data *poop = m_session->m_comm->GsInit(testme);
-        	m_session->m_comm->GsGather(testdb, Gs::gs_add, poop);
-        	for (int i=0; i<testlen; ++i)
-        	{
-        		std::cerr << "i(" << i << "): " << testme[i] << " = " << testdb[i] << std::endl;
-        	}
-
-        	m_session->m_comm->AllReduce(testdb, ReduceSum);
-        	for (int i=0; i<testlen; ++i)
-        	{
-        		std::cerr << "i(" << i << "): " << testme[i] << " = " << testdb[i] << std::endl;
-        	}
-
         	// Override SOLVERINFO and parameters with any specified on the
         	// command line.
         	m_session->CmdLineOverride();
 
         	// DoMain()
-        	std::cerr << "Doing main " << std::endl;
         	m_session->m_mainFunc(m_session);
 
         }
@@ -344,10 +311,12 @@ namespace Nektar
 
             // If we've got more than 1 thread, attach a ThreadedComm
             // to the existing Comm
-			if (vNumWorkers > 1) {
+			if (vNumWorkers > 1)
+			{
 				CommSharedPtr vTmpComm(new ThreadedComm(m_comm, m_threadManager));
 				m_comm = vTmpComm;
 			}
+            std::cerr << "Comm is: " << m_comm->GetType() << std::endl;
 
             m_xmlDoc.resize(vNumWorkers, m_xmlDoc[0]);
             m_filename.resize(vNumWorkers, m_filename[0]);
@@ -357,22 +326,7 @@ namespace Nektar
             }
 
             m_threadManager->Wait();
-        	std::cerr << "Reached abort" << std::endl;
 			m_comm->Block();
-			m_comm->Finalise();
-        	std::exit(0);
-
-/*
-            // Partition mesh
-            PartitionMesh();
-
-            // Parse the XML data in #m_xmlDoc
-            ParseDocument();
-
-            // Override SOLVERINFO and parameters with any specified on the
-            // command line.
-            CmdLineOverride();
-*/
 
         }
 
@@ -597,7 +551,6 @@ namespace Nektar
          */
         void SessionReader::Finalise()
         {
-        	m_threadManager->Hold();
             m_comm->Finalise();
         }
 
@@ -1237,22 +1190,24 @@ namespace Nektar
             e = docHandle.FirstChildElement("NEKTAR").
                 FirstChildElement("CONDITIONS").Element();
 
-            // Read the various sections of the CONDITIONS block
-            ReadParameters (e);
-            ReadSolverInfo (e);
-            ReadExpressions(e);
-            ReadVariables  (e);
-            ReadFunctions  (e);
+			if (m_threadManager->GetWorkerNum() == 0) {
+				// Read the various sections of the CONDITIONS block
+				ReadParameters (e);
+				ReadSolverInfo (e);
+				ReadExpressions(e);
+				ReadVariables  (e);
+				ReadFunctions  (e);
 
-            e = docHandle.FirstChildElement("NEKTAR").
-                FirstChildElement("GEOMETRY").Element();
+				e = docHandle.FirstChildElement("NEKTAR").
+					FirstChildElement("GEOMETRY").Element();
 
-            ReadGeometricInfo(e);
+				ReadGeometricInfo(e);
 
-            e = docHandle.FirstChildElement("NEKTAR").
-                FirstChildElement("FILTERS").Element();
+				e = docHandle.FirstChildElement("NEKTAR").
+					FirstChildElement("FILTERS").Element();
 
-            ReadFilters(e);
+				ReadFilters(e);
+			}
         }
 
 
@@ -1285,7 +1240,7 @@ namespace Nektar
                 {
                     vCommModule = GetSolverInfo("Communication");
                 }
-                else if (GetCommFactory().ModuleExists("ParallelMPI")  || nthreads > 1)
+                else if (GetCommFactory().ModuleExists("ParallelMPI"))
                 {
                     vCommModule = "ParallelMPI";
                 }
@@ -1312,8 +1267,6 @@ namespace Nektar
             unsigned int numPartitions = vCommMesh->GetSize();
             unsigned int vThr = m_threadManager->GetWorkerNum();
 
-			std::cerr << "Entered SessionReader PartitionMesh" << std::endl;
-
             // Partition mesh into length of row comms
             if (numPartitions > 1)
             {
@@ -1325,7 +1278,6 @@ namespace Nektar
 					SessionReaderSharedPtr vSession     = GetSharedThisPtr();
 					MeshPartitionSharedPtr vPartitioner = MemoryManager<
 						MeshPartition>::AllocateSharedPtr(vSession);
-					std::cerr << "Calling PartitionMesh numPartitions: " << numPartitions << std::endl;
 					vPartitioner->PartitionMesh(numPartitions);
 					vPartitioner->WriteLocalPartition(vSession);
 
