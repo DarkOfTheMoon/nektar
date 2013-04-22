@@ -45,7 +45,7 @@ namespace Nektar
         // ThreadManager implementation.
         ThreadManager::~ThreadManager()
         {
-        	// empty
+        	m_instance.reset();
         }
         
         // ThreadHandle implementation.
