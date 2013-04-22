@@ -9,6 +9,7 @@ IF (NEKTAR_USE_VTK)
             ${Boost_ZLIB_LIBRARY}
             ${Boost_DATE_TIME_LIBRARY}
             ${Boost_PROGRAM_OPTIONS_LIBRARY} 
+            ${Boost_SYSTEM_LIBRARY} 
             optimized ${TINYXML_LIB} debug ${TINYXML_LIB}
     )
     TARGET_LINK_LIBRARIES(FibreToNektar ${TINYXML_LIB})

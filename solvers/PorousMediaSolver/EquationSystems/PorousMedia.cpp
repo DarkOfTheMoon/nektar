@@ -168,7 +168,7 @@ namespace Nektar
         //Setup of spatially varying anisotropic permeability
         if(m_session->DefinesFunction("SpatialAnisotropicPermeability"))
         {
-            ASSERTL0(!m_explicitPermeability,"implicit spatially varying permeability not implemented");
+            ASSERTL0(m_explicitPermeability,"implicit spatially varying permeability not implemented");
 
             int nq = m_fields[0]->GetNpoints();
             
@@ -182,29 +182,11 @@ namespace Nektar
                 Array<OneD, NekDouble> vTemp;
                 for (int i = 0; i < m_spacedim; ++i)
                 {
-                    EvaluateFunction(varCoeffs[i], vTemp, "SpatialAnisotropicPermeability");
+                    EvaluateFunction(varCoeffs[0], vTemp, "SpatialAnisotropicPermeability");
                     m_spatialperm[i] = Array<OneD, NekDouble>(nq);
                     Vmath::Sdiv(nq,1.0,vTemp,1,m_spatialperm[i],1);
                 }
-                Array<OneD,NekDouble> x0(nq);
-                Array<OneD,NekDouble> x1(nq);
-                Array<OneD,NekDouble> x2(nq);
-                
-                // Get the coordinates (assuming all fields have the same
-                // discretisation)
-                NekDouble scalefac = 10;
-                m_fields[0]->GetCoords(x0,x1,x2);
-                for(int j=0; j<nq; ++j)
-                {
-                    NekDouble x = x0[j];
-                    NekDouble y = x1[j];
-                    if(x > 0.375 && x <0.625)
-                    {
-                        //cout<<"x: "<<x0[j]<<" y: "<<x1[j]<<" z: "<<x2[j]<<endl;
-                        m_spatialperm[0][j]=m_spatialperm[0][j]*scalefac;
-                        m_spatialperm[1][j]=m_spatialperm[1][j]*scalefac;
-                    }
-                }
+
 
                 // Transform variable coefficient and write out to file.
                 m_fields[0]->FwdTrans_IterPerExp(m_spatialperm[i],
@@ -228,11 +210,11 @@ namespace Nektar
                     "kzz",
                 }; 
 
-                //Explicit implementation
+
                 Array<OneD, NekDouble> vTemp;
                 for (int i = 0; i < m_spacedim; ++i)
                 {
-                    EvaluateFunction(varCoeffs[i], vTemp, "SpatialAnisotropicPermeability");
+                    EvaluateFunction(varCoeffs[0], vTemp, "SpatialAnisotropicPermeability");
                     m_spatialperm[i] = Array<OneD, NekDouble>(nq);
                     Vmath::Sdiv(nq,1.0,vTemp,1,m_spatialperm[i],1);
                 }
