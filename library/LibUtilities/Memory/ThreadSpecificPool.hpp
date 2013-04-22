@@ -231,6 +231,7 @@ namespace Nektar
     };
 
     LIB_UTILITIES_EXPORT MemPool& GetMemoryPool();
+    LIB_UTILITIES_EXPORT void InitMemoryPools(unsigned int pNumThr, bool pEnabled);
 
 }
 

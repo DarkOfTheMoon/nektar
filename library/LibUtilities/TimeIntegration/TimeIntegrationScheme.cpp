@@ -48,8 +48,6 @@ namespace Nektar
 //        	static bool reg = m.RegisterGlobalCreator(TimeIntegrationScheme::Create);
 //        	return m;
 
-//			Should be thread safe: std::map says concurrent access and entry creation is OK,
-//			but apparently not...
         	static std::map<unsigned int,  TimeIntegrationSchemeManagerT *> s_threadTSScheme;
         	static boost::shared_mutex s_TSSmutex;
         	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();

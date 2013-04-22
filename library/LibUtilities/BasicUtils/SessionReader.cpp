@@ -211,6 +211,8 @@ namespace Nektar
             m_filename[0]    = vFilenames[0];
             m_sessionName = m_filename[0].substr(0, m_filename[0].find_last_of('.'));
             m_xmlDoc[0]      = MergeDoc(vFilenames);
+
+            Nektar::InitMemoryPools(1, false);
             // Create communicator
             CreateComm(argc, argv, m_filename[0]);
         }
@@ -235,6 +237,7 @@ namespace Nektar
             m_filename[0]    = pFilenames[0];
             m_sessionName = m_filename[0].substr(0, m_filename[0].find_last_of('.'));
             m_xmlDoc[0]      = MergeDoc(pFilenames); // threads not initialised yet
+            Nektar::InitMemoryPools(1, false);
 
             // Create communicator
             if (!pComm.get())
@@ -2051,7 +2054,7 @@ namespace Nektar
             cerr << "Number of threads will be: " << nthreads << endl;
             // Decide what implementation of ThreadManager you want here.
             m_threadManager = Thread::GetThreadManager().CreateInstance("ThreadManagerBoost", nthreads);
-
+            Nektar::InitMemoryPools(nthreads, true);
         }
 
         Nektar::Thread::ThreadManagerSharedPtr SessionReader::GetThreadManager()

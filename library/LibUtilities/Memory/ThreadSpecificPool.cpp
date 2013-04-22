@@ -37,7 +37,25 @@
 
 namespace Nektar
 {
+//	namespace detail
+//	{
+	static Nektar::Thread::ThreadManagerSharedPtr sThrMan;
+	typedef boost::shared_ptr<std::vector<MemPool *> > MemoryPoolPool;
+	static bool s_threadPoolsEnabled = false;
+//	}
 
+	boost::shared_ptr<std::vector<MemPool *> >& GetMemoryPoolPool()
+	{
+		typedef Loki::SingletonHolder<MemoryPoolPool ,
+				Loki::CreateUsingNew,
+				Loki::NoDestroy > Type;
+		MemoryPoolPool &p = Type::Instance();
+		if (!p)
+		{
+			p = boost::shared_ptr<std::vector<MemPool *> >(new std::vector<MemPool *>(1,0));
+		}
+		return p;
+	}
     MemPool& GetMemoryPool()
     {
 //        typedef Loki::SingletonHolder<MemPool ,
@@ -47,30 +65,46 @@ namespace Nektar
 
     	/*
     	 * Now have a single MemPool per thread (because MemPool is *not* thread safe).
-    	 * Should not need locking here because std::map is supposed to be thread safe
-    	 * when used this way.  Locking here slows things down, too.
-    	 *
-    	 * HOWEVER!  It seems std::map isn't behaving (or I'm misreading the docs).
-    	 * Occasionally get crashes without the locks.
+    	 * We want to avoid locking in here because this function is used heavily.
+    	 * Even shared locking causes a large slowdown.
     	 */
-    	static boost::shared_mutex mutex;
-    	static std::map<unsigned int, MemPool *> s_threadPools;
-    	static Nektar::Thread::ThreadManagerSharedPtr sThrMan; // stored to prevent ThreadManager from
-    														   // going out of scope while it's still needed.
     	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
     	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
-		if (vThrMan)
+		if (!sThrMan && vThrMan)
 		{
 			sThrMan = vThrMan;
 		}
-		boost::shared_lock<boost::shared_mutex> RLock(mutex);
-    	if (s_threadPools.count(vThr) == 0)
+    	static MemoryPoolPool &p = GetMemoryPoolPool();
+    	if (!s_threadPoolsEnabled)
     	{
-    		RLock.unlock();
-    		boost::unique_lock<boost::shared_mutex> WLock(mutex);
-    		s_threadPools[vThr] = new MemPool();
-        	return *(s_threadPools[vThr]);
+    		ASSERTL1(vThr == 0, "Using threaded memory pool before it's inited");
+        	ASSERTL1(p, "Done goofed");
+    		if ((*p)[0] == 0)
+    		{
+    			(*p)[0] = new MemPool();
+    		}
     	}
-    	return *(s_threadPools[vThr]);
+    	return *((*p)[vThr]);
+    }
+
+    /**
+     * @brief Sets up memory pools for all threads.
+     *
+     * @note This must be called by a single thread.
+     */
+    void InitMemoryPools(unsigned int pNumThr, bool pEnabled)
+    {
+    	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+    	MemoryPoolPool &p = GetMemoryPoolPool();
+
+    	p->resize(pNumThr);
+    	for (unsigned int i=0; i < pNumThr; ++i)
+    	{
+    		if ((*p)[i] == 0) // for thread 0
+    		{
+    			(*p)[i] = new MemPool();
+    		}
+    	}
+    	s_threadPoolsEnabled = pEnabled;
     }
 }

@@ -14,7 +14,6 @@
 #include <boost/thread/thread.hpp>
 
 #include <LibUtilities/BasicUtils/NekFactory.hpp>
-#include <LibUtilities/Memory/NekMemoryManager.hpp>
 
 namespace Nektar
 {
