@@ -100,7 +100,7 @@ namespace Nektar
                 /// \throw std::bad_alloc if memory is exhausted.
                 void* Allocate()
                 {
-                    boost::mutex::scoped_lock l(m_mutex);
+//                    boost::mutex::scoped_lock l(m_mutex);
                     void* result = m_pool->malloc();
 
 #if defined(NEKTAR_DEBUG) || defined(NEKTAR_FULLDEBUG)
@@ -116,7 +116,7 @@ namespace Nektar
                 /// from this pool.  Doing this will result in undefined behavior.
                 void Deallocate(const void* p)
                 {
-                    boost::mutex::scoped_lock l(m_mutex);
+//                    boost::mutex::scoped_lock l(m_mutex);
 #if defined(NEKTAR_DEBUG) || defined(NEKTAR_FULLDEBUG)
                     // The idea here is to fill the returned memory with some known
                     // pattern, then detect that pattern on the allocate.  If the 

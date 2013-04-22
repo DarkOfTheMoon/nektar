@@ -1222,23 +1222,28 @@ namespace Nektar
             char*              argv[], 
             const std::string &pFilename)
         {
-            if (argc == 0)
+            TiXmlHandle docHandle(m_xmlDoc[0]); // threads not initialised yet
+            TiXmlElement* e;
+            e = docHandle.FirstChildElement("NEKTAR").
+                FirstChildElement("CONDITIONS").Element();
+
+            ReadSolverInfo(e);
+
+            int nthreads;
+            LoadParameter("NThreads", nthreads, 1);
+
+            if (argc == 0 && nthreads == 1)
             {
                 m_comm = GetCommFactory().CreateInstance("Serial", 0, 0);
             }
             else
             {
-                TiXmlHandle docHandle(m_xmlDoc[0]); // threads not initialised yet
-                TiXmlElement* e;
-                e = docHandle.FirstChildElement("NEKTAR").
-                    FirstChildElement("CONDITIONS").Element();
-
-                ReadSolverInfo(e);
-
-                int nthreads;
-                LoadParameter("NThreads", nthreads, 1);
 
                 string vCommModule("Serial");
+                if (nthreads > 1)
+                {
+                    vCommModule = "ParallelMPI";
+                }
                 if (e && DefinesSolverInfo("Communication"))
                 {
                     vCommModule = GetSolverInfo("Communication");
