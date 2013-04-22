@@ -52,7 +52,7 @@ namespace Nektar
 		MemoryPoolPool &p = Type::Instance();
 		if (!p)
 		{
-			p = boost::shared_ptr<std::vector<MemPool *> >(new std::vector<MemPool *>(1,0));
+			p = boost::shared_ptr<std::vector<MemPool *> >(new std::vector<MemPool *>(1,static_cast<MemPool*>(0)));
 		}
 		return p;
 	}
