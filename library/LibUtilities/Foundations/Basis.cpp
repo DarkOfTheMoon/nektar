@@ -213,7 +213,7 @@ namespace Nektar
              */
         void Basis::GenBasis()
         {
-            int i,p,q;
+            int i,p,q,j,k;
             NekDouble scal;
             Array<OneD, NekDouble> modeSharedArray;
             NekDouble *mode;
@@ -667,6 +667,7 @@ namespace Nektar
 
 					int nu;//lower number in the binomial coefficient binom_coeff(P, nu)
 					int P = numModes - 1;//Bernstein polynomial degree
+					Array<OneD, NekDouble> bern_tmp(numModes, 0.0);
 					
 					//array containing binomial coefficients, first and last are 1s
                     Array<OneD, NekDouble> b_coeffs(numModes, 1.0);
@@ -701,7 +702,13 @@ namespace Nektar
 						//using multiplicative formula for binomial coefficients
 						for(i = 0; i < numPoints; ++i)
 						{
-							mode[i] = b_coeffs[p] * pow(0.5+0.5*z[i],p) * pow(0.5-0.5*z[i], P-p);
+							Vmath::Zero(numModes, bern_tmp, 1);
+							bern_tmp[p] = 1.0;
+							for(j = 1; j <= P; ++j)
+								for(k = 0; k <= P-j; k++)
+									bern_tmp[k] = (0.5-0.5*z[i])*bern_tmp[k] + (0.5+0.5*z[i])*bern_tmp[k+1];
+							mode[i] = bern_tmp[0];
+							//mode[i] = b_coeffs[p] * pow(0.5+0.5*z[i],p) * pow(0.5-0.5*z[i], P-p);
 						}
 					}
 
