@@ -13,7 +13,7 @@ using namespace Nektar;
 #ifdef TIMING
 #include <time.h>
 #define Timing(s) \
- fprintf(stdout,"%s Took %g seconds\n",s,(clock()-st)/cps); \
+ fprintf(stdout,"%s Took %g seconds\n",s,(clock()-st)/(double)CLOCKS_PER_SEC); \
  st = clock();
 #else
 #define Timing(s) \
@@ -34,10 +34,9 @@ int main(int argc, char *argv[])
     StdRegions::ConstFactorMap factors;
     StdRegions::VarCoeffMap varcoeffs;
     FlagList flags;
-    NekDouble    cps = (double)CLOCKS_PER_SEC;
-    NekDouble    st;
+    NekDouble st;
 
-    if( (argc != 2) && (argc != 3) && (argc != 4))
+    if(argc < 2)
     {
         fprintf(stderr,"Usage: Helmholtz2D meshfile [SysSolnType]   or   \n");
         exit(1);
@@ -47,7 +46,8 @@ int main(int argc, char *argv[])
     {
         //----------------------------------------------
         // Read in mesh from input file
-        SpatialDomains::MeshGraphSharedPtr graph2D = MemoryManager<SpatialDomains::MeshGraph2D>::AllocateSharedPtr(vSession);
+        SpatialDomains::MeshGraphSharedPtr graph2D = 
+            SpatialDomains::MeshGraph::Read(vSession);
         //----------------------------------------------
 
         //----------------------------------------------
@@ -137,12 +137,13 @@ int main(int argc, char *argv[])
         Timing("Helmholtz Solve ..");
 
 #ifdef TIMING
-        for(i = 0; i < 1000; ++i)
+        for(i = 0; i < 20; ++i)
         {
+            Vmath::Zero(Exp->GetNcoeffs(),Exp->UpdateCoeffs(),1);
             Exp->HelmSolve(Fce->GetPhys(), Exp->UpdateCoeffs(), flags, factors, varcoeffs);
         }
 
-        Timing("1000 Helmholtz Solves:... ");
+        Timing("20 Helmholtz Solves:... ");
 #endif
 
         //----------------------------------------------
@@ -158,7 +159,7 @@ int main(int argc, char *argv[])
             out += "_P" + boost::lexical_cast<string>(vSession->GetComm()->GetRank());
         }
         out += ".fld";
-        std::vector<SpatialDomains::FieldDefinitionsSharedPtr> FieldDef
+        std::vector<LibUtilities::FieldDefinitionsSharedPtr> FieldDef
                                                     = Exp->GetFieldDefinitions();
         std::vector<std::vector<NekDouble> > FieldData(FieldDef.size());
 
@@ -168,7 +169,7 @@ int main(int argc, char *argv[])
             FieldDef[i]->m_fields.push_back("u");
             Exp->AppendFieldData(FieldDef[i], FieldData[i]);
         }
-        graph2D->Write(out, FieldDef, FieldData);
+        LibUtilities::Write(out, FieldDef, FieldData);
         //-----------------------------------------------
 
         //----------------------------------------------

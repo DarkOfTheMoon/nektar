@@ -88,14 +88,15 @@ namespace Nektar
           return v_GetFaceOrient(i);
       }
 
-      /**
-       * @brief Return the ID of face i in this element.
-       */
-      int Geometry3D::GetFid(int i) const
-      {
-          return v_GetFid(i);
-      }
 
+      /**
+       * @brief Returns the element coordinate direction corresponding to a
+       * given face coordinate direction
+       */
+      int Geometry3D::GetDir(const int faceidx, const int facedir) const
+      {
+          return v_GetDir(faceidx, facedir);
+      }
 
       //---------------------------------------
       // 3D Geometry Methods
@@ -150,7 +151,7 @@ namespace Nektar
               //Interpolate derivative metric at Lcoords
               der1_x = m_xmap[0]->PhysEvaluate(Lcoords, D1Dx);
               der2_x = m_xmap[0]->PhysEvaluate(Lcoords, D1Dy);
-              der3_z = m_xmap[0]->PhysEvaluate(Lcoords, D1Dz);
+              der3_x = m_xmap[0]->PhysEvaluate(Lcoords, D1Dz);
               der1_y = m_xmap[1]->PhysEvaluate(Lcoords, D2Dx);
               der2_y = m_xmap[1]->PhysEvaluate(Lcoords, D2Dy);                  
               der3_y = m_xmap[1]->PhysEvaluate(Lcoords, D2Dz);          
@@ -218,7 +219,7 @@ namespace Nektar
 
                   for(k = 0; k < nFaceCoeffs; k++)
                   {
-                      double v = signArray[k] * coeffs[k];
+                      NekDouble v = signArray[k] * coeffs[k];
                       (m_xmap[j]->UpdateCoeffs())[mapArray[k]] = v;
                   }
               }
@@ -242,7 +243,6 @@ namespace Nektar
             if (m_geomFactorsState != ePtsFilled)
             {
                 GeomType      Gtype  = eRegular;
-                GeomShapeType GSType = eQuadrilateral;
 
                 v_FillGeom();
 
@@ -258,7 +258,7 @@ namespace Nektar
                 }
 
                 m_geomFactors = MemoryManager<GeomFactors3D>::AllocateSharedPtr(
-                    Gtype, m_coordim, m_xmap, tbasis);
+                    Gtype, m_coordim, m_xmap, tbasis, true);
 
                 m_geomFactorsState = ePtsFilled;
             }

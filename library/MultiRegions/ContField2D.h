@@ -86,13 +86,17 @@ namespace Nektar
             /// Scatters from the global coefficients
             /// \f$\boldsymbol{\hat{u}}_g\f$ to the local coefficients
             /// \f$\boldsymbol{\hat{u}}_l\f$.
-            inline const void GlobalToLocal(
+            inline void GlobalToLocal(
                                   Array<OneD,NekDouble> &outarray) const;
 
             /// Scatters from the global coefficients
             /// \f$\boldsymbol{\hat{u}}_g\f$ to the local coefficients
             /// \f$\boldsymbol{\hat{u}}_l\f$.
-            inline const void GlobalToLocal(
+            inline void GlobalToLocal(
+                            const Array<OneD, const NekDouble> &inarray,
+                                  Array<OneD,       NekDouble> &outarray) const;
+
+            inline void LocalToGlobal(
                             const Array<OneD, const NekDouble> &inarray,
                                   Array<OneD,       NekDouble> &outarray) const;
 
@@ -102,7 +106,7 @@ namespace Nektar
 
             /// Assembles the global coefficients \f$\boldsymbol{\hat{u}}_g\f$
             /// from the local coefficients \f$\boldsymbol{\hat{u}}_l\f$.
-            inline const void Assemble(
+            inline void Assemble(
                             const Array<OneD, const NekDouble> &inarray,
                                   Array<OneD,NekDouble> &outarray) const;
 
@@ -310,7 +314,7 @@ namespace Nektar
          *                      \f$\boldsymbol{x}_l\f$ will be stored in this
          *                      array of size \f$N_\mathrm{eof}\f$.
          */
-        inline const void ContField2D::GlobalToLocal(
+        inline void ContField2D::GlobalToLocal(
                                 Array<OneD,NekDouble> &outarray) const
         {
             m_locToGloMap->GlobalToLocal(m_coeffs,outarray);
@@ -343,11 +347,18 @@ namespace Nektar
          *                      \f$\boldsymbol{x}_l\f$ will be stored in this
          *                      array of size \f$N_\mathrm{eof}\f$.
          */
-        inline const void ContField2D::GlobalToLocal(
+        inline void ContField2D::GlobalToLocal(
                             const Array<OneD, const NekDouble> &inarray,
                                   Array<OneD,       NekDouble> &outarray) const
         {
             m_locToGloMap->GlobalToLocal(inarray,outarray);
+        }
+
+        inline void ContField2D::LocalToGlobal(
+                const Array<OneD, const NekDouble> &inarray,
+                Array<OneD,NekDouble> &outarray) const 
+        {
+            m_locToGloMap->LocalToGlobal(inarray, outarray);
         }
 
         /**
@@ -407,7 +418,7 @@ namespace Nektar
          *                      \f$\boldsymbol{x}_g\f$ will be stored in this
          *                      array of size \f$N_\mathrm{dof}\f$.
          */
-        inline const void ContField2D::Assemble(
+        inline void ContField2D::Assemble(
                                 const Array<OneD, const NekDouble> &inarray,
                                       Array<OneD,NekDouble> &outarray) const
         {
@@ -453,7 +464,6 @@ namespace Nektar
                     GlobalMatrixKey gkey(StdRegions::eIProductWRTBase,
                                          m_locToGloMap);
                     GlobalMatrixSharedPtr mat = GetGlobalMatrix(gkey);
-                    int nDir = m_locToGloMap->GetNumGlobalDirBndCoeffs();
                     mat->Multiply(inarray,outarray);
                     m_locToGloMap->UniversalAssemble(outarray);
                 }
@@ -539,7 +549,7 @@ namespace Nektar
             }
             else
             {
-                return matrixIter->second->GetMatrix()->GetNumNonZeroEntries();
+                return matrixIter->second->GetNumNonZeroEntries();
             }
 
             return 0;

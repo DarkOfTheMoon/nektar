@@ -11,7 +11,7 @@
 #ifdef TIMING
 #include <time.h>
 #define Timing(s) \
- fprintf(stdout,"%s Took %g seconds\n",s,(clock()-st)/cps); \
+ fprintf(stdout,"%s Took %g seconds\n",s,(clock()-st)/(double)CLOCKS_PER_SEC); \
  st = clock();
 #else
 #define Timing(s) \
@@ -33,7 +33,6 @@ int main(int argc, char *argv[])
     Array<OneD,NekDouble>  fce; 
     Array<OneD,NekDouble>  xc0,xc1,xc2; 
     StdRegions::ConstFactorMap factors;
-    double   st, cps = (double)CLOCKS_PER_SEC;
 
     if(argc != 2)
     {
@@ -141,7 +140,7 @@ int main(int argc, char *argv[])
         out += "_P" + boost::lexical_cast<string>(vComm->GetRank());
     }
     out += ".fld";
-    std::vector<SpatialDomains::FieldDefinitionsSharedPtr> FieldDef
+    std::vector<LibUtilities::FieldDefinitionsSharedPtr> FieldDef
                                                 = Exp->GetFieldDefinitions();
     std::vector<std::vector<NekDouble> > FieldData(FieldDef.size());
 
@@ -150,7 +149,7 @@ int main(int argc, char *argv[])
         FieldDef[i]->m_fields.push_back("u");
         Exp->AppendFieldData(FieldDef[i], FieldData[i]);
     }
-    graph3D->Write(out, FieldDef, FieldData);
+    LibUtilities::Write(out, FieldDef, FieldData);
     //-----------------------------------------------
     
     //----------------------------------------------

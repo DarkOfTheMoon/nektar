@@ -157,7 +157,7 @@ namespace Nektar
             if (x->first == "CheckpointCellModel")
             {
                 boost::shared_ptr<FilterCheckpointCellModel> c
-                    = boost::shared_dynamic_cast<FilterCheckpointCellModel>(
+                    = boost::dynamic_pointer_cast<FilterCheckpointCellModel>(
                                                                 m_filters[k]);
                 c->SetCellModel(m_cell);
             }
@@ -382,7 +382,6 @@ namespace Nektar
             const NekDouble time)
     {
         int nq = m_fields[0]->GetNpoints();
-        int nvar = inarray.num_elements();
         m_cell->TimeIntegrate(inarray, outarray, time);
         if (m_stimDuration > 0 && time < m_stimDuration)
         {

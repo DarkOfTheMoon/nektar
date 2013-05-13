@@ -94,13 +94,6 @@ namespace Nektar
             // Inner product functions
             //---------------------------------------
             LOCAL_REGIONS_EXPORT virtual void v_IProductWRTBase(
-                const Array<OneD, const NekDouble>& base0, 
-                const Array<OneD, const NekDouble>& base1, 
-                const Array<OneD, const NekDouble>& base2, 
-                const Array<OneD, const NekDouble>& inarray, 
-                      Array<OneD,       NekDouble>& outarray);
-
-            LOCAL_REGIONS_EXPORT virtual void v_IProductWRTBase(
                 const Array<OneD, const NekDouble>& inarray, 
                       Array<OneD,       NekDouble>& outarray);
 
@@ -149,6 +142,8 @@ namespace Nektar
             LOCAL_REGIONS_EXPORT virtual DNekScalMatSharedPtr v_GetLocMatrix(
                 const MatrixKey &mkey);
             LOCAL_REGIONS_EXPORT virtual DNekScalBlkMatSharedPtr v_GetLocStaticCondMatrix(
+                const MatrixKey &mkey);
+            LOCAL_REGIONS_EXPORT void v_DropLocStaticCondMatrix(
                 const MatrixKey &mkey);
             LOCAL_REGIONS_EXPORT DNekScalMatSharedPtr CreateMatrix(
                 const MatrixKey &mkey);

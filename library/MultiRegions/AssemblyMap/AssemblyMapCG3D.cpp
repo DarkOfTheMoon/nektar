@@ -172,7 +172,7 @@ namespace Nektar
             const map<int,pair<int, StdRegions::Orientation> >& periodicFacesId)
         {
             int i,j,k,l;
-            int cnt = 0,cnt1=0;
+            int cnt = 0;
             int intDofCnt;
             int meshVertId;
             int meshVertId2;
@@ -1114,8 +1114,7 @@ namespace Nektar
                 case eIterativeMultiLevelStaticCond:
                 case eXxtMultiLevelStaticCond:
                     {
-                        int mdswitch = 1;
-                        MultiLevelBisectionReordering(boostGraphObj,perm,iperm,bottomUpGraph,mdswitch,partVerts);
+                        MultiLevelBisectionReordering(boostGraphObj,perm,iperm,bottomUpGraph,partVerts);
                     }
                     break;
                 default:
@@ -1468,6 +1467,12 @@ namespace Nektar
 
             m_hash = boost::hash_range(m_localToGlobalMap.begin(), 
                                        m_localToGlobalMap.end());
+
+            // Add up hash values if parallel
+            int hash = m_hash;
+            m_comm->GetRowComm()->AllReduce(hash, 
+                              LibUtilities::ReduceSum);
+            m_hash = hash;
         }
     } // namespace
 } // namespace

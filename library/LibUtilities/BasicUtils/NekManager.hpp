@@ -91,15 +91,6 @@ namespace Nektar
                 	Init(whichPool);
                 }
 
-//                NekManager(NekManager<KeyType, ValueType, opLessCreator> * rhs, unsigned int pThr) :
-//                	m_values(),
-//                    m_globalCreateFunc(rhs->m_globalCreateFunc),
-//                    m_keySpecificCreateFuncs(rhs->m_keySpecificCreateFuncs)
-//                {
-//                	std::cerr << "Called pointer copy constructor with rsh: " << &rhs << " from thr: " << pThr << std::endl;
-//                	Init();
-//                }
-//
 
                 NekManager(CreateFuncType f, std::string whichPool="") :
                     m_values(),
@@ -110,7 +101,7 @@ namespace Nektar
                 	Init(whichPool);
                 }
 
-                void Init(std::string& whichPool = "")
+                void Init(std::string whichPool = "")
                 {
                 	if (!whichPool.empty())
                 	{
@@ -236,6 +227,16 @@ namespace Nektar
 
                 	m_keySpecificCreateFuncs.insert(c.m_keySpecificCreateFuncs.begin(),
                 			c.m_keySpecificCreateFuncs.end());
+                }
+
+                void DeleteObject(typename boost::call_traits<KeyType>::const_reference key)
+                {
+                    typename ValueContainer::iterator found = m_values->find(key);
+
+                    if( found != m_values->end() )
+                    {
+                        m_values->erase(found);
+                    }
                 }
 
                 static void ClearManager(std::string whichPool = "")

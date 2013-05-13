@@ -128,7 +128,7 @@ namespace Nektar
             {
                 out << "\tInital vector       : random  " << endl;
              
-                double eps=1;
+                NekDouble eps=1;
              
                 Vmath::FillWhiteNoise(ntot, eps , &Kseq[1][0], 1);
              
@@ -141,6 +141,12 @@ namespace Nektar
          
             // Normalise first vector in sequence
             alpha[0] = std::sqrt(Vmath::Dot(ntot, &Kseq[0][0], 1, &Kseq[0][0], 1));
+			
+            if (m_comm->GetRank() == 0)
+            {
+                m_comm->AllReduce(alpha[0], Nektar::LibUtilities::ReduceSum);
+            }
+			
             //alpha[0] = std::sqrt(alpha[0]);
             Vmath::Smul(ntot, 1.0/alpha[0], Kseq[0], 1, Kseq[0], 1);
 
@@ -153,6 +159,13 @@ namespace Nektar
              
                 // Normalise
                 alpha[i] = std::sqrt(Vmath::Dot(ntot, &Kseq[i][0], 1, &Kseq[i][0], 1));
+				
+                if (m_comm->GetRank() == 0)
+                {
+                    m_comm->AllReduce(alpha[i],
+                                      Nektar::LibUtilities::ReduceSum);
+                }
+				
                 //alpha[i] = std::sqrt(alpha[i]);
                 Vmath::Smul(ntot, 1.0/alpha[i], Kseq[i], 1, Kseq[i], 1);
              
@@ -257,7 +270,6 @@ namespace Nektar
             {
                 Array<OneD, MultiRegions::ExpListSharedPtr> fields;
                 fields = m_equ[0]->UpdateFields();
-                int ntot = fields[0]->GetNcoeffs();
 		
                 //start Adjoint with latest fields of direct 
                 CopyFwdToAdj();
@@ -344,7 +356,6 @@ namespace Nektar
             NekDouble &resid0)
         {
             int idone = 0;
-            NekDouble re_ev, im_ev, abs_ev, ang_ev, re_Aev, im_Aev;	
             // NekDouble period = 0.1;
 	
             Array<OneD, NekDouble> resid(kdim);
@@ -447,7 +458,6 @@ namespace Nektar
             {
                 // Converged, write out eigenvectors
                 EV_big(Tseq, Kseq, ntot, kdim, icon, zvec, wr, wi);
-                int nq = m_equ[0]->UpdateFields()[0]->GetNcoeffs();
                 Array<OneD, MultiRegions::ExpListSharedPtr> fields
                     = m_equ[0]->UpdateFields();
 

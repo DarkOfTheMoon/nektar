@@ -263,7 +263,6 @@ namespace Nektar
         {
             int i;
             int cnt  = 0;
-            int cnt2 = 0;
 
             const SpatialDomains::BoundaryRegionCollection &bregions
                                                 = bcs.GetBoundaryRegions();
@@ -317,7 +316,6 @@ namespace Nektar
         {
             int i;
             int cnt  = 0;
-            int cnt2 = 0;
 			
             const SpatialDomains::BoundaryRegionCollection &bregions
 			= bcs.GetBoundaryRegions();
@@ -932,7 +930,7 @@ namespace Nektar
                   Array<OneD,       NekDouble> &outarray)
         {
             int p, n, offset, t_offset;
-            double vertnorm = 0.0;
+            NekDouble vertnorm = 0.0;
             
             for (n = 0; n < GetExpSize(); ++n)
             {
@@ -1095,53 +1093,57 @@ namespace Nektar
 			
             for(i = 0; i < m_bndCondExpansions.num_elements(); ++i)
             {
-                m_bndCondExpansions[i]->GetCoords(x0,x1,x2);
-
-                if(x2_in != NekConstants::kNekUnsetDouble && x3_in != NekConstants::kNekUnsetDouble)
+                if(time == 0.0 || m_bndConditions[i]->GetUserDefined() == 
+                   SpatialDomains::eTimeDependent)
                 {
-                    x1 = x2_in;
-                    x2 = x3_in;
-                }
-
-                if(m_bndConditions[i]->GetBoundaryConditionType()
+                    m_bndCondExpansions[i]->GetCoords(x0,x1,x2);
+                    
+                    if(x2_in != NekConstants::kNekUnsetDouble && x3_in != NekConstants::kNekUnsetDouble)
+                    {
+                        x1 = x2_in;
+                        x2 = x3_in;
+                    }
+                    
+                    if(m_bndConditions[i]->GetBoundaryConditionType()
                         == SpatialDomains::eDirichlet)
-                {
-                    m_bndCondExpansions[i]->SetCoeff(
-                            (boost::static_pointer_cast<SpatialDomains
-                             ::DirichletBoundaryCondition>(m_bndConditions[i])
-                             ->m_dirichletCondition).Evaluate(x0,x1,x2,time));
-                }
-				else if((m_bndConditions[i]->GetBoundaryConditionType() == SpatialDomains::eJunction)||
-						(m_bndConditions[i]->GetBoundaryConditionType() == SpatialDomains::eBifurcation)||
-						(m_bndConditions[i]->GetBoundaryConditionType() == SpatialDomains::eMerging))
-                {
-                   //Do not update this conditions as they will be by the domain-linking Riemann solvers
-                }	
-				else if(m_bndConditions[i]->GetBoundaryConditionType()
-                        == SpatialDomains::eNeumann)
-                {
-                    m_bndCondExpansions[i]->SetCoeff(
-                            (boost::static_pointer_cast<SpatialDomains
-                             ::NeumannBoundaryCondition>(m_bndConditions[i])
-                             ->m_neumannCondition).Evaluate(x0,x1,x2,time));
-                }
-                else if(m_bndConditions[i]->GetBoundaryConditionType()
-                        == SpatialDomains::eRobin)
-                {
-                    m_bndCondExpansions[i]->SetCoeff(
-                            (boost::static_pointer_cast<SpatialDomains
-                             ::RobinBoundaryCondition>(m_bndConditions[i])
-                             ->m_robinFunction).Evaluate(x0,x1,x2,time));
-
-                    m_bndCondExpansions[i]->SetPhys(
-                            (boost::static_pointer_cast<SpatialDomains
-                             ::RobinBoundaryCondition>(m_bndConditions[i])
+                    {
+                        m_bndCondExpansions[i]->SetCoeff(
+                                                         (boost::static_pointer_cast<SpatialDomains
+                                                          ::DirichletBoundaryCondition>(m_bndConditions[i])
+                                                          ->m_dirichletCondition).Evaluate(x0,x1,x2,time));
+                    }
+                    else if((m_bndConditions[i]->GetBoundaryConditionType() == SpatialDomains::eJunction)||
+                            (m_bndConditions[i]->GetBoundaryConditionType() == SpatialDomains::eBifurcation)||
+                            (m_bndConditions[i]->GetBoundaryConditionType() == SpatialDomains::eMerging))
+                    {
+                        //Do not update this conditions as they will be by the domain-linking Riemann solvers
+                    }	
+                    else if(m_bndConditions[i]->GetBoundaryConditionType()
+                            == SpatialDomains::eNeumann)
+                    {
+                        m_bndCondExpansions[i]->SetCoeff(
+                                                         (boost::static_pointer_cast<SpatialDomains
+                                                          ::NeumannBoundaryCondition>(m_bndConditions[i])
+                                                          ->m_neumannCondition).Evaluate(x0,x1,x2,time));
+                    }
+                    else if(m_bndConditions[i]->GetBoundaryConditionType()
+                            == SpatialDomains::eRobin)
+                    {
+                        m_bndCondExpansions[i]->SetCoeff(
+                                                         (boost::static_pointer_cast<SpatialDomains
+                                                          ::RobinBoundaryCondition>(m_bndConditions[i])
+                                                          ->m_robinFunction).Evaluate(x0,x1,x2,time));
+                        
+                        m_bndCondExpansions[i]->SetPhys(
+                                                        (boost::static_pointer_cast<SpatialDomains
+                                                         ::RobinBoundaryCondition>(m_bndConditions[i])
                              ->m_robinPrimitiveCoeff).Evaluate(x0,x1,x2,time));
-
-                }
-                else
-                {
-                    ASSERTL0(false,"This type of BC not implemented yet");
+                        
+                    }
+                    else
+                    {
+                        ASSERTL0(false,"This type of BC not implemented yet");
+                    }
                 }
             }
         }

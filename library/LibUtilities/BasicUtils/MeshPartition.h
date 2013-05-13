@@ -72,9 +72,9 @@ namespace Nektar
             struct MeshVertex
             {
                 int id;
-                double x;
-                double y;
-                double z;
+                NekDouble x;
+                NekDouble y;
+                NekDouble z;
             };
 
             struct MeshEdge
@@ -100,12 +100,14 @@ namespace Nektar
             struct MeshCurved
             {
                 int id;
-                int edgeid;
+                std::string entitytype;
+                int entityid;
                 std::string type;
                 int npoints;
                 std::string data;
             };
-
+            typedef std::pair<std::string, int> MeshCurvedKey;
+            
             struct MeshComposite
             {
                 int id;
@@ -161,15 +163,15 @@ namespace Nektar
                         BoostGraph
                     >::adjacency_iterator BoostAdjacencyIterator;
 
-            int                        m_dim;
+            int                                 m_dim;
 
-            std::map<int, MeshVertex>  m_meshVertices;
-            std::map<int, MeshEntity>  m_meshEdges;
-            std::map<int, MeshEntity>  m_meshFaces;
-            std::map<int, MeshEntity>  m_meshElements;
-            std::map<int, MeshCurved>  m_meshCurved;
-            std::map<int, MeshEntity>  m_meshComposites;
-            std::vector<unsigned int>  m_domain;
+            std::map<int, MeshVertex>           m_meshVertices;
+            std::map<int, MeshEntity>           m_meshEdges;
+            std::map<int, MeshEntity>           m_meshFaces;
+            std::map<int, MeshEntity>           m_meshElements;
+            std::map<MeshCurvedKey, MeshCurved> m_meshCurved;
+            std::map<int, MeshEntity>           m_meshComposites;
+            std::vector<unsigned int>           m_domain;
 
             Thread::ThreadManagerSharedPtr m_threadManager;
 
@@ -177,13 +179,14 @@ namespace Nektar
             //BoostSubGraph              m_localPartition;
             std::vector<BoostSubGraph> m_localPartition;
 
-            CommSharedPtr              m_comm;
+            CommSharedPtr                       m_comm;
 
             void ReadMesh(const SessionReaderSharedPtr& pSession);
             void CreateGraph(BoostSubGraph& pGraph);
             void PartitionGraph(BoostSubGraph& pGraph,
                                 int pNumPartitions);
             void OutputPartition(SessionReaderSharedPtr& pSession, const BoostSubGraph& pGraph, TiXmlElement* pGeometry);
+            void CheckPartitions(Array<OneD, int> &pPart);
         };
 
         typedef boost::shared_ptr<MeshPartition> MeshPartitionSharedPtr;

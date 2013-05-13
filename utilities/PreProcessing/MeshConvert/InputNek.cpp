@@ -81,7 +81,7 @@ namespace Nektar
             OpenStream();
             
             string      line, word;
-            int         nParam, nModes, nElements, nCurves, nCurveTypes;
+            int         nParam, nElements, nCurves;
             int         i, j, k, nodeCounter = 0;
             int         nComposite = 0;
             ElementType elType;
@@ -126,10 +126,6 @@ namespace Nektar
                 getline(mshFile, line);
                 s.str(line);
                 s >> tmp1 >> tmp2;
-                if (tmp2 == "MODES")
-                {
-                    nModes = (int)boost::lexical_cast<double>(tmp1);
-                }
             }
             
             // -- Read in passive scalars (ignore)
@@ -389,13 +385,12 @@ namespace Nektar
                 }
                 
                 int nCurvedSides;
-                int faceId, elId, vid1, vid2, vid3;
+                int faceId, elId;
                 map<string,pair<NekCurve, string> >::iterator it;
                 HOSurfSet::iterator hoIt;
 
                 s.clear(); s.str(line);
                 s >> nCurvedSides;
-                int skip = 0;
                 
                 // Iterate over curved sides, and look up high-order surface
                 // information in the HOSurfSet, then map this onto faces.
@@ -486,7 +481,7 @@ namespace Nektar
                         
                         // Add edge/face to list of faces to apply spherigons
                         // to.
-                        m->spherigonFaces.insert(make_pair(elId, faceId));
+                        m->spherigonSurfs.insert(make_pair(elId, faceId));
                     }
                     else if (it->second.first == eFile)
                     {
@@ -561,24 +556,24 @@ namespace Nektar
                         
                         // Prisms may have been rotated by OrientPrism routine
                         // and break curved faces. This block rotates faces
-                        // accordingly.
+                        // accordingly. TODO: Add similar routine for tets.
                         if (el->GetConf().e == ePrism)
                         {
                             boost::shared_ptr<Prism> pr = 
                                 boost::static_pointer_cast<Prism>(el);
                             if (pr->orientation == 1)
                             {
-                                // Prism has been rotated clockwise; rotate
-                                // face, reverse what was the last edge (now
-                                // located at edge 0).
+                                // Prism has been rotated counter-clockwise;
+                                // rotate face, reverse what was the last edge
+                                // (now located at edge 0).
                                 (*hoIt)->Rotate(1);
                                 reverseSide = 0;
                             }
                             else if (pr->orientation == 2)
                             {
-                                // Prism has been rotated counter-clockwise;
-                                // rotate face, reverse what was the last edge
-                                // (now located at edge 1).
+                                // Prism has been rotated clockwise; rotate
+                                // face, reverse what was the last edge (now
+                                // located at edge 1).
                                 (*hoIt)->Rotate(2);
                                 reverseSide = 1;
                             }
@@ -610,8 +605,9 @@ namespace Nektar
                         {
                             edge = f->edgeList[j];
                             
-                            // Skip over edges which have already been populated,
-                            // apart from those which need to be reoriented.
+                            // Skip over edges which have already been
+                            // populated, apart from those which need to be
+                            // reoriented.
                             if (edge->edgeNodes.size() > 0 && reverseSide == 2)
                             {
                                 continue;
@@ -632,11 +628,12 @@ namespace Nektar
                                 reverse(edge->edgeNodes.begin(), 
                                         edge->edgeNodes.end());
                             }
-                            
-                            for (int k = 3+3*(N-2); k < Ntot; ++k)
-                            {
-                                f->faceNodes.push_back((*hoIt)->surfVerts[k]);
-                            }
+                        }
+
+                        f->curveType = LibUtilities::eNodalTriElec;
+                        for (int j = 3+3*(N-2); j < Ntot; ++j)
+                        {
+                            f->faceNodes.push_back((*hoIt)->surfVerts[j]);
                         }
                     }
                 }
@@ -1164,7 +1161,7 @@ namespace Nektar
         
         void HOSurf::Reflect()
         {
-            int n, i, j, cnt;
+            int i, j, cnt;
             int np = ((int)sqrt(8.0*surfVerts.size()+1.0)-1)/2;
             NodeSharedPtr* tmp = new NodeSharedPtr[np*np];
             

@@ -51,13 +51,13 @@ namespace Nektar
         
         PrismGeom::PrismGeom()
         {
-            m_geomShapeType = ePrism;
+            m_shapeType = LibUtilities::ePrism;
         }
 
         PrismGeom::PrismGeom(const Geometry2DSharedPtr faces[]):
             Geometry3D(faces[0]->GetEdge(0)->GetVertex(0)->GetCoordim())
         {
-            m_geomShapeType = ePrism;
+            m_shapeType = LibUtilities::ePrism;
             
             /// Copy the face shared pointers.
             m_faces.insert(m_faces.begin(), faces, faces+PrismGeom::kNfaces);
@@ -183,6 +183,21 @@ namespace Nektar
             return 9;
         }
 
+        int PrismGeom::v_GetDir(const int faceidx, const int facedir) const
+        {
+            if (faceidx == 0)
+            {
+                return facedir;
+            }
+            else if (faceidx == 1 || faceidx == 3)
+            {
+                return 2 * facedir;
+            }
+            else
+            {
+                return 1 + facedir;
+            }
+        }
         
         /**
          * @brief Determines if a point specified in global coordinates is
@@ -264,7 +279,7 @@ namespace Nektar
                 }
 
                 m_geomFactors = MemoryManager<GeomFactors3D>::AllocateSharedPtr(
-                    Gtype, m_coordim, m_xmap, tbasis);
+                    Gtype, m_coordim, m_xmap, tbasis, true);
 
                 m_geomFactorsState = ePtsFilled;
             }
@@ -340,9 +355,7 @@ namespace Nektar
                 Lcoords[0] = za[min_i%qa];
 
                 // recover cartesian coordinate from collapsed coordinate. 
-                Lcoords[0] = (1.0+Lcoords[0])*(1.0-Lcoords[2])/2 -1.0;            
-                Lcoords[1] = (1.0+Lcoords[0])*(1.0-Lcoords[2])/2 -1.0;
-
+                Lcoords[0] = (1.0+Lcoords[0])*(1.0-Lcoords[2])/2 - 1.0;
 
                 // Perform newton iteration to find local coordinates 
                 NewtonIterationForLocCoord(coords,Lcoords);

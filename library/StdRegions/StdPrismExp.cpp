@@ -47,12 +47,12 @@ namespace Nektar
         StdPrismExp::StdPrismExp(const LibUtilities::BasisKey &Ba, 
                                  const LibUtilities::BasisKey &Bb, 
                                  const LibUtilities::BasisKey &Bc) 
-            : StdExpansion  (StdPrismData::getNumberOfCoefficients(
+            : StdExpansion  (LibUtilities::StdPrismData::getNumberOfCoefficients(
                                  Ba.GetNumModes(), 
                                  Bb.GetNumModes(), 
                                  Bc.GetNumModes()),
                              3,Ba,Bb,Bc),
-              StdExpansion3D(StdPrismData::getNumberOfCoefficients(
+              StdExpansion3D(LibUtilities::StdPrismData::getNumberOfCoefficients(
                                  Ba.GetNumModes(), 
                                  Bb.GetNumModes(), 
                                  Bc.GetNumModes()), 
@@ -273,7 +273,6 @@ namespace Nektar
             const Array<OneD, const NekDouble>& inarray)
         {
             // Using implementation from page 146 of Spencer Sherwin's book.
-            int Qy = m_base[1]->GetNumPoints();
             int Qz = m_base[2]->GetNumPoints();
 
             // Get the point distributions:
@@ -351,7 +350,7 @@ namespace Nektar
             eta_x = m_base[0]->GetZ();
             eta_z = m_base[2]->GetZ();
 
-            int i, j, k;
+            int i, k;
 
             bool Do_1 = (out_dxi1.num_elements() > 0)? true:false;
             bool Do_3 = (out_dxi3.num_elements() > 0)? true:false;
@@ -502,13 +501,10 @@ namespace Nektar
         void StdPrismExp::v_BwdTrans_SumFac(const Array<OneD, const NekDouble>& inarray, 
                                                   Array<OneD,       NekDouble>& outarray)
         {
-            int  nquad0 = m_base[0]->GetNumPoints();
             int  nquad1 = m_base[1]->GetNumPoints();
             int  nquad2 = m_base[2]->GetNumPoints();
-
             int  order0 = m_base[0]->GetNumModes();
             int  order1 = m_base[1]->GetNumModes();
-            int  order2 = m_base[2]->GetNumModes();
             
             Array<OneD, NekDouble> wsp(nquad2*order1*order0 +
                                        nquad1*nquad2*order0);
@@ -590,7 +586,7 @@ namespace Nektar
             v_IProductWRTBase(inarray, outarray);
 
             // Get Mass matrix inverse
-            StdMatrixKey      masskey(eInvMass,DetExpansionType(),*this);
+            StdMatrixKey      masskey(eInvMass,DetShapeType(),*this);
             DNekMatSharedPtr  matsys = GetStdMatrix(masskey);
             
             // copy inarray in case inarray == outarray
@@ -661,7 +657,7 @@ namespace Nektar
                   Array<OneD,       NekDouble>& outarray)
         {
             int nq = GetTotPoints();
-            StdMatrixKey      iprodmatkey(eIProductWRTBase,DetExpansionType(),*this);
+            StdMatrixKey      iprodmatkey(eIProductWRTBase,DetShapeType(),*this);
             DNekMatSharedPtr  iprodmat = GetStdMatrix(iprodmatkey);
 
             Blas::Dgemv('N',m_ncoeffs,nq,1.0,iprodmat->GetPtr().get(),
@@ -789,7 +785,7 @@ namespace Nektar
                     break;
             }
 
-            StdMatrixKey      iprodmatkey(mtype,DetExpansionType(),*this);
+            StdMatrixKey      iprodmatkey(mtype,DetShapeType(),*this);
             DNekMatSharedPtr  iprodmat = GetStdMatrix(iprodmatkey);
 
             Blas::Dgemv('N',m_ncoeffs,nq,1.0,iprodmat->GetPtr().get(),
@@ -985,9 +981,9 @@ namespace Nektar
          * \brief Return Shape of region, using ShapeType enum list;
          * i.e. prism.
          */
-        ExpansionType StdPrismExp::v_DetExpansionType() const
+        LibUtilities::ShapeType StdPrismExp::v_DetShapeType() const
         {
-            return ePrism;
+            return LibUtilities::ePrism;
         }
         
         int StdPrismExp::v_NumBndryCoeffs() const
@@ -1135,7 +1131,7 @@ namespace Nektar
         int StdPrismExp::v_CalcNumberOfCoefficients(const std::vector<unsigned int> &nummodes, 
                                                     int &modes_offset)
         {
-            int nmodes = StdPrismData::getNumberOfCoefficients(
+            int nmodes = LibUtilities::StdPrismData::getNumberOfCoefficients(
                 nummodes[modes_offset],
                 nummodes[modes_offset+1],
                 nummodes[modes_offset+2]);
@@ -1248,17 +1244,14 @@ namespace Nektar
             int                        nummodesA,
             int                        nummodesB)
         {
-            const LibUtilities::BasisType bType0 = GetEdgeBasisType(0);
-            const LibUtilities::BasisType bType1 = GetEdgeBasisType(1);
-            const LibUtilities::BasisType bType2 = GetEdgeBasisType(4);
-            
-            ASSERTL1(bType0 == bType1,
+            ASSERTL1(GetEdgeBasisType(0) == GetEdgeBasisType(1),
                      "Method only implemented if BasisType is identical"
                      "in x and y directions");
-            ASSERTL1(bType0 == LibUtilities::eModified_A && 
-                     bType2 == LibUtilities::eModified_B,
+            ASSERTL1(GetEdgeBasisType(0) == LibUtilities::eModified_A && 
+                     GetEdgeBasisType(4) == LibUtilities::eModified_B,
                      "Method only implemented for Modified_A BasisType"
-                     "(x and y direction) and Modified_B BasisType (z direction)");
+                     "(x and y direction) and Modified_B BasisType (z "
+                     "direction)");
 
             int i, j, p, q, r, nFaceCoeffs, idx = 0;
 
@@ -1958,7 +1951,6 @@ namespace Nektar
          */
         int StdPrismExp::GetMode(int p, int q, int r)
         {
-            int P = m_base[0]->GetNumModes() - 1;
             int Q = m_base[1]->GetNumModes() - 1;
             int R = m_base[2]->GetNumModes() - 1;
             
@@ -1972,10 +1964,9 @@ namespace Nektar
                   Array<OneD,       NekDouble>& outarray)
         {
             int i, j;
-
-            int  nquad0 = m_base[0]->GetNumPoints();
-            int  nquad1 = m_base[1]->GetNumPoints();
-            int  nquad2 = m_base[2]->GetNumPoints();
+            int nquad0 = m_base[0]->GetNumPoints();
+            int nquad1 = m_base[1]->GetNumPoints();
+            int nquad2 = m_base[2]->GetNumPoints();
 
             const Array<OneD, const NekDouble>& w0 = m_base[0]->GetW();
             const Array<OneD, const NekDouble>& w1 = m_base[1]->GetW();

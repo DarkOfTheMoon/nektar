@@ -78,9 +78,9 @@ namespace Nektar
         /** \brief Return Shape of region, using  ShapeType enum list.
          *  i.e. Segment
          */
-        ExpansionType StdSegExp::v_DetExpansionType() const
+        LibUtilities::ShapeType StdSegExp::v_DetShapeType() const
         {
-            return eSegment;
+            return LibUtilities::eSegment;
         }
 
         bool StdSegExp::v_IsBoundaryInteriorExpansion()
@@ -234,7 +234,7 @@ namespace Nektar
 
                 NekVector<NekDouble> in(m_ncoeffs,inarray,eWrapper);
                 NekVector<NekDouble> out(nquad,outarray,eWrapper);
-                NekMatrix<double> B(nquad,m_ncoeffs,m_base[0]->GetBdata(),eWrapper);
+                NekMatrix<NekDouble> B(nquad,m_ncoeffs,m_base[0]->GetBdata(),eWrapper);
                 out = B * in;
 
 #endif //NEKTAR_USING_DIRECT_BLAS_CALLS 
@@ -273,7 +273,7 @@ namespace Nektar
                 v_IProductWRTBase(inarray,outarray);
 
                 // get Mass matrix inverse
-                StdMatrixKey      masskey(eInvMass,v_DetExpansionType(),*this);
+                StdMatrixKey      masskey(eInvMass,v_DetShapeType(),*this);
                 DNekMatSharedPtr  matsys = GetStdMatrix(masskey);
 
                 NekVector<NekDouble> in(m_ncoeffs,outarray,eCopy);
@@ -325,7 +325,7 @@ namespace Nektar
                     Array<OneD, NekDouble> tmp0(m_ncoeffs);
                     Array<OneD, NekDouble> tmp1(m_ncoeffs);
 
-                    StdMatrixKey      masskey(eMass,v_DetExpansionType(),*this);
+                    StdMatrixKey      masskey(eMass,v_DetShapeType(),*this);
                     MassMatrixOp(outarray,tmp0,masskey);
                     v_IProductWRTBase(inarray,tmp1);
 
@@ -470,8 +470,10 @@ namespace Nektar
             return  StdExpansion1D::v_PhysEvaluate(coords, physvals);
         }
 
-        void StdSegExp::v_LaplacianMatrixOp(const Array<OneD, const NekDouble> &inarray,
-                Array<OneD,NekDouble> &outarray)
+        void StdSegExp::v_LaplacianMatrixOp(
+            const Array<OneD, const NekDouble> &inarray,
+                  Array<OneD,       NekDouble> &outarray,
+            const StdMatrixKey                 &mkey)
         {
             int    nquad = m_base[0]->GetNumPoints();
 
@@ -487,9 +489,9 @@ namespace Nektar
 
 
         void StdSegExp::v_HelmholtzMatrixOp(
-                const Array<OneD, const NekDouble> &inarray,
-                Array<OneD,NekDouble> &outarray,
-                const double lambda)
+            const Array<OneD, const NekDouble> &inarray,
+                  Array<OneD,       NekDouble> &outarray,
+            const StdMatrixKey                 &mkey)
         {
             int    nquad = m_base[0]->GetNumPoints();
 
@@ -505,7 +507,7 @@ namespace Nektar
             // Laplacian matrix operation
             v_PhysDeriv(physValues,dPhysValuesdx);
             v_IProductWRTBase(m_base[0]->GetDbdata(),dPhysValuesdx,outarray,1);
-            Blas::Daxpy(m_ncoeffs, lambda, wsp.get(), 1, outarray.get(), 1);
+            Blas::Daxpy(m_ncoeffs, mkey.GetConstFactor(eFactorLambda), wsp.get(), 1, outarray.get(), 1);
         }
 
 
@@ -619,9 +621,9 @@ namespace Nektar
             case eFwdTrans:
                 {
                     Mat = MemoryManager<DNekMat>::AllocateSharedPtr(m_ncoeffs,m_ncoeffs);
-                    StdMatrixKey iprodkey(eIProductWRTBase,v_DetExpansionType(),*this);
+                    StdMatrixKey iprodkey(eIProductWRTBase,v_DetShapeType(),*this);
                     DNekMat &Iprod = *GetStdMatrix(iprodkey);
-                    StdMatrixKey imasskey(eInvMass,v_DetExpansionType(),*this);
+                    StdMatrixKey imasskey(eInvMass,v_DetShapeType(),*this);
                     DNekMat &Imass = *GetStdMatrix(imasskey);
 
                     (*Mat) = Imass*Iprod;

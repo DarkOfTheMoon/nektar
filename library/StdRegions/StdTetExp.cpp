@@ -48,12 +48,12 @@ namespace Nektar
         StdTetExp::StdTetExp(const LibUtilities::BasisKey &Ba,
                              const LibUtilities::BasisKey &Bb,
                              const LibUtilities::BasisKey &Bc):
-            StdExpansion(StdTetData::getNumberOfCoefficients(
+            StdExpansion(LibUtilities::StdTetData::getNumberOfCoefficients(
                              Ba.GetNumModes(),
                              Bb.GetNumModes(), 
                              Bc.GetNumModes()),
                          3, Ba, Bb, Bc),
-            StdExpansion3D(StdTetData::getNumberOfCoefficients(
+            StdExpansion3D(LibUtilities::StdTetData::getNumberOfCoefficients(
                                Ba.GetNumModes(), 
                                Bb.GetNumModes(), 
                                Bc.GetNumModes()),
@@ -480,16 +480,6 @@ namespace Nektar
             }
         }
 
-
-        void StdTetExp::v_PhysDirectionalDeriv(
-            const Array<OneD, const NekDouble>& inarray,
-            const Array<OneD, const NekDouble>& direction,
-                  Array<OneD,       NekDouble> &outarray)
-        {
-            ASSERTL0(false,"This method is not defined or valid "
-                           "for this class type");
-        }
-
         void StdTetExp::v_StdPhysDeriv(
             const Array<OneD, const NekDouble>& inarray,
                   Array<OneD,       NekDouble>& out_d0,
@@ -559,13 +549,10 @@ namespace Nektar
             const Array<OneD, const NekDouble>& inarray,
                   Array<OneD,       NekDouble>& outarray)
         {
-            int  nquad0 = m_base[0]->GetNumPoints();
             int  nquad1 = m_base[1]->GetNumPoints();
             int  nquad2 = m_base[2]->GetNumPoints();
-
             int  order0 = m_base[0]->GetNumModes();
             int  order1 = m_base[1]->GetNumModes();
-            int  order2 = m_base[2]->GetNumModes();
 
             Array<OneD, NekDouble> wsp(nquad2*order0*order1*(order1+1)/2+
                                        nquad2*nquad1*order0);
@@ -696,7 +683,7 @@ namespace Nektar
             v_IProductWRTBase(inarray,outarray);
 
             // get Mass matrix inverse
-            StdMatrixKey      masskey(eInvMass,DetExpansionType(),*this);
+            StdMatrixKey      masskey(eInvMass,DetShapeType(),*this);
             DNekMatSharedPtr  matsys = GetStdMatrix(masskey);
 
             // copy inarray in case inarray == outarray
@@ -769,7 +756,7 @@ namespace Nektar
                   Array<OneD,       NekDouble>& outarray)
         {
             int nq = GetTotPoints();
-            StdMatrixKey      iprodmatkey(eIProductWRTBase,DetExpansionType(),*this);
+            StdMatrixKey      iprodmatkey(eIProductWRTBase,DetShapeType(),*this);
             DNekMatSharedPtr  iprodmat = GetStdMatrix(iprodmatkey);
 
             Blas::Dgemv('N',m_ncoeffs,nq,1.0,iprodmat->GetPtr().get(),
@@ -790,10 +777,8 @@ namespace Nektar
             int  nquad0 = m_base[0]->GetNumPoints();
             int  nquad1 = m_base[1]->GetNumPoints();
             int  nquad2 = m_base[2]->GetNumPoints();
-
             int  order0 = m_base[0]->GetNumModes();
             int  order1 = m_base[1]->GetNumModes();
-            int  order2 = m_base[2]->GetNumModes();
 
             Array<OneD, NekDouble> tmp (nquad0*nquad1*nquad2);
             Array<OneD, NekDouble> wsp (nquad1*nquad2*order0 +
@@ -927,7 +912,7 @@ namespace Nektar
                     break;
             }
 
-            StdMatrixKey      iprodmatkey(mtype,DetExpansionType(),*this);
+            StdMatrixKey      iprodmatkey(mtype,DetShapeType(),*this);
             DNekMatSharedPtr iprodmat = GetStdMatrix(iprodmatkey);
 
             Blas::Dgemv('N',m_ncoeffs,nq,1.0,iprodmat->GetPtr().get(),
@@ -1179,9 +1164,9 @@ namespace Nektar
             return 4;
         }
 
-        ExpansionType StdTetExp::v_DetExpansionType() const
+        LibUtilities::ShapeType StdTetExp::v_DetShapeType() const
         {
-            return DetExpansionType();
+            return DetShapeType();
         }
         
         int StdTetExp::v_NumBndryCoeffs() const
@@ -1371,7 +1356,7 @@ namespace Nektar
             const std::vector<unsigned int>& nummodes, 
                   int                      & modes_offset)
         {
-            int nmodes = StdRegions::StdTetData::getNumberOfCoefficients(
+            int nmodes = LibUtilities::StdTetData::getNumberOfCoefficients(
                 nummodes[modes_offset],
                 nummodes[modes_offset+1],
                 nummodes[modes_offset+2]);
@@ -2074,7 +2059,6 @@ namespace Nektar
          */
         int StdTetExp::GetMode(const int I, const int J, const int K)
         {
-            const int P = m_base[0]->GetNumModes();
             const int Q = m_base[1]->GetNumModes();
             const int R = m_base[2]->GetNumModes();
             

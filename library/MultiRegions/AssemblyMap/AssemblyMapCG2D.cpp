@@ -502,6 +502,12 @@ namespace Nektar
             
             m_hash = boost::hash_range(
                 m_localToGlobalMap.begin(), m_localToGlobalMap.end());
+
+            // Add up hash values if parallel
+            int hash = m_hash;
+            m_comm->GetRowComm()->AllReduce(hash, 
+                              LibUtilities::ReduceSum);
+            m_hash = hash;
         }
 
         /**
@@ -549,7 +555,7 @@ namespace Nektar
                 BottomUpSubStructuredGraphSharedPtr &bottomUpGraph, 
                 set<int> &extraDirVerts,
                 const bool checkIfSystemSingular,
-                int mdswitch, 
+                int mdswitch,
                 bool doInteriorMap)
         {
             int i,j,k,l,m;
@@ -886,7 +892,6 @@ namespace Nektar
             }
 
             /// - All other vertices and edges
-            int nEdgeCoeffs;
             int elmtid;
             for(i = 0; i < locExpVector.size(); ++i)
             {
@@ -897,7 +902,6 @@ namespace Nektar
                     m_numLocalBndCoeffs += locExpansion->NumBndryCoeffs();
 
                     nTotalVerts += locExpansion->GetNverts();
-
                 }
             }
 
@@ -1210,7 +1214,7 @@ namespace Nektar
                 case eIterativeMultiLevelStaticCond:
                 case eXxtMultiLevelStaticCond:
                     {
-                        MultiLevelBisectionReordering(boostGraphObj,perm,iperm,bottomUpGraph,mdswitch,partVerts);
+                        MultiLevelBisectionReordering(boostGraphObj,perm,iperm,bottomUpGraph,partVerts,mdswitch);
                     }
                     break;
                 default:

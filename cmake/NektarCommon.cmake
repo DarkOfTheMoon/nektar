@@ -37,6 +37,10 @@ MACRO(SET_LAPACK_LINK_LIBRARIES name)
             TARGET_LINK_LIBRARIES(${name} ${NATIVE_LAPACK} ${OPENBLAS})
         ENDIF( NEKTAR_USE_OPENBLAS AND OPENBLAS_FOUND )
 
+        IF( NEKTAR_USE_SMV AND SMV_FOUND )
+            TARGET_LINK_LIBRARIES(${name} ${SMV_LIBRARY})
+        ENDIF( NEKTAR_USE_SMV AND SMV_FOUND )
+
         IF( NEKTAR_USE_SYSTEM_BLAS_LAPACK )
             TARGET_LINK_LIBRARIES(${name} ${NATIVE_LAPACK} ${NATIVE_BLAS})
         ENDIF( NEKTAR_USE_SYSTEM_BLAS_LAPACK )
@@ -103,16 +107,16 @@ MACRO(SET_COMMON_PROPERTIES name)
         ENDIF( NEKTAR_FULL_DEBUG)
    
         IF( NOT MSVC )
+            SET(CMAKE_CXX_FLAGS_DEBUG 
+                "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wno-deprecated -Wno-sign-compare")
+            SET(CMAKE_CXX_FLAGS_RELEASE 
+                    "${CMAKE_CXX_FLAGS_RELEASE} -Wall -Wno-deprecated -Wno-sign-compare")
+            SET(CMAKE_CXX_FLAGS_RELWITHDEBINFO
+                    "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -Wall -Wno-deprecated -Wno-sign-compare")
             IF (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
                 SET(CMAKE_CXX_FLAGS_DEBUG 
-                    "${CMAKE_CXX_FLAGS_DEBUG} -fpermissive -Wno-deprecated")
-            ELSE ()
-                SET(CMAKE_CXX_FLAGS_DEBUG 
-                    "${CMAKE_CXX_FLAGS_DEBUG} -Wno-deprecated")
+                    "${CMAKE_CXX_FLAGS_DEBUG} -fpermissive")
             ENDIF()
-
-            SET(CMAKE_CXX_FLAGS_RELEASE 
-                    "${CMAKE_CXX_FLAGS_RELEASE} -Wno-deprecated")
         ENDIF( NOT MSVC)
                         
         SET(CMAKE_CXX_FLAGS_RELEASE 
@@ -167,17 +171,19 @@ MACRO(ADD_NEKTAR_EXECUTABLE name component sources)
         ${Boost_FILESYSTEM_LIBRARY} 
         ${Boost_SYSTEM_LIBRARY}
         ${Boost_PROGRAM_OPTIONS_LIBRARY} 
-        ${Boost_ZLIB_LIBRARY} 
+        ${ZLIB_LIBRARY} 
         optimized ${TINYXML_LIB} debug ${TINYXML_LIB}
 	)
-    ADD_DEPENDENCIES(${name} boost tinyxml zlib)
+    ADD_DEPENDENCIES(${name} boost tinyxml zlib-1.2.7)
 
     IF( NEKTAR_USE_MPI )
-        TARGET_LINK_LIBRARIES(${name} ${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY})
-        SET_TARGET_PROPERTIES(${name}
-            PROPERTIES COMPILE_FLAGS "${THE_COMPILE_FLAGS} ${MPI_COMPILE_FLAGS}")
-        SET_TARGET_PROPERTIES(${name}
-            PROPERTIES LINK_FLAGS "${THE_LINK_FLAGS} ${MPI_LINK_FLAGS}")
+        IF (NOT MPI_BUILTIN)
+            TARGET_LINK_LIBRARIES(${name} ${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY})
+            SET_TARGET_PROPERTIES(${name}
+                PROPERTIES LINK_FLAGS "${THE_LINK_FLAGS} ${MPI_LINK_FLAGS}")
+            SET_TARGET_PROPERTIES(${name}
+                PROPERTIES COMPILE_FLAGS "${THE_COMPILE_FLAGS} ${MPI_COMPILE_FLAGS}")
+        ENDIF()
     ENDIF( NEKTAR_USE_MPI )
 
     IF( ${CMAKE_SYSTEM} MATCHES "Linux.*" )
@@ -221,7 +227,8 @@ MACRO(ADD_NEKTAR_LIBRARY name component type)
 
     # NIST Sparse BLAS only static, so link into Nektar libraries directly.
     TARGET_LINK_LIBRARIES( ${name} ${NIST_SPARSE_BLAS} ${METIS_LIB})
-    ADD_DEPENDENCIES(${name} spblastk0.9b modmetis-4.0 boost tinyxml zlib)
+    ADD_DEPENDENCIES(${name} spblastk0.9b modmetis-5.0.2 boost tinyxml
+        zlib-1.2.7)
     SET_PROPERTY(TARGET ${name} PROPERTY FOLDER ${component})
     IF (NEKTAR_USE_MPI)
         TARGET_LINK_LIBRARIES( ${name} ${GSMPI_LIBRARY} ${XXT_LIBRARY})

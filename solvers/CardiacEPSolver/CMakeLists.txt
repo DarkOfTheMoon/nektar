@@ -18,9 +18,11 @@ IF( NEKTAR_SOLVER_CARDIAC_EP )
        ./CellModels/TenTusscher06M.cpp
        ./CellModels/TenTusscher06Endo.cpp
        ./Filters/FilterCheckpointCellModel.cpp
+       ./Filters/FilterElectrogram.cpp
        ./Stimuli/Stimulus.cpp
        ./Stimuli/StimulusCircle.cpp
        ./Stimuli/StimulusRect.cpp
+       ./Stimuli/StimulusPoint.cpp
        ./Stimuli/Protocol.cpp
        ./Stimuli/ProtocolSingle.cpp
        ./Stimuli/ProtocolS1.cpp
@@ -29,4 +31,6 @@ IF( NEKTAR_SOLVER_CARDIAC_EP )
 
     ADD_SOLVER_EXECUTABLE(CardiacEPSolver solvers-extra 
 			${CardiacEPSolverSource})
+
+    ADD_SUBDIRECTORY(Utilities)
 ENDIF( NEKTAR_SOLVER_CARDIAC_EP )

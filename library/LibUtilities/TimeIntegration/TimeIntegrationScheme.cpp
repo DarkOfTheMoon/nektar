@@ -44,10 +44,6 @@ namespace Nektar
     {  
         TimeIntegrationSchemeManagerT &TimeIntegrationSchemeManager(void)
         {
-//        	TimeIntegrationSchemeManagerT& m = Loki::SingletonHolder<TimeIntegrationSchemeManagerT>::Instance();
-//        	static bool reg = m.RegisterGlobalCreator(TimeIntegrationScheme::Create);
-//        	return m;
-
         	static std::map<unsigned int,  TimeIntegrationSchemeManagerT *> s_threadTSScheme;
         	static boost::shared_mutex s_TSSmutex;
         	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
@@ -58,7 +54,7 @@ namespace Nektar
     			ReadLock.unlock();
     			boost::unique_lock<boost::shared_mutex> WriteLock(s_TSSmutex);
         		s_threadTSScheme[vThr] = new (TimeIntegrationSchemeManagerT);
-        		bool reg = s_threadTSScheme[vThr]->RegisterGlobalCreator(TimeIntegrationScheme::Create);
+        		s_threadTSScheme[vThr]->RegisterGlobalCreator(TimeIntegrationScheme::Create);
             	return *(s_threadTSScheme[vThr]);
         	}
         	return *(s_threadTSScheme[vThr]);
@@ -1060,9 +1056,8 @@ namespace Nektar
             int i;
             int j;
             int m;
-            bool returnval = false;
-            int  IMEXdim   = A.num_elements();
-            int  dim       = A[0].GetRows();
+            int  IMEXdim = A.num_elements();
+            int  dim     = A[0].GetRows();
 
             Array<OneD, TimeIntegrationSchemeType> vertype(IMEXdim,eExplicit);
 
@@ -1196,7 +1191,6 @@ namespace Nektar
                 unsigned int nCurSchemeSteps = m_numsteps;  // number of steps in the current scheme
                 unsigned int nMasterSchemeVals  = solvector->GetNvalues(); // number of values of the master scheme
                 unsigned int nMasterSchemeDers  = solvector->GetNderivs(); // number of derivs of the master scheme
-                unsigned int nMasterSchemeSteps = solvector->GetNsteps();  // number of steps in the master scheme
                 // The arrays below contains information to which
                 // time-level the values and derivatives of the
                 // schemes belong
@@ -1385,7 +1379,6 @@ namespace Nektar
             
             unsigned int i,j,k;
             TimeIntegrationSchemeType type = GetIntegrationSchemeType();
-            NekDouble T;
 
             // Check if storage has already been initialised.
             // If so, we just zero the temporary storage.
@@ -1584,7 +1577,7 @@ namespace Nektar
                 {
                     // ensure solution is in correct space
                     op.DoProjection(m_Y,m_Y,m_T); 
-                    op.DoOdeRhs(m_Y, m_F[i], m_T);                   
+                    op.DoOdeRhs(m_Y, m_F[i], m_T);        
                 }
             }
             

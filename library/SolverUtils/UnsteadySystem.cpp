@@ -107,6 +107,9 @@ namespace Nektar
             m_session->LoadParameter("IO_InfoSteps", m_infosteps, 0);
             m_session->LoadParameter("CFL", m_cflSafetyFactor, 0.0);
 
+            // Set up time to be dumped in field information
+            m_fieldMetaDataMap["Time"] = m_time; 
+
             // Set up filters
             LibUtilities::FilterMap::const_iterator x;
             LibUtilities::FilterMap f = m_session->GetFilters();
@@ -169,9 +172,7 @@ namespace Nektar
          */
         void UnsteadySystem::v_DoSolve()
         {
-            int i, n, nchk = 1;
-            int ncoeffs    = m_fields[0]->GetNcoeffs();
-            int npoints    = m_fields[0]->GetNpoints();
+            int i, nchk = 1;
             int nvariables = 0;
 
             if (m_intVariables.empty())
@@ -246,7 +247,6 @@ namespace Nektar
                     
                     u = IntScheme[0]->InitializeScheme(
                         m_timestep, fields, m_time, m_ode);
-                    
                     break;
                 }
                 case LibUtilities::eAdamsBashforthOrder2:
@@ -417,9 +417,9 @@ namespace Nektar
             }
 
             // Check uniqueness of checkpoint output
-            ASSERTL0(m_checktime == 0.0 && m_checksteps == 0 ||
-                     m_checktime >  0.0 && m_checksteps == 0 || 
-                     m_checktime == 0.0 && m_checksteps >  0,
+            ASSERTL0((m_checktime == 0.0 && m_checksteps == 0) ||
+                     (m_checktime >  0.0 && m_checksteps == 0) || 
+                     (m_checktime == 0.0 && m_checksteps >  0),
                      "Only one of IO_CheckTime and IO_CheckSteps "
                      "should be set!");
 
@@ -428,7 +428,7 @@ namespace Nektar
             int       step          = 0;
             NekDouble intTime       = 0.0;
             NekDouble lastCheckTime = 0.0;
-            
+
             while (step   < m_steps ||
                    m_time < m_fintime - NekConstants::kNekZeroTol)
             {
@@ -508,13 +508,15 @@ namespace Nektar
                 m_fields[m_intVariables[i]]->UpdatePhys() = fields[i];
             }
             
-            if (m_cflSafetyFactor > 0.0)
+            if (m_session->GetComm()->GetRank() == 0)
             {
-                cout << "CFL safety factor : " << m_cflSafetyFactor << endl
-                     << "CFL time-step     : " << m_timestep        << endl;
+                if (m_cflSafetyFactor > 0.0)
+                {
+                    cout << "CFL safety factor : " << m_cflSafetyFactor << endl
+                         << "CFL time-step     : " << m_timestep        << endl;
+                }
+                cout << "Time-integration  : " << intTime  << "s"   << endl;
             }
-            cout << "Time-integration  : " << intTime  << "s"   << endl;
-
             
             for (x = m_filters.begin(); x != m_filters.end(); ++x)
             {
@@ -533,7 +535,9 @@ namespace Nektar
          */
         void UnsteadySystem::v_DoInitialise()
         {
-            SetInitialConditions();
+            CheckForRestartTime(m_time);
+            SetBoundaryConditions(m_time);
+            SetInitialConditions(m_time);
         }
         
         /**
@@ -608,8 +612,8 @@ namespace Nektar
         }
 
         void UnsteadySystem::v_NumFluxforScalar(
-            Array<OneD, Array<OneD,             NekDouble> >   &ufield,
-            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &uflux)
+            const Array<OneD, Array<OneD, NekDouble> >               &ufield,
+                  Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &uflux)
         {
             int i, j;
             int nTraceNumPoints = GetTraceNpoints();
@@ -678,9 +682,9 @@ namespace Nektar
         
         
         void UnsteadySystem::v_NumFluxforVector(
-            Array<OneD, Array<OneD,             NekDouble> >    &ufield,
-            Array<OneD, Array<OneD, Array<OneD, NekDouble> > >  &qfield,
-            Array<OneD, Array<OneD,             NekDouble> >    &qflux)
+            const Array<OneD, Array<OneD, NekDouble> >               &ufield,
+                  Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &qfield,
+                  Array<OneD, Array<OneD, NekDouble> >               &qflux)
         {
             int nTraceNumPoints = GetTraceNpoints();
             int nvariables = m_fields.num_elements();
@@ -765,21 +769,42 @@ namespace Nektar
             }
         }
 
-        
-        
-        void UnsteadySystem::v_GetFluxVector(
-            const int i, const int j,
-            Array<OneD, Array<OneD, NekDouble> > &physfield,
-            Array<OneD, Array<OneD, NekDouble> > &flux)
+        void UnsteadySystem::CheckForRestartTime(NekDouble &time)
         {
-            for(int k = 0; k < flux.num_elements(); ++k)
+            
+            if (m_session->DefinesFunction("InitialConditions"))
             {
-                Vmath::Zero(GetNpoints(),flux[k],1);
-            }
-            Vmath::Vcopy(GetNpoints(),physfield[i],1,flux[j],1);
-        }
+                for(int i = 0; i < m_fields.num_elements(); ++i)
+                {
+                    
+                    LibUtilities::FunctionType vType;
+                    
+                    vType = m_session->GetFunctionType("InitialConditions", m_session->GetVariable(i));
+                    if (vType == LibUtilities::eFunctionTypeFile)
+                    {
+                        std::string filename
+                            = m_session->GetFunctionFilename("InitialConditions", 
+                                                             m_session->GetVariable(i));
 
-        
+                        LibUtilities::ImportFieldMetaData(filename,m_fieldMetaDataMap);
+                        
+                        // check to see if time defined
+                        if(m_fieldMetaDataMap != LibUtilities::NullFieldMetaDataMap)
+                        {
+                            LibUtilities::FieldMetaDataMap::iterator iter; 
+                            
+                            iter = m_fieldMetaDataMap.find("Time");
+                            if(iter != m_fieldMetaDataMap.end())
+                            {
+                                time = iter->second; 
+                            }
+                        }
+                        
+                        break;
+                    }
+                }
+            }
+        }
         
         void UnsteadySystem::WeakPenaltyforScalar(
             const int var,
@@ -787,7 +812,7 @@ namespace Nektar
                   Array<OneD,       NekDouble> &penaltyflux,
             NekDouble time)
         {
-            int i, j, e, npoints, id1, id2;
+            int i, e, npoints, id1, id2;
             
             // Number of boundary regions
             int nbnd = m_fields[var]->GetBndCondExpansions().num_elements();
@@ -866,7 +891,7 @@ namespace Nektar
             NekDouble C11,
             NekDouble time)
         {
-            int i, j, e, npoints, id1, id2;
+            int i, e, npoints, id1, id2;
             int nbnd = m_fields[var]->GetBndCondExpansions().num_elements();
             int numBDEdge, Nfps;
             int nTraceNumPoints = GetTraceNpoints();

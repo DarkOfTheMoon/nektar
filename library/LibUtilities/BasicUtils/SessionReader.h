@@ -290,7 +290,7 @@ namespace Nektar
                 const std::string &trueval) const;
             /// Check if the value of a solver info property matches.
             template<typename T>
-            inline const bool MatchSolverInfoAsEnum(
+            inline bool MatchSolverInfoAsEnum(
                 const std::string &name, 
                 const T           &trueval) const;
             /// Registers an enumeration value.
@@ -484,6 +484,10 @@ namespace Nektar
             std::vector<std::string> ParseCommandLineArguments(
                 int argc, char *argv[]);
 
+            /// Loads an xml file into a tinyxml doc and decompresses if needed
+            LIB_UTILITIES_EXPORT void LoadDoc(
+                const std::string &pFilename,
+                TiXmlDocument* pDoc) const;
             /// Creates an XML document from a list of input files.
             LIB_UTILITIES_EXPORT TiXmlDocument *MergeDoc(
                 const std::vector<std::string> &pFilenames) const;
@@ -541,7 +545,7 @@ namespace Nektar
          *
          */
         template<typename T>
-        inline const bool SessionReader::MatchSolverInfoAsEnum(
+        inline bool SessionReader::MatchSolverInfoAsEnum(
             const std::string &name, const T &trueval) const
         {
             return (GetSolverInfoAsEnum<T>(name) == trueval);
