@@ -502,7 +502,7 @@ namespace Nektar
             /// Partitions the mesh when running in parallel.
             LIB_UTILITIES_EXPORT void PartitionMesh();
             /// Partitions the comm object based on session parameters.
-            LIB_UTILITIES_EXPORT void PartitionComm();
+            LIB_UTILITIES_EXPORT void PartitionComm(TiXmlElement* e);
 
             /// Reads the PARAMETERS section of the XML document.
             LIB_UTILITIES_EXPORT void ReadParameters(TiXmlElement *conditions);

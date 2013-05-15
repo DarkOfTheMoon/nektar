@@ -301,11 +301,21 @@ namespace Nektar
          */
         void SessionReader::InitSession()
         {
-            // Split up the communicator
-            PartitionComm();
+
+            // Session not yet loaded, so load parameters section
+            TiXmlHandle docHandle(m_xmlDoc[0]);
+            TiXmlElement* e;
+            e = docHandle.FirstChildElement("NEKTAR").
+                FirstChildElement("CONDITIONS").Element();
+
+            ReadParameters(e);
+
 
         	// Start threads
-            StartThreads();
+        	StartThreads();
+
+        	// Split up the communicator
+        	PartitionComm(e);
 
             // If running in parallel change the default global sys solution
             // type.
@@ -316,15 +326,6 @@ namespace Nektar
             	m_solverInfoDefaults["GLOBALSYSSOLN"] =
             			"IterativeStaticCond";
             }
-
-            // If we've got more than 1 thread, attach a ThreadedComm
-            // to the existing Comm
-			if (vNumWorkers > 1)
-			{
-				CommSharedPtr vTmpComm(new ThreadedComm(m_comm, m_threadManager));
-				m_comm = vTmpComm;
-			}
-            std::cerr << "Comm is: " << m_comm->GetType() << std::endl;
 
             m_xmlDoc.resize(vNumWorkers, m_xmlDoc[0]);
             m_filename.resize(vNumWorkers, m_filename[0]);
@@ -1356,10 +1357,8 @@ namespace Nektar
             CommSharedPtr vCommMesh = m_comm->GetRowComm();
 
             // Number of partitions needed
-            unsigned int numPartitions = vCommMesh->GetSize();
+            int numPartitions = vCommMesh->GetSize();
             unsigned int vThr = m_threadManager->GetWorkerNum();
-            std::cerr << "Comm is (partitionmesh): " << vCommMesh->GetType() << std::cerr;
-            std::cerr << "Number of partitions: " << numPartitions << std::cerr;
 
             // Partition mesh into length of row comms
             if (numPartitions > 1)
@@ -1387,6 +1386,12 @@ namespace Nektar
 //							 boost::lexical_cast<std::string>(m_xmlDoc->Row()));
 
             	}
+            	else
+            	{
+            		// NB, matching the Block in MeshPartition::PartitionGraph, since vThr != 0 this will
+            		// actually not Block in the underlying comm of the ThreadedComm.
+            		m_comm->GetColumnComm()->Block();
+            	}
 
 				vCommMesh->Block();
 				if (vThr == 0) delete m_xmlDoc[0];
@@ -1412,17 +1417,13 @@ namespace Nektar
          * PROC_X parameter which, if specified, gives the number of processes
          * spanned by the Fourier direction. PROC_X must exactly divide the
          * total number of processes or an error is thrown.
+         *
+         * Also attaches the threading decorator if threading is being used.
          */
-        void SessionReader::PartitionComm()
+        void SessionReader::PartitionComm(TiXmlElement* e)
         {
-            // Session not yet loaded, so load parameters section
-            TiXmlHandle docHandle(m_xmlDoc[0]);
-            TiXmlElement* e;
-            e = docHandle.FirstChildElement("NEKTAR").
-                FirstChildElement("CONDITIONS").Element();
-
-            ReadParameters(e);
-			
+        	bool threadedCommDone = false;
+            unsigned int vNumThr = m_threadManager->GetMaxNumWorkers();
             if (e && m_comm->GetSize() > 1)
             {
                 int nProcZ = 1;
@@ -1456,10 +1457,22 @@ namespace Nektar
                 // method.
                 int nProcSem = m_comm->GetSize() / nProcSm;
                 
+                if (vNumThr > 1)
+                {
+                	CommSharedPtr vTmpComm(new ThreadedComm(m_comm, m_threadManager));
+                	m_comm = vTmpComm;
+                }
+
                 m_comm->SplitComm(nProcSm,nProcSem);
                 m_comm->GetColumnComm()->SplitComm((nProcY*nProcX),nProcZ);
                 m_comm->GetColumnComm()->GetColumnComm()->SplitComm(
                     nProcX,nProcY);
+            }
+
+            if (!threadedCommDone && vNumThr > 1)
+            {
+            	CommSharedPtr vTmpComm(new ThreadedComm(m_comm, m_threadManager));
+            	m_comm = vTmpComm;
             }
         }
 
