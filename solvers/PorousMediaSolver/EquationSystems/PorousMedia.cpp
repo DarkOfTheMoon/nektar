@@ -188,6 +188,32 @@ namespace Nektar
                 }
 
 
+                //------------------------------------------------
+                //Coordinate arrays
+                Array<OneD, NekDouble> x1(nq,0.0);
+                Array<OneD, NekDouble> y1(nq,0.0);
+                Array<OneD, NekDouble> z1(nq,0.0);
+                
+                //coordinates of quadrature points
+                m_fields[0]->GetCoords(x1,y1,z1);
+
+                NekDouble scalefac = 10.0;
+                for(int n=0; n<nq; ++n)
+                {
+                    NekDouble x=x1[n];
+                    NekDouble y=y1[n];
+                    NekDouble z=z1[n];
+
+                    NekDouble r=sqrt((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5));
+
+                    if((0.375 <= x && x <= 0.625) && (0.375 <= y && y <= 0.625))
+                    {
+                        m_spatialperm[0][n]=m_spatialperm[0][n]*scalefac;
+                        m_spatialperm[1][n]=m_spatialperm[1][n]*scalefac;
+                    }
+                }
+                //--------------------------------------------------
+
                 // Transform variable coefficient and write out to file.
                 m_fields[0]->FwdTrans_IterPerExp(m_spatialperm[i],
                                                  m_fields[0]->UpdateCoeffs());
@@ -217,7 +243,50 @@ namespace Nektar
                     EvaluateFunction(varCoeffs[0], vTemp, "SpatialAnisotropicPermeability");
                     m_spatialperm[i] = Array<OneD, NekDouble>(nq);
                     Vmath::Sdiv(nq,1.0,vTemp,1,m_spatialperm[i],1);
+
+                    for(j=0; j<nq; ++j)
+                    {
+                        if(m_spatialperm[i][j]==200)
+                        {
+                            m_spatialperm[i][j]=500;
+                            cout<<m_spatialperm[i][j]<<endl;
+                        }
+                    }
+                    cout<<endl;
+
                 }
+
+
+
+/*        
+                //Coordinate arrays
+                Array<OneD, NekDouble> xc0(nq,0.0);
+                Array<OneD, NekDouble> xc1(nq,0.0);
+                Array<OneD, NekDouble> xc2(nq,0.0);
+                
+                //coordinates of quadrature points
+                m_fields[0]->GetCoords(xc0,xc1,xc2);
+
+                //NekDouble scalefac = 0.0;
+                NekDouble scalefac = 10.0;
+                for(int n=0; n<nq; ++n)
+                {
+                    NekDouble x=xc0[n];
+                    NekDouble y=xc1[n];
+                    NekDouble z=xc2[n];
+                    
+                    NekDouble r=sqrt((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)+(z-0.5)*(z-0.5));
+
+                    if(r<0.125)
+                    {
+                        cout<<"x: "<<x<<"y: "<<y<<"z: "<<z<<endl;
+                        m_spatialperm[0][n]=m_spatialperm[0][n]*scalefac;
+                        m_spatialperm[1][n]=m_spatialperm[1][n]*scalefac;
+                        m_spatialperm[2][n]=m_spatialperm[2][n]*scalefac;
+                    }
+                }
+*/              
+
             }
         }
         else if (m_session->DefinesFunction("AnisotropicPermeability"))

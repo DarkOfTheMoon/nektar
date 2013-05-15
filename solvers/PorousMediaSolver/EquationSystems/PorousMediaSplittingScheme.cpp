@@ -305,7 +305,6 @@ namespace Nektar
                     Vmath::Vadd(nqtot,outarray[i],1,(m_forces[i]->GetPhys()),1,outarray[i],1);
                 }
             }
-
             // add permeability term for explicit permeability
             if (m_nConvectiveFields == 2)
             {
@@ -809,7 +808,7 @@ namespace Nektar
         Array<OneD, NekDouble> wk = Array<OneD, NekDouble>(physTot);
             
         Vmath::Zero(physTot,Forcing[0],1);
-        
+
         for(i = 0; i < m_nConvectiveFields; ++i)
         {
             m_fields[i]->PhysDeriv(MultiRegions::DirCartesianMap[i],fields[i], wk);
