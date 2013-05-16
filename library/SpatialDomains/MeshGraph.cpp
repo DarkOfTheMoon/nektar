@@ -2008,6 +2008,7 @@ namespace Nektar
             switch(type)
             {
             case eModified:
+			case eBernstein:
                 quadoffset = 1;
                 break;
             case eModifiedQuadPlus1:
