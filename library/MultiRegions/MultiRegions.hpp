@@ -135,6 +135,20 @@ namespace Nektar
             "LocalLowEnergy"
         };
 
+        enum MatrixStorageType
+        {
+            eNistCSR,
+            eNistBSR,
+            eSmvBSR
+        };
+
+        const char* const MatrixStorageTypeMap[] =
+        {
+            "NistCSR",
+            "NistBSR",
+            "SmvBSR"
+        };
+
 
         typedef std::vector<SpatialDomains::BoundaryConditionType>  BndTypesVector;
         typedef std::vector<SpatialDomains::BoundaryConditionType>::iterator BndTypesVectorIter;
@@ -160,7 +174,26 @@ namespace Nektar
 
         typedef boost::shared_ptr<RobinBCInfo> RobinBCInfoSharedPtr;
 
+        typedef struct _PeriodicEntity
+        {
+            _PeriodicEntity(
+                const int                     id,
+                const StdRegions::Orientation orient,
+                const bool                    isLocal) :
+                id(id), orient(orient), isLocal(isLocal) {}
 
+            _PeriodicEntity() {}
+            
+            /// Geometry ID of entity.
+            int id;
+            /// Orientation of entity within higher dimensional entity.
+            StdRegions::Orientation orient;
+            /// Flag specifying if this entity is local to this partition.
+            bool isLocal;
+        } PeriodicEntity;
+
+        typedef std::map<int, vector<PeriodicEntity> > PeriodicMap;
+        static PeriodicMap NullPeriodicMap;
     }// end of namespace
 }// end of namespace
 
