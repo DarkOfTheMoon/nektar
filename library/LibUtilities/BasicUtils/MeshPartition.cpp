@@ -61,10 +61,10 @@ namespace Nektar
 {
     namespace LibUtilities
     {
-        MeshPartition::MeshPartition(const LibUtilities::SessionReaderSharedPtr& pSession) :
-                m_comm(pSession->GetComm()->GetRowComm()),
-                m_threadManager(pSession->GetThreadManager()),
-                m_localPartition(m_threadManager->GetMaxNumWorkers())
+		MeshPartition::MeshPartition(const LibUtilities::SessionReaderSharedPtr& pSession) :
+			m_threadManager(pSession->GetThreadManager()),
+			m_localPartition(m_threadManager->GetMaxNumWorkers()),
+			m_comm(pSession->GetComm())
         {
             ReadMesh(pSession);
         }

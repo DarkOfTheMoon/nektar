@@ -1390,7 +1390,10 @@ namespace Nektar
             	{
             		// NB, matching the Block in MeshPartition::PartitionGraph, since vThr != 0 this will
             		// actually not Block in the underlying comm of the ThreadedComm.
-            		m_comm->GetColumnComm()->Block();
+            		if (m_threadManager->GetRankFromPartition(m_comm->GetRowComm()->GetRank()) == 0)
+            		{
+            			m_comm->GetColumnComm()->Block();
+            		}
             	}
 
 				vCommMesh->Block();
@@ -1461,6 +1464,7 @@ namespace Nektar
                 {
                 	CommSharedPtr vTmpComm(new ThreadedComm(m_comm, m_threadManager));
                 	m_comm = vTmpComm;
+                	threadedCommDone = true;
                 }
 
                 m_comm->SplitComm(nProcSm,nProcSem);
