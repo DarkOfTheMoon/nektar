@@ -65,9 +65,11 @@ int main(int argc, char* argv[])
 
         NekDouble spacing[3];
         vtkImageReader->SetFilePrefix(argv[2]);
-        vtkImageReader->SetDataExtent(0,100,0,100,0,249);
+        //vtkImageReader->SetDataExtent(0,100,0,100,0,249);
+        vtkImageReader->SetDataExtent(0,100,0,100,0,99);
         vtkImageReader->GetDataSpacing(spacing);
-        vtkImageReader->SetFilePattern("%s%03d.tif");
+        //vtkImageReader->SetFilePattern("%s%03d.tif");
+        vtkImageReader->SetFilePattern("%s%02d.tif");
         vtkImageReader->UpdateWholeExtent();
         imageData= vtkImageReader->GetOutput();
 
@@ -105,13 +107,13 @@ int main(int argc, char* argv[])
             imageData->GetSpacing(whl);
             
             //coordinates of the quadrature points (scaled)
-            /*p[0]=xc0[i]*(dim[0]-1)*whl[0];
+            p[0]=xc0[i]*(dim[0]-1)*whl[0];
             p[1]=xc1[i]*(dim[1]-1)*whl[1];
-            p[2]=xc2[i]*(dim[2]-1);*/
+            p[2]=xc2[i]*(dim[2]-1);
 
-            p[0]=xc0[i]*whl[0];
-            p[1]=xc1[i]*whl[1];
-            p[2]=xc2[i]*whl[2];
+            //p[0]=xc0[i]*whl[0];
+            //p[1]=xc1[i]*whl[1];
+            //p[2]=xc2[i]*whl[2];
             
             cout<<"coodinates of quadrature point: "<<p[0]<<" "<<p[1]<<" "<<p[2]<<endl;
             //this is not need (just for testing)
@@ -130,22 +132,12 @@ int main(int argc, char* argv[])
                 
             //Extract the intensity value
             intensity=imageData->GetScalarComponentAsDouble(ijk[0],ijk[1],ijk[2],0);
-            cout<< "intensity value: " <<intensity<<endl;
             //intensity=intensity/max_val;
+            cout<< "intensity value: " <<intensity<<endl;
 
-            if(intensity < 100)
+            for (int j = 0; j < coordim; ++j)
             {
-                for (int j = 0; j < coordim; ++j)
-                {
-                    m_spatialperm[j][i]=0.005;
-                }
-            }
-            else
-            {
-                for (int j = 0; j < coordim; ++j)
-                {
-                    m_spatialperm[j][i]=1/intensity;
-                }
+                m_spatialperm[j][i]=intensity;
             }
         }
 

@@ -246,10 +246,10 @@ namespace Nektar
 
                     for(j=0; j<nq; ++j)
                     {
-                        if(m_spatialperm[i][j]==200)
+                        if(m_spatialperm[i][j]>5)
                         {
-                            m_spatialperm[i][j]=500;
-                            cout<<m_spatialperm[i][j]<<endl;
+                            m_spatialperm[i][j]=5000;
+                            cout<<"here"<<endl;
                         }
                     }
                     cout<<endl;
