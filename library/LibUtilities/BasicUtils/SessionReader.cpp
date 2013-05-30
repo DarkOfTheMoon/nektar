@@ -151,7 +151,7 @@ namespace Nektar
          */
         SessionReader::SessionReader(int argc, char *argv[]) :
         		m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1), m_geometricInfo(1),
-        		m_expressions(1)
+        		m_expressions(1), m_functions(1), m_variables(1), m_filters(1)
         {
             std::vector<std::string> vFilenames =
                 ParseCommandLineArguments(argc, argv);
@@ -176,7 +176,7 @@ namespace Nektar
             const std::vector<std::string> &pFilenames,
             const CommSharedPtr            &pComm) :
     			m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1), m_geometricInfo(1),
-    			m_expressions(1)
+    			m_expressions(1), m_functions(1), m_variables(1), m_filters(1)
         {
             ASSERTL0(pFilenames.size() > 0, "No filenames specified.");
 
@@ -208,7 +208,7 @@ namespace Nektar
          */
         SessionReader::SessionReader(int argc, char *argv[], void (*pMainFunc)(SessionReaderSharedPtr)) :
         		m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1), m_geometricInfo(1),
-        		m_expressions(1),
+        		m_expressions(1), m_functions(1), m_variables(1), m_filters(1),
         		m_mainFunc(pMainFunc)
         {
             std::vector<std::string> vFilenames = 
@@ -237,7 +237,7 @@ namespace Nektar
             const CommSharedPtr            &pComm,
             void (*pMainFunc)(SessionReaderSharedPtr)) :
     			m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1), m_geometricInfo(1),
-    			m_expressions(1),
+    			m_expressions(1), m_functions(1), m_variables(1), m_filters(1),
     			m_mainFunc(pMainFunc)
         {
             ASSERTL0(pFilenames.size() > 0, "No filenames specified.");
@@ -921,8 +921,9 @@ namespace Nektar
         const std::string& SessionReader::GetVariable(
             const unsigned int &idx) const
         {
-            ASSERTL0(idx < m_variables.size(), "Variable index out of range.");
-            return m_variables[idx];
+            unsigned int vThr = m_threadManager->GetWorkerNum();
+            ASSERTL0(idx < m_variables[vThr].size(), "Variable index out of range.");
+            return m_variables[vThr][idx];
         }
 
 
@@ -931,7 +932,8 @@ namespace Nektar
          */
         std::vector<std::string> SessionReader::GetVariables() const
         {
-            return m_variables;
+            unsigned int vThr = m_threadManager->GetWorkerNum();
+            return m_variables[vThr];
         }
 
 
@@ -942,8 +944,9 @@ namespace Nektar
         {
             FunctionMap::const_iterator it1;
             std::string vName = boost::to_upper_copy(pName);
+            unsigned int vThr = m_threadManager->GetWorkerNum();
 
-            if ((it1 = m_functions.find(vName)) != m_functions.end())
+            if ((it1 = m_functions[vThr].find(vName)) != m_functions[vThr].end())
             {
                 return true;
             }
@@ -961,9 +964,10 @@ namespace Nektar
             FunctionMap::const_iterator it1;
             FunctionVariableMap::const_iterator it2;
             std::string vName = boost::to_upper_copy(pName);
+            unsigned int vThr = m_threadManager->GetWorkerNum();
 
             // Check function exists
-            if ((it1 = m_functions.find(vName))     != m_functions.end())
+            if ((it1 = m_functions[vThr].find(vName))     != m_functions[vThr].end())
             {
                 bool varExists =
                     (it2 = it1->second.find(pVariable)) != it1->second.end() ||
@@ -984,8 +988,9 @@ namespace Nektar
             FunctionMap::const_iterator it1;
             FunctionVariableMap::const_iterator it2, it3;
             std::string vName = boost::to_upper_copy(pName);
+            unsigned int vThr = m_threadManager->GetWorkerNum();
 
-            ASSERTL0((it1 = m_functions.find(vName)) != m_functions.end(),
+            ASSERTL0((it1 = m_functions[vThr].find(vName)) != m_functions[vThr].end(),
                      std::string("No such function '") + pName
                      + std::string("' has been defined in the session file."));
 
@@ -1020,8 +1025,9 @@ namespace Nektar
             const std::string  &pName,
             const unsigned int &pVar) const
         {
-            ASSERTL0(pVar < m_variables.size(), "Variable index out of range.");
-            return GetFunction(pName, m_variables[pVar]);
+            unsigned int vThr = m_threadManager->GetWorkerNum();
+            ASSERTL0(pVar < m_variables[vThr].size(), "Variable index out of range.");
+            return GetFunction(pName, m_variables[vThr][pVar]);
         }
 
 
@@ -1035,9 +1041,10 @@ namespace Nektar
             FunctionMap::const_iterator it1;
             FunctionVariableMap::const_iterator it2, it3;
             std::string vName = boost::to_upper_copy(pName);
+            unsigned int vThr = m_threadManager->GetWorkerNum();
 
-            it1 = m_functions.find(vName);
-            ASSERTL0 (it1 != m_functions.end(),
+            it1 = m_functions[vThr].find(vName);
+            ASSERTL0 (it1 != m_functions[vThr].end(),
                       std::string("Function '") + pName
                       + std::string("' not found."));
 
@@ -1070,8 +1077,9 @@ namespace Nektar
             const std::string  &pName,
             const unsigned int &pVar) const
         {
-            ASSERTL0(pVar < m_variables.size(), "Variable index out of range.");
-            return GetFunctionType(pName, m_variables[pVar]);
+            unsigned int vThr = m_threadManager->GetWorkerNum();
+            ASSERTL0(pVar < m_variables[vThr].size(), "Variable index out of range.");
+            return GetFunctionType(pName, m_variables[vThr][pVar]);
         }
 
 
@@ -1085,9 +1093,10 @@ namespace Nektar
             FunctionMap::const_iterator it1;
             FunctionVariableMap::const_iterator it2, it3;
             std::string vName = boost::to_upper_copy(pName);
+            unsigned int vThr = m_threadManager->GetWorkerNum();
 
-            it1 = m_functions.find(vName);
-            ASSERTL0 (it1 != m_functions.end(),
+            it1 = m_functions[vThr].find(vName);
+            ASSERTL0 (it1 != m_functions[vThr].end(),
                       std::string("Function '") + pName
                       + std::string("' not found."));
 
@@ -1120,8 +1129,9 @@ namespace Nektar
             const std::string  &pName, 
             const unsigned int &pVar) const
         {
-            ASSERTL0(pVar < m_variables.size(), "Variable index out of range.");
-            return GetFunctionFilename(pName, m_variables[pVar]);
+            unsigned int vThr = m_threadManager->GetWorkerNum();
+            ASSERTL0(pVar < m_variables[vThr].size(), "Variable index out of range.");
+            return GetFunctionFilename(pName, m_variables[vThr][pVar]);
         }
 
 
@@ -1175,7 +1185,8 @@ namespace Nektar
          */
         const FilterMap &SessionReader::GetFilters() const
         {
-            return m_filters;
+            unsigned int vThr = m_threadManager->GetWorkerNum();
+            return m_filters[vThr];
         }
 
 
@@ -1316,28 +1327,34 @@ namespace Nektar
             e = docHandle.FirstChildElement("NEKTAR").
                 FirstChildElement("CONDITIONS").Element();
 
-            ReadParameters (e);
             unsigned int vNumW = m_threadManager->GetMaxNumWorkers();
+            m_parameters.resize(vNumW);
             m_solverInfo.resize(vNumW);
             m_geometricInfo.resize(vNumW);
             m_expressions.resize(vNumW);
+            m_variables.resize(vNumW);
+            m_functions.resize(vNumW);
+
+            ReadParameters (e);
             ReadSolverInfo (e);
-            ReadGeometricInfo(e);
             ReadExpressions(e);
+			ReadVariables  (e);
+			ReadFunctions  (e);
+
+			e = docHandle.FirstChildElement("NEKTAR").
+				FirstChildElement("GEOMETRY").Element();
+            ReadGeometricInfo(e);
+
+			e = docHandle.FirstChildElement("NEKTAR").
+				FirstChildElement("FILTERS").Element();
+
+			ReadFilters(e);
+
             if (vThr == 0) {
             	// Read the various sections of the CONDITIONS block
-				ReadVariables  (e);
-				ReadFunctions  (e);
-
-				e = docHandle.FirstChildElement("NEKTAR").
-					FirstChildElement("GEOMETRY").Element();
 
 //				ReadGeometricInfo(e);
 
-				e = docHandle.FirstChildElement("NEKTAR").
-					FirstChildElement("FILTERS").Element();
-
-				ReadFilters(e);
 			}
         }
 
@@ -1863,7 +1880,8 @@ namespace Nektar
          */
         void SessionReader::ReadVariables(TiXmlElement *conditions)
         {
-            m_variables.clear();
+            unsigned int vThr = m_threadManager->GetWorkerNum();
+            m_variables[vThr].clear();
 
             if (!conditions)
             {
@@ -1921,14 +1939,14 @@ namespace Nektar
                     std::istringstream variableStrm(variableName);
                     variableStrm >> variableName;
 
-                    ASSERTL0(std::find(m_variables.begin(), m_variables.end(), 
-                                       variableName) == m_variables.end(),
+                    ASSERTL0(std::find(m_variables[vThr].begin(), m_variables[vThr].end(),
+                                       variableName) == m_variables[vThr].end(),
                              "Variable with ID "+boost::lexical_cast<string>(i)
                              + " has already been defined. "
                              " File: '" + m_filename[m_threadManager->GetWorkerNum()] + "', line: "
                              + boost::lexical_cast<string>(varElement->Row()));
 
-                    m_variables.push_back(variableName);
+                    m_variables[vThr].push_back(variableName);
 
                     varElement = varElement->NextSiblingElement("V");
                 }
@@ -1944,7 +1962,8 @@ namespace Nektar
          */
         void SessionReader::ReadFunctions(TiXmlElement *conditions)
         {
-            m_functions.clear();
+            unsigned int vThr = m_threadManager->GetWorkerNum();
+            m_functions[vThr].clear();
 
             if (!conditions)
             {
@@ -2068,7 +2087,7 @@ namespace Nektar
                     variable = variable->NextSiblingElement();
                 }
                 // Add function definition to map
-                m_functions[functionStr] = functionVarMap;
+                m_functions[vThr][functionStr] = functionVarMap;
                 function = function->NextSiblingElement("FUNCTION");
             }
         }
@@ -2084,7 +2103,8 @@ namespace Nektar
                 return;
             }
 
-            m_filters.clear();
+            unsigned int vThr = m_threadManager->GetWorkerNum();
+            m_filters[vThr].clear();
 
             TiXmlElement *filter = filters->FirstChildElement("FILTER");
             while (filter)
@@ -2111,7 +2131,7 @@ namespace Nektar
                     param = param->NextSiblingElement("PARAM");
                 }
 
-                m_filters.push_back(
+                m_filters[vThr].push_back(
                     std::pair<std::string, FilterParams>(typeStr, vParams));
 
                 filter = filter->NextSiblingElement("FILTER");
@@ -2220,7 +2240,6 @@ namespace Nektar
             // Decide what implementation of ThreadManager you want here.
             m_threadManager = Thread::GetThreadManager().CreateInstance("ThreadManagerBoost", nthreads);
             Nektar::InitMemoryPools(nthreads, true);
-            m_parameters.resize(nthreads);
         }
 
         Nektar::Thread::ThreadManagerSharedPtr SessionReader::GetThreadManager()
