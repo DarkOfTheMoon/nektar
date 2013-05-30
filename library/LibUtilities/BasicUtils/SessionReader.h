@@ -425,7 +425,8 @@ namespace Nektar
             // Partitioner for threads
             MeshPartition*							  m_meshPartition;
             /// Parameters.
-            ParameterMap                              m_parameters;
+            //ParameterMap   			              m_parameters;
+            std::vector<ParameterMap>                 m_parameters;
             /// Solver information properties.
             SolverInfoMap                             m_solverInfo;
             /// Geometric information properties.
@@ -443,9 +444,11 @@ namespace Nektar
             /// Filters map.
             FilterMap                                 m_filters;
             /// Be verbose
-            bool                        m_verbose;
+            bool                        			  m_verbose;
             /// Thread Manager
-            Nektar::Thread::ThreadManagerSharedPtr      m_threadManager;
+            Nektar::Thread::ThreadManagerSharedPtr    m_threadManager;
+            // Holds the function that will be run after Session is initialised.
+            LIB_UTILITIES_EXPORT void 				(*m_mainFunc)(SessionReaderSharedPtr);
 
             /// String to enumeration map for Solver Info parameters.
             LIB_UTILITIES_EXPORT static EnumMapList   m_enums;
@@ -538,8 +541,6 @@ namespace Nektar
             	virtual ~SessionJob();
             	virtual void Run();
             };
-            // Holds the function that will be run after Session is initialised.
-            LIB_UTILITIES_EXPORT void (*m_mainFunc)(SessionReaderSharedPtr);
         };
         /**
          *

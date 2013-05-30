@@ -150,7 +150,7 @@ namespace Nektar
          * @param   argv        Array of command-line arguments
          */
         SessionReader::SessionReader(int argc, char *argv[]) :
-        		m_filename(1), m_xmlDoc(1)
+        		m_filename(1), m_xmlDoc(1), m_parameters(1)
         {
             std::vector<std::string> vFilenames =
                 ParseCommandLineArguments(argc, argv);
@@ -174,7 +174,7 @@ namespace Nektar
             char                           *argv[],
             const std::vector<std::string> &pFilenames,
             const CommSharedPtr            &pComm) :
-    			m_filename(1), m_xmlDoc(1)
+    			m_filename(1), m_xmlDoc(1), m_parameters(1)
         {
             ASSERTL0(pFilenames.size() > 0, "No filenames specified.");
 
@@ -205,7 +205,7 @@ namespace Nektar
          * @param   argv        Array of command-line arguments
          */
         SessionReader::SessionReader(int argc, char *argv[], void (*pMainFunc)(SessionReaderSharedPtr)) :
-        		m_filename(1), m_xmlDoc(1), m_mainFunc(pMainFunc)
+        		m_filename(1), m_xmlDoc(1), m_parameters(1), m_mainFunc(pMainFunc)
         {
             std::vector<std::string> vFilenames = 
                 ParseCommandLineArguments(argc, argv);
@@ -232,7 +232,7 @@ namespace Nektar
             const std::vector<std::string> &pFilenames, 
             const CommSharedPtr            &pComm,
             void (*pMainFunc)(SessionReaderSharedPtr)) :
-    			m_filename(1), m_xmlDoc(1), m_mainFunc(pMainFunc)
+    			m_filename(1), m_xmlDoc(1), m_parameters(1), m_mainFunc(pMainFunc)
         {
             ASSERTL0(pFilenames.size() > 0, "No filenames specified.");
 
@@ -275,8 +275,6 @@ namespace Nektar
         }
         void SessionReader::SessionJob::Run()
         {
-
-        	unsigned int vRank = m_session->m_comm->GetRank();
 
         	// Partition mesh
         	m_session->PartitionMesh();
@@ -570,8 +568,10 @@ namespace Nektar
         bool SessionReader::DefinesParameter(const std::string& pName) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            ParameterMap::const_iterator paramIter = m_parameters.find(vName);
-            return (paramIter != m_parameters.end());
+        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            ParameterMap::const_iterator paramIter = m_parameters[vThr].find(vName);
+            return (paramIter != m_parameters[vThr].end());
         }
 
 
@@ -587,9 +587,11 @@ namespace Nektar
             const std::string& pName) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            ParameterMap::const_iterator paramIter = m_parameters.find(vName);
+        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+        	ParameterMap::const_iterator paramIter = m_parameters[vThr].find(vName);
 
-            ASSERTL0(paramIter != m_parameters.end(),
+            ASSERTL0(paramIter != m_parameters[vThr].end(),
                      "Unable to find requested parameter: " + pName);
 
             return paramIter->second;
@@ -603,8 +605,10 @@ namespace Nektar
             const std::string &pName, int &pVar) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            ParameterMap::const_iterator paramIter = m_parameters.find(vName);
-            ASSERTL0(paramIter != m_parameters.end(), "Required parameter '" + 
+        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            ParameterMap::const_iterator paramIter = m_parameters[vThr].find(vName);
+            ASSERTL0(paramIter != m_parameters[vThr].end(), "Required parameter '" +
                      pName + "' not specified in session.");
             pVar = (int)floor(paramIter->second);
         }
@@ -617,8 +621,10 @@ namespace Nektar
             const std::string &pName, int &pVar, const int &pDefault) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            ParameterMap::const_iterator paramIter = m_parameters.find(vName);
-            if(paramIter != m_parameters.end())
+        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            ParameterMap::const_iterator paramIter = m_parameters[vThr].find(vName);
+            if(paramIter != m_parameters[vThr].end())
             {
                 pVar = (int)floor(paramIter->second);
             }
@@ -636,8 +642,10 @@ namespace Nektar
             const std::string &pName, NekDouble& pVar) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            ParameterMap::const_iterator paramIter = m_parameters.find(vName);
-            ASSERTL0(paramIter != m_parameters.end(), "Required parameter '" + 
+        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            ParameterMap::const_iterator paramIter = m_parameters[vThr].find(vName);
+            ASSERTL0(paramIter != m_parameters[vThr].end(), "Required parameter '" +
                      pName + "' not specified in session.");
             pVar = paramIter->second;
         }
@@ -652,8 +660,10 @@ namespace Nektar
             const NekDouble   &pDefault) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            ParameterMap::const_iterator paramIter = m_parameters.find(vName);
-            if(paramIter != m_parameters.end())
+        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            ParameterMap::const_iterator paramIter = m_parameters[vThr].find(vName);
+            if(paramIter != m_parameters[vThr].end())
             {
                 pVar = paramIter->second;
             }
@@ -671,7 +681,9 @@ namespace Nektar
         void SessionReader::SetParameter(const std::string &pName, int &pVar) 
         {
             std::string vName = boost::to_upper_copy(pName);
-            m_parameters[vName] = pVar;
+        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            m_parameters[vThr][vName] = pVar;
         }
 
 
@@ -682,7 +694,9 @@ namespace Nektar
             const std::string &pName, NekDouble& pVar) 
         {
             std::string vName = boost::to_upper_copy(pName);
-            m_parameters[vName] = pVar;
+        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            m_parameters[vThr][vName] = pVar;
         }
 
 
@@ -1278,9 +1292,9 @@ namespace Nektar
             e = docHandle.FirstChildElement("NEKTAR").
                 FirstChildElement("CONDITIONS").Element();
 
+            ReadParameters (e);
 			if (m_threadManager->GetWorkerNum() == 0) {
 				// Read the various sections of the CONDITIONS block
-				ReadParameters (e);
 				ReadSolverInfo (e);
 				ReadExpressions(e);
 				ReadVariables  (e);
@@ -1486,7 +1500,10 @@ namespace Nektar
          */
         void SessionReader::ReadParameters(TiXmlElement *conditions)
         {
-            m_parameters.clear();
+        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+
+        	m_parameters[vThr].clear();
 
             if (!conditions)
             {
@@ -1527,7 +1544,7 @@ namespace Nektar
                         catch (...)
                         {
                             ASSERTL0(false, "Syntax error. "
-                                    "File: '" + m_filename[m_threadManager->GetWorkerNum()] + "', line: "
+                                    "File: '" + m_filename[vThr] + "', line: "
                                     + boost::lexical_cast<string>(node->Row()));
                         }
 
@@ -1552,7 +1569,7 @@ namespace Nektar
                             m_exprEvaluator.SetParameter(lhs, value);
                             caseSensitiveParameters[lhs] = value;
                             boost::to_upper(lhs);
-                            m_parameters[lhs] = value;
+                            m_parameters[vThr][lhs] = value;
                         }
                     }
 
@@ -1560,11 +1577,11 @@ namespace Nektar
                 }
             }
 
-            if (m_verbose && m_parameters.size() > 0)
+            if (m_verbose && m_parameters[vThr].size() > 0)
             {
                 cout << "Parameters:" << endl;
                 ParameterMap::iterator x;
-                for (x = m_parameters.begin(); x != m_parameters.end(); ++x)
+                for (x = m_parameters[vThr].begin(); x != m_parameters[vThr].end(); ++x)
                 {
                     cout << "\t" << x->first << " = " << x->second << endl;
                 }
@@ -2097,6 +2114,7 @@ namespace Nektar
          */
         void SessionReader::CmdLineOverride()
         {
+            unsigned int vThr = m_threadManager->GetWorkerNum();
             // Parse solver info overrides
             if (m_cmdLineOptions.count("solverinfo"))
             {
@@ -2147,7 +2165,7 @@ namespace Nektar
                     
                     try
                     {
-                        m_parameters[lhsUpper] = 
+                        m_parameters[vThr][lhsUpper] =
                             boost::lexical_cast<NekDouble>(rhs);
                     }
                     catch (...)
@@ -2170,6 +2188,7 @@ namespace Nektar
             // Decide what implementation of ThreadManager you want here.
             m_threadManager = Thread::GetThreadManager().CreateInstance("ThreadManagerBoost", nthreads);
             Nektar::InitMemoryPools(nthreads, true);
+            m_parameters.resize(nthreads);
         }
 
         Nektar::Thread::ThreadManagerSharedPtr SessionReader::GetThreadManager()
