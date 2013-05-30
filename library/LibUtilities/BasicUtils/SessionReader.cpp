@@ -150,7 +150,7 @@ namespace Nektar
          * @param   argv        Array of command-line arguments
          */
         SessionReader::SessionReader(int argc, char *argv[]) :
-        		m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1)
+        		m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1), m_geometricInfo(1)
         {
             std::vector<std::string> vFilenames =
                 ParseCommandLineArguments(argc, argv);
@@ -174,7 +174,7 @@ namespace Nektar
             char                           *argv[],
             const std::vector<std::string> &pFilenames,
             const CommSharedPtr            &pComm) :
-    			m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1)
+    			m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1), m_geometricInfo(1)
         {
             ASSERTL0(pFilenames.size() > 0, "No filenames specified.");
 
@@ -205,7 +205,8 @@ namespace Nektar
          * @param   argv        Array of command-line arguments
          */
         SessionReader::SessionReader(int argc, char *argv[], void (*pMainFunc)(SessionReaderSharedPtr)) :
-        		m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1), m_mainFunc(pMainFunc)
+        		m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1), m_geometricInfo(1),
+        		m_mainFunc(pMainFunc)
         {
             std::vector<std::string> vFilenames = 
                 ParseCommandLineArguments(argc, argv);
@@ -232,7 +233,8 @@ namespace Nektar
             const std::vector<std::string> &pFilenames, 
             const CommSharedPtr            &pComm,
             void (*pMainFunc)(SessionReaderSharedPtr)) :
-    			m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1), m_mainFunc(pMainFunc)
+    			m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1), m_geometricInfo(1),
+    			m_mainFunc(pMainFunc)
         {
             ASSERTL0(pFilenames.size() > 0, "No filenames specified.");
 
@@ -807,8 +809,9 @@ namespace Nektar
         bool SessionReader::DefinesGeometricInfo(const std::string &pName) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            GeometricInfoMap::const_iterator iter = m_geometricInfo.find(vName);
-            return (iter != m_geometricInfo.end());
+            unsigned int vThr = m_threadManager->GetWorkerNum();
+            GeometricInfoMap::const_iterator iter = m_geometricInfo[vThr].find(vName);
+            return (iter != m_geometricInfo[vThr].end());
         }
 
 
@@ -821,8 +824,9 @@ namespace Nektar
             const std::string &pDefault) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            GeometricInfoMap::const_iterator iter = m_geometricInfo.find(vName);
-            if(iter != m_geometricInfo.end())
+            unsigned int vThr = m_threadManager->GetWorkerNum();
+            GeometricInfoMap::const_iterator iter = m_geometricInfo[vThr].find(vName);
+            if(iter != m_geometricInfo[vThr].end())
             {
                 pVar = iter->second;
             }
@@ -842,8 +846,9 @@ namespace Nektar
             const bool        &pDefault) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            GeometricInfoMap::const_iterator iter = m_geometricInfo.find(vName);
-            if(iter != m_geometricInfo.end())
+            unsigned int vThr = m_threadManager->GetWorkerNum();
+            GeometricInfoMap::const_iterator iter = m_geometricInfo[vThr].find(vName);
+            if(iter != m_geometricInfo[vThr].end())
             {
                 if (iter->second == "TRUE")
                 {
@@ -870,8 +875,9 @@ namespace Nektar
             const NekDouble   &pDefault) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            GeometricInfoMap::const_iterator iter = m_geometricInfo.find(vName);
-            if(iter != m_geometricInfo.end())
+            unsigned int vThr = m_threadManager->GetWorkerNum();
+            GeometricInfoMap::const_iterator iter = m_geometricInfo[vThr].find(vName);
+            if(iter != m_geometricInfo[vThr].end())
             {
                 pVar = std::atoi(iter->second.c_str());
             }
@@ -892,8 +898,9 @@ namespace Nektar
             const bool        &pDefault) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            GeometricInfoMap::const_iterator iter = m_geometricInfo.find(vName);
-            if(iter != m_geometricInfo.end())
+            unsigned int vThr = m_threadManager->GetWorkerNum();
+            GeometricInfoMap::const_iterator iter = m_geometricInfo[vThr].find(vName);
+            if(iter != m_geometricInfo[vThr].end())
             {
                 pVar = boost::iequals(iter->second, pTrueVal);
             }
@@ -1307,7 +1314,9 @@ namespace Nektar
             ReadParameters (e);
             unsigned int vNumW = m_threadManager->GetMaxNumWorkers();
             m_solverInfo.resize(vNumW);
+            m_geometricInfo.resize(vNumW);
             ReadSolverInfo (e);
+			ReadGeometricInfo(e);
             if (vThr == 0) {
 				// Read the various sections of the CONDITIONS block
 				ReadExpressions(e);
@@ -1317,7 +1326,7 @@ namespace Nektar
 				e = docHandle.FirstChildElement("NEKTAR").
 					FirstChildElement("GEOMETRY").Element();
 
-				ReadGeometricInfo(e);
+//				ReadGeometricInfo(e);
 
 				e = docHandle.FirstChildElement("NEKTAR").
 					FirstChildElement("FILTERS").Element();
@@ -1717,7 +1726,8 @@ namespace Nektar
          */
         void SessionReader::ReadGeometricInfo(TiXmlElement *geometry)
         {
-            m_geometricInfo.clear();
+            unsigned int vThr = m_threadManager->GetWorkerNum();
+            m_geometricInfo[vThr].clear();
 
             if (!geometry)
             {
@@ -1750,8 +1760,8 @@ namespace Nektar
 
                     // check the property has not already been defined
                     GeometricInfoMap::iterator geometricInfoIter = 
-                        m_geometricInfo.find(geometricProperty);
-                    ASSERTL0(geometricInfoIter == m_geometricInfo.end(),
+                        m_geometricInfo[vThr].find(geometricProperty);
+                    ASSERTL0(geometricInfoIter == m_geometricInfo[vThr].end(),
                              "geometricInfo value: " + geometricProperty +
                              " already specified.");
 
@@ -1768,17 +1778,17 @@ namespace Nektar
                              boost::lexical_cast<string>(geometricInfo->Row()));
 
                     // Set Variable
-                    m_geometricInfo[geometricProperty] = geometricValue;
+                    m_geometricInfo[vThr][geometricProperty] = geometricValue;
                     geometricInfo = geometricInfo->NextSiblingElement("I");
                 }
             }
 
-            if (m_verbose && m_geometricInfo.size() > 0)
+            if (m_verbose && m_geometricInfo[vThr].size() > 0)
             {
                 cout << "Geometric Info:" << endl;
                 GeometricInfoMap::iterator x;
-                for (x  = m_geometricInfo.begin();
-                     x != m_geometricInfo.end(); ++x)
+                for (x  = m_geometricInfo[vThr].begin();
+                     x != m_geometricInfo[vThr].end(); ++x)
                 {
                     cout << "\t" << x->first << " = " << x->second << endl;
                 }

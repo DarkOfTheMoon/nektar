@@ -430,7 +430,7 @@ namespace Nektar
             /// Solver information properties.
             std::vector<SolverInfoMap>                m_solverInfo;
             /// Geometric information properties.
-            GeometricInfoMap                          m_geometricInfo;
+            std::vector<GeometricInfoMap>             m_geometricInfo;
             /// Expressions.
             ExpressionMap                             m_expressions;
             /// Analytic expression evaluator instance.
