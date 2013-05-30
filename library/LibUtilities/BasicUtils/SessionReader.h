@@ -428,7 +428,7 @@ namespace Nektar
             //ParameterMap   			              m_parameters;
             std::vector<ParameterMap>                 m_parameters;
             /// Solver information properties.
-            SolverInfoMap                             m_solverInfo;
+            std::vector<SolverInfoMap>                m_solverInfo;
             /// Geometric information properties.
             GeometricInfoMap                          m_geometricInfo;
             /// Expressions.

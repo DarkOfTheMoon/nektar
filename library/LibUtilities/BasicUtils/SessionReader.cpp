@@ -150,7 +150,7 @@ namespace Nektar
          * @param   argv        Array of command-line arguments
          */
         SessionReader::SessionReader(int argc, char *argv[]) :
-        		m_filename(1), m_xmlDoc(1), m_parameters(1)
+        		m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1)
         {
             std::vector<std::string> vFilenames =
                 ParseCommandLineArguments(argc, argv);
@@ -174,7 +174,7 @@ namespace Nektar
             char                           *argv[],
             const std::vector<std::string> &pFilenames,
             const CommSharedPtr            &pComm) :
-    			m_filename(1), m_xmlDoc(1), m_parameters(1)
+    			m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1)
         {
             ASSERTL0(pFilenames.size() > 0, "No filenames specified.");
 
@@ -205,7 +205,7 @@ namespace Nektar
          * @param   argv        Array of command-line arguments
          */
         SessionReader::SessionReader(int argc, char *argv[], void (*pMainFunc)(SessionReaderSharedPtr)) :
-        		m_filename(1), m_xmlDoc(1), m_parameters(1), m_mainFunc(pMainFunc)
+        		m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1), m_mainFunc(pMainFunc)
         {
             std::vector<std::string> vFilenames = 
                 ParseCommandLineArguments(argc, argv);
@@ -232,7 +232,7 @@ namespace Nektar
             const std::vector<std::string> &pFilenames, 
             const CommSharedPtr            &pComm,
             void (*pMainFunc)(SessionReaderSharedPtr)) :
-    			m_filename(1), m_xmlDoc(1), m_parameters(1), m_mainFunc(pMainFunc)
+    			m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1), m_mainFunc(pMainFunc)
         {
             ASSERTL0(pFilenames.size() > 0, "No filenames specified.");
 
@@ -707,8 +707,10 @@ namespace Nektar
         bool SessionReader::DefinesSolverInfo(const std::string &pName) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            SolverInfoMap::const_iterator infoIter = m_solverInfo.find(vName);
-            return (infoIter != m_solverInfo.end());
+        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            SolverInfoMap::const_iterator infoIter = m_solverInfo[vThr].find(vName);
+            return (infoIter != m_solverInfo[vThr].end());
         }
 
 
@@ -719,9 +721,11 @@ namespace Nektar
             const std::string &pProperty) const
         {
             std::string vProperty = boost::to_upper_copy(pProperty);
-            SolverInfoMap::const_iterator iter = m_solverInfo.find(vProperty);
+        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            SolverInfoMap::const_iterator iter = m_solverInfo[vThr].find(vProperty);
 
-            ASSERTL1(iter != m_solverInfo.end(),
+            ASSERTL1(iter != m_solverInfo[vThr].end(),
                      "Unable to find requested property: " + pProperty);
 
             return iter->second;
@@ -737,8 +741,10 @@ namespace Nektar
             const std::string &pDefault) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            SolverInfoMap::const_iterator infoIter = m_solverInfo.find(vName);
-            if(infoIter != m_solverInfo.end())
+        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            SolverInfoMap::const_iterator infoIter = m_solverInfo[vThr].find(vName);
+            if(infoIter != m_solverInfo[vThr].end())
             {
                 pVar = infoIter->second;
             }
@@ -759,8 +765,10 @@ namespace Nektar
             const bool        &pDefault) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            SolverInfoMap::const_iterator infoIter = m_solverInfo.find(vName);
-            if(infoIter != m_solverInfo.end())
+        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            SolverInfoMap::const_iterator infoIter = m_solverInfo[vThr].find(vName);
+            if(infoIter != m_solverInfo[vThr].end())
             {
                 pVar = boost::iequals(infoIter->second, pTrueVal);
             }
@@ -781,8 +789,10 @@ namespace Nektar
             if (DefinesSolverInfo(pName))
             {
                 std::string vName = boost::to_upper_copy(pName);
-                SolverInfoMap::const_iterator iter = m_solverInfo.find(vName);
-                if(iter != m_solverInfo.end())
+            	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+            	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+                SolverInfoMap::const_iterator iter = m_solverInfo[vThr].find(vName);
+                if(iter != m_solverInfo[vThr].end())
                 {
                     return true;
                 }
@@ -1283,19 +1293,23 @@ namespace Nektar
          */
         void SessionReader::ParseDocument()
         {
+            unsigned int vThr = m_threadManager->GetWorkerNum();
+
             // Check we actually have a document loaded.
-            ASSERTL0(m_xmlDoc[m_threadManager->GetWorkerNum()], "No XML document loaded.");
+            ASSERTL0(m_xmlDoc[vThr], "No XML document loaded.");
 
             // Look for all data in CONDITIONS block.
-            TiXmlHandle docHandle(m_xmlDoc[m_threadManager->GetWorkerNum()]);
+            TiXmlHandle docHandle(m_xmlDoc[vThr]);
             TiXmlElement* e;
             e = docHandle.FirstChildElement("NEKTAR").
                 FirstChildElement("CONDITIONS").Element();
 
             ReadParameters (e);
-			if (m_threadManager->GetWorkerNum() == 0) {
+            unsigned int vNumW = m_threadManager->GetMaxNumWorkers();
+            m_solverInfo.resize(vNumW);
+            ReadSolverInfo (e);
+            if (vThr == 0) {
 				// Read the various sections of the CONDITIONS block
-				ReadSolverInfo (e);
 				ReadExpressions(e);
 				ReadVariables  (e);
 				ReadFunctions  (e);
@@ -1595,9 +1609,6 @@ namespace Nektar
          */
         void SessionReader::ReadSolverInfo(TiXmlElement *conditions)
         {
-            m_solverInfo.clear();
-            m_solverInfo = m_solverInfoDefaults;
-
             unsigned int vThr, vNumWkrs;
             if (m_threadManager.get())
             {
@@ -1608,6 +1619,10 @@ namespace Nektar
             	vThr = 0;
             	vNumWkrs = 1;
             }
+
+            m_solverInfo[vThr].clear();
+            m_solverInfo[vThr] = m_solverInfoDefaults;
+
 
             if (!conditions)
             {
@@ -1665,7 +1680,7 @@ namespace Nektar
                     }
 
                     // Set Variable
-                    m_solverInfo[solverPropertyUpper] = solverValue;
+                    m_solverInfo[vThr][solverPropertyUpper] = solverValue;
                     solverInfo = solverInfo->NextSiblingElement("I");
                 }
             }
@@ -1674,21 +1689,21 @@ namespace Nektar
             		|| vNumWkrs > 1)
             {
                 ASSERTL0(
-                    m_solverInfo["GLOBALSYSSOLN"] == "IterativeFull"       ||
-                    m_solverInfo["GLOBALSYSSOLN"] == "IterativeStaticCond" ||
-                    m_solverInfo["GLOBALSYSSOLN"] == 
+                    m_solverInfo[vThr]["GLOBALSYSSOLN"] == "IterativeFull"       ||
+                    m_solverInfo[vThr]["GLOBALSYSSOLN"] == "IterativeStaticCond" ||
+                    m_solverInfo[vThr]["GLOBALSYSSOLN"] ==
                         "IterativeMultiLevelStaticCond"                    ||
-                    m_solverInfo["GLOBALSYSSOLN"] == "XxtFull"             ||
-                    m_solverInfo["GLOBALSYSSOLN"] == "XxtStaticCond"       ||
-                    m_solverInfo["GLOBALSYSSOLN"] == "XxtMultiLevelStaticCond",
+                    m_solverInfo[vThr]["GLOBALSYSSOLN"] == "XxtFull"             ||
+                    m_solverInfo[vThr]["GLOBALSYSSOLN"] == "XxtStaticCond"       ||
+                    m_solverInfo[vThr]["GLOBALSYSSOLN"] == "XxtMultiLevelStaticCond",
                     "A parallel solver must be used when run in parallel.");
             }
             
-            if (m_verbose && m_solverInfo.size() > 0 && m_comm)
+            if (m_verbose && m_solverInfo[vThr].size() > 0 && m_comm)
             {
                 cout << "Solver Info:" << endl;
                 SolverInfoMap::iterator x;
-                for (x = m_solverInfo.begin(); x != m_solverInfo.end(); ++x)
+                for (x = m_solverInfo[vThr].begin(); x != m_solverInfo[vThr].end(); ++x)
                 {
                     cout << "\t" << x->first << " = " << x->second << endl;
                 }
@@ -2137,7 +2152,7 @@ namespace Nektar
                     }
 
                     std::string lhsUpper = boost::to_upper_copy(lhs);
-                    m_solverInfo[lhsUpper] = rhs;
+                    m_solverInfo[vThr][lhsUpper] = rhs;
                 }
             }
             
