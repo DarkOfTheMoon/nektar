@@ -150,7 +150,8 @@ namespace Nektar
          * @param   argv        Array of command-line arguments
          */
         SessionReader::SessionReader(int argc, char *argv[]) :
-        		m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1), m_geometricInfo(1)
+        		m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1), m_geometricInfo(1),
+        		m_expressions(1)
         {
             std::vector<std::string> vFilenames =
                 ParseCommandLineArguments(argc, argv);
@@ -174,7 +175,8 @@ namespace Nektar
             char                           *argv[],
             const std::vector<std::string> &pFilenames,
             const CommSharedPtr            &pComm) :
-    			m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1), m_geometricInfo(1)
+    			m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1), m_geometricInfo(1),
+    			m_expressions(1)
         {
             ASSERTL0(pFilenames.size() > 0, "No filenames specified.");
 
@@ -206,6 +208,7 @@ namespace Nektar
          */
         SessionReader::SessionReader(int argc, char *argv[], void (*pMainFunc)(SessionReaderSharedPtr)) :
         		m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1), m_geometricInfo(1),
+        		m_expressions(1),
         		m_mainFunc(pMainFunc)
         {
             std::vector<std::string> vFilenames = 
@@ -234,6 +237,7 @@ namespace Nektar
             const CommSharedPtr            &pComm,
             void (*pMainFunc)(SessionReaderSharedPtr)) :
     			m_filename(1), m_xmlDoc(1), m_parameters(1), m_solverInfo(1), m_geometricInfo(1),
+    			m_expressions(1),
     			m_mainFunc(pMainFunc)
         {
             ASSERTL0(pFilenames.size() > 0, "No filenames specified.");
@@ -1201,8 +1205,9 @@ namespace Nektar
         void SessionReader::SubstituteExpressions(std::string& pExpr)
         {
             ExpressionMap::iterator exprIter;
-            for (exprIter  = m_expressions.begin(); 
-                 exprIter != m_expressions.end(); ++exprIter)
+            unsigned int vThr = m_threadManager->GetWorkerNum();
+            for (exprIter  = m_expressions[vThr].begin();
+                 exprIter != m_expressions[vThr].end(); ++exprIter)
             {
                 boost::replace_all(pExpr, exprIter->first, exprIter->second);
             }
@@ -1315,11 +1320,12 @@ namespace Nektar
             unsigned int vNumW = m_threadManager->GetMaxNumWorkers();
             m_solverInfo.resize(vNumW);
             m_geometricInfo.resize(vNumW);
+            m_expressions.resize(vNumW);
             ReadSolverInfo (e);
-			ReadGeometricInfo(e);
+            ReadGeometricInfo(e);
+            ReadExpressions(e);
             if (vThr == 0) {
-				// Read the various sections of the CONDITIONS block
-				ReadExpressions(e);
+            	// Read the various sections of the CONDITIONS block
 				ReadVariables  (e);
 				ReadFunctions  (e);
 
@@ -1802,7 +1808,8 @@ namespace Nektar
          */
         void SessionReader::ReadExpressions(TiXmlElement *conditions)
         {
-            m_expressions.clear();
+            unsigned int vThr = m_threadManager->GetWorkerNum();
+            m_expressions[vThr].clear();
 
             if (!conditions)
             {
@@ -1839,12 +1846,12 @@ namespace Nektar
                              + boost::lexical_cast<std::string>(expr->Row()));
 
                     ExpressionMap::iterator exprIter
-                                            = m_expressions.find(nameString);
-                    ASSERTL0(exprIter == m_expressions.end(),
+                                            = m_expressions[vThr].find(nameString);
+                    ASSERTL0(exprIter == m_expressions[vThr].end(),
                              std::string("Expression '") + nameString
                              + std::string("' already specified."));
 
-                    m_expressions[nameString] = valString;
+                    m_expressions[vThr][nameString] = valString;
                     expr = expr->NextSiblingElement("E");
                 }
             }
