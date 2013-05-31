@@ -1317,6 +1317,14 @@ namespace Nektar
         void SessionReader::ParseDocument()
         {
             unsigned int vThr = m_threadManager->GetWorkerNum();
+            unsigned int vNumW = m_threadManager->GetMaxNumWorkers();
+            m_parameters.resize(vNumW);
+            m_solverInfo.resize(vNumW);
+            m_expressions.resize(vNumW);
+            m_variables.resize(vNumW);
+            m_functions.resize(vNumW);
+            m_geometricInfo.resize(vNumW);
+            m_filters.resize(vNumW);
 
             // Check we actually have a document loaded.
             ASSERTL0(m_xmlDoc[vThr], "No XML document loaded.");
@@ -1326,14 +1334,6 @@ namespace Nektar
             TiXmlElement* e;
             e = docHandle.FirstChildElement("NEKTAR").
                 FirstChildElement("CONDITIONS").Element();
-
-            unsigned int vNumW = m_threadManager->GetMaxNumWorkers();
-            m_parameters.resize(vNumW);
-            m_solverInfo.resize(vNumW);
-            m_geometricInfo.resize(vNumW);
-            m_expressions.resize(vNumW);
-            m_variables.resize(vNumW);
-            m_functions.resize(vNumW);
 
             ReadParameters (e);
             ReadSolverInfo (e);
@@ -1347,15 +1347,8 @@ namespace Nektar
 
 			e = docHandle.FirstChildElement("NEKTAR").
 				FirstChildElement("FILTERS").Element();
-
 			ReadFilters(e);
 
-            if (vThr == 0) {
-            	// Read the various sections of the CONDITIONS block
-
-//				ReadGeometricInfo(e);
-
-			}
         }
 
 
