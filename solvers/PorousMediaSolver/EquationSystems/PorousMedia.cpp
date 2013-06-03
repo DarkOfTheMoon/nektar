@@ -197,20 +197,36 @@ namespace Nektar
                 //coordinates of quadrature points
                 m_fields[0]->GetCoords(x1,y1,z1);
 
-                NekDouble scalefac = 10.0;
+                NekDouble scalefac = 100.0;
                 for(int n=0; n<nq; ++n)
                 {
                     NekDouble x=x1[n];
                     NekDouble y=y1[n];
                     NekDouble z=z1[n];
 
-                    NekDouble r=sqrt((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5));
+                    NekDouble x1=-0.328;
+                    NekDouble y1=-0.328;
+                    NekDouble x2=0.328;
+                    NekDouble y2=0.328;
 
-                    if((0.375 <= x && x <= 0.625) && (0.375 <= y && y <= 0.625))
+                    NekDouble r1=sqrt((x-x1)*(x-x1)+(y-y1)*(y-y1));
+                    NekDouble r2=sqrt((x-0)*(x-0)+(y-y1)*(y-y1));
+                    NekDouble r3=sqrt((x-x2)*(x-x2)+(y-y1)*(y-y1));
+                    NekDouble r4=sqrt((x-x1)*(x-x1)+(y-0)*(y-0));
+                    NekDouble r5=sqrt((x-0)*(x-0)+(y-0)*(y-0));
+                    NekDouble r6=sqrt((x-x2)*(x-x2)+(y-0)*(y-0));
+                    NekDouble r7=sqrt((x-x1)*(x-x1)+(y-y2)*(y-y2));
+                    NekDouble r8=sqrt((x-0)*(x-0)+(y-y2)*(y-y2));
+                    NekDouble r9=sqrt((x-x2)*(x-x2)+(y-y2)*(y-y2));
+
+                    NekDouble r=0.10965874404;
+
+                    if(r1 < r || r2 < r || r3 < r || r4 < r || r5 < r || r6 < r || r7 < r || r8 < r || r9 < r)
                     {
                         m_spatialperm[0][n]=m_spatialperm[0][n]*scalefac;
                         m_spatialperm[1][n]=m_spatialperm[1][n]*scalefac;
                     }
+
                 }
                 //--------------------------------------------------
 
@@ -244,7 +260,7 @@ namespace Nektar
                     m_spatialperm[i] = Array<OneD, NekDouble>(nq);
                     Vmath::Sdiv(nq,1.0,vTemp,1,m_spatialperm[i],1);
 
-                    for(j=0; j<nq; ++j)
+                    /*for(j=0; j<nq; ++j)
                     {
                         if(m_spatialperm[i][j]>5)
                         {
@@ -252,13 +268,12 @@ namespace Nektar
                             cout<<"here"<<endl;
                         }
                     }
-                    cout<<endl;
+                    cout<<endl;*/
 
                 }
 
 
 
-/*        
                 //Coordinate arrays
                 Array<OneD, NekDouble> xc0(nq,0.0);
                 Array<OneD, NekDouble> xc1(nq,0.0);
@@ -285,7 +300,6 @@ namespace Nektar
                         m_spatialperm[2][n]=m_spatialperm[2][n]*scalefac;
                     }
                 }
-*/              
 
             }
         }
@@ -383,6 +397,11 @@ namespace Nektar
             m_perm_inv[3] = m_perm[4]*m_perm[5]-m_perm[2]*m_perm[3];
             m_perm_inv[4] = m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4];
             m_perm_inv[5] = m_perm[3]*m_perm[4]-m_perm[0]*m_perm[5];
+
+            for(int i=0; i<6; ++i)
+            {
+                cout<<m_perm_inv[i]<<endl;
+            }
             
             Vmath::Smul(6, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
         }

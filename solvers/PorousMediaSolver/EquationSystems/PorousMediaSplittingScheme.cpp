@@ -397,14 +397,7 @@ namespace Nektar
         SetUpPressureForcing(inarray, F, aii_Dt);
                     
         // Solver Pressure Poisson Equation 
-#ifdef UseContCoeffs
-        FlagList flags;
-        flags.set(eUseContCoeff, true);
-        m_pressure->HelmSolve(F[0], m_pressure->UpdateContCoeffs(),flags,factors);
-#else
-        
         m_pressure->HelmSolve(F[0], m_pressure->UpdateCoeffs(), NullFlagList, factors);
-#endif
             
         // Viscous Term forcing
         SetUpViscousForcing(inarray, F, aii_Dt);
@@ -424,13 +417,8 @@ namespace Nektar
                 factors[StdRegions::eFactorLambda] = (m_perm_inv[i])+(1.0/aii_Dt/m_kinvis);
             }    
 
-#ifdef UseContCoeffs
-            m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateContCoeffs(),flags,factors);            
-            m_fields[i]->BwdTrans(m_fields[i]->GetContCoeffs(),outarray[i],true);
-#else
             m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateCoeffs(), NullFlagList, factors, m_varperm);
             m_fields[i]->BwdTrans(m_fields[i]->GetCoeffs(),outarray[i]);
-#endif
         }
     }
     

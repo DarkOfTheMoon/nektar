@@ -62,14 +62,16 @@ int main(int argc, char* argv[])
 
         vtkTIFFReader *vtkImageReader = vtkTIFFReader::New();
         //vtkImageReader->SetFileName ( argv[2] );
+        //vtkImageReader->SetDataExtent(0,418,0,418,0,1);
 
         NekDouble spacing[3];
         vtkImageReader->SetFilePrefix(argv[2]);
         //vtkImageReader->SetDataExtent(0,100,0,100,0,249);
         vtkImageReader->SetDataExtent(0,100,0,100,0,99);
         vtkImageReader->GetDataSpacing(spacing);
-        //vtkImageReader->SetFilePattern("%s%03d.tif");
-        vtkImageReader->SetFilePattern("%s%02d.tif");
+        vtkImageReader->SetFilePattern("%s%03d.tif");
+        //vtkImageReader->SetFilePattern("%s%02d.tif");
+
         vtkImageReader->UpdateWholeExtent();
         imageData= vtkImageReader->GetOutput();
 
@@ -133,11 +135,13 @@ int main(int argc, char* argv[])
             //Extract the intensity value
             intensity=imageData->GetScalarComponentAsDouble(ijk[0],ijk[1],ijk[2],0);
             //intensity=intensity/max_val;
-            cout<< "intensity value: " <<intensity<<endl;
+            //cout<< "intensity value: " <<intensity<<endl;
+
 
             for (int j = 0; j < coordim; ++j)
             {
                 m_spatialperm[j][i]=intensity;
+
             }
         }
 
