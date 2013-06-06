@@ -1224,6 +1224,16 @@ namespace Nektar
             }
         }
 
+        CompositeOrdering SessionReader::GetCompositeOrdering() const
+        {
+            return m_compOrder;
+        }
+
+        BndRegionOrdering SessionReader::GetBndRegionOrdering() const
+        {
+            unsigned int vThr = m_threadManager->GetWorkerNum();
+            return m_bndRegOrder[vThr];
+        }
 
         /**
          *
@@ -1412,20 +1422,31 @@ namespace Nektar
             // Number of partitions needed
             int numPartitions = vCommMesh->GetSize();
             unsigned int vThr = m_threadManager->GetWorkerNum();
+            unsigned int vNumThr = m_threadManager->GetMaxNumWorkers();
 
+            m_bndRegOrder.resize(vNumThr);
             // Partition mesh into length of row comms
             if (numPartitions > 1)
             {
             	if (vThr == 0)
             	{
-					// Partitioner now operates in parallel
-					// Each process receives partitioning over interconnect
-					// and writes its own session file to the working directory.
+
+            		/*
+            		 * Partitioner operates on rank0, thread0.
+            		 * Partition information is disseminated to other ranks.
+            		 * Info is written to thread specific files by each rank.
+            		 * Yes, this is a bit of a dog's dinner; blame Chris for
+            		 * changing stuff while I was working on it. SJC.
+            		 */
 					SessionReaderSharedPtr vSession     = GetSharedThisPtr();
 					MeshPartitionSharedPtr vPartitioner = MemoryManager<
 						MeshPartition>::AllocateSharedPtr(vSession);
 					vPartitioner->PartitionMesh(numPartitions);
 					vPartitioner->WriteLocalPartition(vSession);
+                    vPartitioner->GetCompositeOrdering(m_compOrder);
+					for (unsigned int i = 0; i < vNumThr; ++i) {
+						vPartitioner->GetBndRegionOrdering(m_bndRegOrder[i], i);
+					}
 
 
 //					m_filename = GetSessionNameRank() + ".xml";

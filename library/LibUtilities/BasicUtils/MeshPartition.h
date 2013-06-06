@@ -48,6 +48,8 @@ namespace Nektar
     namespace LibUtilities
     {
         class SessionReader;
+        typedef std::map<int, std::vector<unsigned int> > CompositeOrdering;
+        typedef std::map<int, std::vector<unsigned int> > BndRegionOrdering;
 
         class MeshPartition
         {
@@ -60,13 +62,18 @@ namespace Nektar
             LIB_UTILITIES_EXPORT void PartitionMesh(int pNumPartitions);
             LIB_UTILITIES_EXPORT void WriteLocalPartition(
                     SessionReaderSharedPtr& pSession);
+            LIB_UTILITIES_EXPORT void GetCompositeOrdering(
+                    CompositeOrdering &composites);
+            LIB_UTILITIES_EXPORT void GetBndRegionOrdering(
+                    BndRegionOrdering &composites,
+                    unsigned int pThr);
 
         private:
             struct MeshEntity
             {
                 int id;
                 char type;
-                std::vector<int> list;
+                std::vector<unsigned int> list;
             };
 
             struct MeshVertex
@@ -178,6 +185,7 @@ namespace Nektar
             BoostSubGraph              m_mesh;
             //BoostSubGraph              m_localPartition;
             std::vector<BoostSubGraph> m_localPartition;
+            std::vector<BndRegionOrdering>      m_bndRegOrder;
 
             CommSharedPtr                       m_comm;
 
@@ -185,7 +193,8 @@ namespace Nektar
             void CreateGraph(BoostSubGraph& pGraph);
             void PartitionGraph(BoostSubGraph& pGraph,
                                 int pNumPartitions);
-            void OutputPartition(SessionReaderSharedPtr& pSession, const BoostSubGraph& pGraph, TiXmlElement* pGeometry);
+            void OutputPartition(SessionReaderSharedPtr& pSession, const BoostSubGraph& pGraph, TiXmlElement* pGeometry,
+            		unsigned int pThr);
             void CheckPartitions(Array<OneD, int> &pPart);
         };
 

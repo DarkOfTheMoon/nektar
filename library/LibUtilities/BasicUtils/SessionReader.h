@@ -95,6 +95,9 @@ namespace Nektar
         class Equation;
         typedef boost::shared_ptr<Equation> EquationSharedPtr;
 
+        typedef std::map<int, std::vector<unsigned int> > CompositeOrdering;
+        typedef std::map<int, std::vector<unsigned int> > BndRegionOrdering;
+
         struct FunctionVariableDefinition
         {
             enum FunctionType m_type;
@@ -406,6 +409,8 @@ namespace Nektar
 
             /// Substitutes expressions defined in the XML document.
             LIB_UTILITIES_EXPORT void SubstituteExpressions(std::string &expr);
+            LIB_UTILITIES_EXPORT CompositeOrdering GetCompositeOrdering() const;
+            LIB_UTILITIES_EXPORT BndRegionOrdering GetBndRegionOrdering() const;
 
             LIB_UTILITIES_EXPORT Nektar::Thread::ThreadManagerSharedPtr GetThreadManager();
 
@@ -449,7 +454,11 @@ namespace Nektar
             Nektar::Thread::ThreadManagerSharedPtr    m_threadManager;
             // Holds the function that will be run after Session is initialised.
             LIB_UTILITIES_EXPORT void 				(*m_mainFunc)(SessionReaderSharedPtr);
-
+            /// Map of original composite ordering for parallel periodic bcs.
+            CompositeOrdering                         m_compOrder;
+            /// Map of original boundary region ordering for parallel periodic
+            /// bcs.
+            std::vector<BndRegionOrdering>            m_bndRegOrder;
             /// String to enumeration map for Solver Info parameters.
             LIB_UTILITIES_EXPORT static EnumMapList   m_enums;
             /// Default solver info options.

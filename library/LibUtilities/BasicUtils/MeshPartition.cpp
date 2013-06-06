@@ -64,6 +64,7 @@ namespace Nektar
 		MeshPartition::MeshPartition(const LibUtilities::SessionReaderSharedPtr& pSession) :
 			m_threadManager(pSession->GetThreadManager()),
 			m_localPartition(m_threadManager->GetMaxNumWorkers()),
+			m_bndRegOrder(m_threadManager->GetMaxNumWorkers()),
 			m_comm(pSession->GetComm())
         {
             ReadMesh(pSession);
@@ -96,7 +97,7 @@ namespace Nektar
 				TiXmlElement* vElmtNektar;
 				vElmtNektar = new TiXmlElement("NEKTAR");
 
-				OutputPartition(pSession, m_localPartition[thr], vElmtNektar);
+				OutputPartition(pSession, m_localPartition[thr], vElmtNektar, thr);
 
 				vNew.LinkEndChild(vElmtNektar);
 
@@ -104,6 +105,21 @@ namespace Nektar
 						m_comm->GetRowComm()->GetRank() + thr) + ".xml";
 				vNew.SaveFile(vFilename.c_str());
         	}
+        }
+
+        void MeshPartition::GetCompositeOrdering(CompositeOrdering &composites)
+        {
+            std::map<int, MeshEntity>::iterator it;
+            for (it  = m_meshComposites.begin();
+                 it != m_meshComposites.end(); ++it)
+            {
+                composites[it->first] = it->second.list;
+            }
+        }
+
+        void MeshPartition::GetBndRegionOrdering(BndRegionOrdering &bndRegs, unsigned int pThr)
+        {
+            bndRegs = m_bndRegOrder[pThr];
         }
 
         void MeshPartition::ReadMesh(const LibUtilities::SessionReaderSharedPtr& pSession)
@@ -462,7 +478,8 @@ namespace Nektar
         void MeshPartition::OutputPartition(
                 LibUtilities::SessionReaderSharedPtr& pSession,
                 const BoostSubGraph& pGraph,
-                TiXmlElement* pNektar)
+                TiXmlElement* pNektar,
+                unsigned int pThr)
         {
             // Write Geometry data
             std::string vDim   = pSession->GetElement("Nektar/Geometry")->Attribute("DIM");
@@ -755,7 +772,7 @@ namespace Nektar
 
             if (pSession->DefinesElement("Nektar/Conditions"))
             {
-                std::map<int, int> vBndRegionIdList;
+                std::set<int> vBndRegionIdList;
                 TiXmlElement* vConditions    = new TiXmlElement(*pSession->GetElement("Nektar/Conditions"));
                 TiXmlElement* vBndRegions    = vConditions->FirstChildElement("BOUNDARYREGIONS");
                 TiXmlElement* vBndConditions = vConditions->FirstChildElement("BOUNDARYCONDITIONS");
@@ -765,7 +782,6 @@ namespace Nektar
                 {
                     TiXmlElement* vNewBndRegions = new TiXmlElement("BOUNDARYREGIONS");
                     vItem = vBndRegions->FirstChildElement();
-                    int p = 0;
                     while (vItem)
                     {
                         std::string vSeqStr = vItem->FirstChild()->ToText()->Value();
@@ -785,6 +801,7 @@ namespace Nektar
                                 vListStr += boost::lexical_cast<std::string>(vSeq[i]);
                             }
                         }
+                        int p = atoi(vItem->Attribute("ID"));
                         if (vListStr.length() == 0)
                         {
                             vBndRegions->RemoveChild(vItem);
@@ -797,8 +814,12 @@ namespace Nektar
                             vNewElement->SetAttribute("ID", p);
                             vNewElement->LinkEndChild(vList);
                             vNewBndRegions->LinkEndChild(vNewElement);
-                            vBndRegionIdList[atoi(vItem->Attribute("ID"))] = p++;
+                            vBndRegionIdList.insert(p);
                         }
+
+                        // Store original order of boundary region.
+                        m_bndRegOrder[pThr][p] = vSeq;
+                        
                         vItem = vItem->NextSiblingElement();
                     }
                     vConditions->ReplaceChild(vBndRegions, *vNewBndRegions);
@@ -809,10 +830,10 @@ namespace Nektar
                     vItem = vBndConditions->FirstChildElement();
                     while (vItem)
                     {
-                        std::map<int, int>::iterator x;
+                        std::set<int>::iterator x;
                         if ((x = vBndRegionIdList.find(atoi(vItem->Attribute("REF")))) != vBndRegionIdList.end())
                         {
-                            vItem->SetAttribute("REF", x->second);
+                            vItem->SetAttribute("REF", *x);
                         }
                         else
                         {
