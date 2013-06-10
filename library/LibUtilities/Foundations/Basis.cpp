@@ -661,39 +661,11 @@ namespace Nektar
 				{
 					//points z[] are in (-1,1) so we have to rescale to (0,1) on
 					//which Bernstein polynomials are defined:
-					//b(x,P,p) = binom_coeff(P,p) * (x)^p * (1-x)^(P-p)
-					//P is polynomial degree, p is in (0,1,..,n)
+					//P is polynomial degree, p is the number of modes 
 					//We are going to used Legendre-type ordering (in terms of mapping): vertex modes are first and last
 
-					int nu;//lower number in the binomial coefficient binom_coeff(P, nu)
 					int P = numModes - 1;//Bernstein polynomial degree
-					Array<OneD, NekDouble> bern_tmp(numModes, 0.0);
-					
-					//array containing binomial coefficients, first and last are 1s
-                    Array<OneD, NekDouble> b_coeffs(numModes, 1.0);
-					//compute array midpoint, the values after midpoint will be mirrored
-					int mid_array = (numModes%2 == 1) ? numModes/2 + 1 : numModes/2;
-
-					if(numModes > 2)
-					{
-						//auxillary variables used in multiplicative binomial coefficient formula
-						//after all the cancellation is done
-						unsigned long b_coeff_num = P;//binomial coefficient numerator
-						unsigned long b_coeff_den = 1;//binomial coefficient denomiantor
-						unsigned long num_mult = b_coeff_num;
-						unsigned long den_mult = b_coeff_den;
-					
-						for(nu = 1; nu < mid_array; ++nu)
-						{
-							b_coeffs[nu] = (NekDouble)b_coeff_num / (NekDouble)b_coeff_den;
-							b_coeffs[P-nu] = b_coeffs[nu];
-							//decrementing numerator and incrementing denominator
-							num_mult--;
-							den_mult++;
-							b_coeff_num *= num_mult;
-							b_coeff_den *= den_mult;
-						}
-					}
+					Array<OneD, NekDouble> bern_tmp(numModes, 0.0);//temporary array
 					
 					mode = m_bdata.data();
 
@@ -708,7 +680,6 @@ namespace Nektar
 								for(k = 0; k <= P-j; k++)
 									bern_tmp[k] = (0.5-0.5*z[i])*bern_tmp[k] + (0.5+0.5*z[i])*bern_tmp[k+1];
 							mode[i] = bern_tmp[0];
-							//mode[i] = b_coeffs[p] * pow(0.5+0.5*z[i],p) * pow(0.5-0.5*z[i], P-p);
 						}
 					}
 
