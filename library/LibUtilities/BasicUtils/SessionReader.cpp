@@ -1424,13 +1424,12 @@ namespace Nektar
             unsigned int vThr = m_threadManager->GetWorkerNum();
             unsigned int vNumThr = m_threadManager->GetMaxNumWorkers();
 
-            m_bndRegOrder.resize(vNumThr);
             // Partition mesh into length of row comms
             if (numPartitions > 1)
             {
             	if (vThr == 0)
             	{
-
+                    m_bndRegOrder.resize(vNumThr);
             		/*
             		 * Partitioner operates on rank0, thread0.
             		 * Partition information is disseminated to other ranks.
