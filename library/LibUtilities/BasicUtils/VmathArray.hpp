@@ -259,6 +259,17 @@
             
         }
         
+        /// \brief  Svvtvp (vector times vector plus vector): z = alpha*w*x + y
+        template<class T> void Svvtvp(int n, const T alpha, const Array<OneD, const T> &w, const int incw, const Array<OneD,const T> &x, const int incx, const Array<OneD, const T> &y, const int incy, Array<OneD,T> &z, const int incz)
+        {
+            ASSERTL1(n*incw <= w.num_elements()+w.GetOffset(),"Array out of bounds");
+            ASSERTL1(n*incx <= x.num_elements()+x.GetOffset(),"Array out of bounds");
+            ASSERTL1(n*incy <= y.num_elements()+y.GetOffset(),"Array out of bounds");
+            ASSERTL1(n*incz <= z.num_elements()+z.GetOffset(),"Array out of bounds");
+
+            Svvtvp(n,alpha,&w[0],incw,&x[0],incx,&y[0],incy,&z[0],incz);
+        }
+
         /// \brief vvtvvtp (vector times vector plus vector times vector): z = v*w + y*z
         template<class T> void Vvtvvtp (
             int n,

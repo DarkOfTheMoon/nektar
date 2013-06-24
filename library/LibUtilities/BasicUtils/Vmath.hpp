@@ -149,6 +149,14 @@ namespace Vmath
                  const int incx, const T *y, const int incy,
                  T *z, const int incz);
 
+    /// \brief  Svvtvp (scalar times vector times vector plus vector): z = alpha*w*x + y
+    template<class T> LIB_UTILITIES_EXPORT void Svvtvp(int n,
+								 const T alpha,
+                                 const T *w, const int incw,
+                                 const T *x, const int incx,
+                                 const T *y, const int incy,
+                                       T *z, const int incz);
+
     /// \brief  svtvp (scalar times vector plus vector): z = alpha*x + y
     template<class T> LIB_UTILITIES_EXPORT void Svtvp(int n, const T alpha, const T *x,
                  const int incx, const T *y, const int incy,

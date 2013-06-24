@@ -84,6 +84,12 @@ namespace Nektar
             eInflowCFS,
             eOutflowCFS,
             eExtrapOrder0,
+            eOutflow,
+            eFreeSurface,
+            eNavierSlip,
+            eDrag,
+            eWaters,
+            eStressDirichlet,
             eNoUserDefined
         };
 
@@ -116,6 +122,12 @@ namespace Nektar
                 known_type["InflowCFS"] = eInflowCFS;
                 known_type["OutflowCFS"] = eOutflowCFS;
                 known_type["ExtrapOrder0"] = eExtrapOrder0;
+                known_type["Outflow"] = eOutflow;
+                known_type["FreeSurface"] = eFreeSurface;
+                known_type["Slip"] = eNavierSlip;
+                known_type["Drag"] = eDrag;
+                known_type["Waters"] = eWaters;
+                known_type["StressDirichlet"] = eStressDirichlet;
                 known_type["NoUserDefined"] = eNoUserDefined;
 
                 std::map<const std::string, BndUserDefinedType>::const_iterator it = known_type.find(userDefined);
