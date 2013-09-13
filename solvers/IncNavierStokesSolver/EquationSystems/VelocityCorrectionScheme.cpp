@@ -144,6 +144,48 @@ namespace Nektar
 
         m_integrationScheme = LibUtilities::GetTimeIntegrationWrapperFactory().CreateInstance(TimeIntStr);
         m_intSteps = m_integrationScheme->GetIntegrationSteps();
+		
+		
+		////////////////////////////////////////////////////////////////////////////////////
+		/// Initialize wavy geometry
+		if(m_session->DefinesFunction("WavyGeometry"))
+		{
+			int phystot = m_fields[0]->GetTotPoints();
+			// wave geometry variables
+			m_wavyForcing       = Array<OneD, Array< OneD, NekDouble> >(3);       
+			m_wavyGeometricInfo = Array<OneD, Array< OneD, NekDouble> >(6);
+			
+			for(int i = 0; i < m_wavyForcing.num_elements(); i++)
+			{
+				m_wavyForcing[i] = Array<OneD, NekDouble>(phystot,0.0);
+			}
+			
+			for(int i = 0; i < m_wavyGeometricInfo.num_elements(); i++)
+			{
+				m_wavyGeometricInfo[i] = Array<OneD, NekDouble>(phystot,0.0);
+			}
+			
+			EvaluateFunction(m_session->GetVariable(0), m_wavyGeometricInfo[0], "WavyGeometry");
+			
+			// Calculate derivatives of transformation
+			for(int i = 1; i < 4; i++)
+			{
+				m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[2],
+									   m_wavyGeometricInfo[i-1], 
+									   m_wavyGeometricInfo[i]);
+			}
+			
+			Vmath::Vmul(phystot, 
+						m_wavyGeometricInfo[1], 1, 
+						m_wavyGeometricInfo[1], 1, 
+						m_wavyGeometricInfo[4], 1);
+			
+			Vmath::Vmul(phystot, 
+						m_wavyGeometricInfo[1], 1, 
+						m_wavyGeometricInfo[2], 1, 
+						m_wavyGeometricInfo[5], 1);
+		}
+		////////////////////////////////////////////////////////////////////////////////////
 
         if(m_subSteppingScheme)
         {
@@ -403,63 +445,24 @@ namespace Nektar
                                                                     const NekDouble time)
     {
         int nqtot        = m_fields[0]->GetTotPoints();
-        
-        Timer  timer;
-        bool IsRoot = (m_comm->GetColumnComm()->GetRank())? false:true;
-
-        timer.Start();
+		
         // evaluate convection terms
         m_advObject->DoAdvection(m_fields, m_nConvectiveFields, m_velocity,inarray,outarray,m_time);
-        timer.Stop();
-        if(m_showTimings&&IsRoot)
-        {
-            cout << "\t Adv. eval Time   : "<< timer.TimePerTest(1) << endl;
-        }
 		
-        if(m_SmoothAdvection && m_pressureCalls > 1)
-        {
-            for(int i = 0; i < m_nConvectiveFields; ++i)
-            {
-                m_pressure->SmoothField(outarray[i]);
-            }
-        }
-
-        //add the force
-        if(m_session->DefinesFunction("BodyForce"))
-        {
-            timer.Start();
-            if(m_fields[0]->GetWaveSpace())
-            {
-                for(int i = 0; i < m_nConvectiveFields; ++i)
-                {
-                    m_forces[i]->SetWaveSpace(true);					
-                    m_forces[i]->BwdTrans(m_forces[i]->GetCoeffs(),
-                                          m_forces[i]->UpdatePhys());
-                }
-            }
-            for(int i = 0; i < m_nConvectiveFields; ++i)
-            {
-                Vmath::Vadd(nqtot,outarray[i],1,(m_forces[i]->GetPhys()),1,
-                            outarray[i],1);
-            }
-            timer.Stop();
-            if(m_showTimings&&IsRoot)
-            {
-                cout << "\t Body ForceTime   : "<< timer.TimePerTest(1) << endl;
-            }
-        }
-        
         if(m_pressureHBCs[0].num_elements() > 0)
         {
-            // Set pressure BCs
-            timer.Start();
-            EvaluatePressureBCs(inarray, outarray); 
-            timer.Stop();
-
-            if(m_showTimings&&IsRoot)
+            EvaluatePressureBCs(inarray, outarray);
+        }
+		
+		/// Add wavy geometry Forcing
+        if(m_session->DefinesFunction("WavyGeometry"))
+        {
+            CalculateWavyForcing();
+			
+			for(int i = 0; i < m_nConvectiveFields; ++i)
             {
-                cout << "\t Pressure BCs     : "<< timer.TimePerTest(1) << endl;
-            }
+                Vmath::Vadd(nqtot,outarray[i],1,m_wavyForcing[i],1,outarray[i],1);
+            }            
         }
     }
     
@@ -1501,6 +1504,127 @@ namespace Nektar
         }
         /////////////////////////////////////////////////////////////////////////
     }
+	
+	/////////////////////////////////////////////////////////////////////////
+	//////////////  WAVE FORCING  ////////////////////////
+	/////////////////////////////////////////////////////////////////////////
+    void VelocityCorrectionScheme::CalculateWavyForcing()
+    {
+        int nPointsTot = m_fields[0]->GetNpoints();
+		
+		Array<OneD, NekDouble> U,V,W,P,tmp1,tmp2,tmp3, Wz, Wzz, Px;
+		
+		U = Array<OneD, NekDouble> (nPointsTot);
+		V = Array<OneD, NekDouble> (nPointsTot);
+		W = Array<OneD, NekDouble> (nPointsTot);
+		P = Array<OneD, NekDouble> (nPointsTot);
+		
+		tmp1 = Array<OneD, NekDouble> (nPointsTot);
+		tmp2 = Array<OneD, NekDouble> (nPointsTot);
+		tmp3 = Array<OneD, NekDouble> (nPointsTot);
+		
+		Wz  = Array<OneD, NekDouble> (nPointsTot);
+		Wzz = Array<OneD, NekDouble> (nPointsTot);
+		Px  = Array<OneD, NekDouble> (nPointsTot);
+		
+		m_fields[0]->HomogeneousBwdTrans(m_fields[0]->GetPhys(),U);
+		m_fields[0]->HomogeneousBwdTrans(m_fields[1]->GetPhys(),V);
+		m_fields[0]->HomogeneousBwdTrans(m_fields[2]->GetPhys(),W);
+		m_fields[0]->HomogeneousBwdTrans(m_fields[3]->GetPhys(),P);
+		
+	    //-------------------------------------------------------------------------------------------------
+		// Ax calculation
+		
+		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],P,Px); // Px
+		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[2],m_fields[3]->GetPhys(),tmp2); // Pz
+		m_fields[0]->HomogeneousBwdTrans(tmp2,tmp3); // Pz in physiacl space
+		
+		Vmath::Vmul(nPointsTot,tmp3,1,m_wavyGeometricInfo[1],1,tmp3,1); // Pz * Xz
+		Vmath::Vmul(nPointsTot,Px,1,m_wavyGeometricInfo[4],1,tmp1,1); // Px * Xz^2
+		Vmath::Vmul(nPointsTot,W,1,W,1,tmp2,1); // W^2
+		Vmath::Vmul(nPointsTot,tmp2,1,m_wavyGeometricInfo[2],1,tmp2,1); // Xzz * W^2
+		
+		Vmath::Vsub(nPointsTot,tmp3,1,tmp1,1,m_wavyForcing[0],1); // Pz * Xz - Px * Xz^2
+		Vmath::Vsub(nPointsTot,m_wavyForcing[0],1,tmp2,1,m_wavyForcing[0],1); // A0 = Pz * Xz - Px * Xz^2 - Xzz * W^2
+		
+		Vmath::Vmul(nPointsTot,W,1,m_wavyGeometricInfo[3],1,tmp1,1); // W * Xzzz
+		Vmath::Vadd(nPointsTot,tmp1,1,m_wavyGeometricInfo[5],1,tmp1,1); // A1 = W * Xzzz + Xz * Xzz
+		
+		Vmath::Svtvp(nPointsTot,m_kinvis,tmp1,1,m_wavyForcing[0],1,m_wavyForcing[0],1); // A0 + 1/Re* A1
+		
+		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[2],m_fields[2]->GetPhys(),tmp1); // Wz
+		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[2],tmp1,tmp2); // Wzz
+		
+		m_fields[0]->HomogeneousBwdTrans(tmp1,Wz);  //Wz
+		m_fields[0]->HomogeneousBwdTrans(tmp2,Wzz); //Wzz
+		
+		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[2],m_fields[0]->GetPhys(),tmp1); // Uz
+		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],tmp1,tmp2); // Uzx
+		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],U,tmp3); // Ux
+		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],tmp3,U); // Uxx
+		m_fields[0]->HomogeneousBwdTrans(tmp2,tmp1);  // Uzx in ohysical space
+		
+		Vmath::Vmul(nPointsTot,tmp1,1,m_wavyGeometricInfo[1],1,tmp1,1); // Uzx * Xz (1)
+		Vmath::Vmul(nPointsTot,U,1,m_wavyGeometricInfo[4],1,U,1); // Uxx * Xz^2 (2)
+		Vmath::Vmul(nPointsTot,tmp3,1,m_wavyGeometricInfo[2],1,tmp3,1); // Ux * Xzz (3)
+		Vmath::Vmul(nPointsTot,Wzz,1,m_wavyGeometricInfo[1],1,tmp2,1); // Wzz * Xz (4)
+		
+		Vmath::Vsub(nPointsTot,U,1,tmp3,1,tmp3,1); // (2) - (3) 
+		Vmath::Vsub(nPointsTot,tmp3,1,tmp2,1,tmp3,1); // (2) - (3) - (4)
+		Vmath::Svtvp(nPointsTot,-2.0,tmp1,1,tmp3,1,tmp3,1); // (2) - (3) -(4) - 2*(1) = A2
+		
+		Vmath::Svtvp(nPointsTot,m_kinvis,tmp3,1,m_wavyForcing[0],1,tmp1,1); // A0 + 1/Re* A1 + 1/Re * A2
+		
+		m_fields[0]->HomogeneousFwdTrans(tmp1,m_wavyForcing[0]); // back to Fourier Space
+		
+		//-------------------------------------------------------------------------------------------------
+		// Ay calucaltion
+
+		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],V,tmp1); // Vx
+		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],tmp1,tmp2); // Vxx
+		Vmath::Vmul(nPointsTot,tmp1,1,m_wavyGeometricInfo[2],1,tmp1,1); // Vx * Xzz
+		Vmath::Vmul(nPointsTot,tmp2,1,m_wavyGeometricInfo[4],1,tmp2,1); // Vxx * Xzz^2
+		
+		Vmath::Vsub(nPointsTot,tmp2,1,tmp1,1,m_wavyForcing[1],1); // - Vx* Xzz + Vxx * Xzz^2
+		
+		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[2],m_fields[1]->GetPhys(),tmp3); //Vz
+		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],tmp3,tmp2); //Vzx
+		m_fields[0]->HomogeneousBwdTrans(tmp2,tmp1); // Vzx physical space
+		
+		Vmath::Vmul(nPointsTot,tmp1,1,m_wavyGeometricInfo[1],1,tmp2,1); // Vzx * Xz
+		Vmath::Svtvp(nPointsTot,-2.0,tmp2,1,m_wavyForcing[1],1,m_wavyForcing[1],1); // - Vx * Xzz - 2 * Vzx * Xz+ Vxx * Xzz^2
+		
+		Vmath::Smul(nPointsTot,m_kinvis,m_wavyForcing[1],1,tmp1,1); // * 1/Re
+		
+		m_fields[0]->HomogeneousFwdTrans(tmp1,m_wavyForcing[1]); // back to Fourier Space
+		
+		//-------------------------------------------------------------------------------------------------
+		// Az calculation
+		
+		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],Wz,tmp2); // Wzx
+
+		Vmath::Vmul(nPointsTot,tmp2,1,m_wavyGeometricInfo[1],1,tmp2,1); // Wzx * Xz
+		
+		Vmath::Svtvp(nPointsTot,-2.0,tmp2,1,Wzz,1,m_wavyForcing[2],1); // Wzz - 2 * Wzx * Xz
+		
+		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],W,tmp1); // Wx
+		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],tmp1,tmp2); // Wxx
+		Vmath::Vmul(nPointsTot,tmp1,1,m_wavyGeometricInfo[2],1,tmp1,1); // Wx * Xzz
+		Vmath::Vmul(nPointsTot,tmp2,1,m_wavyGeometricInfo[4],1,tmp2,1); // Wxx * Xz^2
+		
+		Vmath::Vsub(nPointsTot,m_wavyForcing[2],1,tmp1,1,m_wavyForcing[2],1); // Wzz - 2 * Wzx * Xz - Wx * Xzz
+		Vmath::Vadd(nPointsTot,m_wavyForcing[2],1,tmp2,1,m_wavyForcing[2],1); // Wzz - 2 * Wzx * Xz - Wx * Xzz + Wxx * Xz^2
+		
+		Vmath::Smul(nPointsTot,m_kinvis,m_wavyForcing[2],1,m_wavyForcing[2],1); // * 1/Re
+		
+		Vmath::Vmul(nPointsTot,Px,1,m_wavyGeometricInfo[1],1,tmp1,1); // Px * Xz
+		
+		Vmath::Vadd(nPointsTot,m_wavyForcing[2],1,tmp1,1,tmp2,1); // Px * Xz + 1/Re* [.....]
+		
+		m_fields[0]->HomogeneousFwdTrans(tmp2,m_wavyForcing[2]); // back to Fourier Space
+    }
+	/////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////
     
 } //end of namespace
 

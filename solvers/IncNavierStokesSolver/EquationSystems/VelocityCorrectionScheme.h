@@ -136,6 +136,12 @@ namespace Nektar
                 NekDouble Aii_Dt);
 
     protected:
+		
+		void CalculateWavyForcing();
+		
+		// wave geometry variables
+		Array<OneD, Array< OneD, NekDouble> > m_wavyForcing;       
+		Array<OneD, Array< OneD, NekDouble> > m_wavyGeometricInfo;
 
     private:
         int m_pressureCalls;
