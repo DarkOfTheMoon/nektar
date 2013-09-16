@@ -265,10 +265,7 @@ namespace Nektar
             // This only has to be done on the zero (mean) Fourier mode.
             if(m_isHomogeneous1D)
             {
-				Array<OneD, unsigned int> planes;
-				planes = pFields[0]->GetZIDs();
-				
-				if(planes[0] == 0)
+				if(vComm->GetColumnComm()->GetRank() == 0)
 				{
 					pFields[0]->GetPlane(0)->GetBoundaryToElmtMap(BoundarytoElmtID,BoundarytoTraceID);
 					BndExp = pFields[0]->GetPlane(0)->GetBndCondExpansions();
@@ -710,9 +707,14 @@ namespace Nektar
 
             }
 
+			vComm->AllReduce(D_p, LibUtilities::ReduceSum);
+			vComm->AllReduce(D_t, LibUtilities::ReduceSum);
             vComm->AllReduce(D, LibUtilities::ReduceSum);
-            vComm->AllReduce(L, LibUtilities::ReduceSum);
-
+            
+			vComm->AllReduce(L_p, LibUtilities::ReduceSum);
+			vComm->AllReduce(L_t, LibUtilities::ReduceSum);
+			vComm->AllReduce(L, LibUtilities::ReduceSum);
+			
             if (vComm->GetRank() == 0)
             {
                 m_outputStream.width(8);
