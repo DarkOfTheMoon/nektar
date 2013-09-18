@@ -91,7 +91,6 @@ namespace Nektar
             std::string                     m_BoundaryString;
             /// number of planes for homogeneous1D expansion
             int                             m_nplanes;
-			bool                            m_wavygeometry;
         };
     }
 }
