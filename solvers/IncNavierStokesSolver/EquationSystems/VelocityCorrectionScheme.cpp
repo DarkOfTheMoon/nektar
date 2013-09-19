@@ -449,11 +449,6 @@ namespace Nektar
         // evaluate convection terms
         m_advObject->DoAdvection(m_fields, m_nConvectiveFields, m_velocity,inarray,outarray,m_time);
 		
-        if(m_pressureHBCs[0].num_elements() > 0)
-        {
-            EvaluatePressureBCs(inarray, outarray);
-        }
-		
 		/// Add wavy geometry Forcing
         if(m_session->DefinesFunction("WavyGeometry"))
         {
@@ -461,9 +456,11 @@ namespace Nektar
 			
 			for(int i = 0; i < m_nConvectiveFields; ++i)
             {
-                Vmath::Vadd(nqtot,outarray[i],1,m_wavyForcing[i],1,outarray[i],1);
+                Vmath::Vsub(nqtot,outarray[i],1,m_wavyForcing[i],1,outarray[i],1);
             }            
         }
+    
+        EvaluatePressureBCs(inarray, outarray);
     }
     
     void VelocityCorrectionScheme::SolveUnsteadyStokesSystem(const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
