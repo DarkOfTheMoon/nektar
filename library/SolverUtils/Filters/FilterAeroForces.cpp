@@ -564,8 +564,9 @@ namespace Nektar
                             Vmath::Smul(nbc,-2.0,fgradV[1],1,fgradV[1],1);
                             Vmath::Vmul(nbc,fgradV[1],1,normals[1],1,temp2,1);
                             Vmath::Smul(nbc,-0.5,fgradV[1],1,fgradV[1],1);
-
-                            Vmath::Vadd(nbc,temp2,1,lift_t,1,lift_t,1);
+							
+                            Vmath::Vadd(nbc,temp,1,temp2,1,temp,1);
+                            Vmath::Vadd(nbc,temp,1,lift_t,1,lift_t,1);
                             Vmath::Smul(nbc,mu,lift_t,1,lift_t,1);
 							
 							//zero temporary storage vector
@@ -579,7 +580,7 @@ namespace Nektar
                             Vmath::Neg(nbc,temp,1);
                             Vmath::Vmul(nbc,temp,1,normals[1],1,temp,1);
 							
-                            Vmath::Vadd(nbc,fgradU[2],1,fgradW[1],1,side_t,1);
+                            Vmath::Vadd(nbc,fgradU[2],1,fgradW[0],1,side_t,1);
                             Vmath::Neg(nbc,side_t,1);
                             Vmath::Vmul(nbc,side_t,1,normals[0],1,side_t,1);
 							
@@ -587,7 +588,8 @@ namespace Nektar
                             Vmath::Vmul(nbc,fgradW[2],1,normals[2],1,temp2,1);
                             Vmath::Smul(nbc,-0.5,fgradW[2],1,fgradW[2],1);
 							
-                            Vmath::Vadd(nbc,temp2,1,side_t,1,side_t,1);
+							Vmath::Vadd(nbc,temp,1,temp2,1,temp,1);
+                            Vmath::Vadd(nbc,temp,1,side_t,1,side_t,1);
                             Vmath::Smul(nbc,mu,side_t,1,side_t,1);
 
 
