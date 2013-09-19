@@ -1547,35 +1547,37 @@ namespace Nektar
 		Vmath::Vsub(nPointsTot,tmp3,1,tmp1,1,m_wavyForcing[0],1); // Pz * Xz - Px * Xz^2
 		Vmath::Vsub(nPointsTot,m_wavyForcing[0],1,tmp2,1,m_wavyForcing[0],1); // A0 = Pz * Xz - Px * Xz^2 - Xzz * W^2
 		
-		Vmath::Vmul(nPointsTot,W,1,m_wavyGeometricInfo[3],1,tmp1,1); // W * Xzzz
-		Vmath::Vadd(nPointsTot,tmp1,1,m_wavyGeometricInfo[5],1,tmp1,1); // A1 = W * Xzzz + Xz * Xzz
-		
-		Vmath::Svtvp(nPointsTot,m_kinvis,tmp1,1,m_wavyForcing[0],1,m_wavyForcing[0],1); // A0 + 1/Re* A1
+		// here part to be multiplied by 1/Re we use P to store it, since we dont't need it anymore
+		Vmath::Vmul(nPointsTot,W,1,m_wavyGeometricInfo[3],1,P,1); // W * Xzzz
+		Vmath::Vadd(nPointsTot,P,1,m_wavyGeometricInfo[5],1,P,1); // P = W * Xzzz + Xz * Xzz
 		
 		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[2],m_fields[2]->GetPhys(),tmp1); // Wz
 		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[2],tmp1,tmp2); // Wzz
+		m_fields[0]->HomogeneousBwdTrans(tmp1,Wz);  //Wz in physical space
+		m_fields[0]->HomogeneousBwdTrans(tmp2,Wzz); //Wzz in physical space
+		Vmath::Vmul(nPointsTot,Wzz,1,m_wavyGeometricInfo[1],1,tmp1,1); // Wzz * Xz
+		Vmath::Vsub(nPointsTot,P,1,tmp1,1,P,1); // P = W * Xzzz + Xz * Xzz - Wzz * Xz
 		
-		m_fields[0]->HomogeneousBwdTrans(tmp1,Wz);  //Wz
-		m_fields[0]->HomogeneousBwdTrans(tmp2,Wzz); //Wzz
+		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],U,tmp1); // Ux
+		Vmath::Vmul(nPointsTot,tmp1,1,m_wavyGeometricInfo[2],1,tmp2,1); // Ux * Xzz
+		Vmath::Vsub(nPointsTot,P,1,tmp2,1,P,1); // P = W * Xzzz + Xz * Xzz - Wzz * Xz - Ux * Xzz
+		
+		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],tmp1,tmp2); // Uxx
+		Vmath::Vmul(nPointsTot,tmp2,1,m_wavyGeometricInfo[4],1,tmp2,1); // Uxx * Xz^2
+		Vmath::Vadd(nPointsTot,P,1,tmp2,1,P,1); // P = W * Xzzz + Xz * Xzz - Wzz * Xz - Ux * Xzz + Uxx * Xz^2
 		
 		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[2],m_fields[0]->GetPhys(),tmp1); // Uz
 		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],tmp1,tmp2); // Uzx
-		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],U,tmp3); // Ux
-		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],tmp3,U); // Uxx
-		m_fields[0]->HomogeneousBwdTrans(tmp2,tmp1);  // Uzx in ohysical space
+		m_fields[0]->HomogeneousBwdTrans(tmp2,tmp1);  // Uzx in physical space
 		
-		Vmath::Vmul(nPointsTot,tmp1,1,m_wavyGeometricInfo[1],1,tmp1,1); // Uzx * Xz (1)
-		Vmath::Vmul(nPointsTot,U,1,m_wavyGeometricInfo[4],1,U,1); // Uxx * Xz^2 (2)
-		Vmath::Vmul(nPointsTot,tmp3,1,m_wavyGeometricInfo[2],1,tmp3,1); // Ux * Xzz (3)
-		Vmath::Vmul(nPointsTot,Wzz,1,m_wavyGeometricInfo[1],1,tmp2,1); // Wzz * Xz (4)
+		Vmath::Vmul(nPointsTot,tmp1,1,m_wavyGeometricInfo[1],1,tmp1,1); // Uzx * Xz
+		Vmath::Smul(nPointsTot,2.0,tmp1,1,tmp2,1); // 2 * Uzx * Xz
+		Vmath::Vsub(nPointsTot,P,1,tmp2,1,P,1); // P = W * Xzzz + Xz * Xzz - Wzz * Xz - Ux * Xzz + Uxx * Xz^2 - 2 * Uzx * Xz
 		
-		Vmath::Vsub(nPointsTot,U,1,tmp3,1,tmp3,1); // (2) - (3) 
-		Vmath::Vsub(nPointsTot,tmp3,1,tmp2,1,tmp3,1); // (2) - (3) - (4)
-		Vmath::Svtvp(nPointsTot,-2.0,tmp1,1,tmp3,1,tmp3,1); // (2) - (3) -(4) - 2*(1) = A2
-		
-		Vmath::Svtvp(nPointsTot,m_kinvis,tmp3,1,m_wavyForcing[0],1,tmp1,1); // A0 + 1/Re* A1 + 1/Re * A2
-		
-		m_fields[0]->HomogeneousFwdTrans(tmp1,m_wavyForcing[0]); // back to Fourier Space
+	    Vmath::Smul(nPointsTot,m_kinvis,P,1,tmp1,1); // *1/Re
+		Vmath::Vadd(nPointsTot,tmp1,1,m_wavyForcing[0],1,tmp2,1);
+
+		m_fields[0]->HomogeneousFwdTrans(tmp2,m_wavyForcing[0]); // back to Fourier Space
 		
 		//-------------------------------------------------------------------------------------------------
 		// Ay calucaltion
@@ -1583,44 +1585,46 @@ namespace Nektar
 		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],V,tmp1); // Vx
 		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],tmp1,tmp2); // Vxx
 		Vmath::Vmul(nPointsTot,tmp1,1,m_wavyGeometricInfo[2],1,tmp1,1); // Vx * Xzz
-		Vmath::Vmul(nPointsTot,tmp2,1,m_wavyGeometricInfo[4],1,tmp2,1); // Vxx * Xzz^2
+		Vmath::Vmul(nPointsTot,tmp2,1,m_wavyGeometricInfo[4],1,tmp2,1); // Vxx * Xz^2
 		
-		Vmath::Vsub(nPointsTot,tmp2,1,tmp1,1,m_wavyForcing[1],1); // - Vx* Xzz + Vxx * Xzz^2
+		Vmath::Vsub(nPointsTot,tmp2,1,tmp1,1,m_wavyForcing[1],1); // Vxx * Xz^2 - Vx* Xzz
 		
 		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[2],m_fields[1]->GetPhys(),tmp3); //Vz
 		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],tmp3,tmp2); //Vzx
 		m_fields[0]->HomogeneousBwdTrans(tmp2,tmp1); // Vzx physical space
 		
 		Vmath::Vmul(nPointsTot,tmp1,1,m_wavyGeometricInfo[1],1,tmp2,1); // Vzx * Xz
-		Vmath::Svtvp(nPointsTot,-2.0,tmp2,1,m_wavyForcing[1],1,m_wavyForcing[1],1); // - Vx * Xzz - 2 * Vzx * Xz+ Vxx * Xzz^2
-		
-		Vmath::Smul(nPointsTot,m_kinvis,m_wavyForcing[1],1,tmp1,1); // * 1/Re
+		Vmath::Smul(nPointsTot,2.0,tmp2,1,tmp1,1); // 2 * Vzx * Xz
+		Vmath::Vsub(nPointsTot,m_wavyForcing[1],1,tmp1,1,tmp3,1); // Vxx * Xz^2 - Vx* Xzz - Vxz * Xz
+				
+		Vmath::Smul(nPointsTot,m_kinvis,tmp3,1,tmp1,1); // * 1/Re
 		
 		m_fields[0]->HomogeneousFwdTrans(tmp1,m_wavyForcing[1]); // back to Fourier Space
 		
 		//-------------------------------------------------------------------------------------------------
 		// Az calculation
 		
-		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],Wz,tmp2); // Wzx
-
-		Vmath::Vmul(nPointsTot,tmp2,1,m_wavyGeometricInfo[1],1,tmp2,1); // Wzx * Xz
+		Vmath::Vmul(nPointsTot,Px,1,m_wavyGeometricInfo[1],1,P,1); // Px * Xz
 		
-		Vmath::Svtvp(nPointsTot,-2.0,tmp2,1,Wzz,1,m_wavyForcing[2],1); // Wzz - 2 * Wzx * Xz
+		Vmath::Vsub(nPointsTot,Wzz,1,m_wavyGeometricInfo[2],1,Wzz,1); //  Wzz - Xzz
 		
 		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],W,tmp1); // Wx
+		Vmath::Vmul(nPointsTot,tmp1,1,m_wavyGeometricInfo[2],1,tmp2,1); // Wx * Xzz
+		Vmath::Vsub(nPointsTot,Wzz,1,tmp2,1,Wzz,1); //  Wzz - Xzz - Wx * Xzz
+		
 		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],tmp1,tmp2); // Wxx
-		Vmath::Vmul(nPointsTot,tmp1,1,m_wavyGeometricInfo[2],1,tmp1,1); // Wx * Xzz
 		Vmath::Vmul(nPointsTot,tmp2,1,m_wavyGeometricInfo[4],1,tmp2,1); // Wxx * Xz^2
+		Vmath::Vadd(nPointsTot,Wzz,1,tmp2,1,Wzz,1); //  Wzz - Xzz - Wx * Xzz + Wxx * Xz^2
 		
-		Vmath::Vsub(nPointsTot,m_wavyForcing[2],1,tmp1,1,m_wavyForcing[2],1); // Wzz - 2 * Wzx * Xz - Wx * Xzz
-		Vmath::Vadd(nPointsTot,m_wavyForcing[2],1,tmp2,1,m_wavyForcing[2],1); // Wzz - 2 * Wzx * Xz - Wx * Xzz + Wxx * Xz^2
+		m_fields[0]->PhysDeriv(MultiRegions::DirCartesianMap[0],Wz,tmp1); // Wzx
+		Vmath::Vmul(nPointsTot,tmp1,1,m_wavyGeometricInfo[1],1,tmp1,1); // Wzx * Xz
+		Vmath::Smul(nPointsTot,2.0,tmp1,1,tmp1,1); // 2 * Vzx * Xz
+		Vmath::Vsub(nPointsTot,Wzz,1,tmp1,1,Wzz,1); //  Wzz - Xzz - Wx * Xzz + Wxx * Xz^2 - 2 * Vzx * Xz
 		
-		Vmath::Smul(nPointsTot,m_kinvis,m_wavyForcing[2],1,m_wavyForcing[2],1); // * 1/Re
+		Vmath::Smul(nPointsTot,m_kinvis,Wzz,1,tmp1,1); // * 1/Re
 		
-		Vmath::Vmul(nPointsTot,Px,1,m_wavyGeometricInfo[1],1,tmp1,1); // Px * Xz
-		
-		Vmath::Vadd(nPointsTot,m_wavyForcing[2],1,tmp1,1,tmp2,1); // Px * Xz + 1/Re* [.....]
-		
+		Vmath::Vadd(nPointsTot,tmp1,1,P,1,tmp2,1);
+	
 		m_fields[0]->HomogeneousFwdTrans(tmp2,m_wavyForcing[2]); // back to Fourier Space
     }
 	/////////////////////////////////////////////////////////////////////////
