@@ -439,13 +439,14 @@ namespace Nektar
             /// Expressions.
             std::vector<ExpressionMap>                m_expressions;
             /// Analytic expression evaluator instance.
-            AnalyticExpressionEvaluator               m_exprEvaluator;
+            std::vector<AnalyticExpressionEvaluator* >  m_exprEvaluator;
+            //AnalyticExpressionEvaluator  m_exprEvaluator;
             /// Functions.
             std::vector<FunctionMap>                  m_functions;
             /// Variables.
             std::vector<VariableList>                 m_variables;
             /// Custom tags.
-            TagMap                                    m_tags;
+            std::vector<TagMap>                       m_tags;
             /// Filters map.
             std::vector<FilterMap>                    m_filters;
             /// Be verbose

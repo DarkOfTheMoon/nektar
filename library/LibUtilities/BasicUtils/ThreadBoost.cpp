@@ -153,7 +153,7 @@ namespace Nektar
         
         unsigned int ThreadManagerBoost::GetNumWorkers()
         {
-            return m_numWorkers+1;
+            return m_numWorkers;
         }
         
         unsigned int ThreadManagerBoost::GetWorkerNum()
@@ -171,15 +171,15 @@ namespace Nektar
         		return;
         	}
 
+        	delete m_barrier;
+            m_barrier = new boost::barrier(num > 0 ? num : 1);
+
         	m_numWorkers = num;
         	for (unsigned int i = 0; i < m_numThreads; i++)
         	{
         		m_threadActiveList[i] = i < m_numWorkers ? true : false;
         	}
         	m_masterActiveCondVar.notify_all();
-
-        	delete m_barrier;
-            m_barrier = new boost::barrier(m_numWorkers > 0 ? m_numWorkers : 1);
         } // Lock on active released here
 
         void ThreadManagerBoost::SetNumWorkers(unsigned int num)

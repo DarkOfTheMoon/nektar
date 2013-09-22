@@ -37,12 +37,10 @@
 
 namespace Nektar
 {
-//	namespace detail
-//	{
+	// sThrMan attempts to keep the ThreadManager from destructing before the ThreadPools do
 	static Nektar::Thread::ThreadManagerSharedPtr sThrMan;
 	typedef boost::shared_ptr<std::vector<MemPool *> > MemoryPoolPool;
 	static bool s_threadPoolsEnabled = false;
-//	}
 
 	boost::shared_ptr<std::vector<MemPool *> >& GetMemoryPoolPool()
 	{
@@ -104,10 +102,6 @@ namespace Nektar
     		{
     			(*p)[i] = new MemPool();
     		}
-    	}
-    	for (unsigned int i=0; i < pNumThr; ++i)
-    	{
-                std::cerr << "Thread " << i << " got " << (*p)[i] << std::endl;
     	}
     	s_threadPoolsEnabled = pEnabled;
     }
