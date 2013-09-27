@@ -235,6 +235,54 @@ int main(int argc, char *argv[])
         {
             Exp[i]->PhysDeriv(Exp[i]->GetPhys(), grad[i*nfields],grad[i*nfields+1],grad[i*nfields+2]);
         }
+        // Correct the gradient for wavy geometries, by using the coordinate
+        //      transformation from the .xml file
+        if(vSession->DefinesFunction("WavyGeometry"))
+        {
+            // Obtain points from the mesh
+            Array<OneD,NekDouble>  xc0,xc1,xc2;
+            xc0 = Array<OneD,NekDouble>(nq,0.0);
+            xc1 = Array<OneD,NekDouble>(nq,0.0);
+            xc2 = Array<OneD,NekDouble>(nq,0.0);
+            Exp[0]->GetCoords(xc0,xc1,xc2);
+
+            // Evaluate function from session file and its derivatives
+            Array<OneD, Array< OneD, NekDouble> > wavyGeometricInfo;
+            wavyGeometricInfo = Array<OneD, Array< OneD, NekDouble> >(3);
+            for(int i = 0; i < wavyGeometricInfo.num_elements(); i++)
+            {
+                wavyGeometricInfo[i] = Array<OneD, NekDouble>(nq,0.0);
+            }
+            LibUtilities::EquationSharedPtr ffunc = vSession->GetFunction("WavyGeometry", 0);
+            ffunc->Evaluate(xc0,xc1,xc2,wavyGeometricInfo[0]);
+            for(int i = 1; i < 3; i++)
+            {
+                Exp[0]->PhysDeriv(MultiRegions::DirCartesianMap[2],
+                                       wavyGeometricInfo[i-1],
+                                       wavyGeometricInfo[i]);
+            }
+
+            // Calculate correct values for the velocity gradient
+            // U'x' = Ux + Xi_z*Wx
+            Vmath::Vvtvp(nq, grad[2*nfields+0], 1, wavyGeometricInfo[1], 1,
+                                grad[0*nfields+0], 1, grad[0*nfields+0], 1);
+            // U'z' = Uz + Xi_z*Wz + Xi_zz * W - Xi_z * U'x'
+            Vmath::Vvtvp(nq, grad[2*nfields+2], 1, wavyGeometricInfo[1], 1,
+                                grad[0*nfields+2], 1, grad[0*nfields+2], 1);
+            Vmath::Vvtvp(nq, Exp[2]->GetPhys(), 1, wavyGeometricInfo[2], 1,
+                                grad[0*nfields+2], 1, grad[0*nfields+2], 1);
+            Vmath::Vvtvm(nq, grad[0*nfields+0], 1, wavyGeometricInfo[1], 1,
+                                grad[0*nfields+2], 1, grad[0*nfields+2], 1);
+            Vmath::Neg(nq, grad[0*nfields+2], 1);
+            // V'z' = Vz - Xi_z*Vx
+            Vmath::Vvtvm(nq, grad[1*nfields+0], 1, wavyGeometricInfo[1], 1,
+                                grad[1*nfields+2], 1, grad[1*nfields+2], 1);
+            Vmath::Neg(nq, grad[1*nfields+2], 1);
+            // W'z' = Wz - Xi_z*Wx
+            Vmath::Vvtvm(nq, grad[2*nfields+0], 1, wavyGeometricInfo[1], 1,
+                                grad[2*nfields+2], 1, grad[2*nfields+2], 1);
+            Vmath::Neg(nq, grad[2*nfields+2], 1);
+        }
 
         // W_x = Wy - Vz
         Vmath::Vsub(nq,grad[2*nfields+1],1,grad[1*nfields+2],1,outfield[0],1);
