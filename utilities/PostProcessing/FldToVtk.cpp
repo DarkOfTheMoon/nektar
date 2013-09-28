@@ -103,10 +103,10 @@ int main(int argc, char *argv[])
             {
                 ptype.push_back(LibUtilities::ePolyEvenlySpaced);
             }
-            
+
             fielddef[i]->m_pointsDef = true;
-            fielddef[i]->m_points    = ptype; 
-            
+            fielddef[i]->m_points    = ptype;
+
             vector<unsigned int> porder;
             if(fielddef[i]->m_numPointsDef == false)
             {
@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
                 {
                     porder.push_back(fielddef[i]->m_numModes[j]+nExtraPoints);
                 }
-                
+
                 fielddef[i]->m_numPointsDef = true;
             }
             else
@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
                 }
             }
             fielddef[i]->m_numPoints = porder;
-            
+
         }
         graphShPt->SetExpansions(fielddef);
         //----------------------------------------------
@@ -149,7 +149,7 @@ int main(int argc, char *argv[])
 
                     // Define Homogeneous expansion
                     //int nplanes = fielddef[0]->m_numModes[1];
-					int nplanes; 
+					int nplanes;
 					vSession->LoadParameter("HomModesZ",nplanes,fielddef[0]->m_numModes[1]);
 
                     // choose points to be at evenly spaced points at
@@ -167,30 +167,30 @@ int main(int argc, char *argv[])
 				else if(fielddef[0]->m_numHomogeneousDir == 2)
 				{
 					MultiRegions::ExpList3DHomogeneous2DSharedPtr Exp3DH2;
-					
+
 					// Define Homogeneous expansion
 					//int nylines = fielddef[0]->m_numModes[1];
 					//int nzlines = fielddef[0]->m_numModes[2];
-					
+
 					int nylines;
 					int nzlines;
 					vSession->LoadParameter("HomModesY",nylines,fielddef[0]->m_numModes[1]);
 					vSession->LoadParameter("HomModesZ",nzlines,fielddef[0]->m_numModes[2]);
-					
-					
+
+
 					// choose points to be at evenly spaced points at
 					const LibUtilities::PointsKey PkeyY(nylines+1,LibUtilities::ePolyEvenlySpaced);
 					const LibUtilities::BasisKey  BkeyY(fielddef[0]->m_basis[1],nylines,PkeyY);
-					
+
 					const LibUtilities::PointsKey PkeyZ(nzlines+1,LibUtilities::ePolyEvenlySpaced);
 					const LibUtilities::BasisKey  BkeyZ(fielddef[0]->m_basis[2],nzlines,PkeyZ);
-					
+
 					NekDouble ly = fielddef[0]->m_homogeneousLengths[0];
 					NekDouble lz = fielddef[0]->m_homogeneousLengths[1];
-					
+
 					Exp3DH2 = MemoryManager<MultiRegions::ExpList3DHomogeneous2D>::AllocateSharedPtr(vSession,BkeyY,BkeyZ,ly,lz,useFFT,dealiasing,graphShPt);
 					Exp[0] = Exp3DH2;
-					
+
 					for(i = 1; i < nfields; ++i)
 					{
 						Exp[i] = MemoryManager<MultiRegions::ExpList3DHomogeneous2D>::AllocateSharedPtr(*Exp3DH2);
@@ -220,13 +220,13 @@ int main(int argc, char *argv[])
 
                     // Define Homogeneous expansion
                     //int nplanes = fielddef[0]->m_numModes[2];
-					
-					int nplanes; 
+
+					int nplanes;
 					vSession->LoadParameter("HomModesZ",nplanes,fielddef[0]->m_numModes[2]);
 
                     // choose points to be at evenly spaced points at
-                    // nplanes + 1 points
-                    const LibUtilities::PointsKey Pkey(nplanes+1,LibUtilities::ePolyEvenlySpaced);
+                    // nplanes  points
+                    const LibUtilities::PointsKey Pkey(nplanes,LibUtilities::ePolyEvenlySpaced);
                     const LibUtilities::BasisKey  Bkey(fielddef[0]->m_basis[2],nplanes,Pkey);
                     NekDouble lz = fielddef[0]->m_homogeneousLengths[0];
 
@@ -285,6 +285,37 @@ int main(int argc, char *argv[])
                                             Exp[j]->UpdateCoeffs());
             }
             Exp[j]->BwdTrans(Exp[j]->GetCoeffs(),Exp[j]->UpdatePhys());
+        }
+        //----------------------------------------------
+
+        // Correct the x-velocity for wavy geometries, by using the coordinate
+        //      transformation from the .xml file
+        if(vSession->DefinesFunction("WavyGeometry"))
+        {
+            int nq = Exp[0]->GetNpoints();
+            // Obtain points from the mesh
+            Array<OneD,NekDouble>  xc0,xc1,xc2;
+            xc0 = Array<OneD,NekDouble>(nq,0.0);
+            xc1 = Array<OneD,NekDouble>(nq,0.0);
+            xc2 = Array<OneD,NekDouble>(nq,0.0);
+            Exp[0]->GetCoords(xc0,xc1,xc2);
+
+            // Evaluate function from session file and its derivative
+            Array<OneD, Array< OneD, NekDouble> > wavyGeometricInfo;
+            wavyGeometricInfo = Array<OneD, Array< OneD, NekDouble> >(2);
+            for(int i = 0; i < wavyGeometricInfo.num_elements(); i++)
+            {
+                wavyGeometricInfo[i] = Array<OneD, NekDouble>(nq,0.0);
+            }
+            LibUtilities::EquationSharedPtr ffunc = vSession->GetFunction("WavyGeometry", 0);
+            ffunc->Evaluate(xc0,xc1,xc2,wavyGeometricInfo[0]);
+            Exp[0]->PhysDeriv(MultiRegions::DirCartesianMap[2],
+                                       wavyGeometricInfo[0],
+                                       wavyGeometricInfo[1]);
+            // Calculate x-velocity: u' = u + w*Xi_z
+            Vmath::Vvtvp(nq, Exp[2]->GetPhys(), 1, wavyGeometricInfo[1], 1,
+                                Exp[0]->GetPhys(), 1, Exp[0]->UpdatePhys(), 1);
+
         }
         //----------------------------------------------
 
