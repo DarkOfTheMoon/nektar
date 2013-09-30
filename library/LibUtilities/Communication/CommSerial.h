@@ -118,8 +118,7 @@ namespace Nektar
             LIB_UTILITIES_EXPORT virtual void v_GsFinalise(Gs::gs_data *pGsh);
             LIB_UTILITIES_EXPORT virtual void v_GsUnique(Array<OneD, long> pId);
             LIB_UTILITIES_EXPORT virtual void v_GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
-                    Gs::gs_data *pGsh, Array<OneD, NekDouble> pBuffer
-                                                     = NullNekDouble1DArray);
+                    Gs::gs_data *pGsh);
 
 			
         };

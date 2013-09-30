@@ -131,8 +131,7 @@ namespace Nektar
                 LIB_UTILITIES_EXPORT inline void GsFinalise(Gs::gs_data *pGsh);
                 LIB_UTILITIES_EXPORT inline void GsUnique(Array<OneD, long> pId);
                 LIB_UTILITIES_EXPORT inline void GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
-                        Gs::gs_data *pGsh, Array<OneD, NekDouble> pBuffer
-                                                         = NullNekDouble1DArray);
+                        Gs::gs_data *pGsh);
 
             protected:
                 int m_size;                 ///< Number of processes
@@ -193,8 +192,7 @@ namespace Nektar
                 virtual void v_GsFinalise(Gs::gs_data *pGsh) = 0;
                 virtual void v_GsUnique(Array<OneD, long> pId) = 0;
                 virtual void v_GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
-                        Gs::gs_data *pGsh, Array<OneD, NekDouble> pBuffer
-                                                         = NullNekDouble1DArray) = 0;
+                        Gs::gs_data *pGsh) = 0;
 
         };
 
@@ -474,9 +472,9 @@ namespace Nektar
         }
 
         inline void Comm::GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
-                Gs::gs_data *pGsh, Array<OneD, NekDouble> pBuffer)
+                Gs::gs_data *pGsh)
         {
-        	v_GsGather(pU, pOp, pGsh, pBuffer);
+        	v_GsGather(pU, pOp, pGsh);
         }
 
 

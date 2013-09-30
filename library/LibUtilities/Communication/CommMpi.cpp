@@ -585,23 +585,23 @@ namespace Nektar
         }
 
         void CommMpi::v_GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
-                Gs::gs_data *pGsh, Array<OneD, NekDouble> pBuffer)
+                Gs::gs_data *pGsh)
         {
             if (!pGsh)
             {
                 return;
             }
-            if (pBuffer.num_elements() == 0)
-            {
+//            if (pBuffer.num_elements() == 0)
+//            {
                 nektar_gs(&pU[0], gs_double, pOp, false, pGsh, 0);
-            }
-            else
-            {
-                array buf;
-                buf.ptr = &pBuffer[0];
-                buf.n = pBuffer.num_elements();
-                nektar_gs(&pU[0], gs_double, pOp, false, pGsh, &buf);
-            }
+//            }
+//            else
+//            {
+//                array buf;
+//                buf.ptr = &pBuffer[0];
+//                buf.n = pBuffer.num_elements();
+//                nektar_gs(&pU[0], gs_double, pOp, false, pGsh, &buf);
+//            }
         }
 
 
