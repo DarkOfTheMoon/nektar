@@ -782,7 +782,7 @@ namespace Nektar
         }
 
         void ThreadedComm::v_GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
-                Gs::gs_data *pGsh, Array<OneD, NekDouble> pBuffer)
+                Gs::gs_data *pGsh)
         {
         	unsigned int vThr = m_tm->GetWorkerNum();
         	Pack(vThr, m_ListOfConstThrSendDataDbl, pU, m_tmpSendArrDbl);
@@ -795,7 +795,7 @@ namespace Nektar
 //				{
 //					std::cerr << "m_tmpSendArrDbl[" << i << "] = " << m_tmpSendArrDbl[i] << std::endl;
 //				}
-				m_comm->GsGather(m_tmpSendArrDbl, pOp, pGsh, pBuffer);
+				m_comm->GsGather(m_tmpSendArrDbl, pOp, pGsh);
 //				std::cerr << "m_tmpSendArrDbl before" << std::endl;
 //				for (int i=0; i < m_tmpSendArrDbl.num_elements(); ++i)
 //				{
