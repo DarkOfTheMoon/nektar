@@ -40,14 +40,14 @@ namespace Nektar
         SolverUtils::GetEquationSystemFactory().RegisterCreatorFunction
         ("PorousMediaSplittingScheme", PorousMediaSplittingScheme::create);
     
-     /**
+    /**
      * Constructor. Creates ...
      *
      * \param 
      * \param
      */
     PorousMediaSplittingScheme::PorousMediaSplittingScheme(
-            const LibUtilities::SessionReaderSharedPtr& pSession):
+        const LibUtilities::SessionReaderSharedPtr& pSession):
         PorousMedia(pSession)
     {
         
@@ -95,7 +95,7 @@ namespace Nektar
                 }
                 break;
                 default:
-                break;
+                    break;
             }
         }
 
@@ -144,7 +144,7 @@ namespace Nektar
             break;
             default:
                 ASSERTL0(0,"Integration method not suitable: Options include IMEXOrder1, IMEXOrder2 or IMEXOrder3");
-            break;
+                break;
         }        
         
         // set explicit time-intregration class operators
@@ -187,7 +187,6 @@ namespace Nektar
     
     PorousMediaSplittingScheme::~PorousMediaSplittingScheme(void)
     {
-        
     }
         
     
@@ -457,7 +456,7 @@ namespace Nektar
                 int nq = PBndExp[n]->GetNcoeffs();
                 Vmath::Vcopy(nq,&(PBndExp[n]->GetCoeffs()[0]),1,&(m_pressureHBCs[0])[cnt],1);
                 cnt += nq;
-                }
+            }
         }
             
         // Extrapolate to n+1
@@ -478,7 +477,7 @@ namespace Nektar
             {
                 int nq = PBndExp[n]->GetNcoeffs();
                 Vmath::Vcopy(nq,&(m_pressureHBCs[nlevels-1])[cnt],1,&(PBndExp[n]->UpdateCoeffs()[0]),1);
-                    cnt += nq;
+                cnt += nq;
             }
         }
     }
@@ -489,15 +488,15 @@ namespace Nektar
     {
         switch(m_velocity.num_elements())
         {
-        case 1:
-            ASSERTL0(false,"Porous media splitting scheme not designed to have just one velocity component");
-            break;
-        case 2:
-            CalcPressureBCs2D(fields,N);
+            case 1:
+                ASSERTL0(false,"Porous media splitting scheme not designed to have just one velocity component");
                 break;
-        case 3:
-            CalcPressureBCs3D(fields,N);
-            break;
+            case 2:
+                CalcPressureBCs2D(fields,N);
+                break;
+            case 3:
+                CalcPressureBCs3D(fields,N);
+                break;
         }
     }
     
@@ -613,7 +612,7 @@ namespace Nektar
                     Pbc->NormVectorIProductWRTBase(Uy,Vx,Pvals); 
                 }
             }
-                // setting if just standard BC no High order
+            // setting if just standard BC no High order
             else if(type == SpatialDomains::eNoUserDefined || type == SpatialDomains::eTimeDependent) 
             {
                 cnt += PBndExp[n]->GetExpSize();
@@ -626,8 +625,8 @@ namespace Nektar
     }
     
     void PorousMediaSplittingScheme::CalcPressureBCs3D(
-            const Array<OneD, const Array<OneD, NekDouble> > &fields, 
-            const Array<OneD, const Array<OneD, NekDouble> >  &N)
+        const Array<OneD, const Array<OneD, NekDouble> > &fields, 
+        const Array<OneD, const Array<OneD, NekDouble> >  &N)
     {
         Array<OneD, const SpatialDomains::BoundaryConditionShPtr > PBndConds;
         Array<OneD, MultiRegions::ExpListSharedPtr>  PBndExp;
@@ -780,12 +779,12 @@ namespace Nektar
             }
             else
             {
-                    ASSERTL0(false,"Unknown USERDEFINEDTYPE in pressure boundary condition");
+                ASSERTL0(false,"Unknown USERDEFINEDTYPE in pressure boundary condition");
             }
         }
     }
     
-        // Evaluate divergence of velocity field. 
+    // Evaluate divergence of velocity field. 
     void PorousMediaSplittingScheme::SetUpPressureForcing(
         const Array<OneD, const Array<OneD, NekDouble> > &fields, 
         Array<OneD, Array<OneD, NekDouble> > &Forcing, 
@@ -816,11 +815,7 @@ namespace Nektar
         int phystot = m_fields[0]->GetTotPoints();
         
         // Grad p
-#ifdef UseContCoeffs
-        m_pressure->BwdTrans(m_pressure->GetContCoeffs(),m_pressure->UpdatePhys(),true);
-            #else
         m_pressure->BwdTrans(m_pressure->GetCoeffs(),m_pressure->UpdatePhys());
-#endif
         
         if(m_nConvectiveFields == 2)
         {
@@ -835,9 +830,9 @@ namespace Nektar
         // need to be updated for the convected fields.
         for(int i = 0; i < m_nConvectiveFields; ++i)
         {
-            Vmath::Svtvp(phystot,-aii_dtinv,inarray[i],1,Forcing[i],1,Forcing[i],1);
-            //Blas::Daxpy(phystot,-aii_dtinv,inarray[i],1,Forcing[i],1);
-            //Blas::Dscal(phystot,1.0/m_kinvis,&(Forcing[i])[0],1);
+            //Vmath::Svtvp(phystot,-aii_dtinv,inarray[i],1,Forcing[i],1,Forcing[i],1);
+            Blas::Daxpy(phystot,-aii_dtinv,inarray[i],1,Forcing[i],1);
+            Blas::Dscal(phystot,1.0/m_kinvis,&(Forcing[i])[0],1);
         }
 
         if(!m_explicitPermeability)
@@ -864,43 +859,6 @@ namespace Nektar
         {
             Vmath::Smul(phystot,1.0/m_kinvis,Forcing[i],1,Forcing[i],1);
         }
-
-        // if (!m_explicitPermeability && m_session->DefinesFunction("AnisotropicPermeability"))
-        // {
-        //     Array<OneD, Array< OneD, NekDouble> > tempF(m_nConvectiveFields);
-        //     for (int i = 0; i < m_nConvectiveFields; ++i)
-        //     {
-        //         tempF[i] = Array<OneD, NekDouble> (phystot);
-        //     }
-
-        //     if(m_nConvectiveFields == 2)
-        //     {
-        //         Vmath::Smul(phystot,m_perm[0],Forcing[0],1,tempF[0],1);
-        //         Vmath::Smul(phystot,m_perm[2],Forcing[0],1,tempF[1],1);
-                
-        //         Vmath::Svtvp(phystot,m_perm[2],Forcing[1],1,tempF[0],1,tempF[0],1);
-        //         Vmath::Svtvp(phystot,m_perm[1],Forcing[1],1,tempF[1],1,tempF[1],1);
-        //     }
-        //     else
-        //     {
-        //         Vmath::Smul(phystot,m_perm[0],Forcing[0],1,tempF[0],1);
-        //         Vmath::Smul(phystot,m_perm[3],Forcing[0],1,tempF[1],1);
-        //         Vmath::Smul(phystot,m_perm[4],Forcing[0],1,tempF[2],1);
-
-        //         Vmath::Svtvp(phystot,m_perm[3],Forcing[1],1,tempF[0],1,tempF[0],1);
-        //         Vmath::Svtvp(phystot,m_perm[1],Forcing[1],1,tempF[1],1,tempF[1],1);
-        //         Vmath::Svtvp(phystot,m_perm[5],Forcing[1],1,tempF[2],1,tempF[2],1);
-
-        //         Vmath::Svtvp(phystot,m_perm[4],Forcing[2],1,tempF[0],1,tempF[0],1);
-        //         Vmath::Svtvp(phystot,m_perm[5],Forcing[2],1,tempF[1],1,tempF[1],1);
-        //         Vmath::Svtvp(phystot,m_perm[2],Forcing[2],1,tempF[2],1,tempF[2],1);
-        //     }
-
-        //     for (int i = 0; i < m_nConvectiveFields; ++i)
-        //     {
-        //         Forcing[i] = tempF[i];
-        //     }
-        // }
     }
         
 } //end of namespace

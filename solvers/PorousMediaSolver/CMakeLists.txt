@@ -5,6 +5,9 @@ IF( NEKTAR_SOLVER_POROUSMEDIA )
     SET(PorousMediaSolverSource 
        ./EquationSystems/PorousMediaSplittingScheme.cpp
        ./EquationSystems/PorousMedia.cpp
+       ./EquationSystems/DarcyTerm.cpp
+       ./EquationSystems/DarcyTermExplicit.cpp
+       ./EquationSystems/DarcyTermImplicit.cpp
        ./AdvectionTerms/AdvectionTerm.cpp
        ./AdvectionTerms/NoAdvection.cpp
        ./PorousMediaSolver.cpp 
