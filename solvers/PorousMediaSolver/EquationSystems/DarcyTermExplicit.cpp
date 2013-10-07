@@ -65,6 +65,71 @@ namespace Nektar
         Array<OneD, Array<OneD, NekDouble> > &outarray,
         NekDouble kinvis)
     {
+        int nqtot = m_fields[0]->GetTotPoints();
+        int nDim = m_fields.num_elements()-1;
+
+        if (nDim == 2)
+        {
+            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[0],inarray[0],1,outarray[0],1,outarray[0],1);
+            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[2],inarray[0],1,outarray[1],1,outarray[1],1);
+            
+            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[2],inarray[1],1,outarray[0],1,outarray[0],1);
+            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[1],inarray[1],1,outarray[1],1,outarray[1],1);
+        }
+        else
+        {
+            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[0],inarray[0],1,outarray[0],1,outarray[0],1);
+            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[3],inarray[0],1,outarray[1],1,outarray[1],1);
+            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[4],inarray[0],1,outarray[2],1,outarray[2],1);
+            
+            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[3],inarray[1],1,outarray[0],1,outarray[0],1);
+            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[1],inarray[1],1,outarray[1],1,outarray[1],1);
+            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[5],inarray[1],1,outarray[2],1,outarray[2],1);
+        
+            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[4],inarray[2],1,outarray[0],1,outarray[0],1);
+            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[5],inarray[2],1,outarray[1],1,outarray[1],1);
+            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[2],inarray[2],1,outarray[2],1,outarray[2],1);
+        }
     }
+
+
+    /**
+     * Registers the class with the Factory.
+     */
+    std::string DarcyTermExplicitSpatial::className = GetDarcyTermFactory().RegisterCreatorFunction(
+        "Explicit spatially varying Darcy term",
+        DarcyTermExplicit::create,
+        "Explicit spatially varying Darcy term");
+
+    DarcyTermExplicitSpatial::DarcyTermExplicitSpatial(
+        const LibUtilities::SessionReaderSharedPtr pSession,
+        Array<OneD, MultiRegions::ExpListSharedPtr> pFields)
+        : DarcyTerm(pSession,pFields)
+    {
+    }
+
+    DarcyTermExplicitSpatial::~DarcyTermExplicitSpatial()
+    {
+    }
+    
+    /** 
+     * 
+     */
+    void DarcyTermExplicitSpatial::v_EvaluateDarcyTerm(
+        const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
+        Array<OneD, Array<OneD, NekDouble> > &outarray,
+        NekDouble kinvis)
+    {
+        Array <OneD, NekDouble> tmp(nqtot);
+        int nqtot = m_fields[0]->GetTotPoints();
+        int nDim = m_fields.num_elements()-1;
+        
+        for(int i=0; i<nDim; ++i)
+        {
+            Vmath::Smul(nqtot,-kinvis,m_spatialperm[i],1,tmp,1);
+            Vmath::Vvtvp(nqtot,tmp,1,inarray[i],1,outarray[i],1,outarray[i],1);
+        }
+    }
+
 }
 

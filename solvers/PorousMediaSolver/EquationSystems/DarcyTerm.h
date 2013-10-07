@@ -79,6 +79,8 @@ namespace Nektar
         
         LibUtilities::SessionReaderSharedPtr m_session;
 
+        Array<OneD, MultiRegions::ExpListSharedPtr> m_fields;
+
         LibUtilities::CommSharedPtr m_comm;
 
     private:

@@ -81,6 +81,45 @@ namespace Nektar
             Array<OneD, Array<OneD, NekDouble> > &outarray,
             NekDouble kinvis);
     };
+
+    //--------------------------------------------
+    // Explicit Spatially varying Darcy term class
+    // -------------------------------------------
+    
+    class DarcyTermExplicitSpatial;
+    
+    typedef boost::shared_ptr<DarcyTermExplicitSpatial> DarcyTermExplicitSpatialSharedPtr;
+    
+    class DarcyTermExplicitSpatial : public DarcyTerm
+    {
+    public:
+
+        /// Creates an instance of this class
+        static DarcyTermSharedPtr create(
+            const LibUtilities::SessionReaderSharedPtr &pSession,
+            Array<OneD, MultiRegions::ExpListSharedPtr> &pFields)
+        {
+            DarcyTermSharedPtr p = MemoryManager<DarcyTermExplicitSpatial>::AllocateSharedPtr(pSession,pFields);
+            return p;
+        }
+
+        /// Name of class
+        static std::string className;
+
+        DarcyTermExplicitSpatial(
+            const LibUtilities::SessionReaderSharedPtr pSession,
+            Array<OneD, MultiRegions::ExpListSharedPtr> pFields);
+
+        virtual ~DarcyTermExplicitSpatial();
+        
+    protected:
+        virtual void v_EvaluateDarcyTerm(
+            const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
+            Array<OneD, Array<OneD, NekDouble> > &outarray,
+            NekDouble kinvis);
+    };
+
+
     
 }
 

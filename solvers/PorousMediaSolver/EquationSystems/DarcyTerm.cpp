@@ -49,6 +49,8 @@ namespace Nektar
     DarcyTerm::DarcyTerm(
         const LibUtilities::SessionReaderSharedPtr pSession,
         Array<OneD, MultiRegions::ExpListSharedPtr> pFields)
+        :m_session(pSession),
+         m_fields(pFields)
     {      
     }
     

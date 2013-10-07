@@ -65,28 +65,6 @@ namespace Nektar
         //m_graph = SpatialDomains::MeshGraph::Read(pSession);
         int numdomains = m_graph->GetDomain().size();
         int numexpansions = numfields*numdomains;
-
-            /*if(m_graph->GetDomain().size() > 1)
-        {
-            m_regions = Array<OneD, MultiRegions::ExpListSharedPtr> (numexpansions);
-            const SpatialDomains::CompositeMap domain = (m_graph->GetDomain());
-			
-            for(i = 0 ; i < numexpansions; i++)
-            {
-                m_regions[i] = MemoryManager<MultiRegions::ContField3D>
-                    ::AllocateSharedPtr(m_session,domain,m_graph,m_session->GetVariable(i%numfields),(i/numfields));
-            }
-			
-            // Only needed for output: whole field
-            m_outfields = Array<OneD, MultiRegions::ExpListSharedPtr> (nvariables);
-            for(i = 0 ; i < m_outfields.num_elements(); i++)
-            {
-                m_outfields[i] = MemoryManager<MultiRegions::DisContField1D>::AllocateSharedPtr(m_session,m_graph,
-                                                                                                m_session->GetVariable(i));
-            }
-            }*/
-
-
         
         // Set up Velocity field to point to the first m_expdim of m_fields; 
         m_velocity = Array<OneD,int>(m_spacedim);
