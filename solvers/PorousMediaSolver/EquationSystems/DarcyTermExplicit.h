@@ -80,6 +80,9 @@ namespace Nektar
             const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
             Array<OneD, Array<OneD, NekDouble> > &outarray,
             NekDouble kinvis);
+
+        virtual void v_SetupPermeability();
+
     };
 
     //--------------------------------------------
@@ -117,6 +120,9 @@ namespace Nektar
             const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
             Array<OneD, Array<OneD, NekDouble> > &outarray,
             NekDouble kinvis);
+
+        virtual void v_SetupPermeability();
+
     };
 
 

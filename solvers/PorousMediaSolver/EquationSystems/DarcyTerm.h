@@ -69,6 +69,8 @@ namespace Nektar
             const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
             Array<OneD, Array<OneD, NekDouble> > &outarray,
             NekDouble kinvis);
+
+        inline void SetupPermeability();
         
     protected:
         
@@ -76,6 +78,13 @@ namespace Nektar
             const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
             Array<OneD, Array<OneD, NekDouble> > &outarray,
             NekDouble kinvis)=0;
+
+        virtual void v_SetupPermeability()=0;
+
+        Array<OneD, NekDouble>  m_perm;  ///< Permeability matrix
+        Array<OneD, Array<OneD, NekDouble> >  m_spatialperm;  ///< Permeability matrix
+        Array<OneD, NekDouble>  m_perm_inv;  ///< inverse Permeability matrix
+
         
         LibUtilities::SessionReaderSharedPtr m_session;
 
@@ -96,6 +105,16 @@ namespace Nektar
     {
         v_EvaluateDarcyTerm(inarray,outarray,kinvis);
     }
+
+    /**
+     *
+     */
+    inline void DarcyTerm::SetupPermeability()
+    {
+        v_SetupPermeability();
+    }
+
+
 }
 
 #endif

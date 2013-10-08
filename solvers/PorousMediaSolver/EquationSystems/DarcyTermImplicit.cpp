@@ -53,8 +53,50 @@ namespace Nektar
     {
     }
 
+    /** 
+     * 
+     */
     DarcyTermImplicit::~DarcyTermImplicit()
     {
+    }
+
+    /** 
+     * 
+     */
+    void DarcyTermImplicit::v_SetupPermeability()
+    {
+        int nDim = m_fields.num_elements()-1;
+        NekDouble kTemp;
+        m_session->LoadParameter("Permeability", kTemp);
+            
+        for (int i = 0; i < nDim; ++i)
+        {
+            m_perm[i] = kTemp;
+        }
+
+        for (int i = (nDim+1); i < (3*(nDim-1)); ++i)
+        {
+            m_perm[i] = 0;
+        }
+
+        NekDouble detTemp = m_perm[0]*(m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5])
+            -m_perm[3]*(m_perm[2]*m_perm[3]-m_perm[4]*m_perm[5])
+            +m_perm[4]*(m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4]);
+            
+        // Check if permeability matrix is positive definite
+        ASSERTL0(m_perm[0] > 0,"Permeability Matrix is not positive definite");
+        NekDouble pd_chk = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
+        ASSERTL0(pd_chk > 0,"Permeability Matrix is not positive definite");
+        ASSERTL0(detTemp > 0,"Permeability Matrix is not positive definite");
+            
+        m_perm_inv[0] = m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5];
+        m_perm_inv[1] = m_perm[0]*m_perm[2]-m_perm[4]*m_perm[4];
+        m_perm_inv[2] = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
+        m_perm_inv[3] = m_perm[4]*m_perm[5]-m_perm[2]*m_perm[3];
+        m_perm_inv[4] = m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4];
+        m_perm_inv[5] = m_perm[3]*m_perm[4]-m_perm[0]*m_perm[5];
+
+        Vmath::Smul(6, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
     }
     
     /** 
