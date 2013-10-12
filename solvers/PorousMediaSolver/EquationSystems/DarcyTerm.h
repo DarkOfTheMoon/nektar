@@ -71,6 +71,9 @@ namespace Nektar
             NekDouble kinvis);
 
         inline void SetupPermeability();
+
+        inline void GetImplicitDarcyFactor(
+            Array<OneD, NekDouble> &permCoeff);
         
     protected:
         
@@ -80,6 +83,9 @@ namespace Nektar
             NekDouble kinvis)=0;
 
         virtual void v_SetupPermeability()=0;
+
+        virtual void v_GetImplicitDarcyFactor(
+            Array<OneD, NekDouble> &permCoeff)=0;
 
         Array<OneD, NekDouble>  m_perm;  ///< Permeability matrix
         Array<OneD, Array<OneD, NekDouble> >  m_spatialperm;  ///< Permeability matrix
@@ -112,6 +118,15 @@ namespace Nektar
     inline void DarcyTerm::SetupPermeability()
     {
         v_SetupPermeability();
+    }
+
+    /**
+     *
+     */
+    inline void DarcyTerm::GetImplicitDarcyFactor(
+        Array<OneD, NekDouble> &permCoeff)
+    {
+        v_GetImplicitDarcyFactor(permCoeff);
     }
 
 

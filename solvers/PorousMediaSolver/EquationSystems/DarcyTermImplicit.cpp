@@ -108,5 +108,18 @@ namespace Nektar
         NekDouble kinvis)
     {
     }
+
+    void DarcyTermImplicit::v_GetImplicitDarcyFactor(
+        Array<OneD, NekDouble> &permCoeff)
+    {
+        int nDim = m_fields.num_elements()-1;
+        for (int i=0; i<nDim; ++i)
+        {
+            permCoeff[i]=m_perm_inv[i];
+        }
+    }
+
+
+
 }
 

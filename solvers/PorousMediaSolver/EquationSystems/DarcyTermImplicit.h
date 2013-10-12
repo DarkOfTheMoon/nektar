@@ -83,6 +83,8 @@ namespace Nektar
 
         virtual void v_SetupPermeability();
 
+        virtual void v_GetImplicitDarcyFactor(
+            Array<OneD, NekDouble> &permCoeff);
     };
     
 }

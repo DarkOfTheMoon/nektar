@@ -169,6 +169,10 @@ namespace Nektar
         }
     }
 
+    void DarcyTermExplicit::v_GetImplicitDarcyFactor(
+        Array<OneD, NekDouble> &permCoeff)
+    {
+    }
 
     /**
      * Registers the class with the Factory.
@@ -217,6 +221,12 @@ namespace Nektar
             Vmath::Vvtvp(nqtot,tmp,1,inarray[i],1,outarray[i],1,outarray[i],1);
         }
     }
+
+    void DarcyTermExplicitSpatial::v_GetImplicitDarcyFactor(
+        Array<OneD, NekDouble> &permCoeff)
+    {
+    }
+
 
 }
 
