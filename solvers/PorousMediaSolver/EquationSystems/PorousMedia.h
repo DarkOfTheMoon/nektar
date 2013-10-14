@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// File IncNavierStokes.h
+// File PorousMedia.h
 //
 // For more information, please see: http://www.nektar.info
 //
@@ -29,7 +29,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 //
-// Description: Basic Advection Diffusion Reaction Field definition in two-dimensions
+// Description:
 //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -97,9 +97,13 @@ namespace Nektar
 
         
     protected: 
-        LibUtilities::TimeIntegrationSolutionSharedPtr  m_integrationSoln;
 
-        Array<OneD, Array<OneD, NekDouble> > m_previousVelFields;
+        /**
+         * Constructor.
+         */
+        PorousMedia(const LibUtilities::SessionReaderSharedPtr& pSession);
+
+        LibUtilities::TimeIntegrationSolutionSharedPtr  m_integrationSoln;
 
         /// Advection term
         AdvectionTermSharedPtr m_advObject;
@@ -126,25 +130,18 @@ namespace Nektar
         NekDouble   m_steadyStateTol; ///< Tolerance to which steady state should be evaluated at
 
         EquationType  m_equationType;  ///< equation type;
-        
+
+        virtual void v_DoSolve(void);
 
         // Time integration classes
         LibUtilities::TimeIntegrationSchemeOperators m_integrationOps;
         Array<OneD, LibUtilities::TimeIntegrationSchemeSharedPtr> m_integrationScheme;
         int m_intSteps;  ///< Number of time integration steps AND  Order of extrapolation for pressure boundary conditions.         
 
-        /**
-         * Constructor.
-         */
-        PorousMedia(const LibUtilities::SessionReaderSharedPtr& pSession);
-
         EquationType GetEquationType(void)
         {
             return m_equationType;
         }
-
-        void AdvanceInTime(int nsteps);
-		
 
         void EvaluateAdvectionTerms(const Array<OneD, 
                                     const Array<OneD, NekDouble> > &inarray, 
@@ -152,17 +149,10 @@ namespace Nektar
                                     Array<OneD, NekDouble> &wk = NullNekDouble1DArray);
 		
         //time dependent boundary conditions updating
-	
         void SetBoundaryConditions(NekDouble time);
 
         // evaluate steady state
         bool CalcSteadyState(void);
-
-        // Virtual functions
-        /*virtual MultiRegions::ExpListSharedPtr v_GetPressure()
-        {
-            return m_pressure; 
-            }*/
 
         virtual void v_PrintSummary(std::ostream &out)
         {
@@ -170,21 +160,6 @@ namespace Nektar
         }
 
         virtual void v_DoInitialise(void)
-        {
-            ASSERTL0(false,"This method is not defined in this class");
-        }
-
-        virtual void v_DoSolve(void)
-        {
-            ASSERTL0(false,"This method is not defined in this class");
-        }
-		
-        virtual void v_TransCoeffToPhys(void)
-        {
-            ASSERTL0(false,"This method is not defined in this class");
-        }
-		
-        virtual void v_TransPhysToCoeff(void)
         {
             ASSERTL0(false,"This method is not defined in this class");
         }

@@ -147,8 +147,8 @@ namespace Nektar
                 break;
         }        
         
-        // set explicit time-intregration class operators
-        m_integrationOps.DefineOdeRhs(&PorousMediaSplittingScheme::EvaluateAdvection_Permeability,this);
+        // set explicit time-integration class operators
+        m_integrationOps.DefineOdeRhs(&PorousMediaSplittingScheme::DoOdeRhs,this);
 
         // Count number of HBC conditions
         Array<OneD, const SpatialDomains::BoundaryConditionShPtr > PBndConds = m_pressure->GetBndConditions();
@@ -181,8 +181,8 @@ namespace Nektar
             }
         }
         
-        // set implicit time-intregration class operators
-        m_integrationOps.DefineImplicitSolve(&PorousMediaSplittingScheme::SolveUnsteadyStokesSystem,this);
+        // set implicit time-integration class operators
+        m_integrationOps.DefineImplicitSolve(&PorousMediaSplittingScheme::DoImplicitSolve,this);
     }
     
     PorousMediaSplittingScheme::~PorousMediaSplittingScheme(void)
@@ -225,44 +225,6 @@ namespace Nektar
         SetInitialConditions(0.0);
     }
     
-    void PorousMediaSplittingScheme::v_DoSolve(void)
-    {
-        switch(m_equationType)
-        {
-            case eUnsteadyPorousMedia:
-            {
-                // Integrate from start time to end time
-                AdvanceInTime(m_steps);
-                break;
-            }
-            case eNoEquationType:
-            default:
-                ASSERTL0(false,"Unknown or undefined equation type for PorousMediaSplittingScheme solver");
-        }
-    }
-    
-    void PorousMediaSplittingScheme:: v_TransCoeffToPhys(void)
-    {
-        int nfields = m_fields.num_elements() - 1;
-        for (int k=0 ; k < nfields; ++k)
-        {
-            //Backward Transformation in physical space for time evolution
-            m_fields[k]->BwdTrans_IterPerExp(m_fields[k]->GetCoeffs(),
-                                             m_fields[k]->UpdatePhys());
-        }
-    }
-    
-    void PorousMediaSplittingScheme:: v_TransPhysToCoeff(void)
-    {
-        
-        int nfields = m_fields.num_elements() - 1;
-        for (int k=0 ; k < nfields; ++k)
-        {
-            //Forward Transformation in physical space for time evolution
-            m_fields[k]->FwdTrans_IterPerExp(m_fields[k]->GetPhys(),m_fields[k]->UpdateCoeffs());
-        }
-    }
-    
     Array<OneD, bool> PorousMediaSplittingScheme::v_GetSystemSingularChecks()
     {
         int vVar = m_session->GetVariables().size();
@@ -276,7 +238,7 @@ namespace Nektar
         return m_session->GetVariables().size() - 1;
     }
     
-    void PorousMediaSplittingScheme::EvaluateAdvection_Permeability(
+    void PorousMediaSplittingScheme::DoOdeRhs(
         const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
         Array<OneD, Array<OneD, NekDouble> > &outarray, 
         const NekDouble time)
@@ -365,7 +327,7 @@ namespace Nektar
         }
     }
     
-    void PorousMediaSplittingScheme::SolveUnsteadyStokesSystem(
+    void PorousMediaSplittingScheme::DoImplicitSolve(
         const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
         Array<OneD, Array<OneD, NekDouble> > &outarray, 
         const NekDouble time, 
@@ -382,7 +344,7 @@ namespace Nektar
         // therefore not only IMEX time integration schemes can be used
         if( !m_explicitPermeability && (m_session->GetSolverInfo("AdvectionForm") == "NoAdvection") )
         {
-            EvaluateAdvection_Permeability(inarray, outarray, time);
+            DoOdeRhs(inarray, outarray, time);
         }
                 
         for(n = 0; n < m_nConvectiveFields; ++n)

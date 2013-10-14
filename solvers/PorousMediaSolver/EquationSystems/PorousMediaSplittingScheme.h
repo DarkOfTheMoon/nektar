@@ -33,8 +33,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef NEKTAR_SOLVERS_BRINKMANSPLITTINGSCHEME_H
-#define NEKTAR_SOLVERS_BRINKMANSPLITTINGSCHEME_H
+#ifndef NEKTAR_SOLVERS_POROUSMEDIASPLITTINGSCHEME_H
+#define NEKTAR_SOLVERS_POROUSMEDIASPLITTINGSCHEME_H
 
 #include <PorousMediaSolver/EquationSystems/PorousMedia.h>
 
@@ -91,13 +91,13 @@ namespace Nektar
             Array<OneD, Array<OneD, NekDouble> > &Forcing, 
             const NekDouble aii_Dt);
         
-        void SolveUnsteadyStokesSystem(
+        void DoImplicitSolve(
             const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
             Array<OneD, Array<OneD, NekDouble> > &outarray, 
             const NekDouble time,
             const NekDouble a_iixDt);
         
-        void EvaluateAdvection_Permeability(
+        void DoOdeRhs(
             const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
             Array<OneD, Array<OneD, NekDouble> > &outarray, 
             const NekDouble time);
@@ -150,11 +150,11 @@ namespace Nektar
         // Virtual functions 
         virtual void v_PrintSummary(std::ostream &out);
         
-        virtual void v_DoSolve(void);
+        //virtual void v_DoSolve(void);
         
-        virtual void v_TransCoeffToPhys(void);
+        //virtual void v_TransCoeffToPhys(void);
         
-        virtual void v_TransPhysToCoeff(void);
+        //virtual void v_TransPhysToCoeff(void);
         
         virtual void v_DoInitialise(void);
         
@@ -168,4 +168,4 @@ namespace Nektar
     
 } //end of namespace
 
-#endif //BRINKMANSPLITTINGSCHEME_H
+#endif //POROUSMEDIASPLITTINGSCHEME_H

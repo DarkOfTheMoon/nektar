@@ -407,7 +407,7 @@ namespace Nektar
 
     }
     
-    void PorousMedia::AdvanceInTime(int nsteps)
+    void PorousMedia::v_DoSolve(void)
     {
         int i,n;
         static int nchk = 0;
@@ -437,7 +437,7 @@ namespace Nektar
         }
 
         //Time advance
-        for(n = 0; n < nsteps; ++n)
+        for(n = 0; n < m_steps; ++n)
         {
 
             timer.Start();
