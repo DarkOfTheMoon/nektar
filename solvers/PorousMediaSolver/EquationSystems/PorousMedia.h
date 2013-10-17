@@ -131,11 +131,6 @@ namespace Nektar
 
         EquationType  m_equationType;  ///< equation type;
 
-        virtual void v_DoSolve(void);
-
-        // Time integration classes
-        LibUtilities::TimeIntegrationSchemeOperators m_integrationOps;
-        Array<OneD, LibUtilities::TimeIntegrationSchemeSharedPtr> m_integrationScheme;
         int m_intSteps;  ///< Number of time integration steps AND  Order of extrapolation for pressure boundary conditions.         
 
         EquationType GetEquationType(void)
