@@ -153,7 +153,8 @@ namespace Nektar
         
         TimeIntegrationSchemeSharedPtr TimeIntegrationScheme::Create(const TimeIntegrationSchemeKey &key)
         {
-            TimeIntegrationSchemeSharedPtr returnval(MemoryManager<TimeIntegrationScheme>::AllocateSharedPtr(key));
+            TimeIntegrationSchemeSharedPtr returnval(
+                MemoryManager<TimeIntegrationScheme>::AllocateSharedPtr(key));
             return returnval;
         }
 

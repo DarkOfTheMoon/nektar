@@ -131,6 +131,17 @@ namespace Nektar
 
 
         /**
+         * List of values for GlobalSysSoln parameters to be used to override
+         * details given in SolverInfo
+         *
+         * This list is populated by ReadGlobalSysSoln if the
+         * GLOBALSYSSOLNINFO section is defined in the input file.
+         * This List allows for details to define for the Global Sys
+         * solver for each variable. 
+         */
+        GloSysSolnInfoList SessionReader::m_gloSysSolnList;
+
+        /**
          * Lists the possible command-line argument which can be specified for
          * this executable.
          *
@@ -220,9 +231,14 @@ namespace Nektar
 
             ASSERTL0(vFilenames.size() > 0, "No session file(s) given.");
 
-            // threads not initialised yet
             m_filename[0]    = vFilenames[0];
             m_sessionName = m_filename[0].substr(0, m_filename[0].find_last_of('.'));
+            if (m_filename[0].size() > 3 &&
+                m_filename[0].substr(m_filename[0].size() - 3, 3) == ".gz")
+            {
+                m_sessionName =
+                    m_sessionName.substr(0, m_sessionName.find_last_of('.'));
+            }
             m_xmlDoc[0]      = MergeDoc(vFilenames);
             m_exprEvaluator[0] = new AnalyticExpressionEvaluator();
 
@@ -254,6 +270,12 @@ namespace Nektar
             m_sessionName = m_filename[0].substr(0, m_filename[0].find_last_of('.'));
             m_xmlDoc[0]      = MergeDoc(pFilenames); // threads not initialised yet
             m_exprEvaluator[0] = new AnalyticExpressionEvaluator();
+            if (m_filename[0].size() > 3 &&
+                m_filename[0].substr(m_filename.size() - 3, 3) == ".gz")
+            {
+                m_sessionName =
+                    m_sessionName.substr(0, m_sessionName.find_last_of('.'));
+            }
 
             Nektar::InitMemoryPools(1, false);
             // Create communicator
@@ -388,10 +410,19 @@ namespace Nektar
                 {
                     names += "," + cmdIt->second.shortName;
                 }
-                desc.add_options()
-                    (names.c_str(), po::value<std::string>(), 
-                     cmdIt->second.description.c_str())
-                ;
+                if (cmdIt->second.isFlag)
+                {
+                    desc.add_options()
+                        (names.c_str(), cmdIt->second.description.c_str())
+                    ;
+                }
+                else
+                {
+                    desc.add_options()
+                        (names.c_str(), po::value<std::string>(),
+                         cmdIt->second.description.c_str())
+                    ;
+                }
             }
 
             // List hidden options (e.g. session file arguments are not actually
@@ -828,6 +859,50 @@ namespace Nektar
         /**
          *
          */
+        bool SessionReader::DefinesGlobalSysSolnInfo(const std::string &pVariable, 
+                                                     const std::string &pProperty) const
+        {
+
+            GloSysSolnInfoList::const_iterator iter = m_gloSysSolnList.find(pVariable);
+            if(iter == m_gloSysSolnList.end())
+            {
+                return false;
+            }
+
+            std::string vProperty = boost::to_upper_copy(pProperty);
+            
+            GloSysInfoMap::const_iterator iter1 = iter->second.find(vProperty);
+            if(iter1 == iter->second.end())
+            {
+                return false;
+            }
+            
+            return true;
+        }
+
+        
+        /**
+         *
+         */
+        const std::string &SessionReader::GetGlobalSysSolnInfo(const std::string &pVariable, const std::string &pProperty) const
+        {
+            GloSysSolnInfoList::const_iterator iter; 
+
+            ASSERTL0( (iter = m_gloSysSolnList.find(pVariable)) != m_gloSysSolnList.end(),
+                      "Failed to find variable in GlobalSysSolnInfoList");
+
+            std::string vProperty = boost::to_upper_copy(pProperty);
+            GloSysInfoMap::const_iterator iter1; 
+
+            ASSERTL0( (iter1 = iter->second.find(vProperty)) != iter->second.end(),
+                      "Failed to find property: " + vProperty + " in GlobalSysSolnInfoList");
+            
+            return iter1->second;
+        }
+        
+        /**
+         *
+         */
         bool SessionReader::DefinesGeometricInfo(const std::string &pName) const
         {
             std::string vName = boost::to_upper_copy(pName);
@@ -942,6 +1017,19 @@ namespace Nektar
             unsigned int vThr = m_threadManager->GetWorkerNum();
             ASSERTL0(idx < m_variables[vThr].size(), "Variable index out of range.");
             return m_variables[vThr][idx];
+        }
+
+
+
+        /**
+         *
+         */
+        void SessionReader::SetVariable(const unsigned int &idx, 
+                                        std::string newname) 
+        {
+            unsigned int vThr = m_threadManager->GetWorkerNum();
+            ASSERTL0(idx < m_variables[vThr].size(), "Variable index out of range.");
+            m_variables[vThr][idx] = newname;
         }
 
 
@@ -1387,18 +1475,25 @@ namespace Nektar
             e = docHandle.FirstChildElement("NEKTAR").
                 FirstChildElement("CONDITIONS").Element();
 
-            ReadParameters (e);
-            ReadSolverInfo (e);
-            ReadExpressions(e);
-			ReadVariables  (e);
-			ReadFunctions  (e);
+            // Read the various sections of the CONDITIONS block
+            ReadParameters        (e);
+            ReadSolverInfo        (e);
+            if (vThr == 0)
+            {
+            	ReadGlobalSysSolnInfo (e);
+            }
+            ReadExpressions       (e);
+            ReadVariables         (e);
+            ReadFunctions         (e);
 
-			e = docHandle.FirstChildElement("NEKTAR").
-				FirstChildElement("GEOMETRY").Element();
+            e = docHandle.FirstChildElement("NEKTAR").
+                FirstChildElement("GEOMETRY").Element();
+
             ReadGeometricInfo(e);
 
 			e = docHandle.FirstChildElement("NEKTAR").
 				FirstChildElement("FILTERS").Element();
+				
 			ReadFilters(e);
 
         }
@@ -1677,15 +1772,18 @@ namespace Nektar
                 }
             }
 
-            if (m_verbose && m_parameters[vThr].size() > 0)
+            if (m_verbose && m_parameters[vThr].size() > 0 && m_comm)
             {
-                cout << "Parameters:" << endl;
-                ParameterMap::iterator x;
-                for (x = m_parameters[vThr].begin(); x != m_parameters[vThr].end(); ++x)
+                if(m_comm->GetRank() == 0)
                 {
-                    cout << "\t" << x->first << " = " << x->second << endl;
+                    cout << "Parameters:" << endl;
+                    ParameterMap::iterator x;
+                    for (x = m_parameters[vThr].begin(); x != m_parameters[vThr].end(); ++x)
+                    {
+                        cout << "\t" << x->first << " = " << x->second << endl;
+                    }
+                    cout << endl;
                 }
-                cout << endl;
             }
         }
 
@@ -1787,13 +1885,149 @@ namespace Nektar
             
             if (m_verbose && m_solverInfo[vThr].size() > 0 && m_comm)
             {
-                cout << "Solver Info:" << endl;
-                SolverInfoMap::iterator x;
-                for (x = m_solverInfo[vThr].begin(); x != m_solverInfo[vThr].end(); ++x)
+                if(m_comm->GetRank() == 0)
                 {
-                    cout << "\t" << x->first << " = " << x->second << endl;
+                    cout << "Solver Info:" << endl;
+                    SolverInfoMap::iterator x;
+                    for (x = m_solverInfo[vThr].begin(); x != m_solverInfo[vThr].end(); ++x)
+                    {
+                        cout << "\t" << x->first << " = " << x->second << endl;
+                    }
+                    cout << endl;
                 }
-                cout << endl;
+            }
+        }
+
+
+
+        /**
+         *
+         */
+        void SessionReader::ReadGlobalSysSolnInfo(TiXmlElement *conditions)
+        {
+        	// NB, this is only supposed to run on the master thread as it
+        	// is setting a static.
+            unsigned int vThr = m_threadManager->GetWorkerNum();
+            m_gloSysSolnList.clear();
+
+            if (!conditions)
+            {
+                return;
+            }
+
+            TiXmlElement *GlobalSys =
+                            conditions->FirstChildElement("GLOBALSYSSOLNINFO");
+
+            if(!GlobalSys)
+            {
+                return;
+            }
+
+            TiXmlElement *VarInfo   = GlobalSys->FirstChildElement("V");
+
+            while (VarInfo)
+            {
+                ASSERTL0(VarInfo->Attribute("VAR"),
+                         "Missing VAR in attribute of GobalSysSolnInfo section."
+                         "File: '" + m_filename[vThr] + ", line: " +
+                         boost::lexical_cast<string>(GlobalSys->Row()));
+
+                std::string VarList = VarInfo->Attribute("VAR");
+
+                // generate a list of variables.
+                std::vector<std::string> varStrings;
+                bool valid = ParseUtils::GenerateOrderedStringVector(
+                                                VarList.c_str(),varStrings);
+
+                ASSERTL0(valid,"Unable to process list of variable in "
+                               "GlobalSysSolnInfo data, File '" + m_filename[vThr] +
+                               ", line: " +
+                               boost::lexical_cast<string>(GlobalSys->Row()));
+
+                if(varStrings.size())
+                {
+                    TiXmlElement *SysSolnInfo = VarInfo->FirstChildElement("I");
+
+                    while (SysSolnInfo)
+                    {
+                        // read the property name
+                        ASSERTL0(SysSolnInfo->Attribute("PROPERTY"),
+                                 "Missing PROPERTY attribute in "
+                                 "GlobalSysSolnInfo section. File: '" +
+                                 m_filename[vThr] + "', line: " +
+                                 boost::lexical_cast<string>(VarInfo->Row()));
+
+                        std::string SysSolnProperty =
+                            SysSolnInfo->Attribute("PROPERTY");
+
+                        ASSERTL0(!SysSolnProperty.empty(),
+                                 "GlobalSysSolnIno properties must have a "
+                                 "non-empty name for variable(s) : '" +
+                                 VarList + ". File: '" + m_filename[vThr] + ", line: "
+                                 + boost::lexical_cast<string>(VarInfo->Row()));
+
+                        // make sure that solver property is capitalised
+                        std::string SysSolnPropertyUpper =
+                                        boost::to_upper_copy(SysSolnProperty);
+
+                        // read the value
+                        ASSERTL0(SysSolnInfo->Attribute("VALUE"),
+                                 "Missing VALUE attribute in GlobalSysSolnInfo "
+                                 "section. File: '" + m_filename[vThr] + "', line: "
+                                 + boost::lexical_cast<string>(VarInfo->Row()));
+
+                        std::string SysSolnValue =
+                                            SysSolnInfo->Attribute("VALUE");
+                        ASSERTL0(!SysSolnValue.empty(),
+                                 "GlobalSysSolnInfo properties must have a "
+                                 "non-empty value. File: '" + m_filename[vThr] +
+                                 "', line: "
+                                 + boost::lexical_cast<string>(VarInfo->Row()));
+
+                        // Store values under variable map.
+                        for(int i = 0; i < varStrings.size(); ++i)
+                        {
+                            GloSysSolnInfoList::iterator x;
+                            if ((x = m_gloSysSolnList.find(varStrings[i])) ==
+                                    m_gloSysSolnList.end())
+                            {
+                                (m_gloSysSolnList[varStrings[i]])[
+                                        SysSolnPropertyUpper] = SysSolnValue;
+                            }
+                            else
+                            {
+                                x->second[SysSolnPropertyUpper] = SysSolnValue;
+                            }
+                        }
+
+                        SysSolnInfo = SysSolnInfo->NextSiblingElement("I");
+                    }
+                    VarInfo = VarInfo->NextSiblingElement("V");
+                }
+            }
+
+            if (m_verbose && m_gloSysSolnList.size() > 0 && m_comm)
+            {
+                if(m_comm->GetRank() == 0)
+                {
+                    cout << "GlobalSysSoln Info:" << endl;
+
+                    GloSysSolnInfoList::iterator x;
+                    for (x = m_gloSysSolnList.begin();
+                         x != m_gloSysSolnList.end();
+                         ++x)
+                    {
+                        cout << "\t Variable: " << x->first <<  endl;
+
+                        GloSysInfoMap::iterator y;
+                        for (y = x->second.begin(); y != x->second.end(); ++y)
+                        {
+                            cout << "\t\t " << y->first  << " = " << y->second
+                                 << endl;
+                        }
+                    }
+                    cout << endl;
+                }
             }
         }
 
@@ -1859,16 +2093,19 @@ namespace Nektar
                 }
             }
 
-            if (m_verbose && m_geometricInfo[vThr].size() > 0)
+            if (m_verbose && m_geometricInfo[vThr].size() > 0 && m_comm)
             {
-                cout << "Geometric Info:" << endl;
-                GeometricInfoMap::iterator x;
-                for (x  = m_geometricInfo[vThr].begin();
-                     x != m_geometricInfo[vThr].end(); ++x)
+                if(m_comm->GetRank() == 0)
                 {
-                    cout << "\t" << x->first << " = " << x->second << endl;
+                    cout << "Geometric Info:" << endl;
+                    GeometricInfoMap::iterator x;
+                    for (x  = m_geometricInfo[vThr].begin();
+                         x != m_geometricInfo[vThr].end(); ++x)
+                    {
+                        cout << "\t" << x->first << " = " << x->second << endl;
+                    }
+                    cout << endl;
                 }
-                cout << endl;
             }
         }
 
