@@ -456,7 +456,7 @@ namespace Nektar
 			
 			for(int i = 0; i < m_nConvectiveFields; ++i)
             {
-                Vmath::Vsub(nqtot,outarray[i],1,m_wavyForcing[i],1,outarray[i],1);
+                Vmath::Vadd(nqtot,outarray[i],1,m_wavyForcing[i],1,outarray[i],1);
             }            
         }
     
