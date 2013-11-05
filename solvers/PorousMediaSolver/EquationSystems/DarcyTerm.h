@@ -51,7 +51,7 @@ namespace Nektar
     
     typedef LibUtilities::NekFactory< std::string, DarcyTerm,
         const LibUtilities::SessionReaderSharedPtr& ,
-        Array<OneD, MultiRegions::ExpListSharedPtr>& > DarcyTermFactory; 
+        const Array<OneD, MultiRegions::ExpListSharedPtr>& > DarcyTermFactory; 
 
     DarcyTermFactory& GetDarcyTermFactory();
 
@@ -60,8 +60,8 @@ namespace Nektar
     {
     public:
         DarcyTerm(        
-            const LibUtilities::SessionReaderSharedPtr pSession,
-            Array<OneD, MultiRegions::ExpListSharedPtr> pFields);
+            const LibUtilities::SessionReaderSharedPtr& pSession,
+            const Array<OneD, MultiRegions::ExpListSharedPtr>& pFields);
         
         virtual ~DarcyTerm();
 

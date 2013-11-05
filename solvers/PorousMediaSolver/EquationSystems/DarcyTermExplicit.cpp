@@ -47,8 +47,8 @@ namespace Nektar
         "Explicit Term");
 
     DarcyTermExplicit::DarcyTermExplicit(
-        const LibUtilities::SessionReaderSharedPtr pSession,
-        Array<OneD, MultiRegions::ExpListSharedPtr> pFields)
+        const LibUtilities::SessionReaderSharedPtr &pSession,
+        const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields)
         : DarcyTerm(pSession,pFields)
     {
     }
@@ -183,8 +183,8 @@ namespace Nektar
         "Explicit spatially varying Darcy term");
 
     DarcyTermExplicitSpatial::DarcyTermExplicitSpatial(
-        const LibUtilities::SessionReaderSharedPtr pSession,
-        Array<OneD, MultiRegions::ExpListSharedPtr> pFields)
+        const LibUtilities::SessionReaderSharedPtr &pSession,
+        const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields)
         : DarcyTerm(pSession,pFields)
     {
     }

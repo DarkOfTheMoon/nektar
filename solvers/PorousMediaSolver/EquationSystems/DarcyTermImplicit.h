@@ -36,9 +36,9 @@
 #ifndef NEKTAR_SOLVERS_DARCYTERMIMPLICIT_H
 #define NEKTAR_SOLVERS_DARCYTERMIMPLICIT_H
 
-#include <LibUtilities/BasicUtils/NekFactory.hpp>
+//#include <LibUtilities/BasicUtils/NekFactory.hpp>
 #include <LibUtilities/Memory/NekMemoryManager.hpp>
-#include <LibUtilities/BasicUtils/SessionReader.h>
+//#include <LibUtilities/BasicUtils/SessionReader.h>
 #include <MultiRegions/ExpList.h>
 #include <LibUtilities/BasicUtils/SharedArray.hpp>
 #include <PorousMediaSolver/EquationSystems/DarcyTerm.h>
@@ -49,31 +49,75 @@ namespace Nektar
     // Implicit Darcy Term class
     // -------------------------
     
-    class DarcyTermImplicit;
+    //class DarcyTermImplicitIsotropic;
     
-    typedef boost::shared_ptr<DarcyTermImplicit> DarcyTermImplicitSharedPtr;
+    //typedef boost::shared_ptr<DarcyTermImplicitIsotropic> DarcyTermImplicitSharedPtr;
     
-    class DarcyTermImplicit : public DarcyTerm
+    class DarcyTermImplicitIsotropic : public DarcyTerm
     {
     public:
+        friend class MemoryManager<DarcyTermImplicitIsotropic>;
 
         /// Creates an instance of this class
         static DarcyTermSharedPtr create(
             const LibUtilities::SessionReaderSharedPtr &pSession,
-            Array<OneD, MultiRegions::ExpListSharedPtr> &pFields)
+            const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields)
         {
-            DarcyTermSharedPtr p = MemoryManager<DarcyTermImplicit>::AllocateSharedPtr(pSession,pFields);
+            DarcyTermSharedPtr p = MemoryManager<DarcyTermImplicitIsotropic>::AllocateSharedPtr(pSession,pFields);
             return p;
         }
 
         /// Name of class
         static std::string className;
 
-        DarcyTermImplicit(
-            const LibUtilities::SessionReaderSharedPtr pSession,
-            Array<OneD, MultiRegions::ExpListSharedPtr> pFields);
+        DarcyTermImplicitIsotropic(
+            const LibUtilities::SessionReaderSharedPtr &pSession,
+            const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields);
 
-        virtual ~DarcyTermImplicit();
+        virtual ~DarcyTermImplicitIsotropic();
+        
+    protected:
+        virtual void v_EvaluateDarcyTerm(
+            const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
+            Array<OneD, Array<OneD, NekDouble> > &outarray,
+            NekDouble kinvis);
+
+        virtual void v_SetupPermeability();
+
+        virtual void v_GetImplicitDarcyFactor(
+            Array<OneD, NekDouble> &permCoeff);
+    };
+
+    //--------------------------
+    // Anisotropic Implicit Darcy Term class
+    // -------------------------
+    
+    //class DarcyTermImplicitAnisotropic;
+    
+    //typedef boost::shared_ptr<DarcyTermImplicitAnisotropic> DarcyTermImplicitAnisotropicSharedPtr;
+    
+    class DarcyTermImplicitAnisotropic : public DarcyTerm
+    {
+    public:
+        friend class MemoryManager<DarcyTermImplicitAnisotropic>;
+
+        /// Creates an instance of this class
+        static DarcyTermSharedPtr create(
+            const LibUtilities::SessionReaderSharedPtr &pSession,
+            const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields)
+        {
+            DarcyTermSharedPtr p = MemoryManager<DarcyTermImplicitAnisotropic>::AllocateSharedPtr(pSession,pFields);
+            return p;
+        }
+
+        /// Name of class
+        static std::string className;
+
+        DarcyTermImplicitAnisotropic(
+            const LibUtilities::SessionReaderSharedPtr &pSession,
+            const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields);
+
+        virtual ~DarcyTermImplicitAnisotropic();
         
     protected:
         virtual void v_EvaluateDarcyTerm(

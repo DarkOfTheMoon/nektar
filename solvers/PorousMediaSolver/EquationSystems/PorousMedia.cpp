@@ -61,11 +61,6 @@ namespace Nektar
         int numfields = m_fields.num_elements();
         std::string velids[] = {"u","v","w"};
 
-        // Read the geometry and the expansion information
-        //m_graph = SpatialDomains::MeshGraph::Read(pSession);
-        int numdomains = m_graph->GetDomain().size();
-        int numexpansions = numfields*numdomains;
-        
         // Set up Velocity field to point to the first m_expdim of m_fields; 
         m_velocity = Array<OneD,int>(m_spacedim);
         
@@ -100,6 +95,21 @@ namespace Nektar
             }
         }
         ASSERTL0(i != eEquationTypeSize,"EQTYPE not found in SOLVERINFO section");
+
+
+        // Determine TimeIntegrationMethod to use
+        ASSERTL0(m_session->DefinesSolverInfo("PERMEABILITYADVANCEMENT"),
+                 "No PERMEABILITYADVANCEMENT defined in session.");
+
+        //Extend this to multiple types
+        //ExplicitIsotropic
+        //ExplicitAnistropic
+        //ExplicitSpatiallyVarying
+        //ImplicitIsotropic
+        //ImplicitAnisotropic
+
+        m_session->MatchSolverInfo("PERMEABILITYADVANCEMENT", "Explicit",
+                                   m_explicitPermeability, true);
         
         // This probably should to into specific implementations 
         // Equation specific Setups 
@@ -352,10 +362,15 @@ namespace Nektar
             
             for (int i = 0; i < m_spacedim; ++i)
             {
+                cout<<"i: "<<i<<endl;
                 m_perm[i] = kTemp;
             }
+
+            cout<<"m_spacedim: "<<m_spacedim<<endl;
+
             for (int i = (m_spacedim+1); i < (3*(m_spacedim-1)); ++i)
             {
+                cout<<"i: "<<i<<endl;
                 m_perm[i] = 0;
             }
 

@@ -41,14 +41,14 @@ namespace Nektar
     /**
      * Registers the class with the Factory.
      */
-    std::string DarcyTermImplicit::className = GetDarcyTermFactory().RegisterCreatorFunction(
-        "Implicit Term",
-        DarcyTermImplicit::create,
-        "Implicit Term");
+    std::string DarcyTermImplicitIsotropic::className = GetDarcyTermFactory().RegisterCreatorFunction(
+        "Implicit Term Isotropic",
+        DarcyTermImplicitIsotropic::create,
+        "Implicit Term Isotropic");
 
-    DarcyTermImplicit::DarcyTermImplicit(
-        const LibUtilities::SessionReaderSharedPtr pSession,
-        Array<OneD, MultiRegions::ExpListSharedPtr> pFields)
+    DarcyTermImplicitIsotropic::DarcyTermImplicitIsotropic(
+        const LibUtilities::SessionReaderSharedPtr &pSession,
+        const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields)
         : DarcyTerm(pSession,pFields)
     {
     }
@@ -56,14 +56,14 @@ namespace Nektar
     /** 
      * 
      */
-    DarcyTermImplicit::~DarcyTermImplicit()
+    DarcyTermImplicitIsotropic::~DarcyTermImplicitIsotropic()
     {
     }
 
     /** 
      * 
      */
-    void DarcyTermImplicit::v_SetupPermeability()
+    void DarcyTermImplicitIsotropic::v_SetupPermeability()
     {
         int nDim = m_fields.num_elements()-1;
         NekDouble kTemp;
@@ -102,14 +102,14 @@ namespace Nektar
     /** 
      * 
      */
-    void DarcyTermImplicit::v_EvaluateDarcyTerm(
+    void DarcyTermImplicitIsotropic::v_EvaluateDarcyTerm(
         const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
         Array<OneD, Array<OneD, NekDouble> > &outarray,
         NekDouble kinvis)
     {
     }
 
-    void DarcyTermImplicit::v_GetImplicitDarcyFactor(
+    void DarcyTermImplicitIsotropic::v_GetImplicitDarcyFactor(
         Array<OneD, NekDouble> &permCoeff)
     {
         int nDim = m_fields.num_elements()-1;
@@ -118,6 +118,89 @@ namespace Nektar
             permCoeff[i]=m_perm_inv[i];
         }
     }
+
+
+    /**
+     * Registers the class with the Factory.
+     */
+    std::string DarcyTermImplicitAnisotropic::className = GetDarcyTermFactory().RegisterCreatorFunction(
+        "Implicit Term Anisotropic",
+        DarcyTermImplicitIsotropic::create,
+        "Implicit Term Anisotropic");
+
+    DarcyTermImplicitAnisotropic::DarcyTermImplicitAnisotropic(
+        const LibUtilities::SessionReaderSharedPtr &pSession,
+        const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields)
+        : DarcyTerm(pSession,pFields)
+    {
+    }
+
+    /** 
+     * 
+     */
+    DarcyTermImplicitAnisotropic::~DarcyTermImplicitAnisotropic()
+    {
+    }
+
+    /** 
+     * 
+     */
+    void DarcyTermImplicitAnisotropic::v_SetupPermeability()
+    {
+        int nDim = m_fields.num_elements()-1;
+        NekDouble kTemp;
+        m_session->LoadParameter("Permeability", kTemp);
+            
+        for (int i = 0; i < nDim; ++i)
+        {
+            m_perm[i] = kTemp;
+        }
+
+        for (int i = (nDim+1); i < (3*(nDim-1)); ++i)
+        {
+            m_perm[i] = 0;
+        }
+
+        NekDouble detTemp = m_perm[0]*(m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5])
+            -m_perm[3]*(m_perm[2]*m_perm[3]-m_perm[4]*m_perm[5])
+            +m_perm[4]*(m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4]);
+            
+        // Check if permeability matrix is positive definite
+        ASSERTL0(m_perm[0] > 0,"Permeability Matrix is not positive definite");
+        NekDouble pd_chk = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
+        ASSERTL0(pd_chk > 0,"Permeability Matrix is not positive definite");
+        ASSERTL0(detTemp > 0,"Permeability Matrix is not positive definite");
+            
+        m_perm_inv[0] = m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5];
+        m_perm_inv[1] = m_perm[0]*m_perm[2]-m_perm[4]*m_perm[4];
+        m_perm_inv[2] = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
+        m_perm_inv[3] = m_perm[4]*m_perm[5]-m_perm[2]*m_perm[3];
+        m_perm_inv[4] = m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4];
+        m_perm_inv[5] = m_perm[3]*m_perm[4]-m_perm[0]*m_perm[5];
+
+        Vmath::Smul(6, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
+    }
+    
+    /** 
+     * 
+     */
+    void DarcyTermImplicitAnisotropic::v_EvaluateDarcyTerm(
+        const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
+        Array<OneD, Array<OneD, NekDouble> > &outarray,
+        NekDouble kinvis)
+    {
+    }
+
+    void DarcyTermImplicitAnisotropic::v_GetImplicitDarcyFactor(
+        Array<OneD, NekDouble> &permCoeff)
+    {
+        int nDim = m_fields.num_elements()-1;
+        for (int i=0; i<nDim; ++i)
+        {
+            permCoeff[i]=m_perm_inv[i];
+        }
+    }
+
 
 
 

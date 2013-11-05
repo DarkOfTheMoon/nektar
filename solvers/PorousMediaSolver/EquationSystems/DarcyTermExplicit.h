@@ -60,7 +60,7 @@ namespace Nektar
         /// Creates an instance of this class
         static DarcyTermSharedPtr create(
             const LibUtilities::SessionReaderSharedPtr &pSession,
-            Array<OneD, MultiRegions::ExpListSharedPtr> &pFields)
+            const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields)
         {
             DarcyTermSharedPtr p = MemoryManager<DarcyTermExplicit>::AllocateSharedPtr(pSession,pFields);
             return p;
@@ -70,8 +70,8 @@ namespace Nektar
         static std::string className;
 
         DarcyTermExplicit(
-            const LibUtilities::SessionReaderSharedPtr pSession,
-            Array<OneD, MultiRegions::ExpListSharedPtr> pFields);
+            const LibUtilities::SessionReaderSharedPtr &pSession,
+            const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields);
 
         virtual ~DarcyTermExplicit();
         
@@ -103,7 +103,7 @@ namespace Nektar
         /// Creates an instance of this class
         static DarcyTermSharedPtr create(
             const LibUtilities::SessionReaderSharedPtr &pSession,
-            Array<OneD, MultiRegions::ExpListSharedPtr> &pFields)
+            const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields)
         {
             DarcyTermSharedPtr p = MemoryManager<DarcyTermExplicitSpatial>::AllocateSharedPtr(pSession,pFields);
             return p;
@@ -113,8 +113,8 @@ namespace Nektar
         static std::string className;
 
         DarcyTermExplicitSpatial(
-            const LibUtilities::SessionReaderSharedPtr pSession,
-            Array<OneD, MultiRegions::ExpListSharedPtr> pFields);
+            const LibUtilities::SessionReaderSharedPtr &pSession,
+            const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields);
 
         virtual ~DarcyTermExplicitSpatial();
         
