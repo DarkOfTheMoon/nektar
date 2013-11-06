@@ -57,6 +57,27 @@ namespace Nektar
         "UnsteadyPorousMedia",
     };
 
+    enum DarcyTermMethod
+    {
+        eExplicitIsotropic,
+        eExplicitAnistropic,
+        eExplicitSpatiallyVarying,
+        eImplicitIsotropic,
+        eImplicitAnisotropic,
+        SIZE_DarcyTerm        //!< Length of enum list
+    };
+
+    // Keep this consistent with the enums in EquationType.
+    const std::string DarcyTermMethodStr[] = 
+    {
+        "ExplicitIsotropic",
+        "ExplicitAnistropic",
+        "ExplicitSpatiallyVarying",
+        "ImplicitIsotropic",
+        "ImplicitAnisotropic"
+    };
+
+
     enum AdvectionForm
     {
         eNoAdvectionForm,
@@ -130,6 +151,7 @@ namespace Nektar
         NekDouble   m_steadyStateTol; ///< Tolerance to which steady state should be evaluated at
 
         EquationType  m_equationType;  ///< equation type;
+        DarcyTermMethod m_darcyType;  ///< equation type;
 
         int m_intSteps;  ///< Number of time integration steps AND  Order of extrapolation for pressure boundary conditions.         
 

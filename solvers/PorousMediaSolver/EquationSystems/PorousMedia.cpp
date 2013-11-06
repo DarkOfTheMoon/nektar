@@ -97,16 +97,18 @@ namespace Nektar
         ASSERTL0(i != eEquationTypeSize,"EQTYPE not found in SOLVERINFO section");
 
 
-        // Determine TimeIntegrationMethod to use
-        ASSERTL0(m_session->DefinesSolverInfo("PERMEABILITYADVANCEMENT"),
-                 "No PERMEABILITYADVANCEMENT defined in session.");
-
-        //Extend this to multiple types
-        //ExplicitIsotropic
-        //ExplicitAnistropic
-        //ExplicitSpatiallyVarying
-        //ImplicitIsotropic
-        //ImplicitAnisotropic
+        // Determine how Darcy term is dealt with
+        for (i = 0; i < (int)SIZE_DarcyTerm; ++i)
+        {
+            bool match;
+            m_session->MatchSolverInfo("PERMEABILITYADVANCEMENT",DarcyTermMethodStr[i],match,false);
+            if(match)
+            {
+                m_darcyType = (DarcyTermMethod)i; 
+                break;
+            }
+        }
+        ASSERTL0(i != SIZE_DarcyTerm,"PERMEABILITYADVANCEMENT not found in SOLVERINFO section");
 
         m_session->MatchSolverInfo("PERMEABILITYADVANCEMENT", "Explicit",
                                    m_explicitPermeability, true);
