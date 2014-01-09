@@ -39,6 +39,7 @@
 #include <SolverUtils/UnsteadySystem.h>
 #include <IncNavierStokesSolver/AdvectionTerms/AdvectionTerm.h>
 #include <LibUtilities/BasicUtils/SessionReader.h>
+#include <PorousMediaSolver/EquationSystems/DarcyTerm.h>
 
 namespace Nektar
 {     
@@ -59,8 +60,7 @@ namespace Nektar
 
     enum DarcyTermMethod
     {
-        eExplicitIsotropic,
-        eExplicitAnistropic,
+        eExplicit,
         eExplicitSpatiallyVarying,
         eImplicitIsotropic,
         eImplicitAnisotropic,
@@ -70,8 +70,7 @@ namespace Nektar
     // Keep this consistent with the enums in EquationType.
     const std::string DarcyTermMethodStr[] = 
     {
-        "ExplicitIsotropic",
-        "ExplicitAnistropic",
+        "Explicit",
         "ExplicitSpatiallyVarying",
         "ImplicitIsotropic",
         "ImplicitAnisotropic"
@@ -144,6 +143,8 @@ namespace Nektar
         Array<OneD, Array<OneD, NekDouble> >  m_spatialperm;  ///< Permeability matrix
         Array<OneD, NekDouble>  m_perm_inv;  ///< inverse Permeability matrix
 
+        Array<OneD, NekDouble>  m_darcy_fac;  ///< inverse Permeability matrix
+
         /// Variable permeability
         StdRegions::VarCoeffMap m_varperm;
 
@@ -180,7 +181,9 @@ namespace Nektar
         {
             ASSERTL0(false,"This method is not defined in this class");
         }
-		
+	
+	DarcyTermSharedPtr m_darcyEvaluation;
+	
     private: 
     };
     

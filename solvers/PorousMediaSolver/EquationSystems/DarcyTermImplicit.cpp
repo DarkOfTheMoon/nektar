@@ -42,7 +42,7 @@ namespace Nektar
      * Registers the class with the Factory.
      */
     std::string DarcyTermImplicitIsotropic::className = GetDarcyTermFactory().RegisterCreatorFunction(
-        "Implicit Term Isotropic",
+        "ImplicitIsotropic",
         DarcyTermImplicitIsotropic::create,
         "Implicit Term Isotropic");
 
@@ -68,6 +68,9 @@ namespace Nektar
         int nDim = m_fields.num_elements()-1;
         NekDouble kTemp;
         m_session->LoadParameter("Permeability", kTemp);
+
+        m_perm = Array<OneD, NekDouble> (6);
+        m_perm_inv = Array<OneD, NekDouble> (6);
             
         for (int i = 0; i < nDim; ++i)
         {
@@ -124,8 +127,8 @@ namespace Nektar
      * Registers the class with the Factory.
      */
     std::string DarcyTermImplicitAnisotropic::className = GetDarcyTermFactory().RegisterCreatorFunction(
-        "Implicit Term Anisotropic",
-        DarcyTermImplicitIsotropic::create,
+        "ImplicitAnisotropic",
+        DarcyTermImplicitAnisotropic::create,
         "Implicit Term Anisotropic");
 
     DarcyTermImplicitAnisotropic::DarcyTermImplicitAnisotropic(
@@ -148,37 +151,82 @@ namespace Nektar
     void DarcyTermImplicitAnisotropic::v_SetupPermeability()
     {
         int nDim = m_fields.num_elements()-1;
-        NekDouble kTemp;
-        m_session->LoadParameter("Permeability", kTemp);
-            
-        for (int i = 0; i < nDim; ++i)
+        switch(nDim)
         {
-            m_perm[i] = kTemp;
-        }
+            case 2:
+            {
+                m_perm = Array<OneD, NekDouble> (3);
+                m_perm_inv = Array<OneD, NekDouble> (3);
 
-        for (int i = (nDim+1); i < (3*(nDim-1)); ++i)
-        {
-            m_perm[i] = 0;
-        }
-
-        NekDouble detTemp = m_perm[0]*(m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5])
-            -m_perm[3]*(m_perm[2]*m_perm[3]-m_perm[4]*m_perm[5])
-            +m_perm[4]*(m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4]);
+                std::string varCoeffs[3] = {
+                    "kxx",
+                    "kyy",
+                    "kxy"
+                };
+                for (int i = 0; i < 3; ++i)
+                {
+                    ASSERTL0(m_session->DefinesFunction("AnisotropicPermeability", varCoeffs[i]),
+                             "Function '" + varCoeffs[i] + "' not correctly defined.");
+                    m_perm[i] = m_session->GetFunction("AnisotropicPermeability", varCoeffs[i])->Evaluate();
+                }
             
-        // Check if permeability matrix is positive definite
-        ASSERTL0(m_perm[0] > 0,"Permeability Matrix is not positive definite");
-        NekDouble pd_chk = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
-        ASSERTL0(pd_chk > 0,"Permeability Matrix is not positive definite");
-        ASSERTL0(detTemp > 0,"Permeability Matrix is not positive definite");
+                NekDouble detTemp = m_perm[0]*m_perm[1]-m_perm[2]*m_perm[2];
             
-        m_perm_inv[0] = m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5];
-        m_perm_inv[1] = m_perm[0]*m_perm[2]-m_perm[4]*m_perm[4];
-        m_perm_inv[2] = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
-        m_perm_inv[3] = m_perm[4]*m_perm[5]-m_perm[2]*m_perm[3];
-        m_perm_inv[4] = m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4];
-        m_perm_inv[5] = m_perm[3]*m_perm[4]-m_perm[0]*m_perm[5];
+                // Check if permeability matrix is positive definite
+                ASSERTL0(m_perm[0] > 0,"Permeability Matrix is not positive definite");
+                ASSERTL0(detTemp > 0,"Permeability Matrix is not positive definite");
+            
+                m_perm_inv[0] = m_perm[1];
+                m_perm_inv[1] = m_perm[0];
+                m_perm_inv[2] = -m_perm[2];
+                Vmath::Smul(3, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
+            }
+            break;
+            case 3:
+            {
+                m_perm = Array<OneD, NekDouble> (6);
+                m_perm_inv = Array<OneD, NekDouble> (6);
 
-        Vmath::Smul(6, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
+                std::string varCoeffs[6] = {
+                    "kxx",
+                    "kyy",
+                    "kzz",
+                    "kxy",
+                    "kxz",
+                    "kyz"
+                };
+                
+                for (int i = 0; i < 6; ++i)
+                {
+                    ASSERTL0(m_session->DefinesFunction("AnisotropicPermeability", varCoeffs[i]),
+                             "Function '" + varCoeffs[i] + "' not correctly defined.");
+                    m_perm[i] = m_session->GetFunction("AnisotropicPermeability", varCoeffs[i])->Evaluate();
+                }
+            
+                NekDouble detTemp = m_perm[0]*(m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5])
+                    -m_perm[3]*(m_perm[2]*m_perm[3]-m_perm[4]*m_perm[5])
+                    +m_perm[4]*(m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4]);
+                
+                // Check if permeability matrix is positive definite
+                ASSERTL0(m_perm[0] > 0,"Permeability Matrix is not positive definite");
+                NekDouble pd_chk = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
+                ASSERTL0(pd_chk > 0,"Permeability Matrix is not positive definite");
+                ASSERTL0(detTemp > 0,"Permeability Matrix is not positive definite");
+
+                m_perm_inv[0] = m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5];
+                m_perm_inv[1] = m_perm[0]*m_perm[2]-m_perm[4]*m_perm[4];
+                m_perm_inv[2] = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
+                m_perm_inv[3] = m_perm[4]*m_perm[5]-m_perm[2]*m_perm[3];
+                m_perm_inv[4] = m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4];
+                m_perm_inv[5] = m_perm[3]*m_perm[4]-m_perm[0]*m_perm[5];
+                
+            Vmath::Smul(6, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
+            }
+            break;
+            default:
+                ASSERTL0(0,"Dimension not supported");
+                break;
+        }
     }
     
     /** 
@@ -200,9 +248,6 @@ namespace Nektar
             permCoeff[i]=m_perm_inv[i];
         }
     }
-
-
-
 
 }
 

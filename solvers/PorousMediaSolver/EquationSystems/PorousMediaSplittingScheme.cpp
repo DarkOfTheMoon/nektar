@@ -175,6 +175,8 @@ namespace Nektar
         // evaluate convection terms
         m_advObject->DoAdvection(m_fields, m_nConvectiveFields, m_velocity,inarray,outarray,m_time);
 
+        m_darcyEvaluation->EvaluateDarcyTerm(inarray,outarray,m_kinvis);
+
         if (m_explicitPermeability)
         {
             // add the force
@@ -193,7 +195,9 @@ namespace Nektar
                     Vmath::Vadd(nqtot,outarray[i],1,(m_forces[i]->GetPhys()),1,outarray[i],1);
                 }
             }
-            // add permeability term for explicit permeability
+        }
+        /* 
+        // add permeability term for explicit permeability
             if (m_nConvectiveFields == 2)
             {
                 if(m_session->DefinesFunction("SpatialAnisotropicPermeability"))
@@ -209,6 +213,7 @@ namespace Nektar
                 }
                 else
                 {
+                    cout<<m_perm_inv[0]<<endl;
                     Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[0],inarray[0],1,outarray[0],1,outarray[0],1);
                     Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[2],inarray[0],1,outarray[1],1,outarray[1],1);
 
@@ -245,7 +250,7 @@ namespace Nektar
                     Vmath::Svtvp(nqtot,-m_kinvis*m_perm_inv[2],inarray[2],1,outarray[2],1,outarray[2],1);
                 }
             }
-        }
+            }*/
 
         if(m_HBCnumber > 0)
         {
@@ -290,21 +295,25 @@ namespace Nektar
         // Viscous Term forcing
         SetUpViscousForcing(inarray, F, aii_Dt);
 
-        if (m_explicitPermeability || m_session->DefinesFunction("SpatialAnisotropicPermeability"))
-        {
-            factors[StdRegions::eFactorLambda] = (1.0/aii_Dt/m_kinvis);
-        }
+        //if (m_explicitPermeability || m_session->DefinesFunction("SpatialAnisotropicPermeability"))
+        //{
+        //factors[StdRegions::eFactorLambda] = (1.0/aii_Dt/m_kinvis);
+        //}
         
+        //Fill array with darcy factors
+        //Array<OneD, NekDouble> darcyfactor(m_nConvectiveFields);
+        //m_darcyEvaluation->GetImplicitDarcyFactor(darcyfactor);
+
         // Solve Helmholtz system and put in Physical space
         for(i = 0; i < m_nConvectiveFields; ++i)
         {
             // needs to be changed
             // is wrong for anisotropic permeability with off-diagonal entries! (isotropic works)
-            if (!m_explicitPermeability)
-            {
-                factors[StdRegions::eFactorLambda] = (m_perm_inv[i])+(1.0/aii_Dt/m_kinvis);
-            }    
-
+            //if (!m_explicitPermeability)
+            //{
+            //factors[StdRegions::eFactorLambda] = (darcyfactor[i])+(1.0/aii_Dt/m_kinvis);
+                factors[StdRegions::eFactorLambda] = (m_darcy_fac[i])+(1.0/aii_Dt/m_kinvis);
+                //}    
             m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateCoeffs(), NullFlagList, factors, m_varperm);
             m_fields[i]->BwdTrans(m_fields[i]->GetCoeffs(),outarray[i]);
         }

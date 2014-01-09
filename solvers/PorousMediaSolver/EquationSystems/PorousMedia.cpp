@@ -108,7 +108,7 @@ namespace Nektar
                 break;
             }
         }
-        ASSERTL0(i != SIZE_DarcyTerm,"PERMEABILITYADVANCEMENT not found in SOLVERINFO section");
+        //ASSERTL0(i != SIZE_DarcyTerm,"PERMEABILITYADVANCEMENT not found in SOLVERINFO section");
 
         m_session->MatchSolverInfo("PERMEABILITYADVANCEMENT", "Explicit",
                                    m_explicitPermeability, true);
@@ -145,6 +145,19 @@ namespace Nektar
             ASSERTL0(false,"Unknown or undefined equation type");
         }
 
+        m_darcyEvaluation=GetDarcyTermFactory().CreateInstance(DarcyTermMethodStr[m_darcyType],m_session,m_fields);
+
+        //Setup permeability matrix
+        m_darcyEvaluation->SetupPermeability();
+
+        //Set Darcy factor for implicit step
+        m_darcy_fac = Array<OneD, NekDouble> (3*(m_spacedim-1));
+        m_darcyEvaluation->GetImplicitDarcyFactor(m_darcy_fac);
+
+        //temp - need to decide if we keep the implicit implementation
+        m_perm_inv = Array<OneD, NekDouble> (3*(m_spacedim-1));
+        m_darcyEvaluation->GetImplicitDarcyFactor(m_perm_inv);
+
         //Kinematic viscosity
         m_session->LoadParameter("Kinvis", m_kinvis);
 
@@ -153,7 +166,7 @@ namespace Nektar
         m_spatialperm = Array<OneD, Array<OneD, NekDouble> > (m_spacedim);
 
         // Inverted Permeability Matrix
-        m_perm_inv = Array<OneD, NekDouble> (3*(m_spacedim-1));
+        //m_perm_inv = Array<OneD, NekDouble> (3*(m_spacedim-1));
 
         //Setup of spatially varying anisotropic permeability
         if(m_session->DefinesFunction("SpatialAnisotropicPermeability"))
@@ -295,7 +308,7 @@ namespace Nektar
         }
         else if (m_session->DefinesFunction("AnisotropicPermeability"))
         {
-            if (m_spacedim == 2)
+            /*if (m_spacedim == 2)
             {
                 std::string varCoeffs[3] = {
                     "kxx",
@@ -355,7 +368,7 @@ namespace Nektar
                 m_perm_inv[5] = m_perm[3]*m_perm[4]-m_perm[0]*m_perm[5];
                 
                 Vmath::Smul(6, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
-            }
+            }*/
         }
         else if (m_session->DefinesParameter("Permeability"))
         {

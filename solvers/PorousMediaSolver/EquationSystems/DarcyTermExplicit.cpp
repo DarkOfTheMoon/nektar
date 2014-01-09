@@ -42,7 +42,7 @@ namespace Nektar
      * Registers the class with the Factory.
      */
     std::string DarcyTermExplicit::className = GetDarcyTermFactory().RegisterCreatorFunction(
-        "Explicit Term",
+        "Explicit",
         DarcyTermExplicit::create,
         "Explicit Term");
 
@@ -67,12 +67,15 @@ namespace Nektar
         {
             case 2:
             {
+                m_perm = Array<OneD, NekDouble> (3);
+                m_perm_inv = Array<OneD, NekDouble> (3);
+
                 std::string varCoeffs[3] = {
                     "kxx",
                     "kyy",
                     "kxy"
                 };
-                for (int i = 0; i < (3*(nDim-1)); ++i)
+                for (int i = 0; i < 3; ++i)
                 {
                     ASSERTL0(m_session->DefinesFunction("AnisotropicPermeability", varCoeffs[i]),
                              "Function '" + varCoeffs[i] + "' not correctly defined.");
@@ -93,6 +96,9 @@ namespace Nektar
             break;
             case 3:
             {
+                m_perm = Array<OneD, NekDouble> (6);
+                m_perm_inv = Array<OneD, NekDouble> (6);
+
                 std::string varCoeffs[6] = {
                     "kxx",
                     "kyy",
@@ -101,7 +107,7 @@ namespace Nektar
                     "kxz",
                     "kyz"
                 };                
-                for (int i = 0; i < (3*(nDim-1)); ++i)
+                for (int i = 0; i < 6; ++i)
                 {
                     ASSERTL0(m_session->DefinesFunction("AnisotropicPermeability", varCoeffs[i]),
                              "Function '" + varCoeffs[i] + "' not correctly defined.");
@@ -145,40 +151,53 @@ namespace Nektar
         int nqtot = m_fields[0]->GetTotPoints();
         int nDim = m_fields.num_elements()-1;
 
-        if (nDim == 2)
+        switch(nDim)
         {
-            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[0],inarray[0],1,outarray[0],1,outarray[0],1);
-            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[2],inarray[0],1,outarray[1],1,outarray[1],1);
-            
-            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[2],inarray[1],1,outarray[0],1,outarray[0],1);
-            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[1],inarray[1],1,outarray[1],1,outarray[1],1);
-        }
-        else
-        {
-            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[0],inarray[0],1,outarray[0],1,outarray[0],1);
-            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[3],inarray[0],1,outarray[1],1,outarray[1],1);
-            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[4],inarray[0],1,outarray[2],1,outarray[2],1);
-            
-            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[3],inarray[1],1,outarray[0],1,outarray[0],1);
-            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[1],inarray[1],1,outarray[1],1,outarray[1],1);
-            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[5],inarray[1],1,outarray[2],1,outarray[2],1);
+            case 2:
+            {
+                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[0],inarray[0],1,outarray[0],1,outarray[0],1);
+                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[2],inarray[0],1,outarray[1],1,outarray[1],1);
+                
+                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[2],inarray[1],1,outarray[0],1,outarray[0],1);
+                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[1],inarray[1],1,outarray[1],1,outarray[1],1);
+            }
+            break;
+            case 3:
+            {
+                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[0],inarray[0],1,outarray[0],1,outarray[0],1);
+                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[3],inarray[0],1,outarray[1],1,outarray[1],1);
+                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[4],inarray[0],1,outarray[2],1,outarray[2],1);
+                
+                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[3],inarray[1],1,outarray[0],1,outarray[0],1);
+                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[1],inarray[1],1,outarray[1],1,outarray[1],1);
+                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[5],inarray[1],1,outarray[2],1,outarray[2],1);
         
-            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[4],inarray[2],1,outarray[0],1,outarray[0],1);
-            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[5],inarray[2],1,outarray[1],1,outarray[1],1);
-            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[2],inarray[2],1,outarray[2],1,outarray[2],1);
+                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[4],inarray[2],1,outarray[0],1,outarray[0],1);
+                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[5],inarray[2],1,outarray[1],1,outarray[1],1);
+                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[2],inarray[2],1,outarray[2],1,outarray[2],1);
+            }
+            break;
+            default:
+                ASSERTL0(0,"Dimension not supported");
+                break;
         }
     }
 
     void DarcyTermExplicit::v_GetImplicitDarcyFactor(
         Array<OneD, NekDouble> &permCoeff)
     {
+        int nDim = m_fields.num_elements()-1;
+        for (int i=0; i<nDim; ++i)
+        {
+            permCoeff[i]=0.0;
+        }
     }
 
     /**
      * Registers the class with the Factory.
      */
     std::string DarcyTermExplicitSpatial::className = GetDarcyTermFactory().RegisterCreatorFunction(
-        "Explicit spatially varying Darcy term",
+        "ExplicitSpatiallyVarying",
         DarcyTermExplicit::create,
         "Explicit spatially varying Darcy term");
 
@@ -199,9 +218,56 @@ namespace Nektar
      */
     void DarcyTermExplicitSpatial::v_SetupPermeability()
     {
+        int nqtot = m_fields[0]->GetTotPoints();
+        int nDim = m_fields.num_elements()-1;
+            
+        switch(nDim)
+        {
+            case 2:
+            {
 
+                std::string varCoeffs[2] = {
+                    "kxx",
+                    "kyy",
+                };
+                    
+                Array<OneD, NekDouble> vTemp;
+                for (int i = 0; i < 2; ++i)
+                {
+                    EvaluateFunction(varCoeffs[0], vTemp, "SpatialAnisotropicPermeability");
+                    m_spatialperm[i] = Array<OneD, NekDouble>(nqtot);
+                    Vmath::Sdiv(nqtot,1.0,vTemp,1,m_spatialperm[i],1);
+                }
+
+            }
+            break;
+            case 3:
+            {
+
+                //std::string varName = "k";
+                std::string varCoeffs[3] = {
+                    "kxx",
+                    "kyy",
+                    "kzz",
+                }; 
+
+
+                Array<OneD, NekDouble> vTemp;
+                for (int i = 0; i < 3; ++i)
+                {
+                    EvaluateFunction(varCoeffs[0], vTemp, "SpatialAnisotropicPermeability");
+                    m_spatialperm[i] = Array<OneD, NekDouble>(nqtot);
+                    Vmath::Sdiv(nqtot,1.0,vTemp,1,m_spatialperm[i],1);
+                }
+                    
+            }
+            break;
+            default:
+                ASSERTL0(0,"Dimension not supported");
+                break;
+        }
     }
-
+    
 
     /** 
      * 
@@ -225,6 +291,11 @@ namespace Nektar
     void DarcyTermExplicitSpatial::v_GetImplicitDarcyFactor(
         Array<OneD, NekDouble> &permCoeff)
     {
+        int nDim = m_fields.num_elements()-1;
+        for (int i=0; i<nDim; ++i)
+        {
+            permCoeff[i]=0.0;
+        }
     }
 
 
