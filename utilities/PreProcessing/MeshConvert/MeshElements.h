@@ -85,7 +85,7 @@ namespace Nektar
         class Node {
         public:
             /// Create a new node at a specified coordinate.
-            Node(unsigned int pId, double pX, double pY, double pZ)
+            Node(int pId, double pX, double pY, double pZ)
                 : id(pId), x(pX), y(pY), z(pZ), m_geom() {}
             /// Copy an existing node.
             Node(const Node& pSrc)
@@ -101,7 +101,7 @@ namespace Nektar
             }
 
             /// Get the local id;
-            unsigned int GetID(void)
+            int GetID(void)
             {
                 return id;
             }
@@ -180,21 +180,21 @@ namespace Nektar
                             z*pSrc.x-x*pSrc.z, x*pSrc.y-y*pSrc.x);
             }
 
-            /// Generate a %SpatialDomains::VertexComponent for this node.
-            SpatialDomains::VertexComponentSharedPtr GetGeom(int coordDim)
+            /// Generate a %SpatialDomains::PointGeom for this node.
+            SpatialDomains::PointGeomSharedPtr GetGeom(int coordDim)
             {
                 if (m_geom)
                 {
                     return m_geom;
                 }
                 
-                m_geom = MemoryManager<SpatialDomains::VertexComponent>::
+                m_geom = MemoryManager<SpatialDomains::PointGeom>::
                     AllocateSharedPtr(coordDim,id,x,y,z);
                 return m_geom;
             }
             
             /// ID of node.
-            unsigned int id;
+            int id;
             /// X-coordinate.
             double x;
             /// Y-coordinate.
@@ -203,7 +203,7 @@ namespace Nektar
             double z;
             
         private:
-            SpatialDomains::VertexComponentSharedPtr m_geom;
+            SpatialDomains::PointGeomSharedPtr m_geom;
         };
         /// Shared pointer to a Node.
         typedef boost::shared_ptr<Node> NodeSharedPtr;
@@ -280,7 +280,7 @@ namespace Nektar
             SpatialDomains::SegGeomSharedPtr GetGeom(int coordDim)
             {
                 // Create edge vertices.
-                SpatialDomains::VertexComponentSharedPtr p[2];
+                SpatialDomains::PointGeomSharedPtr p[2];
                 p[0] = n1->GetGeom(coordDim);
                 p[1] = n2->GetGeom(coordDim);
                 
@@ -751,10 +751,18 @@ namespace Nektar
             void SetEdgeLink(EdgeSharedPtr pLink) {
                 m_edgeLink = pLink;
             }
+            /// Get correspondence between this element and an edge.
+            EdgeSharedPtr GetEdgeLink() {
+                return m_edgeLink;
+            }
             /// Set a correspondence between this element and a face
             /// (3D boundary element).
             void SetFaceLink(FaceSharedPtr pLink) {
                 m_faceLink = pLink;
+            }
+            /// Get correspondence between this element and a face.
+            FaceSharedPtr GetFaceLink() {
+                return m_faceLink;
             }
             /// Set a correspondence between edge or face i and its
             /// representative boundary element m->element[expDim-1][j].
@@ -790,55 +798,9 @@ namespace Nektar
                     }
                     break;
                 case 2:
+                    for(int j=0; j< edge.size(); ++j)
                     {
-                        NekDouble cross;
-                        
-                        // caclulate sign based on cross product of vertices
-                        if(edge[0]->n1 == edge[1]->n1)
-                        {
-                            cross  = (edge[0]->n2->x - edge[0]->n1->x)*
-                                (edge[1]->n2->y - edge[1]->n1->y) - 
-                                (edge[0]->n2->y - edge[0]->n1->y)*
-                                (edge[1]->n2->x - edge[1]->n1->x); 
-                        }
-                        else if(edge[0]->n1 == edge[1]->n2)
-                        {
-                            cross  = (edge[0]->n2->x - edge[0]->n1->x)*
-                                (edge[1]->n1->y - edge[1]->n2->y) - 
-                                (edge[0]->n2->y - edge[0]->n1->y)*
-                                (edge[1]->n1->x - edge[1]->n2->x); 
-                        }
-                        else if(edge[0]->n2 == edge[1]->n1)
-                        {
-                            cross  = (edge[0]->n1->x - edge[0]->n2->x)*
-                                (edge[1]->n2->y - edge[1]->n1->y) - 
-                                (edge[0]->n1->y - edge[0]->n2->y)*
-                                (edge[1]->n2->x - edge[1]->n1->x); 
-
-                        }
-                        else if(edge[0]->n2 == edge[1]->n2)
-                        {
-                            cross  = (edge[0]->n1->x - edge[0]->n2->x)*
-                                (edge[1]->n1->y - edge[1]->n2->y) - 
-                                (edge[0]->n1->y - edge[0]->n2->y)*
-                                (edge[1]->n1->x - edge[1]->n2->x); 
-                        }
-                        
-                        // provide edges in anticlockwise sense
-                        if(cross  < 0.0)
-                        {
-                            for(int j=0; j< edge.size(); ++j)
-                            {
-                                s << std::setw(5) << edge[j]->id << " ";
-                            }
-                        }
-                        else
-                        {
-                            for(int j=edge.size()-1; j>=0; --j)
-                            {
-                                s << std::setw(5) << edge[j]->id << " ";
-                            }
-                        }
+                        s << std::setw(5) << edge[j]->id << " ";
                     }
                     break;
                 case 3:

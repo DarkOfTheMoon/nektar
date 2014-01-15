@@ -75,6 +75,9 @@ namespace Nektar
             MULTI_REGIONS_EXPORT GlobalLinSysSharedPtr GetGlobalBndLinSys(
                 const GlobalLinSysKey &mkey);
             
+            MULTI_REGIONS_EXPORT void EvaluateHDGPostProcessing(
+                Array<OneD, NekDouble> &outarray);
+            
         protected:
             /**
              * @brief An object which contains the discretised boundary
@@ -132,7 +135,7 @@ namespace Nektar
             vector<int> m_periodicFwdCopy;
             vector<int> m_periodicBwdCopy;
             
-            void SetUpDG();
+            void SetUpDG(const std::string = "DefaultVar");
             bool SameTypeOfBoundaryConditions(const DisContField3D &In);
             void GenerateBoundaryConditionExpansion(
                 const SpatialDomains::MeshGraphSharedPtr &graph3D,
@@ -183,7 +186,7 @@ namespace Nektar
              * @brief Obtain a copy of the periodic edges and vertices for this
              * field.
              */
-            virtual void v_GetPeriodicFaces(
+            virtual void v_GetPeriodicEntities(
                 PeriodicMap &periodicVerts,
                 PeriodicMap &periodicEdges,
                 PeriodicMap &periodicFaces)

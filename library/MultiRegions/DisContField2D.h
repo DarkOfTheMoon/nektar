@@ -116,14 +116,15 @@ namespace Nektar
             std::set<int> m_boundaryEdges;
             
             /**
+             * @brief A map which identifies groups of periodic vertices.
+             */
+            PeriodicMap m_periodicVerts;
+
+            /**
              * @brief A map which identifies pairs of periodic edges.
              */
             PeriodicMap m_periodicEdges;
             
-            /**
-             * @brief A map which identifies groups of periodic vertices.
-             */
-            PeriodicMap m_periodicVerts;
             
             /**
              * @brief A vector indicating degress of freedom which need to be
@@ -139,7 +140,7 @@ namespace Nektar
              */
             vector<bool> m_leftAdjacentEdges;
 
-            void SetUpDG();
+            void SetUpDG(const std::string  = "DefaultVar");
             bool SameTypeOfBoundaryConditions(const DisContField2D &In);
             void GenerateBoundaryConditionExpansion(
                 const SpatialDomains::MeshGraphSharedPtr &graph2D,
@@ -195,9 +196,10 @@ namespace Nektar
              * @brief Obtain a copy of the periodic edges and vertices for this
              * field.
              */
-            virtual void v_GetPeriodicEdges(
+            virtual void v_GetPeriodicEntities(
                 PeriodicMap &periodicVerts,
-                PeriodicMap &periodicEdges)
+                PeriodicMap &periodicEdges,
+                PeriodicMap &periodicFaces)
             {
                 periodicVerts = m_periodicVerts;
                 periodicEdges = m_periodicEdges;

@@ -307,7 +307,6 @@
         template<class T>  void Gathr(int n, const Array<OneD, const T> &x, const Array<OneD, const int> &y,  Array<OneD,T> &z)
         {
             
-            ASSERTL1(n <= x.num_elements()+x.GetOffset(),"Array out of bounds");
             ASSERTL1(n <= y.num_elements()+y.GetOffset(),"Array out of bounds");
             ASSERTL1(n <= z.num_elements()+z.GetOffset(),"Array out of bounds");
 
@@ -320,7 +319,6 @@
         {
             ASSERTL1(n <= x.num_elements()+x.GetOffset(),"Array out of bounds");
             ASSERTL1(n <= y.num_elements()+y.GetOffset(),"Array out of bounds");
-            ASSERTL1(n <= z.num_elements()+z.GetOffset(),"Array out of bounds");
 
             Scatr(n,&x[0],&y[0],&z[0]);
         }
@@ -331,7 +329,6 @@
         {
             ASSERTL1(n <= x.num_elements()+x.GetOffset(),"Array out of bounds");
             ASSERTL1(n <= y.num_elements()+y.GetOffset(),"Array out of bounds");
-            ASSERTL1(n <= z.num_elements()+z.GetOffset(),"Array out of bounds");
 
             Assmb(n,&x[0],&y[0],&z[0]);
         }
