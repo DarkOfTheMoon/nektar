@@ -42,6 +42,7 @@
 #include <MultiRegions/ExpList.h>
 #include <LibUtilities/BasicUtils/SharedArray.hpp>
 #include <PorousMediaSolver/EquationSystems/DarcyTerm.h>
+//#include <LibUtilities/BasicUtils/FieldIO.h>
 
 namespace Nektar
 {
@@ -128,6 +129,11 @@ namespace Nektar
 
         virtual void v_GetImplicitDarcyFactor(
             Array<OneD, NekDouble> &permCoeff);
+
+        void EvaluateFunction(
+            std::string pFieldName,
+            Array<OneD, NekDouble> pArray,
+            const std::string pFunctionName);
 
     };
 
