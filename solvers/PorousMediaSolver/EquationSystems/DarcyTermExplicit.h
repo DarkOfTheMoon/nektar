@@ -130,7 +130,7 @@ namespace Nektar
         virtual void v_GetImplicitDarcyFactor(
             Array<OneD, NekDouble> &permCoeff);
 
-        void EvaluateFunction(
+        void LoadPermeabilityField(
             std::string pFieldName,
             Array<OneD, NekDouble> pArray,
             const std::string pFunctionName);

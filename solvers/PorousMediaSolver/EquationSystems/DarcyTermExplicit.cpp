@@ -234,7 +234,7 @@ namespace Nektar
                 Array<OneD, NekDouble> vTemp;
                 for (int i = 0; i < 2; ++i)
                 {
-                    EvaluateFunction(varCoeffs[0], vTemp, "SpatialAnisotropicPermeability");
+                    LoadPermeabilityField(varCoeffs[0], vTemp, "SpatialAnisotropicPermeability");
                     m_spatialperm[i] = Array<OneD, NekDouble>(nqtot);
                     Vmath::Sdiv(nqtot,1.0,vTemp,1,m_spatialperm[i],1);
                 }
@@ -255,7 +255,7 @@ namespace Nektar
                 Array<OneD, NekDouble> vTemp;
                 for (int i = 0; i < 3; ++i)
                 {
-                    EvaluateFunction(varCoeffs[0], vTemp, "SpatialAnisotropicPermeability");
+                    LoadPermeabilityField(varCoeffs[0], vTemp, "SpatialAnisotropicPermeability");
                     m_spatialperm[i] = Array<OneD, NekDouble>(nqtot);
                     Vmath::Sdiv(nqtot,1.0,vTemp,1,m_spatialperm[i],1);
                 }
@@ -298,7 +298,7 @@ namespace Nektar
         }
     }
 
-    void DarcyTermExplicitSpatial::EvaluateFunction(
+    void DarcyTermExplicitSpatial::LoadPermeabilityField(
         std::string pFieldName,
         Array<OneD, NekDouble> pArray,
         const std::string pFunctionName)
@@ -319,45 +319,18 @@ namespace Nektar
         Vmath::Zero(vCoeffs.num_elements(),vCoeffs,1);
                 
 
-        int numexp = m_fields[0]->GetExpSize(); 
-        Array<OneD,int> ElementGIDs(numexp);
-        // Define list of global element ids 
-        for(int i = 0; i < numexp; ++i)
-        {
-            ElementGIDs[i] = m_fields[0]->GetExp(i)->GetGeom()->GetGlobalID();
-        }
-
         // Read the restart file containing this variable
         LibUtilities::Import(filename, FieldDef, FieldData);
-                
-        int idx = -1;
-                
-        // Loop over all the expansions
+
+        std::string varName;
+
         for(int i = 0; i < FieldDef.size(); ++i)
         {
-            // Find the index of the required field in the
-            // expansion segment
-            for(int j = 0; j < FieldDef[i]->m_fields.size(); ++j)
-            {
-                if (FieldDef[i]->m_fields[j] == pFieldName)
-                {
-                    idx = j;
-                }
-            }
-                    
-            if(idx >= 0 )
-            {
-                m_fields[0]->ExtractDataToCoeffs(FieldDef[i], 
-                                                 FieldData[i],
-                                                 FieldDef[i]->m_fields[idx],
-                                                 vCoeffs);
-            }
-            else
-            {
-                cout << "Field " + pFieldName + " not found." << endl;
-            }
+            m_fields[0]->ExtractDataToCoeffs(FieldDef[i],
+                                             FieldData[i],
+                                             varName,
+                                             vCoeffs);
         }
-
 
         m_fields[0]->BwdTrans_IterPerExp(vCoeffs, pArray);
     }
