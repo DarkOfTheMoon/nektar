@@ -1087,6 +1087,22 @@ namespace Nektar
                     lmat->Invert();
                 }
                 break;
+			//matrices for the manifold implementation (include metric terms)
+			//mass matrix M[i,j] = (phi_i, g_11 phi_j)
+			case StdRegions::eManifoldMass00:
+				break;
+			//mass matrix M[i,j] = (phi_i, g_21 phi_j). Keep in mind that g_12 = g_21 due to the symmetry of the metric tensor
+			case StdRegions::eManifoldMass10:
+				break;
+			//mass matrix M[i,j] = (phi_i, g_22 phi_j)
+			case StdRegions::eManifoldMass11:
+				break;
+			//weak derivative matrices for manifod D_k[i,j] = (phi_i, d( sqrt(g) phi_j )/d xi_k)
+			case StdRegions::eManifoldWeakDeriv0:
+				break;
+			case StdRegions::eManifoldWeakDeriv1:
+				break;
+			case 
             default:
                 ASSERTL0(false,"This matrix type cannot be generated from this class");
                 break;
