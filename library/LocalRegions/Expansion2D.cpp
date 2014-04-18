@@ -1090,6 +1090,13 @@ namespace Nektar
 			//matrices for the manifold implementation (include metric terms)
 			//mass matrix M[i,j] = (phi_i, g_11 phi_j)
 			case StdRegions::eManifoldMass00:
+				{
+					Array<TwoD, const NekDouble> gmat = m_metricinfo->GetGmat(GetPointsKeys());//!!this is inverted metric tensor, need to write a function to compute g_ij one
+					StdRegions::VarCoeffsMap vcMap;
+					vcMap[StdRegions::eVarCoeffMass] = gmat[0][0];
+					StdRegions::StdMatrixKey masskey(StdRegions::eMass, DetShapeType(), *this, StdRegions::NullConstFactorMap, vcMap);
+					returnval = StdRegions::CreateGeneralMatrix(masskey);
+				}
 				break;
 			//mass matrix M[i,j] = (phi_i, g_21 phi_j). Keep in mind that g_12 = g_21 due to the symmetry of the metric tensor
 			case StdRegions::eManifoldMass10:
@@ -1102,7 +1109,6 @@ namespace Nektar
 				break;
 			case StdRegions::eManifoldWeakDeriv1:
 				break;
-			case 
             default:
                 ASSERTL0(false,"This matrix type cannot be generated from this class");
                 break;

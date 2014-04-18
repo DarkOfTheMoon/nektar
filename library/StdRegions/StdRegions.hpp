@@ -144,6 +144,11 @@ namespace Nektar
             ePreconLinearSpaceMass,
             eInterpGauss,
             eGaussDG,
+			eManifoldMass00,
+			eManifoldMass10,
+			eManifoldMass11,
+			eManifoldWeakDeriv0,
+			eManifoldWeakDeriv1,
             SIZE_MatrixType
         };
 
