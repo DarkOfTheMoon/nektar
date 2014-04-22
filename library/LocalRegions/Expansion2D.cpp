@@ -1091,23 +1091,66 @@ namespace Nektar
 			//mass matrix M[i,j] = (phi_i, g_11 phi_j)
 			case StdRegions::eManifoldMass00:
 				{
-					Array<TwoD, const NekDouble> gmat = m_metricinfo->GetGmat(GetPointsKeys());//!!this is inverted metric tensor, need to write a function to compute g_ij one
-					StdRegions::VarCoeffsMap vcMap;
-					vcMap[StdRegions::eVarCoeffMass] = gmat[0][0];
+					int nqtot = GetTotPoints();
+					Array<TwoD, const NekDouble> gmat = m_metricinfo->GetMetricTensor(GetPointsKeys());
+					//passing metric info through the VarCoeffMap in matrix key
+					StdRegions::VarCoeffMap vcMap;
+					vcMap[StdRegions::eVarCoeffMetric] = Array<OneD, NekDouble>(nqtot); 
+					Vmath::Vcopy(nqtot, &gmat[0][0], 1, &vcMap[StdRegions::eVarCoeffMetric][0], 1);
 					StdRegions::StdMatrixKey masskey(StdRegions::eMass, DetShapeType(), *this, StdRegions::NullConstFactorMap, vcMap);
-					returnval = StdRegions::CreateGeneralMatrix(masskey);
+					returnval = StdExpansion::CreateGeneralMatrix(masskey);
 				}
 				break;
 			//mass matrix M[i,j] = (phi_i, g_21 phi_j). Keep in mind that g_12 = g_21 due to the symmetry of the metric tensor
 			case StdRegions::eManifoldMass10:
+				{
+					int nqtot = GetTotPoints();
+					Array<TwoD, const NekDouble> gmat = m_metricinfo->GetMetricTensor(GetPointsKeys());
+					//passing metric info through the VarCoeffMap in matrix key
+					StdRegions::VarCoeffMap vcMap;
+					vcMap[StdRegions::eVarCoeffMetric] = Array<OneD, NekDouble>(nqtot); 
+					Vmath::Vcopy(nqtot, &gmat[1][0], 1, &vcMap[StdRegions::eVarCoeffMetric][0], 1);
+					StdRegions::StdMatrixKey masskey(StdRegions::eMass, DetShapeType(), *this, StdRegions::NullConstFactorMap, vcMap);
+					returnval = StdExpansion::CreateGeneralMatrix(masskey);
+				}
 				break;
 			//mass matrix M[i,j] = (phi_i, g_22 phi_j)
 			case StdRegions::eManifoldMass11:
+				{
+					int nqtot = GetTotPoints();
+					Array<TwoD, const NekDouble> gmat = m_metricinfo->GetMetricTensor(GetPointsKeys());
+					//passing metric info through the VarCoeffMap in matrix key
+					StdRegions::VarCoeffMap vcMap;
+					vcMap[StdRegions::eVarCoeffMetric] = Array<OneD, NekDouble>(nqtot); 
+					Vmath::Vcopy(nqtot, &gmat[4][0], 1, &vcMap[StdRegions::eVarCoeffMetric][0], 1);
+					StdRegions::StdMatrixKey masskey(StdRegions::eMass, DetShapeType(), *this, StdRegions::NullConstFactorMap, vcMap);
+					returnval = StdExpansion::CreateGeneralMatrix(masskey);
+				}
 				break;
 			//weak derivative matrices for manifod D_k[i,j] = (phi_i, d( sqrt(g) phi_j )/d xi_k)
 			case StdRegions::eManifoldWeakDeriv0:
+				{
+					int nqtot = GetTotPoints();
+					Array<OneD, const NekDouble> jac = m_metricinfo->GetJac(GetPointsKeys());
+					//passing metric info through the VarCoeffMap in matrix key
+					StdRegions::VarCoeffMap vcMap;
+					vcMap[StdRegions::eVarCoeffMetric] = Array<OneD, NekDouble>(nqtot); 
+					Vmath::Vcopy(nqtot, &jac[0], 1, &vcMap[StdRegions::eVarCoeffMetric][0], 1);
+					StdRegions::StdMatrixKey weakDkey(StdRegions::eWeakDeriv0, DetShapeType(), *this, StdRegions::NullConstFactorMap, vcMap);
+					returnval = StdExpansion::CreateGeneralMatrix(weakDkey);
+				}
 				break;
 			case StdRegions::eManifoldWeakDeriv1:
+				{
+					int nqtot = GetTotPoints();
+					Array<OneD, const NekDouble> jac = m_metricinfo->GetJac(GetPointsKeys());
+					//passing metric info through the VarCoeffMap in matrix key
+					StdRegions::VarCoeffMap vcMap;
+					vcMap[StdRegions::eVarCoeffMetric] = Array<OneD, NekDouble>(nqtot); 
+					Vmath::Vcopy(nqtot, &jac[0], 1, &vcMap[StdRegions::eVarCoeffMetric][0], 1);
+					StdRegions::StdMatrixKey weakDkey(StdRegions::eWeakDeriv0, DetShapeType(), *this, StdRegions::NullConstFactorMap, vcMap);
+					returnval = StdExpansion::CreateGeneralMatrix(weakDkey);
+				}
 				break;
             default:
                 ASSERTL0(false,"This matrix type cannot be generated from this class");

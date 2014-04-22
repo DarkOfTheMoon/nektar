@@ -307,6 +307,71 @@ namespace Nektar
             return jac;
         }
 
+        /**
+         * This routine returns a two-dimensional array of values specifying
+         * the metric terms associated with the coordinate mapping of
+         * the corresponding reference region to the physical element. These
+         * terms correspond to the \f$g_{ij}\f$ terms in \cite CaYaKiPeSh13 and,
+         * in the case of an embedded manifold, map contravariant quantities to
+         * covariant quantities. The leading index of the array is the index
+         * of the term in the tensor numbered as
+         * \f[\left(\begin{array}{ccc}
+         *    0 & 1 & 2 \\
+         *    1 & 3 & 4 \\
+         *    2 & 4 & 5
+         * \end{array}\right)\f].
+         * The second dimension is either of size 1 in the case of elements
+         * having #GeomType #eRegular, or of size equal to the number of
+         * quadrature points for #eDeformed elements.
+         *
+         * @see [Wikipedia "Covariance and Contravariance of Vectors"]
+         *      (http://en.wikipedia.org/wiki/Covariance_and_contravariance_of_vectors)
+         * @returns             Two-dimensional array containing the inverse
+         *                      metric tensor of the coordinate mapping.
+         */
+        Array<TwoD, NekDouble> GeomFactors::ComputeMetricTensor(
+                const LibUtilities::PointsKeyVector &keyTgt) const
+        {
+            ASSERTL1(keyTgt.size() == m_expDim,
+                     "Dimension of target point distribution does not match "
+                     "expansion dimension.");
+
+            int i = 0, j = 0, k = 0, l = 0;
+            int ptsTgt   = 1;
+
+            if (m_type == eDeformed)
+            {
+                // Allocate storage and compute number of points
+                for (i = 0; i < m_expDim; ++i)
+                {
+                    ptsTgt   *= keyTgt[i].GetNumPoints();
+                }
+            }
+
+            // Get derivative at geometry points
+            DerivStorage deriv = ComputeDeriv(keyTgt);
+
+            Array<TwoD, NekDouble> gmat(m_expDim*m_expDim, ptsTgt, 0.0);
+
+            // Compute g_{ij} as t_i \cdot t_j and store in tmp
+            for (i = 0, l = 0; i < m_expDim; ++i)
+            {
+                for (j = 0; j < m_expDim; ++j, ++l)
+                {
+                    for (k = 0; k < m_coordDim; ++k)
+                    {
+                        Vmath::Vvtvp(ptsTgt, &deriv[i][k][0], 1,
+                                             &deriv[j][k][0], 1,
+                                             &gmat[l][0],      1,
+                                             &gmat[l][0],      1);
+                    }
+                }
+            }
+
+            return gmat;
+        }
+
+
 
         /**
          * This routine returns a two-dimensional array of values specifying

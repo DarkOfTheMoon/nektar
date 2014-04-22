@@ -209,7 +209,8 @@ namespace Nektar
             eVarCoeffD02,
             eVarCoeffD12,
             eVarCoeffVelX,
-            eVarCoeffVelY
+            eVarCoeffVelY,
+			eVarCoeffMetric
         };
 
         const char* const VarCoeffTypeMap[] = {
@@ -223,7 +224,8 @@ namespace Nektar
             "VarCoeffD02",
             "VarCoeffD12",
             "VarCoeffVelX",
-            "VarCoeffVelY"
+            "VarCoeffVelY",
+			"VarCoeffMetric"
         };
         typedef std::map<StdRegions::VarCoeffType, Array<OneD, NekDouble> > VarCoeffMap;
         static VarCoeffMap NullVarCoeffMap;

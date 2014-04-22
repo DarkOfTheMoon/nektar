@@ -107,7 +107,11 @@ namespace SpatialDomains
             inline const Array<OneD, const NekDouble> GetJac(
                     const LibUtilities::PointsKeyVector &keyTgt);
 
-            /// Return the Laplacian coefficients \f$g_{ij}\f$.
+            /// Return the metric tensor \f$g_{ij}\f$.
+            inline const Array<TwoD, const NekDouble> GetMetricTensor(
+                    const LibUtilities::PointsKeyVector &keyTgt);
+
+            /// Return the Laplacian coefficients (inverse metric tensor) \f$g^{ij}\f$.
             inline const Array<TwoD, const NekDouble> GetGmat(
                     const LibUtilities::PointsKeyVector &keyTgt);
 
@@ -159,7 +163,11 @@ namespace SpatialDomains
             SPATIAL_DOMAINS_EXPORT Array<OneD, NekDouble> ComputeJac(
                     const LibUtilities::PointsKeyVector &keyTgt) const;
 
-            /// Computes the Laplacian coefficients \f$g_{ij}\f$.
+            /// Computes the metric tensor \f$g_{ij}\f$.
+            SPATIAL_DOMAINS_EXPORT Array<TwoD, NekDouble> ComputeMetricTensor(
+                    const LibUtilities::PointsKeyVector &keyTgt) const;
+
+            /// Computes the Laplacian coefficients (inverse metric tensor) \f$g^{ij}\f$.
             SPATIAL_DOMAINS_EXPORT Array<TwoD, NekDouble> ComputeGmat(
                     const LibUtilities::PointsKeyVector &keyTgt) const;
 
@@ -234,6 +242,18 @@ namespace SpatialDomains
 
     }
 
+
+    /**
+     * @param   keyTgt      Target point distributions.
+     * @returns             Metric tensor evaluated at target point
+     *                      distributions.
+     * @see                 GeomFactors::ComputeMetricTensor
+     */
+    inline const Array<TwoD, const NekDouble> GeomFactors::GetMetricTensor(
+            const LibUtilities::PointsKeyVector &keyTgt)
+    {
+        return ComputeMetricTensor(keyTgt);
+    }
 
     /**
      * @param   keyTgt      Target point distributions.
