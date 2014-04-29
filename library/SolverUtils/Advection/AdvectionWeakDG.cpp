@@ -41,10 +41,13 @@ namespace Nektar
 {
     namespace SolverUtils
     {
-        std::string AdvectionWeakDG::type = GetAdvectionFactory().
-            RegisterCreatorFunction("WeakDG", AdvectionWeakDG::create);
+        std::string AdvectionWeakDG::type[] = {
+            GetAdvectionFactory().RegisterCreatorFunction("WeakDG",
+                                                    AdvectionWeakDG::create),
+            GetAdvectionFactory().RegisterCreatorFunction("AdjointWeakDG",
+                                                          AdvectionWeakDG::create)};
 
-        AdvectionWeakDG::AdvectionWeakDG()
+        AdvectionWeakDG::AdvectionWeakDG(std::string advType):m_advType(advType)
         {
         }
 
@@ -86,8 +89,13 @@ namespace Nektar
             int nTracePointsTot = fields[0]->GetTrace()->GetTotPoints();
             int i, j;
 
+            Array<OneD, Array<OneD, NekDouble> >        outarray_tmp(nConvectiveFields);
+            Array<OneD, Array<OneD, NekDouble> >        outarray_tmp2(nConvectiveFields);
+            
             Array<OneD, Array<OneD, NekDouble> > tmp(nConvectiveFields);
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > fluxvector(
+                nConvectiveFields);
+            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > JacTransVec(
                 nConvectiveFields);
 
             // Allocate storage for flux vector F(u).
@@ -95,6 +103,7 @@ namespace Nektar
             {
                 fluxvector[i] =
                     Array<OneD, Array<OneD, NekDouble> >(m_spaceDim);
+                
                 for (j = 0; j < m_spaceDim; ++j)
                 {
                     fluxvector[i][j] = Array<OneD, NekDouble>(nPointsTot);
@@ -103,19 +112,84 @@ namespace Nektar
 
             ASSERTL1(m_riemann,
                      "Riemann solver must be provided for AdvectionWeakDG.");
-
-            m_fluxVector(inarray, fluxvector);
-
-            // Get the advection part (without numerical flux)
-            for(i = 0; i < nConvectiveFields; ++i)
+            
+            // Retreive the direct solution for the forward problem
+            for (i = 0; i < nConvectiveFields; ++i)
             {
-                tmp[i] = Array<OneD, NekDouble>(nCoeffs, 0.0);
-
-                for (j = 0; j < nDim; ++j)
+                fluxvector[i] =
+                Array<OneD, Array<OneD, NekDouble> >(m_spaceDim);
+                
+                JacTransVec[i] =
+                Array<OneD, Array<OneD, NekDouble> >(m_spaceDim);
+                
+                for (j = 0; j < m_spaceDim; ++j)
                 {
-                    fields[i]->IProductWRTDerivBase(j, fluxvector[i][j],
-                                                       outarray[i]);
-                    Vmath::Vadd(nCoeffs, outarray[i], 1, tmp[i], 1, tmp[i], 1);
+                    fluxvector[i][j] = Array<OneD, NekDouble>(nPointsTot);
+                    JacTransVec[i][j] = Array<OneD, NekDouble>(nPointsTot);
+                }
+            }
+            
+            m_fluxVector(inarray, fluxvector);
+            
+            if (m_advType == "AdjointWeakDG")
+            {
+                m_JacTransposeDivVector(inarray, JacTransVec);
+                
+                // Get the advection part (without numerical flux)
+                for(i = 0; i < nConvectiveFields; ++i)
+                {
+                    tmp[i] = Array<OneD, NekDouble>(nCoeffs, 0.0);
+                    
+                    outarray_tmp[i] = Array<OneD, NekDouble>(nCoeffs, 0.0);
+                    outarray_tmp2[i] = Array<OneD, NekDouble>(nCoeffs, 0.0);
+                    
+                    
+                    
+                    for (j = 0; j < nDim; ++j)
+                    {
+                        fields[i]->IProductWRTDerivBase(j,
+                                            fluxvector[i][j],
+                                            outarray[i]);
+                        
+                        // since the adjoint for the convective part is NOT given in conservative form, an additional term where the derivatives of the transposed jacobians are multiplied with the basis hence,
+                        
+                        fields[i]->IProductWRTBase(JacTransVec[i][j],
+                                                   outarray_tmp[i]);
+                        
+                        Vmath::Vadd(nCoeffs,
+                                    outarray[i], 1,
+                                    outarray_tmp[i], 1,
+                                    outarray_tmp2[i], 1);
+                        
+                        Vmath::Vadd(nCoeffs,
+                                    outarray_tmp2[i], 1,
+                                    tmp[i], 1,
+                                    tmp[i], 1);
+                    }
+                }
+            }
+            
+            if (m_advType == "WeakDG")
+            {
+                // Get the advection part (without numerical flux)
+                for(i = 0; i < nConvectiveFields; ++i)
+                {
+                    tmp[i] = Array<OneD, NekDouble>(nCoeffs, 0.0);
+                    
+                    outarray_tmp[i] = Array<OneD, NekDouble>(nCoeffs, 0.0);
+                    
+                    for (j = 0; j < nDim; ++j)
+                    {
+                        fields[i]->IProductWRTDerivBase(j,
+                                        fluxvector[i][j],
+                                        outarray[i]);
+                        
+                        
+                        Vmath::Vadd(nCoeffs,
+                                    outarray[i], 1,
+                                    tmp[i], 1,
+                                    tmp[i], 1);
+                    }
                 }
             }
 
@@ -133,8 +207,8 @@ namespace Nektar
             }
 
             m_riemann->Solve(Fwd, Bwd, numflux);
-
-            // Evaulate <\phi, \hat{F}\cdot n> - OutField[i]
+            
+            // Evaulate <\phi, \hat{F}\cdot n> - OutField[i]g
             for(i = 0; i < nConvectiveFields; ++i)
             {
                 Vmath::Neg                      (nCoeffs, tmp[i], 1);

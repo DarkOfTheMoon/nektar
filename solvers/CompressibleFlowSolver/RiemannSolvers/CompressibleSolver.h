@@ -54,6 +54,13 @@ namespace Nektar
             const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
                   Array<OneD,       Array<OneD, NekDouble> > &flux);
         
+        virtual void  v_AdjointSolve(
+            const Array<OneD, const Array<OneD, NekDouble> > &Fwd,
+            const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
+            const Array<OneD, const Array<OneD, NekDouble> > &FwdDir,
+            const Array<OneD, const Array<OneD, NekDouble> > &BwdDir,
+                  Array<OneD,       Array<OneD, NekDouble> > &flux);
+        
         virtual void v_ArraySolve(
             const Array<OneD, const Array<OneD, NekDouble> > &Fwd,
             const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
@@ -65,6 +72,26 @@ namespace Nektar
         virtual void v_PointSolve(
             NekDouble  rhoL, NekDouble  rhouL, NekDouble  rhovL, NekDouble  rhowL, NekDouble  EL,
             NekDouble  rhoR, NekDouble  rhouR, NekDouble  rhovR, NekDouble  rhowR, NekDouble  ER,
+            NekDouble &rhof, NekDouble &rhouf, NekDouble &rhovf, NekDouble &rhowf, NekDouble &Ef)
+        {
+            ASSERTL0(false, "This function should be defined by subclasses.");
+        }
+        
+        virtual void v_ArrayAdjointSolve(
+            const Array<OneD, const Array<OneD, NekDouble> > &Fwd,
+            const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
+            const Array<OneD, const Array<OneD, NekDouble> > &FwdDir,
+            const Array<OneD, const Array<OneD, NekDouble> > &BwdDir,
+                  Array<OneD,       Array<OneD, NekDouble> > &flux)
+        {
+            ASSERTL0(false, "This function should be defined by subclasses.");
+        }
+        
+        virtual void v_PointAdjointSolve(
+            NekDouble  rhoL, NekDouble  rhouL, NekDouble  rhovL, NekDouble  rhowL, NekDouble  EL,
+            NekDouble  rhoR, NekDouble  rhouR, NekDouble  rhovR, NekDouble  rhowR, NekDouble  ER,
+            NekDouble  rhoLDir, NekDouble  rhouLDir, NekDouble  rhovLDir, NekDouble  rhowLDir, NekDouble  ELDir,
+            NekDouble  rhoRDir, NekDouble  rhouRDir, NekDouble  rhovRDir, NekDouble  rhowRDir, NekDouble  ERDir,
             NekDouble &rhof, NekDouble &rhouf, NekDouble &rhovf, NekDouble &rhowf, NekDouble &Ef)
         {
             ASSERTL0(false, "This function should be defined by subclasses.");

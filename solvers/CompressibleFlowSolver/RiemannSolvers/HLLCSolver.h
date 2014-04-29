@@ -58,6 +58,14 @@ namespace Nektar
             double  rhoL, double  rhouL, double  rhovL, double  rhowL, double  EL,
             double  rhoR, double  rhouR, double  rhovR, double  rhowR, double  ER,
             double &rhof, double &rhouf, double &rhovf, double &rhowf, double &Ef);
+        
+        virtual void v_PointAdjointSolve(
+            double  rhoL, double  rhouL, double  rhovL, double  rhowL, double  EL,
+            double  rhoR, double  rhouR, double  rhovR, double  rhowR, double  ER,
+            double  rhoLdir, double  rhouLdir, double  rhovLdir, double  rhowLdir, double  ELdir,
+            double  rhoRdir, double  rhouRdir, double  rhovRdir, double  rhowRdir, double  ERdir,
+            double &rhof, double &rhouf, double &rhovf, double &rhowf, double &Ef);
+
     };
 }
 

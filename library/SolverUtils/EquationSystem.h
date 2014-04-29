@@ -61,7 +61,10 @@ namespace Nektar
         const LibUtilities::SessionReaderSharedPtr&
         > EquationSystemFactory;
         SOLVER_UTILS_EXPORT EquationSystemFactory& GetEquationSystemFactory();
-
+        
+        typedef boost::function<
+        void (const Array<OneD, const Array<OneD, NekDouble> >&,
+              Array<OneD, NekDouble> &) > CPFuncType;
         /// A base class for describing how to solve specific equations.
         class EquationSystem
         {
@@ -154,6 +157,9 @@ namespace Nektar
             /// Perform initialisation of the base flow.
             SOLVER_UTILS_EXPORT void InitialiseBaseFlow(
                 Array<OneD, Array<OneD, NekDouble> > &base);
+            
+            /// Perform initialisation of the base flow.
+            SOLVER_UTILS_EXPORT void InitialisePrimalSolution();
             
             /// Initialise the data in the dependent fields.
             SOLVER_UTILS_EXPORT inline void SetInitialConditions(
@@ -399,6 +405,8 @@ namespace Nektar
             Array<OneD, MultiRegions::ExpListSharedPtr> m_fields;
             /// Base fields.
             Array<OneD, MultiRegions::ExpListSharedPtr> m_base;
+            /// primal fields.
+            Array<OneD, MultiRegions::ExpListSharedPtr> m_primal;
             /// Array holding all dependent variables.
             Array<OneD, MultiRegions::ExpListSharedPtr> m_derivedfields;
             /// Pointer to boundary conditions object.
@@ -458,6 +466,8 @@ namespace Nektar
        
             /// Map to identify relevant solver info to dump in output fields
             LibUtilities::FieldMetaDataMap            m_fieldMetaDataMap;
+            
+            map<std::string, CPFuncType>                m_checkpointFuncs;
 
             /// Number of Quadrature points used to work out the error
             int  m_NumQuadPointsError;
@@ -543,6 +553,11 @@ namespace Nektar
             // Fill m_base with the values stored in a fld file
             SOLVER_UTILS_EXPORT void ImportFldBase(
                 std::string pInfile, 
+                SpatialDomains::MeshGraphSharedPtr pGraph);
+            
+            // Fill m_base with the values stored in a fld file
+            SOLVER_UTILS_EXPORT void ImportFldPrimal(
+                std::string pInfile,
                 SpatialDomains::MeshGraphSharedPtr pGraph);
             
             // Ouptut field information

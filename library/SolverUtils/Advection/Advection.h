@@ -54,8 +54,17 @@ namespace Nektar
         /// \f$.
         typedef boost::function<void (
             const Array<OneD, Array<OneD, NekDouble> >&,
-            Array<OneD, Array<OneD, Array<OneD, NekDouble> > >&)>
-                AdvectionFluxVecCB;
+                  Array<OneD, Array<OneD, Array<OneD, NekDouble> > >&)>
+                  AdvectionFluxVecCB;
+        
+        typedef boost::function<void (
+            const Array<OneD, Array<OneD, NekDouble> >&,
+                  Array<OneD, Array<OneD, Array<OneD, NekDouble> > >&)>
+                  AdvectionJacTransDivVecCB;
+        
+        typedef boost::function<void (
+                  Array<OneD, Array<OneD, NekDouble> >&)>
+                  DirectSolVecCB;
 
         /**
          * @brief An abstract base class encapsulating the concept of advection
@@ -91,7 +100,19 @@ namespace Nektar
             {
                 m_fluxVector = boost::bind(func, obj, _1, _2);
             }
-
+            
+            template<typename FuncPointerT, typename ObjectPointerT>
+            void SetJacTransposeDivVector(FuncPointerT func, ObjectPointerT obj)
+            {
+                m_JacTransposeDivVector = boost::bind(func, obj, _1, _2);
+            }
+            
+            template<typename FuncPointerT, typename ObjectPointerT>
+            void SetDirectSolution(FuncPointerT func, ObjectPointerT obj)
+            {
+                m_directSolution = boost::bind(func, obj, _1);
+            }
+            
             /**
              * @brief Set a Riemann solver object for this advection object.
              *
@@ -111,7 +132,17 @@ namespace Nektar
             {
                 m_fluxVector = fluxVector;
             }
-
+            
+            inline void SetJacTransposeDivVector(AdvectionJacTransDivVecCB JacTransDivVector)
+            {
+                m_JacTransposeDivVector = JacTransDivVector;
+            }
+            
+            inline void SetDirectSolution(DirectSolVecCB directSol)
+            {
+                m_directSolution = directSol;
+            }
+            
         protected:
             virtual void v_InitObject(
                 LibUtilities::SessionReaderSharedPtr              pSession,
@@ -126,7 +157,11 @@ namespace Nektar
 
             /// Callback function to the flux vector (set when advection is in
             /// conservative form).
+            AdvectionJacTransDivVecCB m_JacTransposeDivVector;
+            
             AdvectionFluxVecCB     m_fluxVector;
+            /// Callback function to the forward solution given in the xml
+            DirectSolVecCB         m_directSolution;
             /// Riemann solver for DG-type schemes.
             RiemannSolverSharedPtr m_riemann;
             /// Storage for space dimension. Used for homogeneous extension.

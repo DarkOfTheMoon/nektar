@@ -100,12 +100,16 @@ namespace Nektar
             unsigned int            field,
             Array<OneD, NekDouble> &outfield,
             const NekDouble         time = 0.0);
+        
+        void CPPrimal(
+            const Array<OneD, const Array<OneD, NekDouble> > &inarray,
+                  Array<OneD, NekDouble> &outarray);
       
     private:
         void SetBoundaryConditions(
             Array<OneD, Array<OneD, NekDouble> >            &physarray, 
             NekDouble                                        time);
-
+        
         /// Isentropic Vortex Test Case.
         void EvaluateIsentropicVortex(
             const Array<OneD, NekDouble>                    &x,

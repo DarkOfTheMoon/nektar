@@ -136,8 +136,10 @@ namespace Nektar
         
         // Compute wave amplitudes (equations 11.68, 11.69).
         NekDouble alpha[5];
-        alpha[1] = (gamma-1.0)*(jump[0]*(hRoe - uRoe*uRoe) + uRoe*jump[1] -
-                                jumpbar)/(cRoe*cRoe);
+        
+        alpha[1] = ((gamma-1.0)/(cRoe*cRoe)) * (jump[0]*(hRoe - uRoe*uRoe)
+                                            + uRoe*jump[1] - jumpbar);
+        
         alpha[0] = (jump[0]*(uRoe + cRoe) - jump[1] - cRoe*alpha[1])/(2.0*cRoe);
         alpha[4] = jump[0] - (alpha[0] + alpha[1]);
         alpha[2] = jump[2] - vRoe * jump[0];
@@ -152,7 +154,7 @@ namespace Nektar
 
         // Compute eigenvalues \lambda_i (equation 11.58).
         NekDouble uRoeAbs = fabs(uRoe);
-        NekDouble lambda[5] = { 
+        NekDouble lambda[5] = {
             fabs(uRoe - cRoe),
             uRoeAbs,
             uRoeAbs,
@@ -169,6 +171,182 @@ namespace Nektar
             rhovf -= ahat*k[i][2];
             rhowf -= ahat*k[i][3];
             Ef    -= ahat*k[i][4];
+        }
+    }
+    void RoeSolver::v_PointAdjointSolve(
+        double  rhoL, double  rhouL, double  rhovL, double  rhowL, double  EL,
+        double  rhoR, double  rhouR, double  rhovR, double  rhowR, double  ER,
+        double  rhoLdir, double  rhouLdir, double  rhovLdir, double  rhowLdir, double  ELdir,
+        double  rhoRdir, double  rhouRdir, double  rhovRdir, double  rhowRdir, double  ERdir,
+        double &rhof, double &rhouf, double &rhovf, double &rhowf, double &Ef)
+    {        
+        static NekDouble gamma = m_params["gamma"]();
+        
+        // Left and right velocities
+        NekDouble uLdir = rhouLdir / rhoLdir;
+        NekDouble vLdir = rhovLdir / rhoLdir;
+        NekDouble wLdir = rhowLdir / rhoLdir;
+        NekDouble uRdir = rhouRdir / rhoRdir;
+        NekDouble vRdir = rhovRdir / rhoRdir;
+        NekDouble wRdir = rhowRdir / rhoRdir;
+        
+        // Left and right pressures
+        NekDouble pLdir = (gamma - 1.0) *
+        (ELdir - 0.5 * (rhouLdir * uLdir + rhovLdir * vLdir + rhowLdir * wLdir));
+        NekDouble pRdir = (gamma - 1.0) *
+        (ERdir - 0.5 * (rhouRdir * uRdir + rhovRdir * vRdir + rhowRdir * wRdir));
+        
+        // Left and right enthalpy
+        NekDouble hLdir = (ELdir + pLdir) / rhoLdir;
+        NekDouble hRdir = (ERdir + pRdir) / rhoRdir;
+        
+        // Square root of rhoL and rhoR.
+        NekDouble srL  = sqrt(rhoLdir);
+        NekDouble srR  = sqrt(rhoRdir);
+        NekDouble srLR = srL + srR;
+        
+        // Velocity, enthalpy and sound speed Roe averages (equation 11.60).
+        NekDouble uRoe   = (srL * uLdir + srR * uRdir) / srLR;
+        NekDouble vRoe   = (srL * vLdir + srR * vRdir) / srLR;
+        NekDouble wRoe   = (srL * wLdir + srR * wRdir) / srLR;
+        NekDouble hRoe   = (srL * hLdir + srR * hRdir) / srLR;
+        NekDouble URoe   = (uRoe * uRoe + vRoe * vRoe + wRoe * wRoe);
+        NekDouble cRoe   = sqrt((gamma - 1.0)*(hRoe - 0.5 * URoe));
+        
+         NekDouble k[5][5] = {
+             {0.5*URoe + (cRoe*uRoe)/(gamma-1.0), -uRoe-cRoe/(gamma-1.0), -vRoe, -wRoe, 1},
+             {uRoe*uRoe-hRoe, -uRoe, 0, 0, 1},
+             {-vRoe, 0, 1, 0, 0},
+             {-wRoe, 0, 0, 1, 0},
+             {0.5*URoe - (cRoe*uRoe)/(gamma-1.0), -uRoe+cRoe/(gamma-1.0), -vRoe, -wRoe, 1},
+         };
+        
+        // Calculate jumps \Delta u_i (defined preceding equation 11.67).
+        NekDouble jump[5] = {
+            rhoR  - rhoL,
+            rhouR - rhouL,
+            rhovR - rhovL,
+            rhowR - rhowL,
+            ER    - EL
+        };
+        
+        // wave strength
+        NekDouble alpha[5];
+    
+        // =====================================================================
+        alpha[0] = ((gamma - 1)/(2*(cRoe*cRoe)))*jump[0]
+                    + (-((cRoe - uRoe)*(gamma - 1))/(2*(cRoe*cRoe)))*jump[1]
+                    + ((vRoe*(gamma - 1))/(2*(cRoe*cRoe)))*jump[2]
+                    + ((wRoe*(gamma - 1))/(2*(cRoe*cRoe)))*jump[3]
+                    + (((gamma - 1)*(hRoe - cRoe*uRoe))/(2*(cRoe*cRoe)))*jump[4];
+        
+        alpha[1] = (-(gamma - 1)/(cRoe*cRoe))*jump[0]
+                    + (-(uRoe*(gamma - 1))/(cRoe*cRoe))*jump[1]
+                    + (-(vRoe*(gamma - 1))/(cRoe*cRoe))*jump[2]
+                    + (-(wRoe*(gamma - 1))/(cRoe*cRoe))*jump[3]
+                    + (-(URoe*(gamma - 1))/(2*(cRoe*cRoe)))*jump[4];
+        
+        alpha[2] = ((vRoe*(gamma - 1))/(cRoe*cRoe))*jump[0]
+                    + ((uRoe*vRoe*(gamma - 1))/(cRoe*cRoe))*jump[1]
+                    + (((vRoe*vRoe)*(gamma - 1))/((cRoe*cRoe)) + 1)*jump[2]
+                    + ((vRoe*wRoe*(gamma - 1))/(cRoe*cRoe))*jump[3]
+                    + ((hRoe*vRoe*(gamma - 1))/(cRoe*cRoe))*jump[4];
+        
+        alpha[3] = ((wRoe*(gamma - 1))/(cRoe*cRoe))*jump[0]
+                    + ((uRoe*wRoe*(gamma - 1))/(cRoe*cRoe))*jump[1]
+                    + ((vRoe*wRoe*(gamma - 1))/(cRoe*cRoe))*jump[2]
+                    + (((wRoe*wRoe)*(gamma - 1))/((cRoe*cRoe)) + 1)*jump[3]
+                    + ((hRoe*wRoe*(gamma - 1))/(cRoe*cRoe))*jump[4];
+        
+        alpha[4] = ((gamma - 1)/(2*(cRoe*cRoe)))*jump[0]
+                    + (((cRoe + uRoe)*(gamma - 1))/(2*(cRoe*cRoe)))*jump[1]
+                    + ((vRoe*(gamma - 1))/(2*(cRoe*cRoe)))*jump[2]
+                    + ((wRoe*(gamma - 1))/(2*(cRoe*cRoe)))*jump[3]
+                    + (((gamma - 1)*(hRoe + cRoe*uRoe))/(2*(cRoe*cRoe)))*jump[4];
+       //======================================================================
+        
+        NekDouble   zrhoL_flux  = 0.0, zrhoR_flux  = 0.0,
+                    zrhouL_flux = 0.0, zrhouR_flux = 0.0,
+                    zrhovL_flux = 0.0, zrhovR_flux = 0.0,
+                    zrhowL_flux = 0.0, zrhowR_flux = 0.0,
+                    zEL_flux    = 0.0, zER_flux    = 0.0;
+        
+        NekDouble vsqLdir = pow(uLdir,2)+pow(vLdir,2);
+        NekDouble vsqRdir = pow(uRdir,2)+pow(vRdir,2);
+        
+        // HLLC Riemann fluxes (positive case)
+        
+        zrhoL_flux =     (0.5*(gamma-1)*vsqLdir-uLdir*uLdir)*rhouL
+                        -uLdir*vLdir*rhovL
+                        -uLdir*wLdir*rhowL
+                        -uLdir*(hLdir - vsqLdir*0.5*(gamma-1))*EL;
+        
+        zrhouL_flux =   rhoL
+                        -(uLdir*(gamma-3))*rhouL
+                        +vLdir*rhovL
+                        +wLdir*rhowL
+                        +(hLdir+uLdir*uLdir*(1-gamma))*EL;
+        
+        zrhovL_flux =   -(vLdir*(gamma-1))*rhouL
+                        +uLdir*rhovL
+                        -uLdir*vLdir*(gamma-1)*EL;
+        
+        zrhowL_flux =    -(wLdir*(gamma-1))*rhouL
+                         +uLdir*rhowL
+                         -uLdir*wLdir*(gamma-1)*EL;
+        
+        zEL_flux    =    (gamma-1)*rhouL + (gamma*uLdir)*EL;
+        
+        //==================================
+        
+        zrhoR_flux =     (0.5*(gamma-1)*vsqRdir-pow(uRdir,2))*rhouR
+                        -uRdir*vRdir*rhovR
+                        -uRdir*wRdir*rhowR
+                        -uRdir*(hRdir - vsqRdir*0.5*(gamma-1))*ER;
+        
+        zrhouR_flux =    rhoR
+                        -(uRdir*(gamma-3))*rhouR
+                        +vRdir*rhovR
+                        +wRdir*rhowR
+                        +(hRdir+pow(uRdir,2)*(1-gamma))*ER;
+        
+        zrhovR_flux =   -(vRdir*(gamma-1))*rhouR
+                        +uRdir*rhovR
+                        -uRdir*vRdir*(gamma-1)*ER;
+        
+        zrhowR_flux =   -(wRdir*(gamma-1))*rhouR
+                        +uRdir*rhowR
+                        -uRdir*wRdir*(gamma-1)*ER;
+        
+        zER_flux    =    (gamma-1)*rhouR + (gamma*uRdir)*ER;
+        
+        //======================================================================
+        
+        rhof  = 0.5*(zrhoR_flux+zrhoL_flux);
+        rhouf = 0.5*(zrhouR_flux+zrhouL_flux);
+        rhovf = 0.5*(zrhovR_flux+zrhovL_flux);
+        rhowf = 0.5*(zrhowR_flux+zrhowL_flux);
+        Ef    = 0.5*(zER_flux+zEL_flux);
+        
+        // Compute eigenvalues \lambda_i (equation 11.58).
+        NekDouble uRoeAbs = fabs(uRoe);
+        NekDouble lambda[5] = {
+            fabs(uRoe - cRoe),
+            uRoeAbs,
+            uRoeAbs,
+            uRoeAbs,
+            fabs(uRoe + cRoe)
+        };
+        
+        // Finally perform summation (11.29).
+        for (int i = 0; i < 5; ++i)
+        {
+            NekDouble ahat = 0.5*alpha[i]*lambda[i];
+            rhof  += ahat*k[i][0];
+            rhouf += ahat*k[i][1];
+            rhovf += ahat*k[i][2];
+            rhowf += ahat*k[i][3];
+            Ef    += ahat*k[i][4];
         }
     }
 }

@@ -91,4 +91,14 @@ namespace Nektar
             v_ArraySolve(Fwd, Bwd, flux);
         }
     }
+    
+    void  LinearSWESolver::v_AdjointSolve(
+        const Array<OneD, const Array<OneD, NekDouble> > &Fwd,
+        const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
+        const Array<OneD, const Array<OneD, NekDouble> > &FwdDir,
+        const Array<OneD, const Array<OneD, NekDouble> > &BwdDir,
+        Array<OneD,       Array<OneD, NekDouble> > &flux)
+    {
+        ASSERTL1(false, "adjoint Riemann solver for linear SW solver NOT implemented yet");
+    }
 }

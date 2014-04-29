@@ -75,7 +75,8 @@ namespace Nektar
          */
         
         RiemannSolver::RiemannSolver() : m_requiresRotation(false),
-                                         m_rotStorage      (3)
+                                         m_rotStorage      (3),
+                                         m_rotStorageDirSol(3)
         {
             
         }
@@ -99,37 +100,107 @@ namespace Nektar
             const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
                   Array<OneD,       Array<OneD, NekDouble> > &flux)
         {
-            if (m_requiresRotation)
+            
+            // Check if an adjoitn problem is solved or a primal problem
+            static NekDouble adjointSwitch = m_params["adjointSwitch"]();
+            
+            int nFields = Fwd   .num_elements();
+            int nPts    = Fwd[0].num_elements();
+            
+            if (adjointSwitch == 1)
             {
-                int nFields = Fwd   .num_elements();
-                int nPts    = Fwd[0].num_elements();
+                Array<OneD, Array<OneD, NekDouble> > BwdDir(
+                                                            nFields);
+                Array<OneD, Array<OneD, NekDouble> > FwdDir(
+                                                            nFields);
                 
-                if (m_rotStorage[0].num_elements()    != nFields ||
-                    m_rotStorage[0][0].num_elements() != nPts)
+                for (int i = 0; i < nFields; ++i)
                 {
-                    for (int i = 0; i < 3; ++i)
-                    {
-                        m_rotStorage[i] =
-                            Array<OneD, Array<OneD, NekDouble> >(nFields);
-                        for (int j = 0; j < nFields; ++j)
-                        {
-                            m_rotStorage[i][j] = Array<OneD, NekDouble>(nPts);
-                        }
-                    }
+                    FwdDir[i]    =   Array<OneD, NekDouble>(nPts,0.0);
+                    BwdDir[i]    =   Array<OneD, NekDouble>(nPts,0.0);
                 }
                 
-                const Array<OneD, const Array<OneD, NekDouble> > normals =
+                m_FwdBwdDirectSolution(FwdDir,BwdDir);
+                
+                if (m_requiresRotation)
+                {
+                    if (m_rotStorage[0].num_elements()    != nFields ||
+                        m_rotStorage[0][0].num_elements() != nPts)
+                    {
+                        for (int i = 0; i < 3; ++i)
+                        {
+                            m_rotStorage[i] =
+                            Array<OneD, Array<OneD, NekDouble> >(nFields);
+                            
+                            m_rotStorageDirSol[i] =
+                            Array<OneD, Array<OneD, NekDouble> >(nFields);
+                            
+                            for (int j = 0; j < nFields; ++j)
+                            {
+                              m_rotStorage[i][j] = Array<OneD, NekDouble>(nPts);
+                                
+                              m_rotStorageDirSol[i][j] = Array<OneD, NekDouble>(nPts);
+                            }
+                        }
+                    }
+                    
+                    const Array<OneD, const Array<OneD, NekDouble> > normals =
                     m_vectors["N"]();
-
-                rotateToNormal  (Fwd, normals, m_rotStorage[0]);
-                rotateToNormal  (Bwd, normals, m_rotStorage[1]);
-                v_Solve         (m_rotStorage[0], m_rotStorage[1],
-                                 m_rotStorage[2]);
-                rotateFromNormal(m_rotStorage[2], normals, flux);
+                    
+                    rotateToNormal(Fwd, normals, m_rotStorage[0]);
+                    rotateToNormal(Bwd, normals, m_rotStorage[1]);
+                    
+                    rotateToNormal(FwdDir, normals, m_rotStorageDirSol[0]);
+                    rotateToNormal(BwdDir, normals, m_rotStorageDirSol[1]);
+                    
+                    v_AdjointSolve  (m_rotStorage[0],
+                                     m_rotStorage[1],
+                                     m_rotStorageDirSol[0],
+                                     m_rotStorageDirSol[1],
+                                     m_rotStorage[2]);
+                    
+                    rotateFromNormal(m_rotStorage[2], normals, flux);
+                }
+                else
+                {
+                    v_AdjointSolve(Fwd, Bwd, FwdDir, BwdDir, flux);
+                }
             }
             else
             {
-                v_Solve(Fwd, Bwd, flux);
+                if (m_requiresRotation)
+                {
+                    int nFields = Fwd   .num_elements();
+                    int nPts    = Fwd[0].num_elements();
+                    
+                    if (m_rotStorage[0].num_elements()    != nFields ||
+                        m_rotStorage[0][0].num_elements() != nPts)
+                    {
+                        for (int i = 0; i < 3; ++i)
+                        {
+                            m_rotStorage[i] =
+                            Array<OneD, Array<OneD, NekDouble> >(nFields);
+                            for (int j = 0; j < nFields; ++j)
+                            {
+                                m_rotStorage[i][j] = Array<OneD, NekDouble>(nPts);
+                            }
+                        }
+                    }
+                    
+                    const Array<OneD, const Array<OneD, NekDouble> > normals =
+                    m_vectors["N"]();
+                    
+                    rotateToNormal  (Fwd, normals, m_rotStorage[0]);
+                    rotateToNormal  (Bwd, normals, m_rotStorage[1]);
+                    v_Solve         (m_rotStorage[0], m_rotStorage[1],
+                                     m_rotStorage[2]);
+                    
+                    rotateFromNormal(m_rotStorage[2], normals, flux);
+                }
+                else
+                {
+                    v_Solve(Fwd, Bwd, flux);
+                }
             }
         }
 

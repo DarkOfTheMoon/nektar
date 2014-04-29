@@ -138,4 +138,141 @@ namespace Nektar
         Ef    = 0.5 * ((uL * (EL + pL) + uR * (ER + pR)) - 
                         sign * S * (ER - EL));
     }
+    
+    void LaxFriedrichsSolver::v_PointAdjointSolve(
+        double  rhoL, double  rhouL, double  rhovL, double  rhowL, double  EL,
+        double  rhoR, double  rhouR, double  rhovR, double  rhowR, double  ER,
+        double  rhoLdir, double  rhouLdir, double  rhovLdir, double  rhowLdir, double  ELdir,
+        double  rhoRdir, double  rhouRdir, double  rhovRdir, double  rhowRdir, double  ERdir,
+        double &rhof, double &rhouf, double &rhovf, double &rhowf, double &Ef)
+    {
+        static NekDouble gamma = m_params["gamma"]();
+        
+        // Left and right velocities
+        NekDouble uLdir = rhouLdir / rhoLdir;
+        NekDouble vLdir = rhovLdir / rhoLdir;
+        NekDouble wLdir = rhowLdir / rhoLdir;
+        NekDouble uRdir = rhouRdir / rhoRdir;
+        NekDouble vRdir = rhovRdir / rhoRdir;
+        NekDouble wRdir = rhowRdir / rhoRdir;
+        
+        // Left and right pressures
+        NekDouble pLdir = (gamma - 1.0) *
+        (ELdir - 0.5 * (rhouLdir*uLdir + rhovLdir*vLdir + rhowLdir*wLdir));
+        
+        NekDouble pRdir = (gamma - 1.0) *
+        (ERdir - 0.5 * (rhouRdir*uRdir + rhovRdir*vRdir + rhowRdir*wRdir));
+        
+        // Left and right speeds of sound
+        NekDouble cLdir = sqrt(gamma * pLdir / rhoLdir);
+        NekDouble cRdir = sqrt(gamma * pRdir / rhoRdir);
+        
+        // Left and right entalpies
+        NekDouble hLdir = (ELdir + pLdir) / rhoLdir;
+        NekDouble hRdir = (ERdir + pRdir) / rhoRdir;
+
+        
+        // Square root of rhoL and rhoR.
+        NekDouble srLdir  = sqrt(rhoLdir);
+        NekDouble srRdir  = sqrt(rhoRdir);
+        NekDouble srLRdir = srLdir + srRdir;
+        
+        //std::cout << srRdir << "  " << srRdir << std::endl;
+        
+        // Velocity Roe averages
+        NekDouble uRoe   = (srLdir * uLdir + srRdir * uRdir) / srLRdir;
+        NekDouble vRoe   = (srLdir * vLdir + srRdir * vRdir) / srLRdir;
+        NekDouble wRoe   = (srLdir * wLdir + srRdir * wRdir) / srLRdir;
+        NekDouble hRoe   = (srLdir * hLdir + srRdir * hRdir) / srLRdir;
+        NekDouble cRoe   = sqrt((gamma - 1.0)*(hRoe - 0.5 *
+                                (uRoe * uRoe + vRoe * vRoe + wRoe * wRoe)));
+        
+        // Minimum and maximum wave speeds
+        NekDouble S    = std::max(uRoe+cRoe, std::max(uRdir+cRdir, -uLdir+cLdir));
+        NekDouble sign = 1.0;
+        
+        /*if(S == -uLdir+cLdir)
+        {
+            sign = -1.0;
+        }*/
+        
+        NekDouble zrhoL_flux  = 0.0, zrhoR_flux  = 0.0,
+                  zrhouL_flux = 0.0, zrhouR_flux = 0.0,
+                  zrhovL_flux = 0.0, zrhovR_flux = 0.0,
+                  zrhowL_flux = 0.0, zrhowR_flux = 0.0,
+                  zEL_flux    = 0.0, zER_flux    = 0.0;
+        
+        NekDouble vsqLdir = pow(uLdir,2)+pow(vLdir,2);
+        NekDouble vsqRdir = pow(uRdir,2)+pow(vRdir,2);
+        // =====================================================================
+        
+        zrhoL_flux =     (0.5*(gamma-1)*vsqLdir-pow(uLdir,2))*rhouL
+                         -uLdir*vLdir*rhovL
+                         -uLdir*wLdir*rhowL
+                         -uLdir*(hLdir - vsqLdir*0.5*(gamma-1))*EL;
+        
+        zrhoR_flux =     (0.5*(gamma-1)*vsqRdir-pow(uRdir,2))*rhouR
+                         -uRdir*vRdir*rhovR
+                         -uRdir*wRdir*rhowR
+                         -uRdir*(hRdir - vsqRdir*0.5*(gamma-1))*ER;
+        
+        // =====================================================================
+        
+        zrhouL_flux =    rhoL
+                         -(uLdir*(gamma-3))*rhouL
+                         +vLdir*rhovL
+                         +wLdir*rhowL
+                         +(hLdir+pow(uLdir,2)*(1-gamma))*EL;
+        
+        zrhouR_flux=     rhoR
+                         -(uRdir*(gamma-3))*rhouR
+                         +vRdir*rhovR
+                         +wRdir*rhowR
+                         +(hRdir+pow(uRdir,2)*(1-gamma))*ER;
+        
+        
+        // =====================================================================
+        
+        zrhovL_flux =    -(vLdir*(gamma-1))*rhouL
+                         +uLdir*rhovL
+                         -uLdir*vLdir*(gamma-1)*EL;
+        
+        
+        zrhovR_flux =    -(vRdir*(gamma-1))*rhouR
+                         +uRdir*rhovR
+                         -uRdir*vRdir*(gamma-1)*ER;
+        
+        // =====================================================================
+        
+        zrhowL_flux =    -(wLdir*(gamma-1))*rhouL
+                         +uLdir*rhowL
+                         -uLdir*wLdir*(gamma-1)*EL;
+        
+        
+        zrhowR_flux =    -(wRdir*(gamma-1))*rhouR
+                         +uRdir*rhowR
+                         -uRdir*wRdir*(gamma-1)*ER;
+        
+        // =====================================================================
+        
+        zEL_flux    =    (gamma-1)*rhouL + (gamma*uLdir)*EL;
+        zER_flux    =    (gamma-1)*rhouR + (gamma*uRdir)*ER;
+        
+        // =====================================================================
+        // Lax-Friedrichs Riemann rho flux
+        rhof  = 0.5 * ((zrhoL_flux + zrhoR_flux) + sign * S * (rhoR - rhoL));// - sign * S * (rhoR - rhoL));
+        
+        // Lax-Friedrichs Riemann rhou flux
+        rhouf = 0.5 * ((zrhouL_flux + zrhouR_flux)  + sign *  S * (rhouR - rhouL));// - sign * S * (rhouR - rhouL));
+        
+        // Lax-Friedrichs Riemann rhov flux
+        rhovf = 0.5 * ((zrhovL_flux + zrhovR_flux)  + sign *  S * (rhovR - rhovL));// - sign * S * (rhovR - rhovL));
+        
+        // Lax-Friedrichs Riemann rhow flux
+        rhowf = 0.5 * ((zrhowL_flux + zrhowR_flux)  + sign *  S * (rhowR - rhowL));// - sign * S * (rhowR - rhowL));
+        
+        // Lax-Friedrichs Riemann E flux
+        Ef    = 0.5 * ((zEL_flux + zER_flux)  + sign *   S * (ER - EL));// - sign * S * (ER - EL));
+        
+    }
 }

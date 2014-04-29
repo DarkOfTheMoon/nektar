@@ -111,4 +111,158 @@ namespace Nektar
             flux[1][j] += 0.5 * (Pfwd + Pbwd);
         }
     }
+    
+    void AverageSolver::v_ArrayAdjointSolve(
+                const Array<OneD, const Array<OneD, NekDouble> > &Fwd,
+                const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
+                const Array<OneD, const Array<OneD, NekDouble> > &FwdDir,
+                const Array<OneD, const Array<OneD, NekDouble> > &BwdDir,
+                Array<OneD,       Array<OneD, NekDouble> > &flux)
+    {
+        static NekDouble gamma = m_params["gamma"]();
+    
+        int expDim = Fwd.num_elements()-2;
+        int nvariables = Fwd.num_elements();
+        int i, j;
+        
+        for (j = 0; j < Fwd[0].num_elements(); ++j)
+        {
+            NekDouble tmp1 = 0.0, tmp2 = 0.0, vsqFwd = 0.0, vsqBwd = 0.0,
+            FadjL = 0.0, FadjR = 0.0;
+            
+            Array<OneD, NekDouble> Ufwd(expDim);
+            Array<OneD, NekDouble> Ubwd(expDim);
+            
+            Array<OneD, NekDouble> UfwdDir(expDim);
+            Array<OneD, NekDouble> UbwdDir(expDim);
+            
+            for (i = 0; i < expDim; ++i)
+            {
+                UfwdDir[i] = FwdDir[i+1][j]/FwdDir[0][j];
+                UbwdDir[i] = BwdDir[i+1][j]/BwdDir[0][j];
+                
+                tmp1    +=  UfwdDir[i]*FwdDir[i+1][j];
+                tmp2    +=  UbwdDir[i]*BwdDir[i+1][j];
+                vsqFwd  +=  UfwdDir[i]*UfwdDir[i];
+                vsqBwd  +=  UbwdDir[i]*UbwdDir[i];
+                
+            }
+            
+            NekDouble PfwdDir = (gamma - 1.0) * (FwdDir[expDim+1][j] - 0.5*tmp1);
+            NekDouble PbwdDir = (gamma - 1.0) * (BwdDir[expDim+1][j] - 0.5*tmp2);
+            
+            NekDouble HfwdDir = (FwdDir[expDim+1][j]+PfwdDir)/FwdDir[0][j];
+            NekDouble HbwdDir = (BwdDir[expDim+1][j]+PbwdDir)/BwdDir[0][j];
+        
+            if (expDim == 1)
+            {
+                ASSERTL0(false, "1D adjoint solver not yet implemented");
+            }
+            if (expDim == 2)
+            {
+               FadjL = (0.5*(gamma-1)*vsqFwd-pow(UfwdDir[0],2))*Fwd[1][j]
+                       -UfwdDir[0]*UfwdDir[1]*Fwd[2][j]
+                       -UfwdDir[0]*(HfwdDir - vsqFwd*0.5*(gamma-1))*Fwd[3][j];
+                
+               FadjR = (0.5*(gamma-1)*vsqBwd-pow(UbwdDir[0],2))*Bwd[1][j]
+                       -UbwdDir[0]*UbwdDir[1]*Bwd[2][j]
+                       -UbwdDir[0]*(HbwdDir - vsqBwd*0.5*(gamma-1))*Bwd[3][j];
+                
+               flux[0][j] = 0.5*(FadjL+FadjR);
+                
+               FadjL = 0.0;
+               FadjR = 0.0;
+                
+               FadjL =  Fwd[0][j]
+                        -(UfwdDir[0]*(gamma-3))*Fwd[1][j]
+                        +UfwdDir[1]*Fwd[2][j]
+                        +(HfwdDir+pow(UfwdDir[0],2)*(1-gamma))*Fwd[3][j];
+                
+               FadjR =  Bwd[0][j]
+                        -(UbwdDir[0]*(gamma-3))*Bwd[1][j]
+                        +UbwdDir[1]*Bwd[2][j]
+                        +(HbwdDir+pow(UbwdDir[0],2)*(1-gamma))*Bwd[3][j];
+               
+               flux[1][j] = 0.5*(FadjL+FadjR);
+               
+               FadjL = 0.0;
+               FadjR = 0.0;
+                
+               FadjL =  -(UfwdDir[1]*(gamma-1))*Fwd[1][j]
+                        +UfwdDir[0]*Fwd[2][j]
+                        -UfwdDir[0]*UfwdDir[1]*(gamma-1)*Fwd[3][j];
+               
+               FadjR =  -(UbwdDir[1]*(gamma-1))*Bwd[1][j]
+                        +UbwdDir[0]*Bwd[2][j]
+                        -UbwdDir[0]*UbwdDir[1]*(gamma-1)*Bwd[3][j];
+                
+               flux[2][j] = 0.5*(FadjL+FadjR);
+               
+               FadjL = 0.0;
+               FadjR = 0.0;
+                
+               FadjL = (gamma-1)*Fwd[1][j] + (gamma*UfwdDir[0])*Fwd[3][j];
+               FadjR = (gamma-1)*Bwd[1][j] + (gamma*UbwdDir[0])*Bwd[3][j];
+               
+               flux[3][j] = 0.5*(FadjL+FadjR);
+
+               FadjL = 0.0;
+               FadjR = 0.0;
+                
+            }
+            if (expDim == 3)
+            {
+               FadjL = (-pow(UfwdDir[0],2)+(gamma-1)/2*vsqFwd)*Fwd[1][j]
+                            -UfwdDir[0]*UfwdDir[1]*Fwd[2][j]
+                            -UfwdDir[0]*UfwdDir[2]*Fwd[3][j]
+                            -(HfwdDir- vsqFwd*(gamma-1)/2)*Fwd[4][j];
+                
+               FadjR = (-pow(UbwdDir[0],2)+(gamma-1)/2*vsqBwd)*Bwd[1][j]
+                            -UbwdDir[0]*UbwdDir[1]*Bwd[2][j]
+                            -UbwdDir[0]*UbwdDir[2]*Bwd[3][j]
+                            -(HbwdDir- vsqBwd*(gamma-1)/2)*Bwd[3][j];
+               
+               flux[0][j] = 0.5*(FadjL+FadjR);
+                
+               FadjL =  Fwd[0][j]
+                              -(UfwdDir[0]*(gamma-3))*Fwd[1][j]
+                              +UfwdDir[1]*Fwd[2][j]
+                              +UfwdDir[2]*Fwd[3][j]
+                              -(HfwdDir- UfwdDir[0]*(gamma-1))*Fwd[4][j];
+                                    
+               FadjR =  Bwd[0][j]
+                              -(UbwdDir[0]*(gamma-3))*Bwd[1][j]
+                              +UbwdDir[1]*Bwd[2][j]
+                              +UbwdDir[2]*Bwd[2][j]
+                              -(HbwdDir- UbwdDir[0]*(gamma-1))*Bwd[3][j];
+               
+               flux[1][j] = 0.5*(FadjL+FadjR);
+                
+               FadjL =  -(UfwdDir[1]*(gamma-1))*Fwd[1][j]
+                              +UfwdDir[0]*Fwd[2][j]
+                              +UfwdDir[0]*UfwdDir[1]*(gamma-1)*Fwd[3][j];
+                         
+               FadjR =  -(UbwdDir[1]*(gamma-1))*Bwd[1][j]
+                              +UbwdDir[0]*Bwd[2][j]
+                              +UbwdDir[0]*UbwdDir[1]*(gamma-1)*Bwd[3][j];
+               
+               flux[2][j] = 0.5*(FadjL+FadjR);
+                          
+               FadjL =  -(UfwdDir[2]*(gamma-1))*Fwd[1][j]
+                              +UfwdDir[0]*Fwd[2][j]
+                              +UfwdDir[0]*UfwdDir[2]*(gamma-1)*Fwd[3][j];
+                                                 
+               FadjR =  -(UbwdDir[2]*(gamma-1))*Bwd[1][j]
+                              +UbwdDir[0]*Bwd[2][j]
+                              +UbwdDir[0]*UbwdDir[2]*(gamma-1)*Bwd[3][j];
+               
+               flux[3][j] = 0.5*(FadjL+FadjR);
+                          
+               FadjL = (gamma-1)*Fwd[1][j] + (gamma*UfwdDir[0])*Fwd[4][j];
+               FadjR = (gamma-1)*Bwd[1][j] + (gamma*UbwdDir[0])*Bwd[4][j];
+                                
+               flux[4][j] = 0.5*(FadjL+FadjR);
+            }
+        }
+    }
 }

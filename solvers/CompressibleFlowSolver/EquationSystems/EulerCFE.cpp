@@ -87,6 +87,8 @@ namespace Nektar
         {
             ASSERTL0(false, "Implicit CFE not set up.");
         }
+        
+        //m_checkpointFuncs["rho_primal"] = boost::bind(&EulerCFE::CPPrimal, this, _1, _2);
     }
     
     /**
@@ -131,7 +133,7 @@ namespace Nektar
         int phystot = m_fields[0]->GetTotPoints();
         Array<OneD, NekDouble> noise(phystot);
         
-        m_session->LoadParameter("Noise", Noise,0.0);
+        m_session->LoadParameter("Noise", Noise, 0.0);
         int m_nConvectiveFields =  m_fields.num_elements();
         
         if(Noise > 0.0)
@@ -159,18 +161,19 @@ namespace Nektar
               Array<OneD,       Array<OneD, NekDouble> > &outarray,
         const NekDouble                                   time)
     {
-        //cout<<setprecision(16);
         int i;
         int nvariables = inarray.num_elements();
         int npoints    = GetNpoints();
-
         Array<OneD, Array<OneD, NekDouble> > advVel(m_spacedim);
         
         m_advection->Advect(nvariables, m_fields, advVel, inarray, outarray);
-
-        for (i = 0; i < nvariables; ++i)
+        
+        if (m_adjointSwitch == 0.0)
         {
-            Vmath::Neg(npoints, outarray[i], 1);
+            for (i = 0; i < nvariables; ++i)
+            {
+                Vmath::Neg(npoints, outarray[i], 1);
+            }
         }
     }
     
@@ -198,6 +201,7 @@ namespace Nektar
                     Vmath::Vcopy(npoints, inarray[i], 1, outarray[i], 1);
                 }
                 SetBoundaryConditions(outarray, time);
+                
                 break;
             }
             case MultiRegions::eGalerkin:
@@ -230,15 +234,24 @@ namespace Nektar
         std::string varName;
         int nvariables = m_fields.num_elements();
         int cnt        = 0;
-
+        
+        
         // Loop over Boundary Regions
         for (int n = 0; n < m_fields[0]->GetBndConditions().num_elements(); ++n)
         {
+            // cout << cnt << " " << n << " " << endl;
             // Wall Boundary Condition
             if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
                 SpatialDomains::eWall)
             {
                 WallBC(n, cnt, inarray);
+            }
+            
+            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
+                SpatialDomains::eAdjointWall)
+            {
+                //cout << cnt << " " << n << " wall " << endl;
+                AdjointWallBC(n, cnt, inarray);
             }
             
             // Wall Boundary Condition
@@ -298,6 +311,28 @@ namespace Nektar
             cnt += m_fields[0]->GetBndCondExpansions()[n]->GetExpSize();
         }
     }
+    
+    void EulerCFE::CPPrimal(
+        const Array<OneD, const Array<OneD, NekDouble> > &inarray,
+              Array<OneD, NekDouble> &outarray)
+    {
+        const int npts = m_fields[0]->GetTotPoints();
+        outarray = Array<OneD, NekDouble>(GetNcoeffs());
+        Array<OneD, Array<OneD, NekDouble> > direct_sol(m_spacedim+2);
+        
+        for (int i = 0; i < m_spacedim+2; ++i)
+        {
+            direct_sol[i] = Array<OneD, NekDouble>(npts);
+        }
+        
+        if (m_adjointSwitch == 1.0)
+        {
+            GetDirectSolution(direct_sol);
+        }
+        
+        m_fields[0]->FwdTrans(direct_sol[0], outarray);
+    }
+
 
     /**
      * @brief Get the exact solutions for isentropic vortex and Ringleb

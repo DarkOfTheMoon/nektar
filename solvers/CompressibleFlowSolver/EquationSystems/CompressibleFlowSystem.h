@@ -105,6 +105,14 @@ namespace Nektar
         NekDouble                           m_thermalConductivity;
         NekDouble                           m_Cp;
         NekDouble                           m_Prandtl;
+        NekDouble                           m_adjointSwitch;
+        NekDouble                           m_rhoInfPrimal;
+        NekDouble                           m_uInfPrimal;
+        NekDouble                           m_vInfPrimal;
+        NekDouble                           m_pInfPrimal;
+        NekDouble                           m_alphaInfDir;
+        NekDouble                           m_Lref;
+        NekDouble                           m_alpha;
 
         CompressibleFlowSystem(
             const LibUtilities::SessionReaderSharedPtr& pSession);
@@ -117,6 +125,17 @@ namespace Nektar
         void GetFluxVector(
             const Array<OneD, Array<OneD, NekDouble> >               &physfield,
                   Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &flux);
+        void GetJacTransposeDivVector(
+            const Array<OneD, Array<OneD, NekDouble> > &inarray,
+                  Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
+        void GetAdjointFluxVector(
+            const Array<OneD, Array<OneD, NekDouble> > &inarray,
+                  Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
+        void GetDirectSolution(
+                  Array<OneD, Array<OneD, NekDouble> > &directSol);
+        void GetFwdBwdDirectSolution(
+                  Array<OneD, Array<OneD, NekDouble> > &FwdDir,
+                 Array<OneD, Array<OneD, NekDouble> > &BwdDir);
         void GetFluxVectorDeAlias(
             const Array<OneD, Array<OneD, NekDouble> >         &physfield,
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &flux);
@@ -129,6 +148,10 @@ namespace Nektar
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &derivatives,
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &viscousTensor);
         void WallBC(
+            int                                                 bcRegion,
+            int                                                 cnt,
+            Array<OneD, Array<OneD, NekDouble> >               &physarray);
+        void AdjointWallBC(
             int                                                 bcRegion,
             int                                                 cnt,
             Array<OneD, Array<OneD, NekDouble> >               &physarray);
@@ -204,6 +227,11 @@ namespace Nektar
         const Array<OneD, const Array<OneD, NekDouble> > &GetNormals()
         {
             return m_traceNormals;
+        }
+        
+        NekDouble GetAdjointSwitch()
+        {
+            return m_adjointSwitch;
         }
     };
 }

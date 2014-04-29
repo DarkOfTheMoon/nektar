@@ -39,7 +39,8 @@
 #include <LocalRegions/HexExp.h>
 #include <MultiRegions/ExpList.h>
 #include <MultiRegions/AssemblyMap/AssemblyMapDG.h>
-
+#include <math.h>
+#define PI 3.14159265
 namespace Nektar
 {
     string CompressibleFlowSystem::className =
@@ -118,7 +119,15 @@ namespace Nektar
         m_session->LoadParameter ("mu",            m_mu,            1.78e-05);
         m_session->LoadParameter ("thermalConductivity",
                                   m_thermalConductivity, 0.0257);
-
+        m_session->LoadParameter ("adjointSwitch", m_adjointSwitch, 0.0);
+        m_session->LoadParameter ("rhoInfPrimal", m_rhoInfPrimal, 0.0);
+        m_session->LoadParameter ("uInfPrimal", m_uInfPrimal, 1.0);
+        m_session->LoadParameter ("vInfPrimal", m_vInfPrimal, 1.0);
+        m_session->LoadParameter ("pInfPrimal", m_pInfPrimal, 1.0);
+        m_session->LoadParameter ("alphaInfPrimal", m_alphaInfDir, 0.0);
+        m_session->LoadParameter ("Lref", m_Lref, 1.0);
+        m_session->LoadParameter ("alpha", m_alpha, 0.0);
+        
         m_Cp      = m_gamma / (m_gamma - 1.0) * m_gasConstant;
         m_Prandtl = m_Cp * m_mu / m_thermalConductivity;
 
@@ -143,7 +152,6 @@ namespace Nektar
                                             .CreateInstance(advName, advName);
                 m_diffusion = SolverUtils::GetDiffusionFactory()
                                             .CreateInstance(diffName, diffName);
-
                 // Setting up flux vector for advection operator
                 if (m_specHP_dealiasing)
                 {
@@ -177,6 +185,9 @@ namespace Nektar
                 // Setting up upwind solver for diffusion operator
                 m_riemannSolverLDG = SolverUtils::GetRiemannSolverFactory()
                                                 .CreateInstance("UpwindLDG");
+                
+                m_riemannSolver->SetParam ("adjointSwitch",
+                                           &CompressibleFlowSystem::GetAdjointSwitch,   this);
 
                 // Setting up parameters for advection operator Riemann solver
                 m_riemannSolver->SetParam (
@@ -193,7 +204,23 @@ namespace Nektar
                     "velLoc", &CompressibleFlowSystem::GetVelLoc,  this);
                 m_riemannSolverLDG->SetVector(
                     "N",      &CompressibleFlowSystem::GetNormals, this);
-
+                
+                if (m_adjointSwitch == 1.0)
+                {
+                    EquationSystem::InitialisePrimalSolution();
+                    
+                    m_advection->SetFluxVector(&CompressibleFlowSystem::
+                                                GetAdjointFluxVector, this);
+                    
+                    m_advection->SetJacTransposeDivVector(&CompressibleFlowSystem::
+                                               GetJacTransposeDivVector, this);
+                    
+                    m_advection->SetDirectSolution(&CompressibleFlowSystem::
+                                                      GetDirectSolution, this);
+                                               
+                    m_riemannSolver->SetFwdBwdDirectSolution(&CompressibleFlowSystem::GetFwdBwdDirectSolution, this);
+                }
+                
                 // Concluding initialisation of advection / diffusion operators
                 m_advection->SetRiemannSolver   (m_riemannSolver);
                 m_diffusion->SetRiemannSolver   (m_riemannSolverLDG);
@@ -242,10 +269,13 @@ namespace Nektar
 
         // Get physical values of the forward trace
         Array<OneD, Array<OneD, NekDouble> > Fwd(nVariables);
+        Array<OneD, Array<OneD, NekDouble> > Fwdnew(nVariables);
         for (i = 0; i < nVariables; ++i)
         {
             Fwd[i] = Array<OneD, NekDouble>(nTracePts);
+            Fwdnew[i] = Array<OneD, NekDouble>(nTracePts);
             m_fields[i]->ExtractTracePhys(physarray[i], Fwd[i]);
+            m_fields[i]->ExtractTracePhys(physarray[i], Fwdnew[i]);
         }
 
         // Adjust the physical values of the trace to take
@@ -264,7 +294,8 @@ namespace Nektar
 
             // For 2D/3D, define: v* = v - 2(v.n)n
             Array<OneD, NekDouble> tmp(nBCEdgePts, 0.0);
-
+            Array<OneD, NekDouble> tmpfwd(nBCEdgePts, 0.0);
+            Array<OneD, NekDouble> tmpfwdnew(nBCEdgePts, 0.0);
             // Calculate (v.n)
             for (i = 0; i < m_spacedim; ++i)
             {
@@ -274,7 +305,7 @@ namespace Nektar
                              &tmp[0], 1,
                              &tmp[0], 1);
             }
-
+            
             // Calculate 2.0(v.n)
             Vmath::Smul(nBCEdgePts, -2.0, &tmp[0], 1, &tmp[0], 1);
 
@@ -284,16 +315,127 @@ namespace Nektar
                 Vmath::Vvtvp(nBCEdgePts,
                              &tmp[0], 1,
                              &m_traceNormals[i][id2], 1,
-                             &Fwd[1+i][id2], 1,
-                             &Fwd[1+i][id2], 1);
+                             &Fwdnew[1+i][id2], 1,
+                             &Fwdnew[1+i][id2], 1);
             }
-
+            
             // Copy boundary adjusted values into the boundary expansion
             for (i = 0; i < nVariables; ++i)
             {
-                Vmath::Vcopy(nBCEdgePts, &Fwd[i][id2], 1,
+                Vmath::Vcopy(nBCEdgePts, &Fwdnew[i][id2], 1,
                              &(m_fields[i]->GetBndCondExpansions()[bcRegion]->
                              UpdatePhys())[id1], 1);
+            }
+        }
+    }
+    
+    /**
+     * @brief Wall boundary conditions for compressible flow problems.
+     */
+    void CompressibleFlowSystem::AdjointWallBC(
+                int                                   bcRegion,
+                int                                   cnt,
+                Array<OneD, Array<OneD, NekDouble> > &physarray)
+    {
+        int i;
+        int nTracePts = GetTraceTotPoints();
+        int nVariables = physarray.num_elements();
+        int nq = physarray[0].num_elements();
+        
+        const Array<OneD, const int> &traceBndMap
+        = m_fields[0]->GetTraceBndMap();
+        
+        // Get physical values of the forward trace
+        Array<OneD, Array<OneD, NekDouble> > Fwd(nVariables);
+        Array<OneD, Array<OneD, NekDouble> > Fwdnew(nVariables);
+        
+        Array<OneD, Array<OneD, NekDouble> > BwdDir(nVariables);
+        Array<OneD, Array<OneD, NekDouble> > FwdDir(nVariables);
+        
+        for (i = 0; i < nVariables; ++i)
+        {
+            Fwd[i] = Array<OneD, NekDouble>(nTracePts);
+            Fwdnew[i] = Array<OneD, NekDouble>(nTracePts);
+            m_fields[i]->ExtractTracePhys(physarray[i], Fwd[i]);
+            m_fields[i]->ExtractTracePhys(physarray[i], Fwdnew[i]);
+        }
+        
+        NekDouble Cinf = 0.5 * m_rhoInfPrimal
+                       * (m_uInfPrimal*m_uInfPrimal+m_vInfPrimal*m_vInfPrimal) * m_Lref;
+        
+        NekDouble norm_fac = 1.0;///Cinf;
+        
+        // Adjust the physical values of the trace to take
+        // user defined boundaries into account
+        int e, id1, id2, nBCEdgePts, eMax;
+        
+        eMax = m_fields[0]->GetBndCondExpansions()[bcRegion]->GetExpSize();
+        for (e = 0; e < eMax; ++e)
+        {
+            nBCEdgePts = m_fields[0]->GetBndCondExpansions()[bcRegion]->
+            GetExp(e)->GetTotPoints();
+            id1 = m_fields[0]->GetBndCondExpansions()[bcRegion]->
+            GetPhys_Offset(e);
+            id2 = m_fields[0]->GetTrace()->GetPhys_Offset(traceBndMap[cnt+e]);
+            
+            Array<OneD, NekDouble> tmp(nBCEdgePts, 0.0);
+            Array<OneD, NekDouble> tmp1(nBCEdgePts, 0.0);
+            Array<OneD, NekDouble> tmp2(nBCEdgePts, 0.0);
+            
+            Array<OneD, Array<OneD, NekDouble> > DragDir(m_spacedim);
+            
+            NekDouble Dx = norm_fac * cos (m_alphaInfDir*PI/180);
+            NekDouble Dy = norm_fac * sin (m_alphaInfDir*PI/180);
+            
+            NekDouble Lx = norm_fac * cos (m_alphaInfDir*PI/180);
+            NekDouble Ly = norm_fac * sin (m_alphaInfDir*PI/180);
+            
+            DragDir[0] = Array<OneD, NekDouble> (nBCEdgePts, Dx);
+            DragDir[1] = Array<OneD, NekDouble> (nBCEdgePts, Dy);
+            
+            LiftDir[0] = Array<OneD, NekDouble> (nBCEdgePts, Lx);
+            LiftDir[1] = Array<OneD, NekDouble> (nBCEdgePts, Ly);
+            
+            for (i = 0; i < m_spacedim; ++i)
+            {
+
+                Vmath::Vvtvp(nBCEdgePts,
+                             &Fwd[1+i][id2], 1,
+                             &m_traceNormals[i][id2], 1,
+                             &tmp[0], 1,
+                             &tmp[0], 1);
+                
+                Vmath::Vvtvp(nBCEdgePts,
+                             &DragDir[i][0], 1,
+                             &m_traceNormals[i][id2], 1,
+                             &tmp1[0], 1,
+                             &tmp1[0], 1);
+            }
+            
+            Vmath::Vsub(nBCEdgePts, &tmp1[0], 1, &tmp[0], 1, &tmp2[0], 1);
+            // Calculate 2.0(1/Cinf(phi.n)-v.n)
+            Vmath::Smul(nBCEdgePts, 2.0, &tmp2[0], 1, &tmp2[0], 1);
+            // Calculate 1/Cinf(phi.n)
+            
+            // Calculate v* = v + 2.0(1/Cinf(phi.n)-v.n)n
+            for (i = 0; i < m_spacedim; ++i)
+            {
+                Vmath::Vvtvp(nBCEdgePts,
+                             &tmp2[0], 1,
+                             &m_traceNormals[i][id2], 1,
+                             &Fwdnew[1+i][id2], 1,
+                             &Fwdnew[1+i][id2], 1);
+            }
+            
+            Vmath::Neg(nBCEdgePts,&Fwdnew[0][id2], 1);
+            Vmath::Neg(nBCEdgePts,&Fwdnew[nVariables-1][id2], 1);
+            // Copy boundary adjusted values into the boundary expansion
+            
+            for (i = 0; i < nVariables; ++i)
+            {
+                Vmath::Vcopy(nBCEdgePts, &Fwdnew[i][id2], 1,
+                             &(m_fields[i]->GetBndCondExpansions()[bcRegion]->
+                               UpdatePhys())[id1], 1);
             }
         }
     }
@@ -790,7 +932,951 @@ namespace Nektar
                         flux[m_spacedim+1][j], 1);
         }
     }
+    
+    
+    
+    void CompressibleFlowSystem::GetJacTransposeDivVector(
+            const Array<OneD, Array<OneD, NekDouble> > &inarray,
+                  Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray)
+    {
+        int i, j, k, n, p, o, t;
+        int nq = inarray[0].num_elements();
+        int nvar = m_fields.num_elements();
+        
+        Array<OneD, NekDouble> pressure(nq,0.0);
+        Array<OneD, NekDouble> H(nq,0.0);
+        Array<OneD, NekDouble> Htmp(nq,0.0);
+        Array<OneD, NekDouble> U2(nq,0.0);
+        Array<OneD, Array<OneD, NekDouble> > vel(m_spacedim);
+        Array<OneD, Array<OneD, NekDouble> > direct_fields(nvar);
+        
+        Array<OneD, NekDouble> dH_dx(nq, 0.0);
+        Array<OneD, NekDouble> dH_dy(nq, 0.0);
+        Array<OneD, NekDouble> dH_dz(nq, 0.0);
+        
+        Array<OneD, NekDouble> du_dx(nq, 0.0);
+        Array<OneD, NekDouble> du_dy(nq, 0.0);
+        Array<OneD, NekDouble> du_dz(nq, 0.0);
+        
+        Array<OneD, NekDouble> dv_dx(nq, 0.0);
+        Array<OneD, NekDouble> dv_dy(nq, 0.0);
+        Array<OneD, NekDouble> dv_dz(nq, 0.0);
+        
+        Array<OneD, NekDouble> dw_dx(nq, 0.0);
+        Array<OneD, NekDouble> dw_dy(nq, 0.0);
+        Array<OneD, NekDouble> dw_dz(nq, 0.0);
+        
+        Array<OneD, NekDouble> dU2_dx(nq, 0.0);
+        Array<OneD, NekDouble> dU2_dy(nq, 0.0);
+        Array<OneD, NekDouble> dU2_dz(nq, 0.0);
+        
+        Array<OneD, NekDouble> duv_dx(nq, 0.0);
+        Array<OneD, NekDouble> duv_dy(nq, 0.0);
+        Array<OneD, NekDouble> duv_dz(nq, 0.0);
+        
+        Array<OneD, NekDouble> duU2_dx(nq, 0.0);
+        Array<OneD, NekDouble> dvU2_dy(nq, 0.0);
+        Array<OneD, NekDouble> dwU2_dz(nq, 0.0);
+        
+        Array<OneD, NekDouble> duH_dx(nq, 0.0);
+        Array<OneD, NekDouble> dvH_dy(nq, 0.0);
+        Array<OneD, NekDouble> dwH_dz(nq, 0.0);
+        
+        Array<OneD, NekDouble> du2_dx(nq, 0.0);
+        Array<OneD, NekDouble> du2_dy(nq, 0.0);
+        Array<OneD, NekDouble> du2_dz(nq, 0.0);
+        
+        Array<OneD, NekDouble> dv2_dx(nq, 0.0);
+        Array<OneD, NekDouble> dv2_dy(nq, 0.0);
+        Array<OneD, NekDouble> dv2_dz(nq, 0.0);
+        
+        Array<OneD, NekDouble> dw2_dx(nq, 0.0);
+        Array<OneD, NekDouble> dw2_dy(nq, 0.0);
+        Array<OneD, NekDouble> dw2_dz(nq, 0.0);
+        
+        NekDouble GammaMinOne     = m_gamma - 1;
+        NekDouble HalfGammaMinOne = 0.5*(m_gamma - 1);
+        NekDouble ThreeMinGam     = 3.0 - m_gamma;
+        
+        for (i = 0; i < nvar; ++i)
+        {
+            direct_fields[i] = Array<OneD, NekDouble>(nq, 0.0);
+        }
+        
+        GetDirectSolution(direct_fields);
+        
+        for (i = 0; i < m_spacedim; ++i)
+        {
+           vel[i] = Array<OneD, NekDouble>(nq, 0.0);
+           Vmath::Vdiv(nq, direct_fields[i+1], 1, direct_fields[0], 1, vel[i], 1);
+           Vmath::Vvtvp(nq, &vel[i][0], 1, &vel[i][0], 1, &U2[0], 1, &U2[0], 1);
+        }
+        
+        GetPressure(direct_fields, vel, pressure);
+        
+        // determine H = E + p/rho;
+        Vmath::Vdiv(nq, direct_fields[nvar-1], 1, direct_fields[0], 1, H, 1);
+        
+        Vmath::Vdiv(nq, pressure, 1, direct_fields[0], 1, Htmp, 1);
+        
+        Vmath::Vadd(nq, H, 1, Htmp, 1, H, 1);
+        
+        if (m_spacedim == 1)
+        {
+            ASSERTL0(false, "1D adjoint solver is not yet implemented");
+        }
+        if (m_spacedim == 2)
+        {
+            m_primal[0]->PhysDeriv(vel[0], du_dx, du_dy);
+            m_primal[0]->PhysDeriv(vel[1], dv_dx, dv_dy);
+            m_primal[0]->PhysDeriv(H, dH_dx, dH_dy);
+            
+            // create du^2/dx = 2u*du/dx
+            Vmath::Vmul(nq, &vel[0][0], 1, &du_dx[0], 1, &du2_dx[0], 1);
+            Vmath::Smul(nq, 2.0, &du2_dx[0], 1, &du2_dx[0], 1);
+            
+            // create dv^2/dx = 2v*dv/dx
+            Vmath::Vmul(nq, &vel[1][0], 1, &dv_dx[0], 1, &dv2_dx[0], 1);
+            Vmath::Smul(nq, 2.0, &dv2_dx[0], 1, &dv2_dx[0], 1);
+            
+            // create du^2/dy = 2u*du/dy
+            Vmath::Vmul(nq, &vel[0][0], 1, &du_dy[0], 1, &du2_dy[0], 1);
+            Vmath::Smul(nq, 2.0, &du2_dy[0], 1, &du2_dy[0], 1);
+            
+            // create dv^2/dy = 2v*dv/dy
+            Vmath::Vmul(nq, &vel[1][0], 1, &dv_dy[0], 1, &dv2_dy[0], 1);
+            Vmath::Smul(nq, 2.0, &dv2_dy[0], 1, &dv2_dy[0], 1);
+            
+            // create dU^2/dx = du^2/dx + dv^2/dx = 2udu/dx+2vdv/dx
+            Vmath::Vadd(nq, &du2_dx[0], 1, &dv2_dx[0], 1, &dU2_dx[0], 1);
+            
+            // create dU^2/dy = du^2/dy + dv^2/dy
+            Vmath::Vadd(nq, &du2_dy[0], 1, &dv2_dy[0], 1, &dU2_dy[0], 1);
+            
+            // d(uU^2)/dx = d(u^3 + u*v^2)/dx = du^3/dx + d(uv^2)/dx = du^3/dx + d(u*v*v)/dx
+            //  = du^3/dx + 2*u*v*dv/dx + v^2*du/dx
+            
+            // d(uU^2)/dx = 2*u*v*dv/dx + v^2du/dx + 3u^2du/dx
+            
+            Array<OneD, NekDouble> tmp_dir(nq, 0.0);
+            Array<OneD, NekDouble> tmp2_dir(nq, 0.0);
+            
+            Vmath::Vmul(nq, &vel[0][0], 1, &vel[1][0], 1, &duU2_dx[0], 1);
+            Vmath::Smul(nq, 2.0, &duU2_dx[0], 1, &duU2_dx[0], 1);
+            Vmath::Vmul(nq, &duU2_dx[0], 1, &dv_dx[0], 1, &duU2_dx[0], 1);
+            
+            Vmath::Vmul(nq, &vel[0][0], 1, &vel[0][0], 1, &tmp_dir[0], 1);
+            Vmath::Smul(nq, 3.0, &tmp_dir[0], 1, &tmp_dir[0], 1);
+            Vmath::Vmul(nq, &tmp_dir[0], 1, &du_dx[0], 1, &tmp_dir[0], 1);
+            
+            Vmath::Vmul(nq, &vel[1][0], 1, &vel[1][0], 1, &tmp2_dir[0], 1);
+            Vmath::Vmul(nq, &tmp2_dir[0], 1, &du_dx[0], 1, &tmp2_dir[0], 1);
+            
+            Vmath::Vadd(nq, &tmp_dir[0], 1, &duU2_dx[0], 1, &duU2_dx[0], 1);
+            Vmath::Vadd(nq, &tmp2_dir[0], 1, &duU2_dx[0], 1, &duU2_dx[0], 1);
+            
+            Vmath::Zero(nq, &tmp_dir[0], 1);
+            Vmath::Zero(nq, &tmp2_dir[0], 1);
+            
+            // d(vU^2)/dy = d(vu^2 + v^3)/dy = dvu^2/dy + d(v^3)/dy
+            // = vdu^2/dy+u^2dv/dy + dv^3/dy
+            
+            // d(vU^2)/dy = 2*u*v*du/dy + u^2dv/dy + 3v^2dv/dy
+            
+            Vmath::Vmul(nq, &vel[0][0], 1, &vel[1][0], 1, &dvU2_dy[0], 1);
+            Vmath::Smul(nq, 2.0, &dvU2_dy[0], 1, &dvU2_dy[0], 1);
+            Vmath::Vmul(nq, &dvU2_dy[0], 1, &du_dy[0], 1, &dvU2_dy[0], 1);
+            
+            Vmath::Vmul(nq, &vel[1][0], 1, &vel[1][0], 1, &tmp_dir[0], 1);
+            Vmath::Smul(nq, 3.0, &tmp_dir[0], 1, &tmp_dir[0], 1);
+            Vmath::Vmul(nq, &tmp_dir[0], 1, &dv_dy[0], 1, &tmp_dir[0], 1);
+            
+            Vmath::Vmul(nq, &vel[0][0], 1, &vel[0][0], 1, &tmp2_dir[0], 1);
+            Vmath::Vmul(nq, &tmp2_dir[0], 1, &dv_dy[0], 1, &tmp2_dir[0], 1);
+            
+            Vmath::Vadd(nq, &tmp_dir[0], 1, &dvU2_dy[0], 1, &dvU2_dy[0], 1);
+            Vmath::Vadd(nq, &tmp2_dir[0], 1, &dvU2_dy[0], 1, &dvU2_dy[0], 1);
+            
+            Vmath::Zero(nq, &tmp_dir[0], 1);
+            Vmath::Zero(nq, &tmp2_dir[0], 1);
+            // create d(vU^2)/dy = vdU^2/dy + U^2dv/dy
+ 
+            // create d(uH)/dx = udH/dx + Hdu/dx
+            Vmath::Vmul(nq, &vel[0][0], 1, &dH_dx[0], 1, &duH_dx[0], 1);
+            Vmath::Vvtvp(nq, &H[0], 1, &du_dx[0], 1, &duH_dx[0], 1, &duH_dx[0], 1);
+            
+            // create d(vH)/dy = vdH/dy + Hdv/dy
+            Vmath::Vmul(nq, &vel[1][0], 1, &dH_dy[0], 1, &dvH_dy[0], 1);
+            Vmath::Vvtvp(nq, &H[0], 1, &dv_dy[0], 1, &dvH_dy[0], 1, &dvH_dy[0], 1);
+            
+            // create d(uv)/dx = udv/dx + vdu/dx
+            Vmath::Vmul(nq, &vel[0][0], 1, &dv_dx[0], 1, &duv_dx[0], 1);
+            Vmath::Vvtvp(nq, &vel[1][0], 1, &du_dx[0], 1, &duv_dx[0], 1, &duv_dx[0], 1);
+            
+            // create d(uv)/dy = udv/dy + vdu/dy
+            Vmath::Vmul(nq, &vel[0][0], 1, &dv_dy[0], 1, &duv_dy[0], 1);
+            Vmath::Vvtvp(nq, &vel[1][0], 1, &du_dy[0], 1, &duv_dy[0], 1, &duv_dy[0], 1);
+        
+            // =================================================================
+            //                   Create JacTransVectorX
+            // =================================================================
+            // ===========================Eq1===================================
+            
+            Array<OneD, NekDouble> tmp(nq,  0.0);
+            Array<OneD, NekDouble> tmp1(nq, 0.0);
+            Array<OneD, NekDouble> tmp2(nq, 0.0);
+            Array<OneD, NekDouble> tmp3(nq, 0.0);
+            
+            // tmp = du^2_dx
+            Vmath::Vcopy(nq, &du2_dx[0], 1, &tmp[0], 1);
+            
+            // tmp1 = (gamma-1)/2 * dU^2_dx
+            Vmath::Smul(nq, HalfGammaMinOne, &dU2_dx[0], 1, &tmp1[0], 1);
+            
+            // tmp = (gamma-1)/2 * dU^2_dx - du^2_dx
+            Vmath::Vsub(nq, &tmp1[0], 1, &tmp[0], 1, &tmp[0], 1);
+            
+            // tmp = z_rhou*((gamma-1)/2 * dU^2_dx - du^2_dx)
+            Vmath::Vmul(nq, &inarray[1][0], 1, &tmp[0], 1, &tmp[0], 1);
+            
+            //------------------------------------------------------------------
+            
+            // tmp2 = u*v;
+            Vmath::Vcopy(nq, &duv_dx[0], 1, &tmp2[0], 1);
+            
+            // tmp2 = -u*v;
+            Vmath::Neg(nq, &tmp2[0], 1);
+            
+            // tmp2 = -u*v*z_rhov;
+            Vmath::Vmul(nq, &inarray[2][0], 1, &tmp2[0], 1, &tmp2[0], 1);
+            
+            //------------------------------------------------------------------
+            // tmp3 = (gamma-1)/2*duU2_dx;
+            Vmath::Smul(nq, HalfGammaMinOne, &duU2_dx[0], 1, &tmp3[0], 1);
+            
+            // tmp3 = (gamma-1)/2*duU2_dx-duH_dx;
+            Vmath::Vsub(nq, &tmp3[0], 1, &duH_dx[0], 1, &tmp3[0], 1);
+            
+            // tmp3 = z_rhoE*((gamma-1)/2*duU2_dx-duH_dx);
+            Vmath::Vmul(nq, &inarray[3][0], 1, &tmp3[0], 1,  &tmp3[0], 1);
+            //------------------------------------------------------------------
+            
+            Vmath::Vadd(nq, &tmp[0], 1, &tmp2[0], 1, &outarray[0][0][0], 1);
+            
+            Vmath::Vadd(nq, &outarray[0][0][0], 1, &tmp3[0], 1, &outarray[0][0][0], 1);
+            
+            // ===========================Eq2===================================
+            
+            Vmath::Zero(nq, &tmp[0], 1);
+            Vmath::Zero(nq, &tmp1[0], 1);
+            Vmath::Zero(nq, &tmp2[0], 1);
+            Vmath::Zero(nq, &tmp3[0], 1);
+            
+            // tmp = zrho;
+            //Vmath::Vcopy(nq, &inarray[0][0], 1, &tmp[0], 1);
+            
+            // tmp1 = (3-gamma) * du_dx
+            Vmath::Smul(nq,ThreeMinGam, &du_dx[0], 1, &tmp1[0], 1);
+            
+            // tmp1 = (3-gamma) * du_dx * z_rhou
+            Vmath::Vmul(nq, &tmp1[0], 1, &inarray[1][0], 1, &tmp1[0], 1);
+            
+            // tmp2 = dv_dx
+            Vmath::Vcopy(nq, &dv_dx[0], 1, &tmp2[0], 1);
+            
+            // tmp2 = dv_dx * z_rhov
+            Vmath::Vmul(nq, &tmp2[0], 1, &inarray[2][0], 1, &tmp2[0], 1);
+            
+            // tmp3 = (1-gamma) * du^2_dx
+            Vmath::Smul(nq, -GammaMinOne, &du2_dx[0], 1, &tmp3[0], 1);
+            
+            // tmp3 = (1-gamma) * du^2_dx+dH_dx
+            Vmath::Vadd(nq, &tmp3[0], 1, &dH_dx[0], 1, &tmp3[0], 1);
+            
+            // tmp3 = ((1-gamma) * du^2_dx+dH_dx)*z_rhoE
+            Vmath::Vmul(nq, &inarray[3][0], 1, &tmp3[0], 1, &tmp3[0], 1);
+            
+            Vmath::Vcopy(nq, &tmp1[0], 1, &outarray[1][0][0], 1);
+            
+            Vmath::Vadd(nq, &outarray[1][0][0], 1, &tmp2[0], 1, &outarray[1][0][0], 1);
+            
+            Vmath::Vadd(nq, &outarray[1][0][0], 1, &tmp3[0], 1, &outarray[1][0][0], 1);
+            
+            // ===========================Eq3===================================
+            
+            Vmath::Zero(nq, &tmp[0], 1);
+            Vmath::Zero(nq, &tmp1[0], 1);
+            Vmath::Zero(nq, &tmp2[0], 1);
+            Vmath::Zero(nq, &tmp3[0], 1);
+            
+            // tmp = -(gamma-1)*dv_dx
+            Vmath::Smul(nq, -GammaMinOne, &dv_dx[0], 1, &tmp[0], 1);
+            
+            // tmp = -(gamma-1)*dv_dx * z_rhou
+            Vmath::Vmul(nq, &tmp[0], 1, &inarray[1][0], 1, &tmp[0], 1);
+            
+            // tmp1 = du_dx * z_rhov
+            Vmath::Vmul(nq, &du_dx[0], 1, &inarray[2][0], 1, &tmp1[0], 1);
+            
+            // tmp2 =  duv_dx
+            Vmath::Vcopy(nq, &duv_dx[0], 1, &tmp2[0], 1);
+            
+            // tmp2 = -(gamma-1)* duv_dx
+            Vmath::Smul(nq, -GammaMinOne, &tmp2[0], 1, &tmp2[0], 1);
+            
+            // tmp2 = -(gamma-1)* duv_dx * z_rhoE
+            Vmath::Vmul(nq, &inarray[3][0], 1, &tmp2[0], 1, &tmp2[0], 1);
+            
+            Vmath::Vadd(nq, &tmp[0], 1, &tmp1[0], 1, &outarray[2][0][0], 1);
+            Vmath::Vadd(nq, &outarray[2][0][0], 1, &tmp2[0], 1, &outarray[2][0][0], 1);
+            
+            // ===========================Eq4===================================
+            
+            Vmath::Zero(nq, &tmp[0], 1);
+            Vmath::Zero(nq, &tmp1[0], 1);
+            Vmath::Zero(nq, &tmp2[0], 1);
+            Vmath::Zero(nq, &tmp3[0], 1);
+            
+            Vmath::Smul(nq, m_gamma, &du_dx[0], 1, &tmp1[0], 1);
+            Vmath::Vmul(nq, &tmp1[0], 1, &inarray[3][0], 1, &outarray[3][0][0], 1);
+            
+            // =================================================================
+            //                   Create JacTransVectorY
+            // =================================================================
+            // ===========================Eq1===================================
+            
+            Vmath::Zero(nq, &tmp[0], 1);
+            Vmath::Zero(nq, &tmp1[0], 1);
+            Vmath::Zero(nq, &tmp2[0], 1);
+            Vmath::Zero(nq, &tmp3[0], 1);
+            
+            // tmp = dv^2_dy
+            Vmath::Vcopy(nq, &dv2_dy[0], 1, &tmp[0], 1);
+            
+            // tmp1 = (gamma-1)/2 * dU^2_dy
+            Vmath::Smul(nq, HalfGammaMinOne, &dU2_dy[0], 1, &tmp1[0], 1);
+            
+            // tmp = (gamma-1)/2 * dU^2_dy - dv^2_dy
+            Vmath::Vsub(nq, &tmp1[0], 1, &tmp[0], 1, &tmp[0], 1);
+            
+            // tmp = z_rhov*((gamma-1)/2 * dU^2_dy - du^2_dy)
+            Vmath::Vmul(nq, &inarray[2][0], 1, &tmp[0], 1, &tmp[0], 1);
+            
+            //--------------------------------------------------------------
+            
+            // tmp2 = duv_dy;
+            Vmath::Vcopy(nq, &duv_dy[0], 1, &tmp2[0], 1);
+            
+            // tmp2 = -duv_dy;
+            Vmath::Neg(nq, &tmp2[0], 1);
+            
+            // tmp2 = -u*v*z_rhou;
+            Vmath::Vmul(nq, &inarray[1][0], 1, &tmp2[0], 1, &tmp2[0], 1);
+            
+            //--------------------------------------------------------------
+            // tmp3 = (gamma-1)/2*dvU2_dy;
+            Vmath::Smul(nq, HalfGammaMinOne, &dvU2_dy[0], 1, &tmp3[0], 1);
+            
+            // tmp3 = (gamma-1)/2*dvU2_dy-dvH_dy;
+            Vmath::Vsub(nq, &tmp3[0], 1, &dvH_dy[0], 1, &tmp3[0], 1);
+            
+            // tmp3 = z_rhoE*((gamma-1)/2*dvU2_dy-dvH_dy);
+            Vmath::Vmul(nq, &inarray[3][0], 1, &tmp3[0], 1,  &tmp3[0], 1);
+            //--------------------------------------------------------------
+            
+            Vmath::Vadd(nq,&tmp[0], 1, &tmp2[0], 1, &outarray[0][1][0], 1);
+            
+            Vmath::Vadd(nq, &outarray[0][1][0], 1, &tmp3[0], 1, &outarray[0][1][0], 1);
+            
+            // ===========================Eq2===================================
+            
+            Vmath::Zero(nq, &tmp[0], 1);
+            Vmath::Zero(nq, &tmp1[0], 1);
+            Vmath::Zero(nq, &tmp2[0], 1);
+            Vmath::Zero(nq, &tmp3[0], 1);
+            
+            // tmp = -(gamma-1)*du_dy
+            Vmath::Smul(nq, -GammaMinOne, &du_dy[0], 1, &tmp[0], 1);
+            
+            // tmp = -(gamma-1)*du_dy * z_rhov
+            Vmath::Vmul(nq, &tmp[0], 1, &inarray[2][0], 1, &tmp[0], 1);
+            
+            // tmp1 = dv_dy * z_rhou
+            Vmath::Vmul(nq, &dv_dy[0], 1, &inarray[1][0], 1, &tmp1[0], 1);
+            
+            // tmp2 =  duv_dy
+            Vmath::Vcopy(nq, &duv_dy[0], 1, &tmp2[0], 1);
+            
+            // tmp2 = -(gamma-1)* duv_dy
+            Vmath::Smul(nq, -GammaMinOne, &tmp2[0], 1, &tmp2[0], 1);
+            
+            // tmp2 = -(gamma-1)* duv_dy * z_rhoE
+            Vmath::Vmul(nq, &inarray[3][0], 1, &tmp2[0], 1, &tmp2[0], 1);
+            
+            Vmath::Vadd(nq, &tmp[0], 1, &tmp1[0], 1, &outarray[1][1][0], 1);
+            Vmath::Vadd(nq, &outarray[1][1][0], 1, &tmp2[0], 1, &outarray[1][1][0], 1);
+            
+            // ===========================Eq3===============================
+            
+            Vmath::Zero(nq, &tmp[0], 1);
+            Vmath::Zero(nq, &tmp1[0], 1);
+            Vmath::Zero(nq, &tmp2[0], 1);
+            Vmath::Zero(nq, &tmp3[0], 1);
+            
+            // tmp = zrho
+            // Vmath::Vcopy(nq, &inarray[0][0], 1, &tmp[0], 1);
+            
+            // tmp1 = (3-gamma) * dv_dy
+            Vmath::Smul(nq,ThreeMinGam, &dv_dy[0], 1, &tmp1[0], 1);
+            
+            // tmp1 = (3-gamma) * dv_dy * z_rhov
+            Vmath::Vmul(nq, &tmp1[0], 1, &inarray[2][0], 1, &tmp1[0], 1);
+            
+            // tmp2 = du_dy
+            Vmath::Vcopy(nq, &du_dy[0], 1, &tmp2[0], 1);
+            
+            // tmp2 = du_dy * z_rhou
+            Vmath::Vmul(nq, &tmp2[0], 1, &inarray[1][0], 1, &tmp2[0], 1);
+            
+            // tmp3 = dv^2_dy
+            Vmath::Vcopy(nq, &dv2_dy[0], 1, &tmp3[0], 1);
+            
+            // tmp3 = (1-gamma) * dv^2_dy
+            Vmath::Smul(nq, -GammaMinOne, &tmp3[0], 1, &tmp3[0], 1);
+            
+            // tmp3 = (gamma-1) * du^2_dy+dH_dy
+            Vmath::Vadd(nq, &tmp3[0], 1, &dH_dy[0], 1, &tmp3[0], 1);
+            
+            // tmp3 = ((gamma-1) * du^2_dy+dH_dy)*z_rhoE
+            Vmath::Vmul(nq, &inarray[3][0], 1, &tmp3[0], 1, &tmp3[0], 1);
+            
+            Vmath::Vcopy(nq, &tmp1[0], 1, &outarray[2][1][0], 1);
+            
+            Vmath::Vadd(nq, &outarray[2][1][0], 1, &tmp2[0], 1, &outarray[2][1][0], 1);
+            
+            Vmath::Vadd(nq, &outarray[2][1][0], 1, &tmp3[0], 1, &outarray[2][1][0], 1);
+            // ===========================Eq4===============================
+            
+            Vmath::Zero(nq, &tmp[0], 1);
+            Vmath::Zero(nq, &tmp1[0], 1);
+            Vmath::Zero(nq, &tmp2[0], 1);
+            Vmath::Zero(nq, &tmp3[0], 1);
+            
+            Vmath::Smul(nq, m_gamma, &dv_dy[0], 1, &tmp1[0], 1);
+            Vmath::Vmul(nq, &tmp1[0], 1, &inarray[3][0], 1, &outarray[3][1][0], 1);
+            
+            Vmath::Zero(nq, &tmp[0], 1);
+            Vmath::Zero(nq, &tmp1[0], 1);
+            Vmath::Zero(nq, &tmp2[0], 1);
+            Vmath::Zero(nq, &tmp3[0], 1);
+        }
+        
+        if (m_spacedim == 3)
+        {
+            ASSERTL0(false, "3D adjoint solver is not yet implemented");
+        }
+    }
+    
 
+    void CompressibleFlowSystem::GetAdjointFluxVector(
+        const Array<OneD, Array<OneD, NekDouble> > &inarray,
+              Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray)
+    {
+        
+        int i, j, k, n, p, o, t;
+        int nq = inarray[0].num_elements();
+        int nvar = m_fields.num_elements();
+        
+        Array<OneD, NekDouble> pressure(nq,0.0);
+        Array<OneD, NekDouble> H(nq,0.0);
+        Array<OneD, NekDouble> Htmp(nq,0.0);
+        Array<OneD, NekDouble> velsq(nq,0.0);
+        Array<OneD, Array<OneD, NekDouble> > vel(m_spacedim);
+        Array<OneD, Array<OneD, NekDouble> > direct_fields(nvar);
+        
+        for (i = 0; i < nvar; ++i)
+        {
+            direct_fields[i] = Array<OneD, NekDouble>(nq, 0.0);
+        }
+        
+        GetDirectSolution(direct_fields);
+        // load the physical values to obtain the adjoint vector \phi
+        
+        // Flux vector for the rho equation
+        for (i = 0; i < m_spacedim; ++i)
+        {
+            vel[i] = Array<OneD, NekDouble>(nq);
+        }
+        
+        GetVelocityVector(direct_fields, vel);
+        GetPressure      (direct_fields, vel, pressure);
+        
+        Array<OneD, NekDouble> ones(nq, 1.0);
+        
+        // determine u^2+v^2+w^2;
+        for (i = 0; i < m_spacedim; ++i)
+        {
+            Vmath::Vvtvp(nq, vel[i], 1, vel[i], 1, velsq, 1, velsq, 1);
+        }
+        
+        // determine H = E + p/rho;
+        Vmath::Vdiv(nq, direct_fields[nvar-1], 1, direct_fields[0], 1, H, 1);
+        
+        Vmath::Vdiv(nq, pressure, 1, direct_fields[0], 1, Htmp, 1);
+        
+        Vmath::Vadd(nq, H, 1, Htmp, 1, H, 1);
+        
+        // determine constants that are used regularly
+        NekDouble GammaMinOne     = m_gamma - 1;
+        NekDouble HalfGammaMinOne = 0.5*(m_gamma - 1);
+        NekDouble ThreeMinGam     = 3.0 - m_gamma;
+        
+        if (m_spacedim == 1)
+        {
+            ASSERTL0(false, "1D adjoint solver is not yet implemented");
+        }
+        if (m_spacedim == 2)
+        {
+            Array<OneD, NekDouble> tmp(nq, 0.0);
+            Array<OneD, NekDouble> tmp1(nq, 0.0);
+            Array<OneD, NekDouble> tmp2(nq, 0.0);
+            Array<OneD, NekDouble> tmp3(nq, 0.0);
+            
+            // tmp = u^2
+            Vmath::Vmul(nq, &vel[0][0], 1, &vel[0][0], 1, &tmp[0], 1);
+            
+            // tmp1 = (gamma-1)/2 * velsq
+            Vmath::Smul(nq, HalfGammaMinOne, &velsq[0], 1, &tmp1[0], 1);
+            
+            // ====================================================
+            
+            // tmp = (gamma-1)/2 * velsq - u^2
+            Vmath::Vsub(nq, &tmp1[0], 1, &tmp[0], 1, &tmp[0], 1);
+            
+            // tmp = z_rhou*((gamma/2 - 1/2)*(v1^2 + v2^2) - v1^2)
+            Vmath::Vmul(nq, &inarray[1][0], 1, &tmp[0], 1, &tmp[0], 1);
+        
+            // tmp2 = u*v;
+            Vmath::Vmul(nq, &vel[0][0], 1, &vel[1][0], 1, &tmp2[0], 1);
+            
+            // tmp2 = -u*v;
+            Vmath::Neg(nq, &tmp2[0], 1);
+            
+            // tmp2 = -u*v*z_rhov;
+            Vmath::Vmul(nq, &inarray[2][0], 1, &tmp2[0], 1, &tmp2[0], 1);
+        
+            // tmp3 = (gamma-1)/2*velsq;
+            Vmath::Smul(nq, HalfGammaMinOne, &velsq[0], 1, &tmp3[0], 1);
+            
+            // tmp3 = ((gamma-1)/2*velsq-H);
+            Vmath::Vsub(nq, &tmp3[0], 1, &H[0], 1, &tmp3[0], 1);
+            
+            // tmp3 = u((gamma-1)/2*velsq-H);
+            Vmath::Vmul(nq, &vel[0][0], 1, &tmp3[0], 1, &tmp3[0], 1);
+            
+            // tmp3 = z_rhoE*u((gamma-1)/2*velsq-H);
+            Vmath::Vmul(nq, &inarray[3][0], 1, &tmp3[0], 1, &tmp3[0], 1);
+            
+            Vmath::Vadd(nq, &tmp[0], 1, &tmp2[0], 1, &outarray[0][0][0], 1);
+            
+            Vmath::Vadd(nq, &outarray[0][0][0], 1, &tmp3[0], 1, &outarray[0][0][0], 1);
+            
+            // ====================================================
+            
+            Vmath::Zero(nq, &tmp[0], 1);
+            Vmath::Zero(nq, &tmp1[0], 1);
+            Vmath::Zero(nq, &tmp2[0], 1);
+            Vmath::Zero(nq, &tmp3[0], 1);
+            
+            // tmp = z_rho
+            Vmath::Vcopy(nq, &inarray[0][0], 1, &tmp[0], 1);
+            
+            // tmp1 = (3-gamma) * u
+            Vmath::Smul(nq, ThreeMinGam, &vel[0][0], 1, &tmp1[0], 1);
+            
+            // tmp1 = (3-gamma) * u * z_rhou
+            Vmath::Vmul(nq, &tmp1[0], 1, &inarray[1][0], 1, &tmp1[0], 1);
+            
+            // tmp2 = v
+            Vmath::Vcopy(nq, &vel[1][0], 1, &tmp2[0], 1);
+            
+            // tmp2 = v * z_rhov
+            Vmath::Vmul(nq, &tmp2[0], 1, &inarray[2][0], 1, &tmp2[0], 1);
+            
+            // tmp3 = u^2
+            Vmath::Vmul(nq, &vel[0][0], 1, &vel[0][0], 1, &tmp3[0], 1);
+            
+            // tmp3 = (1-gamma) * u^2
+            Vmath::Smul(nq, -GammaMinOne, &tmp3[0], 1, &tmp3[0], 1);
+            
+            // tmp3 = (gamma-1) * u^2+H
+            Vmath::Vadd(nq, &tmp3[0], 1, &H[0], 1, &tmp3[0], 1);
+            
+             // tmp3 = ((gamma-1) * u^2+H)*z_rhoE
+            Vmath::Vmul(nq, &inarray[3][0], 1, &tmp3[0], 1, &tmp3[0], 1);
+            
+            
+            Vmath::Vadd(nq, &tmp[0], 1, &tmp1[0], 1, &outarray[1][0][0], 1);
+            Vmath::Vadd(nq, &outarray[1][0][0], 1, &tmp2[0], 1, &outarray[1][0][0], 1);
+            Vmath::Vadd(nq, &outarray[1][0][0], 1, &tmp3[0], 1, &outarray[1][0][0], 1);
+            
+            // ====================================================
+            
+            Vmath::Zero(nq, &tmp[0], 1);
+            Vmath::Zero(nq, &tmp1[0], 1);
+            Vmath::Zero(nq, &tmp2[0], 1);
+            Vmath::Zero(nq, &tmp3[0], 1);
+            
+            // tmp = -(gamma-1)*v
+            Vmath::Smul(nq, -GammaMinOne, &vel[1][0], 1, &tmp[0], 1);
+            
+            // tmp = -(gamma-1)*v * z_rhou
+            Vmath::Vmul(nq, &tmp[0], 1, &inarray[1][0], 1, &tmp[0], 1);
+            
+            // tmp1 = u * z_rhov
+            Vmath::Vmul(nq, &vel[0][0], 1, &inarray[2][0], 1, &tmp1[0], 1);
+            
+            // tmp2 =  u * v
+            Vmath::Vmul(nq, &vel[0][0], 1, &vel[1][0], 1, &tmp2[0], 1);
+            
+            // tmp2 = -(gamma-1) * u * v
+            Vmath::Smul(nq, -GammaMinOne, &tmp2[0], 1, &tmp2[0], 1);
+            
+            // tmp2 = -(gamma-1) * u * v * z_rhoE
+            Vmath::Vmul(nq, &inarray[3][0], 1, &tmp2[0], 1, &tmp2[0], 1);
+            
+            Vmath::Vadd(nq, &tmp[0], 1, &tmp1[0], 1, &outarray[2][0][0], 1);
+            Vmath::Vadd(nq, &outarray[2][0][0], 1, &tmp2[0], 1, &outarray[2][0][0], 1);
+            
+            Vmath::Zero(nq, &tmp[0], 1);
+            Vmath::Zero(nq, &tmp1[0], 1);
+            Vmath::Zero(nq, &tmp2[0], 1);
+            Vmath::Zero(nq, &tmp3[0], 1);
+            
+            Vmath::Smul(nq, GammaMinOne, &inarray[1][0], 1, &tmp[0], 1);
+            
+            Vmath::Smul(nq, m_gamma, &vel[0][0], 1, &tmp1[0], 1);
+            Vmath::Vmul(nq, &tmp1[0], 1, &inarray[3][0], 1, &tmp1[0], 1);
+            
+            Vmath::Vadd(nq, &tmp[0], 1, &tmp1[0], 1, &outarray[3][0][0], 1);
+        
+            // =================================================================
+            // =================================================================
+            
+            Vmath::Zero(nq, &tmp[0], 1);
+            Vmath::Zero(nq, &tmp1[0], 1);
+            Vmath::Zero(nq, &tmp2[0], 1);
+            Vmath::Zero(nq, &tmp3[0], 1);
+            
+            // tmp = v^2
+            Vmath::Vmul(nq, &vel[1][0], 1, &vel[1][0], 1, &tmp[0], 1);
+            
+            // tmp1 = (gamma-1)/2 * velsq
+            Vmath::Smul(nq, HalfGammaMinOne, &velsq[0], 1, &tmp1[0], 1);
+            
+            
+            // tmp = (gamma-1)/2 * velsq - v^2
+            Vmath::Vsub(nq, &tmp1[0], 1, &tmp[0], 1, &tmp[0], 1);
+            
+            // tmp = z_rhov*((gamma/2 - 1/2)*(v1^2 + v2^2) - v1^2)
+            Vmath::Vmul(nq, &inarray[2][0], 1, &tmp[0], 1, &tmp[0], 1);
+            
+            
+            // ====================================================
+            
+            // tmp2 = u*v;
+            Vmath::Vmul(nq, &vel[0][0], 1, &vel[1][0], 1, &tmp2[0], 1);
+            
+            // tmp2 = -u*v;
+            Vmath::Neg(nq, &tmp2[0], 1);
+            
+            // tmp2 = -u*v*z_rhou;
+            Vmath::Vmul(nq, &inarray[1][0], 1, &tmp2[0], 1, &tmp2[0], 1);
+            
+            // ====================================================
+            
+            // tmp3 = (gamma-1)/2*velsq;
+            Vmath::Smul(nq, HalfGammaMinOne, &velsq[0], 1, &tmp3[0], 1);
+            
+            // tmp3 = ((gamma-1)/2*velsq-H);
+            Vmath::Vsub(nq, &tmp3[0], 1, &H[0], 1, &tmp3[0], 1);
+            
+            // tmp3 = v((gamma-1)/2*velsq-H);
+            Vmath::Vmul(nq,
+                        &vel[1][0], 1,
+                        &tmp3[0], 1,
+                        &tmp3[0], 1);
+            
+            // tmp3 = z_rhoE*u((gamma-1)/2*velsq-H);
+            Vmath::Vmul(nq, &inarray[3][0], 1, &tmp3[0], 1, &tmp3[0], 1);
+            
+            Vmath::Vadd(nq, &tmp[0], 1, &tmp2[0], 1, &outarray[0][1][0], 1);
+            
+            Vmath::Vadd(nq, &outarray[0][1][0], 1, &tmp3[0], 1, &outarray[0][1][0], 1);
+            
+            // ====================================================
+            
+            Vmath::Zero(nq, &tmp[0], 1);
+            Vmath::Zero(nq, &tmp1[0], 1);
+            Vmath::Zero(nq, &tmp2[0], 1);
+            Vmath::Zero(nq, &tmp3[0], 1);
+        
+            // tmp = z_rho
+            Vmath::Vcopy(nq, &inarray[0][0], 1, &tmp[0], 1);
+            
+            // tmp1 = -(gamma-3) * v
+            Vmath::Smul(nq, ThreeMinGam, &vel[1][0], 1, &tmp1[0], 1);
+            // tmp1 = -(gamma-3) * v * z_rhov
+            Vmath::Vmul(nq, &tmp1[0], 1, &inarray[2][0], 1, &tmp1[0], 1);
+            
+            
+            
+            // tmp2 = u
+            Vmath::Vcopy(nq, &vel[0][0], 1, &tmp2[0], 1);
+            
+            // tmp2 = u * z_rhou
+            Vmath::Vmul(nq, &tmp2[0], 1, &inarray[1][0], 1, &tmp2[0], 1);
+            
+            
+            
+            // tmp3 = v^2
+            Vmath::Vmul(nq, &vel[1][0], 1, &vel[1][0], 1, &tmp3[0], 1);
+            
+            // tmp3 = (1-gamma) * v^2
+            Vmath::Smul(nq, -GammaMinOne, &tmp3[0], 1, &tmp3[0], 1);
+            
+            // tmp3 = (gamma-1) * v^2+H
+            Vmath::Vadd(nq, &tmp3[0], 1, &H[0], 1, &tmp3[0], 1);
+            
+            // tmp3 = ((gamma-1) * v^2+H)*z_rhoE
+            Vmath::Vmul(nq, &inarray[3][0], 1, &tmp3[0], 1, &tmp3[0], 1);
+            
+
+            
+            Vmath::Vadd(nq, &tmp[0], 1, &tmp1[0], 1, &outarray[2][1][0], 1);
+            
+            Vmath::Vadd(nq, &outarray[2][1][0], 1, &tmp2[0], 1, &outarray[2][1][0], 1);
+            
+            Vmath::Vadd(nq, &outarray[2][1][0], 1, &tmp3[0], 1, &outarray[2][1][0], 1);
+            
+            // ====================================================
+            
+            Vmath::Zero(nq, &tmp[0], 1);
+            Vmath::Zero(nq, &tmp1[0], 1);
+            Vmath::Zero(nq, &tmp2[0], 1);
+            Vmath::Zero(nq, &tmp3[0], 1);
+            
+            // tmp = -(gamma-1) * u
+            Vmath::Smul(nq, -GammaMinOne, &vel[0][0], 1, &tmp[0], 1);
+            
+            // tmp = -(gamma-1) * u * z_rhov
+            Vmath::Vmul(nq, &tmp[0], 1, &inarray[2][0], 1, &tmp[0], 1);
+            
+            // tmp1 = v * z_rhou
+            Vmath::Vmul(nq, &vel[1][0], 1, &inarray[1][0], 1, &tmp1[0], 1);
+            
+            // tmp2 =  u * v
+            Vmath::Vmul(nq, &vel[0][0], 1, &vel[1][0], 1, &tmp2[0], 1);
+            
+            // tmp2 = -(gamma-1)* u * v
+            Vmath::Smul(nq, -GammaMinOne, &tmp2[0], 1, &tmp2[0], 1);
+            
+            // tmp2 = -(gamma-1)* u * v * z_rhoE
+            Vmath::Vmul(nq, &inarray[3][0], 1, &tmp2[0], 1, &tmp2[0], 1);
+            
+            Vmath::Vadd(nq, &tmp[0], 1, &tmp1[0], 1, &outarray[1][1][0], 1);
+            
+            Vmath::Vadd(nq, &outarray[1][1][0], 1, &tmp2[0], 1, &outarray[1][1][0], 1);
+            
+            // ====================================================
+            
+            Vmath::Zero(nq, &tmp[0], 1);
+            Vmath::Zero(nq, &tmp1[0], 1);
+            Vmath::Zero(nq, &tmp2[0], 1);
+            Vmath::Zero(nq, &tmp3[0], 1);
+            
+            Vmath::Smul(nq, GammaMinOne, &inarray[2][0], 1, &tmp[0], 1);
+            
+            Vmath::Smul(nq, m_gamma, &vel[1][0], 1, &tmp1[0], 1);
+            Vmath::Vmul(nq, &tmp1[0], 1, &inarray[3][0], 1, &tmp1[0], 1);
+            
+            Vmath::Vadd(nq, &tmp[0], 1, &tmp1[0], 1, &outarray[3][1][0], 1);
+            
+        }
+        if (m_spacedim == 3)
+        {
+            ASSERTL0(false, "3D adjoint solver is not yet implemented");
+        }
+    }
+    
+    void CompressibleFlowSystem::GetDirectSolution(
+                    Array<OneD, Array<OneD, NekDouble> > &directSol)
+    {
+        int nConvectiveFields = directSol.num_elements();
+        int npts = GetTotPoints();
+        int nCoeffs = m_primal[0]->GetCoeffs().num_elements();
+        int npts_dir = directSol[0].num_elements();
+        
+        Array<OneD, Array<OneD, NekDouble> > directSol2(nConvectiveFields);
+        
+        for (int i = 0; i < nConvectiveFields; ++i)
+        {
+            m_primal[i]->BwdTrans(m_primal[i]->GetCoeffs(), directSol[i]);
+        }
+    }
+    
+    void CompressibleFlowSystem::GetFwdBwdDirectSolution(
+                    Array<OneD, Array<OneD, NekDouble> > &FwdDir,
+                    Array<OneD, Array<OneD, NekDouble> > &BwdDir)
+    {
+        int nConvectiveFields = FwdDir.num_elements();
+        Array<OneD, Array<OneD, NekDouble> > directSol(nConvectiveFields);
+        
+        Array<OneD, Array<OneD, NekDouble> > absBwdDir(nConvectiveFields);
+        Array<OneD, Array<OneD, NekDouble> > absFwdDir(nConvectiveFields);
+                for (int i = 0; i < nConvectiveFields; ++i)
+        {
+            
+            directSol[i] = Array<OneD, NekDouble>(m_primal[0]->GetPhys().num_elements());
+            
+            m_primal[i]->BwdTrans(m_primal[i]->GetCoeffs(), directSol[i]);
+
+            m_primal[i]->GetFwdBwdTracePhys(directSol[i],
+                                            FwdDir[i],
+                                            BwdDir[i]);
+        }
+
+        // correct for boundary conditions // HACK so check for better implementation
+        int bcRegion = 0;
+        int eMax     = 0;
+        
+        // =============================HACK!!!!================================
+        int cnt = 0;
+        const Array<OneD, const int> &traceBndMap =
+                                                  m_fields[0]->GetTraceBndMap();
+        
+        int nBCregions = m_fields[0]->GetBndConditions().num_elements();
+        
+        for (int k = 0; k < nBCregions; ++k)
+        {
+            if (m_fields[0]->GetBndConditions()[k]->GetUserDefined() ==
+                SpatialDomains::eAdjointWall)
+            {
+                eMax = m_fields[0]->GetBndCondExpansions()[k]->GetExpSize();
+                
+                for (int e = 0; e < eMax; ++e)
+                {
+                    int nBCEdgePts = m_primal[0]->GetBndCondExpansions()[k]->
+                    GetExp(e)->GetTotPoints();
+                    int id1 = m_primal[0]->GetBndCondExpansions()[k]->
+                    GetPhys_Offset(e);
+                    int id2 = m_primal[0]->GetTrace()->GetPhys_Offset(traceBndMap[cnt+e]);
+                    
+                    Array<OneD, NekDouble> tmp(nBCEdgePts, 0.0);
+                    Array<OneD, NekDouble> tmp1(nBCEdgePts, 0.0);
+                    Array<OneD, NekDouble> tmpfwdnew(nBCEdgePts, 0.0);
+                    Array<OneD, NekDouble> tmpfwd(nBCEdgePts, 0.0);
+                    
+                    for (int i = 0; i < nConvectiveFields; ++i)
+                    {
+                        Vmath::Vcopy(nBCEdgePts,
+                                     &FwdDir[i][id2], 1,
+                                     &BwdDir[i][id2], 1);
+                        
+                    }
+                    //cout << endl;
+                    // Calculate (v.n) and (phi.n)
+                    for (int i = 0; i < m_spacedim; ++i)
+                    {
+                        Vmath::Vvtvp(nBCEdgePts,
+                                     &FwdDir[1+i][id2], 1,
+                                     &m_traceNormals[i][id2], 1,
+                                     &tmp[0], 1,
+                                     &tmp[0], 1);
+                    }
+                    
+                    // Calculate 2.0(v.n)
+                    Vmath::Smul(nBCEdgePts, -2.0, &tmp[0], 1, &tmp1[0], 1);
+                    
+                    // Calculate v* = v - 2.0(v.n)n + 1/Cinf(phi.n)n
+                    for (int i = 0; i < m_spacedim; ++i)
+                    {
+                        Vmath::Vvtvp(nBCEdgePts,
+                                     &tmp1[0], 1,
+                                     &m_traceNormals[i][id2], 1,
+                                     &BwdDir[1+i][id2], 1,
+                                     &BwdDir[1+i][id2], 1);
+                    }
+                    
+                    for (int i = 0; i < nConvectiveFields; ++i)
+                    {
+                        Vmath::Vcopy(nBCEdgePts, &BwdDir[i][id2], 1,
+                                     &(m_primal[i]->GetBndCondExpansions()[k]->
+                                       UpdatePhys())[id1], 1);
+                    }
+                }
+                
+                cnt += m_fields[0]->GetBndCondExpansions()[k]->GetExpSize();
+            }
+            else // Deals with farfield BC only so far
+            {
+                
+              eMax = m_fields[0]->GetBndCondExpansions()[k]->GetExpSize();
+                
+              for (int e = 0; e < eMax; ++e)
+              {
+                    int nBCEdgePts = m_primal[0]->GetBndCondExpansions()[k]->
+                    GetExp(e)->GetTotPoints();
+                    int id1 = m_primal[0]->GetBndCondExpansions()[k]->
+                    GetPhys_Offset(e);
+                    int id2 = m_primal[0]->GetTrace()->GetPhys_Offset(traceBndMap[cnt+e]);
+                    
+                    Array<OneD, NekDouble> tmp(nBCEdgePts, 0.0);
+                    Array<OneD, NekDouble> tmp1(nBCEdgePts, 0.0);
+                    Array<OneD, NekDouble> ones(nBCEdgePts, 1.0);
+                    
+                    NekDouble rhouInfPrimal = m_rhoInfPrimal*m_uInfPrimal;
+                    NekDouble rhovInfPrimal = m_rhoInfPrimal*m_vInfPrimal;
+                    
+                    NekDouble rhoEInfPrimal = m_pInfPrimal/(m_gamma - 1)
+                    + 0.5 * m_rhoInfPrimal * (m_uInfPrimal * m_uInfPrimal + m_vInfPrimal * m_vInfPrimal);
+                    
+                    Vmath::Smul(nBCEdgePts,
+                                m_rhoInfPrimal,
+                                &ones[0], 1,
+                                &BwdDir[0][id2], 1);
+                    Vmath::Smul(nBCEdgePts,
+                                rhouInfPrimal,
+                                &ones[0], 1,
+                                &BwdDir[1][id2], 1);
+                    Vmath::Smul(nBCEdgePts,
+                                rhovInfPrimal,
+                                &ones[0], 1,
+                                &BwdDir[2][id2], 1);
+                    Vmath::Smul(nBCEdgePts,
+                                rhoEInfPrimal,
+                                &ones[0], 1,
+                                &BwdDir[3][id2], 1);
+                    
+                    for (int i = 0; i < nConvectiveFields; ++i)
+                    {
+                        Vmath::Vcopy(nBCEdgePts,
+                                     &FwdDir[i][id2], 1,
+                                     &BwdDir[i][id2], 1);
+                        
+                    }
+                    
+                    for (int i = 0; i < nConvectiveFields; ++i)
+                    {
+                        Vmath::Vcopy(nBCEdgePts, &BwdDir[i][id2], 1,
+                                     &(m_primal[i]->GetBndCondExpansions()[k]->
+                                       UpdatePhys())[id1], 1);
+                    }
+                }
+                cnt += m_fields[0]->GetBndCondExpansions()[k]->GetExpSize();
+            }
+        }
+    }
 
     /**
      * @brief Return the flux vector for the compressible Euler equations

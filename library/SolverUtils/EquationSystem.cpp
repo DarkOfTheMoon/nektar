@@ -780,7 +780,6 @@ namespace Nektar
                     ElementGIDs[i] = m_fields[0]->GetExp(i)->GetGeom()->GetGlobalID();
                 }
 
-
                 m_fld->Import(filename,FieldDef,FieldData,
                                      LibUtilities::NullFieldMetaDataMap,
                                      ElementGIDs);
@@ -1082,6 +1081,7 @@ namespace Nektar
             else
             {
                 int nq = m_fields[0]->GetNpoints();
+                
                 for (int i = 0; i < m_fields.num_elements(); i++)
                 {
                     Vmath::Zero(nq, m_fields[i]->UpdatePhys(), 1);
@@ -1139,7 +1139,80 @@ namespace Nektar
             vel.resize(m_spacedim);
             SetUpBaseFields(m_graph);
             EvaluateFunction(vel, base, "BaseFlow");
-        }    	    
+        }
+        
+        void EquationSystem::InitialisePrimalSolution()
+        {
+            string file = m_session->GetFunctionFilename("PrimalSolution", 0);
+            
+            m_base = Array<OneD, MultiRegions::ExpListSharedPtr>(m_spacedim+2);
+            m_primal = Array<OneD, MultiRegions::ExpListSharedPtr>(m_spacedim+2);
+            
+            SetUpBaseFields(m_graph);
+            
+            m_primal = m_base;
+            
+            std::vector<std::string> adjoint_fields;
+            adjoint_fields.push_back("rho");
+            adjoint_fields.push_back("rhou");
+            adjoint_fields.push_back("rhov");
+            adjoint_fields.push_back("E");
+            
+            adjoint_fields.resize(m_spacedim+2);
+            
+            if (m_session->GetComm()->GetRank() == 0)
+            {
+                cout << "Primal Solution:" << endl;
+            }
+            
+            if (m_session->DefinesFunction("PrimalSolution"))
+            {
+                EvaluateFunction(adjoint_fields, m_primal,
+                                 "PrimalSolution");
+                
+                if (m_session->GetComm()->GetRank() == 0)
+                {
+                    
+                    for (int i = 0; i < m_fields.num_elements(); ++i)
+                    {
+                        std::string varName = m_session->GetVariable(i);
+                        cout << "  - Primal Field " << varName << ": "
+                        << DescribeFunction(varName, "PrimalSolution")
+                        << endl;
+                    }
+                }
+            }
+            else
+            {
+                int nq = m_fields[0]->GetNpoints();
+                for (int i = 0; i < m_fields.num_elements(); i++)
+                {
+                    Vmath::Zero(nq, m_primal[i]->UpdatePhys(), 1);
+                    m_primal[i]->SetPhysState(true);
+                    Vmath::Zero(m_primal[i]->GetNcoeffs(),
+                                m_primal[i]->UpdateCoeffs(), 1);
+                    if (m_session->GetComm()->GetRank() == 0)
+                    {
+                        cout << "  - Primal Field "    << m_session->GetVariable(i)
+                        << ": 0 (default)" << endl;
+                    }
+                }
+            }
+        }
+        
+        /*void EquationSystem::InitialisePrimalSolution()
+        {
+            string file = m_session->GetFunctionFilename("PrimalSolution", 0);
+            
+            m_base = Array<OneD, MultiRegions::ExpListSharedPtr>(m_spacedim+2);
+            m_primal = Array<OneD, MultiRegions::ExpListSharedPtr>(m_spacedim+2);
+            
+            SetUpBaseFields(m_graph);
+            
+            m_primal = m_base;
+            
+            ImportFldPrimal(file, m_graph);
+        }*/
     
         void EquationSystem::SetUpBaseFields(
             SpatialDomains::MeshGraphSharedPtr &mesh)
@@ -1337,6 +1410,45 @@ namespace Nektar
                     m_base[j]->ExtractDataToCoeffs(FieldDef[i], FieldData[i],
                                                    FieldDef[i]->m_fields[j],
                                                    m_base[j]->UpdateCoeffs());
+                }
+            }
+        }
+        
+        void EquationSystem::ImportFldPrimal(
+                        std::string pInfile,
+                        SpatialDomains::MeshGraphSharedPtr pGraph)
+        {
+            std::vector<LibUtilities::FieldDefinitionsSharedPtr> FieldDef;
+            std::vector<std::vector<NekDouble> > FieldData;
+            
+            //Get Homogeneous
+            LibUtilities::Import(pInfile,FieldDef,FieldData);
+            
+            int nvar = m_session->GetVariables().size();
+            if(m_session->DefinesSolverInfo("HOMOGENEOUS"))
+            {
+                std::string HomoStr = m_session->GetSolverInfo("HOMOGENEOUS");
+            }
+            
+            Array<OneD, Array<OneD, NekDouble> > primal(nvar);
+        
+            // copy FieldData into m_fields
+            for(int j = 0; j < nvar; ++j)
+            {
+                //primal[j] = Array<OneD, NekDouble>();
+                
+                for(int i = 0; i < FieldDef.size(); ++i)
+                {
+                    
+                    bool flag = FieldDef[i]->m_fields[j] ==
+                    m_session->GetVariable(j);
+                    ASSERTL1(flag, (std::string("Order of ") + pInfile
+                                    + std::string(" data and that defined in "
+                                                  "m_boundaryconditions differs")).c_str());
+                    
+                    m_primal[j]->ExtractDataToCoeffs(FieldDef[i], FieldData[i],
+                                                     FieldDef[i]->m_fields[j],
+                                                     m_primal[j]->UpdateCoeffs());
                 }
             }
         }
@@ -1926,7 +2038,20 @@ namespace Nektar
                                            fieldcoeffs[j]);
                 }            
             }
-
+            
+            map<std::string, CPFuncType>::iterator it;
+            for (it  = m_checkpointFuncs.begin();
+                 it != m_checkpointFuncs.end(); ++it)
+            {
+                Array<OneD, NekDouble> tmp;
+                (it->second)(fieldcoeffs, tmp);
+                for (int i = 0; i < FieldDef.size(); ++i)
+                {
+                    FieldDef[i]->m_fields.push_back(it->first);
+                    field->AppendFieldData(FieldDef[i], FieldData[i], tmp);
+                }
+            }
+            
             // Update time in field info if required
             if(m_fieldMetaDataMap.find("Time") != m_fieldMetaDataMap.end())
             {

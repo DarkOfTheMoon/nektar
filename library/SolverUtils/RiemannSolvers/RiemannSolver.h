@@ -58,6 +58,11 @@ namespace Nektar
             const Array<OneD, const Array<OneD, NekDouble> >& ()> RSVecFuncType;
         typedef boost::function<
             NekDouble ()> RSParamFuncType;
+        
+        typedef boost::function<void (
+        Array<OneD, Array<OneD, NekDouble> >&,
+        Array<OneD, Array<OneD, NekDouble> >&)>
+        FwdBwdDirectSolutionVecCB;
 
         class RiemannSolver
         {
@@ -107,6 +112,12 @@ namespace Nektar
             }
             
             template<typename FuncPointerT, typename ObjectPointerT>
+            void SetFwdBwdDirectSolution(FuncPointerT func, ObjectPointerT obj)
+            {
+                m_FwdBwdDirectSolution = boost::bind(func, obj, _1, _2);
+            }
+            
+            template<typename FuncPointerT, typename ObjectPointerT>
             void SetAuxiliary(std::string    name,
                               FuncPointerT   func,
                               ObjectPointerT obj)
@@ -128,6 +139,11 @@ namespace Nektar
             {
                 return m_params;
             }
+            
+            inline void SetFwdBwdDirectSolution(FwdBwdDirectSolutionVecCB FwdBwdDirectSol)
+            {
+                m_FwdBwdDirectSolution = FwdBwdDirectSol;
+            }
 
         protected:
             /// Indicates whether the Riemann solver requires a rotation to be
@@ -145,10 +161,17 @@ namespace Nektar
             Array<OneD, Array<OneD, NekDouble> >    m_rotMat;
             /// Rotation storage
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_rotStorage;
-
+            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_rotStorageDirSol;
             SOLVER_UTILS_EXPORT RiemannSolver();
 
             virtual void v_Solve(
+                const Array<OneD, const Array<OneD, NekDouble> > &Fwd,
+                const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
+                      Array<OneD,       Array<OneD, NekDouble> > &flux) = 0;
+            
+            virtual void v_AdjointSolve(
+                const Array<OneD, const Array<OneD, NekDouble> > &FwdDir,
+                const Array<OneD, const Array<OneD, NekDouble> > &BwdDir,
                 const Array<OneD, const Array<OneD, NekDouble> > &Fwd,
                 const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
                       Array<OneD,       Array<OneD, NekDouble> > &flux) = 0;
@@ -170,6 +193,8 @@ namespace Nektar
             bool CheckScalars(std::string name);
             bool CheckVectors(std::string name);
             bool CheckParams (std::string name);
+            
+            FwdBwdDirectSolutionVecCB     m_FwdBwdDirectSolution;
         };
 
         /// A shared pointer to an EquationSystem object

@@ -99,5 +99,15 @@ namespace Nektar
                 }
             }
         }
+        
+        void UpwindSolver::v_AdjointSolve(
+            const Array<OneD, const Array<OneD, NekDouble> > &Fwd,
+            const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
+            const Array<OneD, const Array<OneD, NekDouble> > &FwdDir,
+            const Array<OneD, const Array<OneD, NekDouble> > &BwdDir,
+                  Array<OneD,       Array<OneD, NekDouble> > &flux)
+        {
+            ASSERTL1(false, "adjoint Riemann solver for UpwindLDG NOT implemented yet");
+        }
     }
 }
