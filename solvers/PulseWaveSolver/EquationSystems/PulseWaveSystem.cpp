@@ -225,6 +225,7 @@ namespace Nektar
             EvaluateFunction("A_0", m_A_0[omega],"A_0",0.0,omega);
 
             int nqTrace = GetTraceTotPoints();
+            cout<<"nqTrace: "<<nqTrace<<endl;
 
             m_beta_trace[omega] = Array<OneD, NekDouble>(nqTrace);
             m_fields[0]->ExtractTracePhys(m_beta[omega],m_beta_trace[omega]);

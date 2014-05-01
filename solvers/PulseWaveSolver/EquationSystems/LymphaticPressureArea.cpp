@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// File CommMpi.cpp
+// File LymphaticPressureArea.cpp
 //
 // For more information, please see: http://www.nektar.info
 //
@@ -34,7 +34,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include <PulseWaveSolver/EquationSystems/LymphaticPressureArea.h>
-
+#define PI 3.14159265359
 namespace Nektar
 {
 
@@ -48,9 +48,10 @@ namespace Nektar
      *
      */
     LymphaticPressureArea::LymphaticPressureArea(Array<OneD, MultiRegions::ExpListSharedPtr> pVessel, 
-                       const LibUtilities::SessionReaderSharedPtr pSession)
+                                                 const LibUtilities::SessionReaderSharedPtr pSession)
         : PulseWavePressureArea(pVessel,pSession)
     {
+        m_session->LoadParameter("rho", m_rho, 0.5);
     }
 
     /**
@@ -61,9 +62,325 @@ namespace Nektar
 
     }
 
-    void LymphaticPressureArea::v_DoPressure()
+
+    void LymphaticPressureArea::v_ReadParameters(int nDomains, int nqTrace)
     {
-        cout<<"lymphatic pressure area"<<endl; 
+    }
+
+    void LymphaticPressureArea::v_GetPacons(int omega, Array<OneD, Array<OneD, NekDouble> > &pacons_trace, int nqTrace)
+    {
+    }
+
+
+    /**
+     *  Contains the definition of the pressure-area relationship. To implement a new pressure-area relationship
+     *  change the mathematical definitions here and also in getdpda. Also consider changing: getAfromPressure
+     *  and getCharIntegral; currently use numerical methods but it is preferable to enter analyticall expressions
+     *  if they can be derived for the chosen p-A relation. Furthermore ensure that the definition of the lower
+     *  integration boundary A_0 is updated in getAfromPressure, getAfromChars and getCharIntegral if using the
+     *  numerical methods to ensure it refers to the correct element of pacons; typically can be assumed to be
+     *  equal to the passive area.
+     *
+     *  The p-A relation cannot be a function of u and can contain any number of parameters as specified by
+     *  P-A_num_Params in the input file which should then be specified for each subdomain using:
+     *  <FUNCTION NAME="P-A_Vals">
+     *  <E VAR="Val[Domain ID][Parameter ID]" VALUE="" />
+     *  </FUNCTION>
+     */
+    
+    void LymphaticPressureArea::v_getPressure(NekDouble A, Array<OneD, NekDouble> pacons, NekDouble &pressure)
+    {
+        
+        /*
+         * pacons is an array which holds, for the point for which at which we are evaluating this function,
+         * all of the constants found in the pressure-area relation. They are in the same order as the input file.
+         */
+        
+        //pacons[0] = p_{ext}
+        //pacons[1] = P_d
+        //pacons[2] = D_d
+        //pacons[3] = M
+        //pacons[4] = f
+        //pacons[5] = t_0
+        
+        NekDouble Passive = 0.0;
+        NekDouble Active = 0.0;
+        
+        Passive = pacons[1]*(exp(2*sqrt(A)/(pacons[2]*sqrt(PI))) -pow(pacons[2],3)*pow(PI,1.5)*pow(A,-1.5)/8);
+        Active = -(pacons[3]*sqrt(PI)/(2*sqrt(A)))*(cos(2*PI*pacons[4]*(m_time-pacons[5]))-1);
+        
+        pressure = pacons[0] + Passive + Active;
+        
+        //cout<<"Working?"<<pressure<<endl;
+        
+    }
+    
+    /**
+     *  Contains the definition of dp/da - needs to be updated when chaning p-A relation!
+     */
+    void LymphaticPressureArea::v_getdpda(NekDouble A, NekDouble u, Array<OneD, NekDouble> pacons, NekDouble &dpda)
+    {
+        NekDouble Passive = 0.0;
+        NekDouble Active = 0.0;
+        
+        Passive = pacons[1]*(exp(2*sqrt(A)/(pacons[2]*sqrt(PI)))/(sqrt(A*PI)*pacons[2]) + 3.0*pow(pacons[2],3)*pow(PI,1.5)*pow(A,-2.5)/16);
+        Active = (pacons[3]*sqrt(PI)/(4*pow(A,1.5)))*(cos(2*PI*pacons[4]*(m_time-pacons[5]))-1);
+        
+        dpda = Passive + Active;
+        
+    }
+    
+    /**
+     *  Calculates A in terms of pressure for for any p-A relation using a Newton iteration. If using a different
+     *  p-A relation the definition of A_0 may need modifying.
+     */
+    void LymphaticPressureArea::v_getAfromPressure(NekDouble pressure, Array<OneD, NekDouble> pacons, NekDouble &A)
+    {
+        
+        //A = (pressure - pacons[2])/pacons[0] + sqrt(pacons[1]);
+        //A = A*A;
+        
+        NekDouble fa = 0.0;
+        NekDouble dpda = 0.0;
+        NekDouble p_calc = 0.0;
+        NekDouble delta_A_calc = 0.0;
+        NekDouble A_0 = 0.0;
+        
+        // Initialise to A_0
+        A_0=PI*pow(pacons[2],2)/40;
+        A=A_0;
+        
+        int proceed = 1;
+        int iter = 0;
+        int MAX_ITER = 200;
+        
+        // Tolerances for the algorithm
+        NekDouble Tol = 1.0e-10;
+        
+        while ((proceed) && (iter < MAX_ITER))
+        {
+            iter =iter+1;
+            
+            getPressure(A, pacons, p_calc);
+            fa = p_calc-pressure;
+            getdpda(A, 0, pacons, dpda);
+            
+            delta_A_calc=fa/dpda;
+            A = A - delta_A_calc;
+            
+            if (sqrt(delta_A_calc*delta_A_calc) < Tol)
+                proceed = 0;
+        }
+        
+    }
+    
+    /**
+     *  Calculates the two characteristic variables for any p-A relation, currently using numerical
+     *  integration. Unlike lambda and the derivitives we calculate both in the same function to avoid having
+     *  to do the numerical integration twice.
+     */
+    void LymphaticPressureArea::v_getW(NekDouble A, NekDouble u, Array<OneD, NekDouble> pacons, NekDouble &W1, NekDouble &W2)
+    {
+        NekDouble integralTerm=0.0;
+        getCharIntegral(A, u, pacons, integralTerm);
+        W1 = u + integralTerm;
+        W2 = u - integralTerm;
+    }
+    
+    /**
+     *  Contains the definition of A in terms of W_1 and W_2 for any p-A relation though definition of A_0 may
+     *  need updating. Solved for using a Newton iteration and numerical integration and numerical integration.
+     */
+    void LymphaticPressureArea::v_getAfromChars(NekDouble W_1, NekDouble W_2, Array<OneD, NekDouble> pacons, NekDouble &A)
+    {
+        
+        //    A = (W_1 - W_2)*sqrt(m_rho/(32*pacons[0]))+sqrt(sqrt(pacons[1]));
+        //    A = A*A;
+        //    A = A*A;
+        
+        NekDouble fa = 0.0;
+        NekDouble dfa = 0.0;
+        NekDouble dpda = 0.0;
+        NekDouble integralTerm = 0.0;
+        NekDouble delta_A_calc = 0.0;
+        NekDouble A_0 = 0.0;
+        
+        // Initialise to A_0
+        A_0=PI*pow(pacons[2],2)/40;
+        A=A_0;
+        
+        int proceed = 1;
+        int iter = 0;
+        int MAX_ITER = 200;
+        
+        // Tolerances for the algorithm
+        NekDouble Tol = 1.0e-10;
+        
+        while ((proceed) && (iter < MAX_ITER))
+        {
+            iter =iter+1;
+            
+            getCharIntegral(A, 0, pacons, integralTerm);
+            fa = integralTerm - 0.5*(W_1-W_2);
+            getdpda(A, 0, pacons, dpda);
+            dfa=sqrt(dpda/(m_rho*A));
+            
+            delta_A_calc=fa/dfa;
+            A = A - delta_A_calc;
+            
+            if (sqrt(delta_A_calc*delta_A_calc) < Tol)
+                proceed = 0;
+        }
+        
+    }
+    
+    /**
+     *  Contains the definition of u in terms of W_1 and W_2 for any p-A relation
+     */
+    void LymphaticPressureArea::v_getufromChars(NekDouble W_1, NekDouble W_2, Array<OneD, NekDouble> pacons, NekDouble &u)
+    {
+        
+        u = 0.5*(W_1+W_2);
+        
+    }
+    
+    /**
+     *  Contains the definition of the the first eigenvalue lambda_1 for any p-A relation
+     */
+    void LymphaticPressureArea::v_getlambda1(NekDouble A, NekDouble u, Array<OneD, NekDouble> pacons, NekDouble &lambda_1)
+    {
+        NekDouble dpda=0.0;
+        getdpda(A, u, pacons, dpda);
+        
+        lambda_1 = u + sqrt((A/m_rho)*dpda);
+        
+    }
+    
+    /**
+     *  Contains the definition of the the second eigenvalue lambda_2 for any p-A relation
+     */
+    void LymphaticPressureArea::v_getlambda2(NekDouble A, NekDouble u, Array<OneD, NekDouble> pacons, NekDouble &lambda_2)
+    {
+        NekDouble dpda=0.0;
+        getdpda(A, u, pacons, dpda);
+        
+        lambda_2 = u - sqrt((A/m_rho)*dpda);
+    }
+    
+    
+    /**
+     *  Contains the definition of dp/du for any p-A relation
+     */
+    void LymphaticPressureArea::v_getdpdu(NekDouble A, NekDouble u, Array<OneD, NekDouble> pacons, NekDouble &dpdu)
+    {
+        
+        dpdu = 0;
+        
+    }
+    
+    /**
+     *  Contains the definition of dW1/da for any p-A relation
+     */
+    void LymphaticPressureArea::v_getdW1da(NekDouble A, NekDouble u, Array<OneD, NekDouble> pacons, NekDouble &dW1da)
+    {
+        NekDouble dpda=0.0;
+        getdpda(A, u, pacons, dpda);
+        
+        dW1da = sqrt(dpda/(A*m_rho));
+        
+    }
+    
+    /**
+     *  Contains the definition of dW1/du for any p-A relation
+     */
+    void LymphaticPressureArea::v_getdW1du(NekDouble A, NekDouble u, Array<OneD, NekDouble> pacons, NekDouble &dW1du)
+    {
+        
+        dW1du = 1;
+        
+    }
+    
+    /**
+     *  Contains the definition of dW2/da for any p-A relation
+     */
+    void LymphaticPressureArea::v_getdW2da(NekDouble A, NekDouble u, Array<OneD, NekDouble> pacons, NekDouble &dW2da)
+    {
+        
+        NekDouble dpda=0.0;
+        getdpda(A, u, pacons, dpda);
+        
+        dW2da = -1.0*sqrt(dpda/(A*m_rho));
+        
+    }
+    
+    /**
+     *  Contains the definition of dW2/du for any p-A relation
+     */
+    void LymphaticPressureArea::v_getdW2du(NekDouble A, NekDouble u, Array<OneD, NekDouble> pacons, NekDouble &dW2du)
+    {
+        
+        dW2du = 1;
+        
+    }
+    
+    /**
+     *  Evalautes the integral \int^A_{A_{0}}{ \sqrt{\frac{1}{\rho A} \frac{\partial p\left(A,t\right)}{\partial A}} dA}
+     *  which is found in the general definition of the characteristic variables.
+     *  Currenly does this numerically but if p-A relation allows suggest the analytical expression is entered instead.
+     *  This current implementation is suitable for any p-A relation, though A_0 may need updating as well as num of
+     *  trapeziums.
+     */
+    void LymphaticPressureArea::v_getCharIntegral(NekDouble A, NekDouble u, Array<OneD, NekDouble> pacons, NekDouble &intergralTerm)
+    {
+        
+        int numTrapeziums = 50;
+        NekDouble A_0 = 0.1*PI*pow(pacons[2],2)/4; //For active contractions can be less than static area
+        NekDouble A_n = A_0;
+        NekDouble dA = (A - A_n)/numTrapeziums;
+        NekDouble dpda_n = 0.0;
+        
+        intergralTerm = 0.0;
+        
+        for (int i = 2; i < numTrapeziums+1; i++)
+        {
+            A_n = A_n +dA;
+            getdpda(A_n, u, pacons, dpda_n);
+            intergralTerm = intergralTerm + sqrt(dpda_n/(m_rho*A_n));
+        }
+        
+        intergralTerm=intergralTerm*2.0;
+        getdpda(A_0, u, pacons, dpda_n);
+        intergralTerm=intergralTerm+sqrt(dpda_n/(m_rho*A_0));
+        getdpda(A, u, pacons, dpda_n);
+        intergralTerm=intergralTerm+sqrt(dpda_n/(m_rho*A));
+        intergralTerm = intergralTerm*0.5*(A-A_0)/numTrapeziums;
+        
+    }
+    
+    /**
+     *  Solves an Ax=b system using the linsys utility. Note that the A matrix must be passed as a 1D buffer array of
+     *  rows which is then used to form a NekMatrix
+     */
+    void LymphaticPressureArea::v_solveAxb(int rows, const Array<OneD, NekDouble> &matrix_buf, const Array<OneD, NekDouble> &b_buf, Array<OneD, NekDouble> &x)
+    {
+        
+        //Cast A as NekMatrix and b as NekVector
+        boost::shared_ptr<NekMatrix<double> > N(new NekMatrix<double>(rows, rows, matrix_buf,eFULL));
+        boost::shared_ptr<NekVector<double> > b(new NekVector<double>(rows, b_buf));   
+        
+        //Initialise Linear System
+        LinearSystem linsys(N);
+        
+        //Solve
+        NekVector<double> result = linsys.Solve(b);
+        result = linsys.SolveTranspose(b);
+        
+        //Convert the resulting NekVector to an array of NekDouble's for further manipulations later
+        for (int i = 0; i < rows; i++)
+        {
+            x[i]=result[i];
+        }
+        
     }
 
 }

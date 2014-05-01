@@ -66,4 +66,97 @@ namespace Nektar
                                       Loki::NoDestroy > Type;
         return Type::Instance();
     }
+
+    void PulseWavePressureArea::EvaluateFunction(
+        Array<OneD, MultiRegions::ExpListSharedPtr>       pFields,
+        LibUtilities::SessionReaderSharedPtr              pSession,
+        std::string                                       pFieldName,
+        Array<OneD, NekDouble>&                           pArray,
+        const std::string&                                pFunctionName,
+        NekDouble                                         pTime,
+        const int domain)
+    {
+        ASSERTL0(pSession->DefinesFunction(pFunctionName),
+                 "Function '" + pFunctionName + "' does not exist.");
+
+        unsigned int nq = pFields[0]->GetNpoints();
+        if (pArray.num_elements() != nq)
+        {
+            pArray = Array<OneD, NekDouble> (nq);
+        }
+
+        LibUtilities::FunctionType vType;
+        vType = pSession->GetFunctionType(pFunctionName, pFieldName);
+        if (vType == LibUtilities::eFunctionTypeExpression)
+        {
+            Array<OneD, NekDouble> x0(nq);
+            Array<OneD, NekDouble> x1(nq);
+            Array<OneD, NekDouble> x2(nq);
+
+            pFields[0]->GetCoords(x0, x1, x2);
+            LibUtilities::EquationSharedPtr ffunc =
+                pSession->GetFunction(pFunctionName, pFieldName,domain);
+
+            ffunc->Evaluate(x0, x1, x2, pTime, pArray);
+        }
+        else if (vType == LibUtilities::eFunctionTypeFile)
+        {
+            std::string filename = pSession->GetFunctionFilename(
+                pFunctionName,
+                pFieldName,
+                domain);
+
+            std::vector<LibUtilities::FieldDefinitionsSharedPtr> FieldDef;
+            std::vector<std::vector<NekDouble> > FieldData;
+            Array<OneD, NekDouble> vCoeffs(pFields[0]->GetNcoeffs());
+            Vmath::Zero(vCoeffs.num_elements(), vCoeffs, 1);
+
+            int numexp = pFields[0]->GetExpSize();
+            Array<OneD,int> ElementGIDs(numexp);
+
+            // Define list of global element ids
+            for(int i = 0; i < numexp; ++i)
+            {
+                ElementGIDs[i] = pFields[0]->GetExp(i)->GetGeom()->GetGlobalID();
+            }
+
+            LibUtilities::FieldIOSharedPtr fld =
+                MemoryManager<LibUtilities::FieldIO>::AllocateSharedPtr(m_session->GetComm());
+
+            fld->Import(filename,FieldDef,FieldData,
+                          LibUtilities::NullFieldMetaDataMap,
+                          ElementGIDs);
+            int idx = -1;
+
+            // Loop over all the expansions
+            for (int i = 0; i < FieldDef.size(); ++i)
+            {
+                // Find the index of the required field in the
+                // expansion segment
+                for(int j = 0; j < FieldDef[i]->m_fields.size(); ++j)
+                {
+                    if (FieldDef[i]->m_fields[j] == pFieldName)
+                    {
+                        idx = j;
+                    }
+                }
+
+                if (idx >= 0)
+                {
+                    pFields[0]->ExtractDataToCoeffs(
+                        FieldDef[i], FieldData[i],
+                        FieldDef[i]->m_fields[idx], vCoeffs);
+                }
+                else
+                {
+                    cout << "Field " + pFieldName + " not found." << endl;
+                }
+            }
+
+
+            pFields[0]->BwdTrans_IterPerExp(vCoeffs, pArray);
+
+        }
+    }
+
 }

@@ -93,6 +93,7 @@ namespace Nektar
                                  NekDouble n);
         
         Array<OneD, PulseWaveBoundarySharedPtr> m_Boundary;
+        Array<OneD, Array<OneD, NekDouble> > m_pacons_trace;
 
         PulseWavePressureAreaSharedPtr m_pressureArea;
         virtual void v_GenerateSummary(SolverUtils::SummaryList& s);

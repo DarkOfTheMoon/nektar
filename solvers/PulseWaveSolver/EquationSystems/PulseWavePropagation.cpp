@@ -61,8 +61,17 @@ namespace Nektar
     {
         PulseWaveSystem::v_InitObject();
 	
-        m_pressureArea=GetPressureAreaFactory().CreateInstance("Lymphatic",m_vessels,m_session);
-        m_pressureArea->DoPressure();
+
+        std::string vPressureArea = "Arterial";
+
+        if (m_session->DefinesSolverInfo("PressureArea"))
+        {
+            vPressureArea = m_session->GetSolverInfo("PressureArea");
+        }
+
+        m_pressureArea=GetPressureAreaFactory().CreateInstance(vPressureArea,m_vessels,m_session);
+        m_pressureArea->ReadParameters(GetNdomains(),GetTraceTotPoints());
+
 	
         if (m_explicitAdvection)
         {
@@ -112,6 +121,13 @@ namespace Nektar
         // do advection evauation in all domains
         for(int omega=0; omega < m_nDomains; ++omega)
         {
+            m_pressureArea->GetPacons(omega, m_pacons_trace, GetTraceTotPoints());
+
+            for(int i=0; i<m_pacons_trace[0].num_elements(); ++i)
+            {
+                cout<<"m_pacons_trace[0][i]: "<<m_pacons_trace[0][i]<<endl;
+            }
+
             m_currentDomain = omega;
             int nq = m_vessels[omega*m_nVariables]->GetTotPoints();
             int ncoeffs = m_vessels[omega*m_nVariables]->GetNcoeffs();

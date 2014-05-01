@@ -66,7 +66,117 @@ namespace Nektar
 
         virtual ~ArterialPressureArea();
     protected:
-        virtual void v_DoPressure();
+
+        virtual void v_ReadParameters(int nDomains, int nqTrace);
+
+        virtual void v_GetPacons(int omega, Array<OneD, Array<OneD, NekDouble> > &pacons_trace, int nqTrace);
+
+        /// Pressure-area relationship definition
+        virtual void v_getPressure(
+            NekDouble A, 
+            Array<OneD, NekDouble> pacons, 
+            NekDouble &pressure);
+        
+        /// Definition of dp/da
+        virtual void v_getdpda(
+            NekDouble A, 
+            NekDouble u, 
+            Array<OneD, NekDouble> pacons, 
+            NekDouble &dpda);
+        
+        /// Calculates A from pressure
+        virtual void v_getAfromPressure(
+            NekDouble pressure, 
+            Array<OneD, NekDouble> pacons, 
+            NekDouble &A);
+        
+        /// Calculates the two characteristic variables
+        virtual void v_getW(
+            NekDouble A, 
+            NekDouble u, 
+            Array<OneD, NekDouble> pacons, 
+            NekDouble &W1, 
+            NekDouble &W2);
+        
+        /// Calculates A from W_1 and W_2
+        virtual void v_getAfromChars(
+            NekDouble W_1, 
+            NekDouble W_2, 
+            Array<OneD, NekDouble> pacons, 
+            NekDouble &A);
+        
+        /// Definition of u in terms of W_1 and W_2
+        virtual void v_getufromChars(
+            NekDouble W_1, 
+            NekDouble W_2, 
+            Array<OneD, NekDouble> pacons, 
+            NekDouble &u);
+        
+        /// lambda_1 relationship definition
+        virtual void v_getlambda1(
+            NekDouble A, 
+            NekDouble u, 
+            Array<OneD, NekDouble> pacons, 
+            NekDouble &lambda_1);
+        
+        /// lambda_2 relationship definition
+        virtual void v_getlambda2(
+            NekDouble A, 
+            NekDouble u, 
+            Array<OneD, NekDouble> pacons, 
+            NekDouble &lambda_2);
+        
+        /// Definition of dp/du
+        virtual void v_getdpdu(
+            NekDouble A, 
+            NekDouble u, 
+            Array<OneD, NekDouble> pacons, 
+            NekDouble &dpdu);
+        
+        /// Definition of dW1/da
+        virtual void v_getdW1da(
+            NekDouble A, 
+            NekDouble u, 
+            Array<OneD, NekDouble> pacons, 
+            NekDouble &dW1da);
+        
+        /// Definition of dW1/du
+        virtual void v_getdW1du(
+            NekDouble A, 
+            NekDouble u, 
+            Array<OneD, NekDouble> pacons, 
+            NekDouble &dW1du);
+        
+        /// Definition of dW2/dA
+        virtual void v_getdW2da(
+            NekDouble A, 
+            NekDouble u, 
+            Array<OneD, NekDouble> pacons, 
+            NekDouble &dW2da);
+        
+        /// Definition of dW2/du
+        virtual void v_getdW2du(
+            NekDouble A, 
+            NekDouble u, 
+            Array<OneD, NekDouble> pacons, 
+            NekDouble &dW2du);
+        
+        /// Evaluates the integral \int^A_{A_{0}}{ \sqrt{\frac{1}{\rho A} \frac{\partial p\left(A,t\right)}{\partial A}} dA}
+        virtual void v_getCharIntegral(
+            NekDouble A, 
+            NekDouble u, 
+            Array<OneD, NekDouble> pacons, 
+            NekDouble &intergralTerm);
+        
+        //void solveAxb(int rows, Array<OneD, double> A_buf, Array<OneD, double> b_buf);
+        virtual void v_solveAxb(
+            int rows, 
+            const Array<OneD, NekDouble> &matrix_buf, 
+            const Array<OneD, NekDouble> &b_buf, 
+            Array<OneD, NekDouble> &x);
+
+        Array<OneD, Array<OneD, NekDouble> > m_beta;
+        Array<OneD, Array<OneD, NekDouble> > m_beta_trace;
 
     private:
 
