@@ -48,8 +48,9 @@ namespace Nektar
      *
      */
     LymphaticPressureArea::LymphaticPressureArea(Array<OneD, MultiRegions::ExpListSharedPtr> pVessel, 
-                                                 const LibUtilities::SessionReaderSharedPtr pSession)
-        : PulseWavePressureArea(pVessel,pSession)
+                                                 const LibUtilities::SessionReaderSharedPtr pSession,
+                                                 const int nDomains)
+        : PulseWavePressureArea(pVessel,pSession,nDomains)
     {
         m_session->LoadParameter("rho", m_rho, 0.5);
     }
@@ -63,7 +64,7 @@ namespace Nektar
     }
 
 
-    void LymphaticPressureArea::v_ReadParameters(int nDomains, int nqTrace)
+    void LymphaticPressureArea::v_ReadParameters(int omega, int nqTrace, MultiRegions::ExpListSharedPtr &field)
     {
     }
 

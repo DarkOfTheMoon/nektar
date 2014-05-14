@@ -196,6 +196,15 @@ namespace Nektar
         // Load external pressure
         m_session->LoadParameter("pext", m_pext, 0.0);
         
+        std::string vPressureArea = "Arterial";
+
+        if (m_session->DefinesSolverInfo("PressureArea"))
+        {
+            vPressureArea = m_session->GetSolverInfo("PressureArea");
+        }
+
+        m_pressureArea=GetPressureAreaFactory().CreateInstance(vPressureArea,m_vessels,m_session,m_nDomains);
+
         int nq = 0;
         /**
          *  Gets the Material Properties of each arterial segment
@@ -225,7 +234,8 @@ namespace Nektar
             EvaluateFunction("A_0", m_A_0[omega],"A_0",0.0,omega);
 
             int nqTrace = GetTraceTotPoints();
-            cout<<"nqTrace: "<<nqTrace<<endl;
+
+            m_pressureArea->ReadParameters(omega,nqTrace,m_fields[0]);
 
             m_beta_trace[omega] = Array<OneD, NekDouble>(nqTrace);
             m_fields[0]->ExtractTracePhys(m_beta[omega],m_beta_trace[omega]);

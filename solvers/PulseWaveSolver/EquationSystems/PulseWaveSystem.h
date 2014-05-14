@@ -37,6 +37,7 @@
 #define NEKTAR_SOLVERS_PULSEWAVESOLVER_EQUATIONSYSTEMS_PULSEWAVESYSTEM_H
 
 #include <SolverUtils/UnsteadySystem.h>
+#include <PulseWaveSolver/EquationSystems/PulseWavePressureArea.h>
 
 using namespace Nektar::SolverUtils;
 
@@ -172,6 +173,8 @@ namespace Nektar
         void WriteVessels(const std::string &outname);
         
         void EnforceInterfaceConditions(const Array<OneD, const Array<OneD, NekDouble> > &fields);
+
+        PulseWavePressureAreaSharedPtr m_pressureArea;
         
     private:
         void SetUpDomainInterfaces(void);

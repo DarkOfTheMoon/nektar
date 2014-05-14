@@ -61,18 +61,6 @@ namespace Nektar
     {
         PulseWaveSystem::v_InitObject();
 	
-
-        std::string vPressureArea = "Arterial";
-
-        if (m_session->DefinesSolverInfo("PressureArea"))
-        {
-            vPressureArea = m_session->GetSolverInfo("PressureArea");
-        }
-
-        m_pressureArea=GetPressureAreaFactory().CreateInstance(vPressureArea,m_vessels,m_session);
-        m_pressureArea->ReadParameters(GetNdomains(),GetTraceTotPoints());
-
-	
         if (m_explicitAdvection)
         {
             m_ode.DefineOdeRhs       (&PulseWavePropagation::DoOdeRhs, this);

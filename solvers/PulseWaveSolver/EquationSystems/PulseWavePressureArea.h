@@ -51,18 +51,20 @@ namespace Nektar
     typedef LibUtilities::NekFactory< std::string, 
         PulseWavePressureArea, 
         Array<OneD, MultiRegions::ExpListSharedPtr>&, 
-        const LibUtilities::SessionReaderSharedPtr& > PressureAreaFactory;
+        const LibUtilities::SessionReaderSharedPtr&,
+        const int& > PressureAreaFactory;
     PressureAreaFactory& GetPressureAreaFactory();
    
     class PulseWavePressureArea
     {
     public:
         PulseWavePressureArea(Array<OneD, MultiRegions::ExpListSharedPtr> &pVessel,
-                              const LibUtilities::SessionReaderSharedPtr &pSession);
+                              const LibUtilities::SessionReaderSharedPtr &pSession,
+                              const int &nDomains);
 
         virtual ~PulseWavePressureArea();
 
-        inline void ReadParameters(int nDomains, int nqTrace);
+        inline void ReadParameters(int omega, int nqTrace, MultiRegions::ExpListSharedPtr &field);
         inline void GetPacons(int omega, Array<OneD, Array<OneD, NekDouble> > &pacons_trace, int nqTrace);
         inline void getPressure(NekDouble A, Array<OneD, NekDouble> pacons, NekDouble &pressure);
         inline void getdpda(NekDouble A, NekDouble u, Array<OneD, NekDouble> pacons, NekDouble &dpda);
@@ -81,7 +83,7 @@ namespace Nektar
         inline void solveAxb(int rows, const Array<OneD, NekDouble> &matrix_buf, const Array<OneD, NekDouble> &b_buf, Array<OneD, NekDouble> &x);
 
     protected:
-        virtual void v_ReadParameters(int nDomains, int nqTrace)=0;
+        virtual void v_ReadParameters(int omega, int nqTrace, MultiRegions::ExpListSharedPtr &field)=0;
         virtual void v_GetPacons(int omega, Array<OneD, Array<OneD, NekDouble> > &pacons_trace, int nqTrace)=0;
         virtual void v_getPressure(NekDouble A, Array<OneD, NekDouble> pacons, NekDouble &pressure)=0;
         virtual void v_getdpda(NekDouble A, NekDouble u, Array<OneD, NekDouble> pacons, NekDouble &dpda)=0;
@@ -101,6 +103,7 @@ namespace Nektar
 
         Array<OneD, MultiRegions::ExpListSharedPtr> m_vessels;
 	LibUtilities::SessionReaderSharedPtr m_session;
+        const int m_domains;
 
         NekDouble m_rho;
         NekDouble m_time;
@@ -112,14 +115,15 @@ namespace Nektar
             Array<OneD, NekDouble>& pArray,
             const std::string& pFunctionName,
             NekDouble pTime = NekDouble(0),
-            const int domain = 0);
+            const int domain = 0,
+            const int nq=0);
 
     private:
     };
 
-    inline void PulseWavePressureArea::ReadParameters(int nDomains, int nqTrace)
+    inline void PulseWavePressureArea::ReadParameters(int omega, int nqTrace, MultiRegions::ExpListSharedPtr &field)
     {
-        v_ReadParameters(nDomains, nqTrace);
+        v_ReadParameters(omega, nqTrace, field);
     }
 
     inline void PulseWavePressureArea::GetPacons(int omega, Array<OneD, Array<OneD, NekDouble> > &pacons_trace, int nqTrace)

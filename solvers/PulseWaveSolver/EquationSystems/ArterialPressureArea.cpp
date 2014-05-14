@@ -48,10 +48,14 @@ namespace Nektar
      *
      */
     ArterialPressureArea::ArterialPressureArea(Array<OneD, MultiRegions::ExpListSharedPtr> pVessel, 
-                                               const LibUtilities::SessionReaderSharedPtr pSession)
-        : PulseWavePressureArea(pVessel,pSession)
+                                               const LibUtilities::SessionReaderSharedPtr pSession,
+                                               const int nDomains)
+        : PulseWavePressureArea(pVessel,pSession,nDomains)
     {
         m_session->LoadParameter("rho", m_rho, 0.5);
+
+        m_beta = Array<OneD, Array<OneD, NekDouble> >(nDomains);
+        m_beta_trace = Array<OneD, Array<OneD, NekDouble> >(nDomains);
     }
 
     /**
@@ -62,22 +66,14 @@ namespace Nektar
 
     }
 
-    void ArterialPressureArea::v_ReadParameters(int nDomains, int nqTrace)
+    void ArterialPressureArea::v_ReadParameters(int omega, int nqTrace, MultiRegions::ExpListSharedPtr &field)
     {
-        m_beta = Array<OneD, Array<OneD, NekDouble> >(nDomains);
-        m_beta_trace = Array<OneD, Array<OneD, NekDouble> >(nDomains);
-        
-        for (int omega = 0; omega < nDomains; omega++)
-        {
-            int nq = m_vessels[2*omega]->GetNpoints();
-            
-            m_beta[omega] = Array<OneD, NekDouble>(nq);
-            EvaluateFunction(m_vessels,m_session,"beta", m_beta[omega],"MaterialProperties",0.0,omega);
+        int nq=m_vessels[2*omega]->GetNpoints();
+        m_beta[omega] = Array<OneD, NekDouble>(nq);
+        EvaluateFunction(m_vessels,m_session,"beta", m_beta[omega],"MaterialProperties",0.0,omega,nq);
 
-            m_beta_trace[omega] = Array<OneD, NekDouble>(nqTrace);
-            m_vessels[2*omega]->ExtractTracePhys(m_beta[omega],m_beta_trace[omega]);
-        }
-
+        m_beta_trace[omega] = Array<OneD, NekDouble>(nqTrace);
+        field->ExtractTracePhys(m_beta[omega],m_beta_trace[omega]);
     }
 
     void ArterialPressureArea::v_GetPacons(int omega, Array<OneD, Array<OneD, NekDouble> > &pacons_trace, int nqTrace)

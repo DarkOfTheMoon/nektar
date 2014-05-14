@@ -45,9 +45,11 @@ namespace Nektar
      */
   PulseWavePressureArea::PulseWavePressureArea(
       Array<OneD, MultiRegions::ExpListSharedPtr> &pVessel, 
-      const LibUtilities::SessionReaderSharedPtr &pSession)
+      const LibUtilities::SessionReaderSharedPtr &pSession,
+      const int &nDomains)
     : m_vessels(pVessel),
-      m_session(pSession)
+      m_session(pSession),
+      m_domains(nDomains)
     {
     }
 
@@ -74,16 +76,17 @@ namespace Nektar
         Array<OneD, NekDouble>&                           pArray,
         const std::string&                                pFunctionName,
         NekDouble                                         pTime,
-        const int domain)
+        const int domain,
+        const int nq)
     {
         ASSERTL0(pSession->DefinesFunction(pFunctionName),
                  "Function '" + pFunctionName + "' does not exist.");
 
-        unsigned int nq = pFields[0]->GetNpoints();
-        if (pArray.num_elements() != nq)
-        {
-            pArray = Array<OneD, NekDouble> (nq);
-        }
+        //unsigned int nq = pFields[0]->GetNpoints();
+        //if (pArray.num_elements() != nq)
+        //{
+        //pArray = Array<OneD, NekDouble> (nq);
+        //}
 
         LibUtilities::FunctionType vType;
         vType = pSession->GetFunctionType(pFunctionName, pFieldName);

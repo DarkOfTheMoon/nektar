@@ -53,21 +53,23 @@ namespace Nektar
     public:
         /// Creates an instance of this class
       static PulseWavePressureAreaSharedPtr create(Array<OneD, MultiRegions::ExpListSharedPtr>& pVessel, 
-                                               const LibUtilities::SessionReaderSharedPtr& pSession)
+                                                   const LibUtilities::SessionReaderSharedPtr& pSession,
+                                                   const int &nDomains)
         {
-            return MemoryManager<ArterialPressureArea>::AllocateSharedPtr(pVessel,pSession);
+            return MemoryManager<ArterialPressureArea>::AllocateSharedPtr(pVessel,pSession,nDomains);
         }
 
         /// Name of class
         static std::string className;
         
         ArterialPressureArea(Array<OneD, MultiRegions::ExpListSharedPtr> pVessel, 
-                 const LibUtilities::SessionReaderSharedPtr pSession); 
+                             const LibUtilities::SessionReaderSharedPtr pSession,
+                             const int nDomains); 
 
         virtual ~ArterialPressureArea();
     protected:
 
-        virtual void v_ReadParameters(int nDomains, int nqTrace);
+        virtual void v_ReadParameters(int omega, int nqTrace, MultiRegions::ExpListSharedPtr &field);
 
         virtual void v_GetPacons(int omega, Array<OneD, Array<OneD, NekDouble> > &pacons_trace, int nqTrace);
 
