@@ -177,8 +177,6 @@ namespace Nektar
         NekDouble srRdir  = sqrt(rhoRdir);
         NekDouble srLRdir = srLdir + srRdir;
         
-        //std::cout << srRdir << "  " << srRdir << std::endl;
-        
         // Velocity Roe averages
         NekDouble uRoe   = (srLdir * uLdir + srRdir * uRdir) / srLRdir;
         NekDouble vRoe   = (srLdir * vLdir + srRdir * vRdir) / srLRdir;

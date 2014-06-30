@@ -349,4 +349,90 @@ namespace Nektar
             Ef    += ahat*k[i][4];
         }
     }
+    
+    void RoeSolver::v_PointAdjointNSSolve(
+        double  rhoL, double  rhouL, double  rhovL, double  rhowL, double  EL,
+        double  rhoR, double  rhouR, double  rhovR, double  rhowR, double  ER,
+        double  rhoLdir, double  rhouLdir, double  rhovLdir, double  rhowLdir, double  ELdir,
+        double  rhoRdir, double  rhouRdir, double  rhovRdir, double  rhowRdir, double  ERdir,
+        double  DrhoLdirDX, double  DrhouLdirDX, double  DrhovLdirDX, double  DrhowLdirDX, double  DPLdirDX,
+        double  DrhoRdirDX, double  DrhouRdirDX, double  DrhovRdirDX, double  DrhowRdirDX, double  DPRdirDX,
+        double  DrhoLdirDY, double  DrhouLdirDY, double  DrhovLdirDY, double  DrhowLdirDY, double  DPLdirDY,
+        double  DrhoRdirDY, double  DrhouRdirDY, double  DrhovRdirDY, double  DrhowRdirDY, double  DPRdirDY,
+        double  DrhoLdirDZ, double  DrhouLdirDZ, double  DrhovLdirDZ, double  DrhowLdirDZ, double  DPLdirDZ,
+        double  DrhoRdirDZ, double  DrhouRdirDZ, double  DrhovRdirDZ, double  DrhowRdirDZ, double  DPRdirDZ,
+        double &rhof, double &rhouf, double &rhovf, double &rhowf, double &Ef)
+    {
+        static NekDouble gamma = m_params["gamma"]();
+        
+        
+        static NekDouble R  = 287.05;
+        static NekDouble k  = 0.0257;
+        static NekDouble mu = 0.415274;
+        
+        NekDouble FadjL = 0.0;
+        NekDouble FadjR = 0.0;
+        
+        NekDouble uLdir = rhouLdir/rhoLdir;
+        NekDouble uRdir = rhouRdir/rhoRdir;
+        
+        NekDouble vLdir = rhovLdir/rhoLdir;
+        NekDouble vRdir = rhovRdir/rhoRdir;
+        
+        NekDouble vsqL = uLdir * uLdir + vLdir * vLdir;
+        NekDouble vsqR = uRdir * uRdir + vRdir * vRdir;
+        
+        NekDouble PLDir = (gamma - 1.0) * (ELdir - 0.5*vsqL);
+        NekDouble PRDir = (gamma - 1.0) * (ERdir - 0.5*vsqR);
+        
+        FadjL = -(0.5 * (gamma-1)/(R*rhoLdir*rhoLdir)*k*vsqL*DPLdirDX)*EL
+        +(mu * vLdir/rhoLdir*(DrhouLdirDY+DrhovLdirDX))*EL
+        +(2.0/3.0 * mu * uLdir*(2.0 * DrhouLdirDX - DrhovLdirDY))*EL
+        +(k/(R*rhoLdir*rhoLdir*rhoLdir)*(2.0*DrhoLdirDX*PLDir+DPLdirDX*rhoLdir))*EL;
+        
+        FadjR = -(0.5 * (gamma-1)/(R*rhoRdir*rhoRdir)*k*vsqR*DPRdirDX)*ER
+        +(mu * vRdir/rhoRdir*(DrhouRdirDY+DrhovRdirDX))*ER
+        +(2.0/3.0 * mu * uRdir*(2.0 * DrhouRdirDX - DrhovRdirDY))*ER
+        +(k/(R*rhoRdir*rhoRdir*rhoRdir)*(2.0*DrhoRdirDX*PRDir+DPRdirDX*rhoRdir))*ER;
+        
+        rhof = 0.5*(FadjL+FadjR);
+        
+        FadjL = 0.0;
+        FadjR = 0.0;
+        
+        FadjL = -(2.0/3.0*mu/rhoLdir*(2.0*DrhouLdirDX-DrhovLdirDY))*EL
+        +(DrhoLdirDX*k*uLdir*(gamma-1)/(R*rhoLdir*rhoLdir))*EL;
+        
+        FadjR = -(2.0/3.0*mu/rhoRdir*(2.0*DrhouRdirDX-DrhovRdirDY))*ER
+        +(DrhoRdirDX*k*uRdir*(gamma-1)/(R*rhoRdir*rhoRdir))*ER;
+        
+        rhouf = 0.5*(FadjL+FadjR);
+        
+        FadjL = 0.0;
+        FadjR = 0.0;
+        
+        FadjL = -(mu/rhoLdir*(DrhouLdirDY+DrhovLdirDX))*EL
+        +(DrhoLdirDX*k/R*(gamma-1)*vLdir/(rhoLdir*rhoLdir))*EL;
+
+        FadjR = -(mu/rhoRdir*(DrhouRdirDY+DrhovRdirDX))*ER
+        +(DrhoRdirDX*k/R*(gamma-1)*vRdir/(rhoRdir*rhoRdir))*EL;
+        
+        rhovf = 0.5*(FadjL+FadjR);
+        
+        FadjL = 0.0;
+        FadjR = 0.0;
+        
+        FadjL = -(DrhoLdirDX*k/R*(gamma-1)/(rhoLdir*rhoLdir))*EL;
+        
+        FadjR = -(DrhoRdirDX*k/R*(gamma-1)/(rhoRdir*rhoRdir))*ER;
+        
+        
+        Ef = 0.5*(FadjL+FadjR);
+        
+        FadjL = 0.0;
+        FadjR = 0.0;
+        
+        //std::cout << rhof << " " << rhouf << " " << rhovf << " " << rhowf << " " << Ef << std::endl;
+
+    }
 }

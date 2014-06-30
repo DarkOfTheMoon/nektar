@@ -101,6 +101,7 @@ namespace Nektar
         NekDouble                           m_gasConstant;
         NekDouble                           m_Twall;
         std::string                         m_ViscosityType;
+        std::string                         m_Target;
         NekDouble                           m_mu;
         NekDouble                           m_thermalConductivity;
         NekDouble                           m_Cp;
@@ -113,6 +114,9 @@ namespace Nektar
         NekDouble                           m_alphaInfDir;
         NekDouble                           m_Lref;
         NekDouble                           m_alpha;
+        NekDouble                           m_Skappa;
+        NekDouble                           m_Kappa;
+        NekDouble                           m_mu0;
 
         CompressibleFlowSystem(
             const LibUtilities::SessionReaderSharedPtr& pSession);
@@ -121,7 +125,65 @@ namespace Nektar
       
         /// Print a summary of time stepping parameters.
         virtual void v_GenerateSummary(SolverUtils::SummaryList& s);
-
+    
+        
+        //======================================================================
+        void GetConservToPrimVariableMat(
+           const Array<OneD, Array<OneD, NekDouble> > &inarray,
+                 Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &dUdV);
+        
+        void GetConservToPrimVariableInvMat(
+           Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &dUdVInv);
+        
+        void GetConservToPrimVariableInvMatDiv(
+           Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &dUdVInv,
+           Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &dUdVInvdX,
+           Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &dUdVInvdY);
+       
+        //======================================================================
+        void GetJacobianConvFluxPrimitiveVar(
+          Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &Jac);
+        
+        void GetAdjointConvFluxVectorFromPrimitiveVar(
+          const Array<OneD, Array<OneD, NekDouble> > &inarray,
+                Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
+        
+        void GetDerivJacVectorFromPrimitiveVar(
+          const Array<OneD, Array<OneD, NekDouble> > &inarray,
+                Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
+        
+        void GetAdjointViscousFluxVectorFromPrimitiveVar(
+          const Array<OneD, Array<OneD, NekDouble> > &inarray,
+                Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &derivatives,
+                Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
+        
+        void GetJacobianViscousFluxFromDiffPrimitiveVar(
+                    Array<OneD, Array<OneD, NekDouble> > inarray,
+                    Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &Dxx,
+                    Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &Dxy,
+                    Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &Dyx,
+                    Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &Dyy);
+        
+        void GetJacobianAddConvFluxFromPrimitiveVar(
+           Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &Jac);
+        
+        void GetAdjointAddConvFluxVectorFromPrimitiveVar(
+              const Array<OneD, Array<OneD, NekDouble> > &inarray,
+                    Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
+        
+        void GetDerivAdjointAddConvFluxVectorFromPrimitiveVar(
+             const Array<OneD, Array<OneD, NekDouble> > &inarray,
+                   Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
+        
+        void GetDerivAddJacVectorFromPrimitiveVar(
+             const Array<OneD, Array<OneD, NekDouble> > &inarray,
+                   Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
+        
+        void GetDerivJacobian(
+            Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &Jac,
+            Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &JacDiv);
+        //======================================================================
+        
         void GetFluxVector(
             const Array<OneD, Array<OneD, NekDouble> >               &physfield,
                   Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &flux);
@@ -135,7 +197,12 @@ namespace Nektar
                   Array<OneD, Array<OneD, NekDouble> > &directSol);
         void GetFwdBwdDirectSolution(
                   Array<OneD, Array<OneD, NekDouble> > &FwdDir,
-                 Array<OneD, Array<OneD, NekDouble> > &BwdDir);
+                  Array<OneD, Array<OneD, NekDouble> > &BwdDir);
+        void GetFwdBwdDIFFDirectSolution(
+                 Array<OneD, Array<OneD, NekDouble> > &FwdDir,
+                 Array<OneD, Array<OneD, NekDouble> > &BwdDir,
+                 Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &FwdDirDIFF,
+                 Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &BwdDirDIFF);
         void GetFluxVectorDeAlias(
             const Array<OneD, Array<OneD, NekDouble> >         &physfield,
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &flux);
@@ -199,9 +266,17 @@ namespace Nektar
         void GetDynamicViscosity(
             const Array<OneD, const NekDouble>                    &temperature,
                   Array<OneD,       NekDouble>                    &mu);
+        void GetSensor(
+            const Array<OneD, const Array<OneD,       NekDouble> > &physarray,
+                  Array<OneD,                         NekDouble>   &Sensor,
+                  Array<OneD,                         NekDouble>   &SensorKappa);
+        void GetArtificialDynamicViscosity(
+            const Array<OneD,  Array<OneD, NekDouble> > &physfield,
+                  Array<OneD,                    NekDouble  > &mu_var);
       
         virtual NekDouble v_GetTimeStep(
             const Array<OneD, const Array<OneD, NekDouble> > &inarray);
+        
 
         virtual void v_SetInitialConditions(
             NekDouble initialtime = 0.0,

@@ -61,6 +61,16 @@ namespace Nektar
             const Array<OneD, const Array<OneD, NekDouble> > &BwdDir,
                   Array<OneD,       Array<OneD, NekDouble> > &flux);
         
+        virtual void  v_AdjointNSSolve(
+            const Array<OneD, const Array<OneD, NekDouble> > &Fwd,
+            const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
+            const Array<OneD, const Array<OneD, NekDouble> > &FwdDir,
+            const Array<OneD, const Array<OneD, NekDouble> > &BwdDir,
+            Array<OneD, Array<OneD, Array<OneD, NekDouble > > > &FwdDirDIFF,
+            Array<OneD, Array<OneD, Array<OneD, NekDouble > > > &BwdDirDIFF,
+                  Array<OneD,       Array<OneD, NekDouble> > &flux);
+        
+        
         virtual void v_ArraySolve(
             const Array<OneD, const Array<OneD, NekDouble> > &Fwd,
             const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
@@ -87,11 +97,39 @@ namespace Nektar
             ASSERTL0(false, "This function should be defined by subclasses.");
         }
         
+        virtual void v_ArrayAdjointNSSolve(
+            const Array<OneD, const Array<OneD, NekDouble> > &Fwd,
+            const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
+            const Array<OneD, const Array<OneD, NekDouble> > &FwdDir,
+            const Array<OneD, const Array<OneD, NekDouble> > &BwdDir,
+            Array<OneD, Array<OneD, Array<OneD, NekDouble > > > &FwdDirDiff,
+            Array<OneD, Array<OneD, Array<OneD, NekDouble > > > &BwdDirDiff,
+                 Array<OneD,       Array<OneD, NekDouble> > &flux)
+        {
+            ASSERTL0(false, "This function should be defined by subclasses.");
+        }
+        
         virtual void v_PointAdjointSolve(
             NekDouble  rhoL, NekDouble  rhouL, NekDouble  rhovL, NekDouble  rhowL, NekDouble  EL,
             NekDouble  rhoR, NekDouble  rhouR, NekDouble  rhovR, NekDouble  rhowR, NekDouble  ER,
             NekDouble  rhoLDir, NekDouble  rhouLDir, NekDouble  rhovLDir, NekDouble  rhowLDir, NekDouble  ELDir,
             NekDouble  rhoRDir, NekDouble  rhouRDir, NekDouble  rhovRDir, NekDouble  rhowRDir, NekDouble  ERDir,
+            NekDouble &rhof, NekDouble &rhouf, NekDouble &rhovf, NekDouble &rhowf, NekDouble &Ef)
+        {
+            ASSERTL0(false, "This function should be defined by subclasses.");
+        }
+        
+        virtual void v_PointAdjointNSSolve(
+            NekDouble  rhoL, NekDouble  rhouL, NekDouble  rhovL, NekDouble  rhowL, NekDouble  EL,
+            NekDouble  rhoR, NekDouble  rhouR, NekDouble  rhovR, NekDouble  rhowR, NekDouble  ER,
+            NekDouble  rhoLDir, NekDouble  rhouLDir, NekDouble  rhovLDir, NekDouble  rhowLDir, NekDouble  ELDir,
+            NekDouble  rhoRDir, NekDouble  rhouRDir, NekDouble  rhovRDir, NekDouble  rhowRDir, NekDouble  ERDir,
+            NekDouble  DrhoLDirDX, NekDouble  DrhouLDirDX, NekDouble  DrhovLDirDX, NekDouble  DrhowLDirDX, NekDouble  DELDirDX,
+            NekDouble  DrhoRDirDX, NekDouble  DrhouRDirDX, NekDouble  DrhovRDirDX, NekDouble  DrhowRDirDX, NekDouble  DERDirDX,
+            NekDouble  DrhoLDirDY, NekDouble  DrhouLDirDY, NekDouble  DrhovLDirDY, NekDouble  DrhowLDirDY, NekDouble  DELDirDY,
+            NekDouble  DrhoRDirDY, NekDouble  DrhouRDirDY, NekDouble  DrhovRDirDY, NekDouble  DrhowRDirDY, NekDouble  DERDirDY,
+            NekDouble  DrhoLDirDZ, NekDouble  DrhouLDirDZ, NekDouble  DrhovLDirDZ, NekDouble  DrhowLDirDZ, NekDouble  DELDirDZ,
+            NekDouble  DrhoRDirDZ, NekDouble  DrhouRDirDZ, NekDouble  DrhovRDirDZ, NekDouble  DrhowRDirDZ, NekDouble  DERDirDZ,
             NekDouble &rhof, NekDouble &rhouf, NekDouble &rhovf, NekDouble &rhowf, NekDouble &Ef)
         {
             ASSERTL0(false, "This function should be defined by subclasses.");

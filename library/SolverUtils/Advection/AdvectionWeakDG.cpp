@@ -45,6 +45,8 @@ namespace Nektar
             GetAdvectionFactory().RegisterCreatorFunction("WeakDG",
                                                     AdvectionWeakDG::create),
             GetAdvectionFactory().RegisterCreatorFunction("AdjointWeakDG",
+                                                          AdvectionWeakDG::create),
+            GetAdvectionFactory().RegisterCreatorFunction("AdjointWeakDGNS",
                                                           AdvectionWeakDG::create)};
 
         AdvectionWeakDG::AdvectionWeakDG(std::string advType):m_advType(advType)
@@ -91,13 +93,19 @@ namespace Nektar
 
             Array<OneD, Array<OneD, NekDouble> >        outarray_tmp(nConvectiveFields);
             Array<OneD, Array<OneD, NekDouble> >        outarray_tmp2(nConvectiveFields);
+            Array<OneD, Array<OneD, NekDouble> >        outarray_tmp3(nConvectiveFields);
+            Array<OneD, Array<OneD, NekDouble> >        outarray_tmp4(nConvectiveFields);
+            Array<OneD, Array<OneD, NekDouble> >        outarray_tmp5(nConvectiveFields);
             
             Array<OneD, Array<OneD, NekDouble> > tmp(nConvectiveFields);
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > fluxvector(
-                nConvectiveFields);
+                                                        nConvectiveFields);
+            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > addfluxvector(
+                                                        nConvectiveFields);
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > JacTransVec(
-                nConvectiveFields);
-
+                                                        nConvectiveFields);
+            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > addJacTransVec(
+                                                        nConvectiveFields);
             // Allocate storage for flux vector F(u).
             for (i = 0; i < nConvectiveFields; ++i)
             {
@@ -114,25 +122,62 @@ namespace Nektar
                      "Riemann solver must be provided for AdvectionWeakDG.");
             
             // Retreive the direct solution for the forward problem
-            for (i = 0; i < nConvectiveFields; ++i)
+            
+            if (m_advType == "WeakDG")
             {
-                fluxvector[i] =
-                Array<OneD, Array<OneD, NekDouble> >(m_spaceDim);
-                
-                JacTransVec[i] =
-                Array<OneD, Array<OneD, NekDouble> >(m_spaceDim);
-                
-                for (j = 0; j < m_spaceDim; ++j)
+                for (i = 0; i < nConvectiveFields; ++i)
                 {
-                    fluxvector[i][j] = Array<OneD, NekDouble>(nPointsTot);
-                    JacTransVec[i][j] = Array<OneD, NekDouble>(nPointsTot);
+                    fluxvector[i] =
+                    Array<OneD, Array<OneD, NekDouble> >(m_spaceDim);
+                    
+                    for (j = 0; j < m_spaceDim; ++j)
+                    {
+                        fluxvector[i][j] = Array<OneD, NekDouble>(nPointsTot);
+                    }
+                }
+                
+                m_fluxVector(inarray, fluxvector);
+                // Get the advection part (without numerical flux)
+                for(i = 0; i < nConvectiveFields; ++i)
+                {
+                    tmp[i] = Array<OneD, NekDouble>(nCoeffs, 0.0);
+                    
+                    outarray_tmp[i] = Array<OneD, NekDouble>(nCoeffs, 0.0);
+                    
+                    for (j = 0; j < nDim; ++j)
+                    {
+                        fields[i]->IProductWRTDerivBase(j,
+                                                        fluxvector[i][j],
+                                                        outarray[i]);
+                        
+                        
+                        Vmath::Vadd(nCoeffs,
+                                    outarray[i], 1,
+                                    tmp[i], 1,
+                                    tmp[i], 1);
+                    }
                 }
             }
             
-            m_fluxVector(inarray, fluxvector);
-            
             if (m_advType == "AdjointWeakDG")
             {
+                for (i = 0; i < nConvectiveFields; ++i)
+                {
+                    fluxvector[i] =
+                    Array<OneD, Array<OneD, NekDouble> >(m_spaceDim);
+                    
+                    JacTransVec[i] =
+                    Array<OneD, Array<OneD, NekDouble> >(m_spaceDim);
+                    
+                    for (j = 0; j < m_spaceDim; ++j)
+                    {
+                        fluxvector[i][j] = Array<OneD, NekDouble>(nPointsTot);
+                        JacTransVec[i][j] = Array<OneD, NekDouble>(nPointsTot);
+                    }
+                }
+                
+                m_fluxVector(inarray, fluxvector);
+                
                 m_JacTransposeDivVector(inarray, JacTransVec);
                 
                 // Get the advection part (without numerical flux)
@@ -169,21 +214,84 @@ namespace Nektar
                 }
             }
             
-            if (m_advType == "WeakDG")
+            if (m_advType == "AdjointWeakDGNS")
             {
+                for (i = 0; i < nConvectiveFields; ++i)
+                {
+                    fluxvector[i] =
+                    Array<OneD, Array<OneD, NekDouble> >(m_spaceDim);
+                    
+                    addfluxvector[i] =
+                    Array<OneD, Array<OneD, NekDouble> >(m_spaceDim);
+                    
+                    JacTransVec[i] =
+                    Array<OneD, Array<OneD, NekDouble> >(m_spaceDim);
+                    
+                    addJacTransVec[i] =
+                    Array<OneD, Array<OneD, NekDouble> >(m_spaceDim);
+                    
+                    for (j = 0; j < m_spaceDim; ++j)
+                    {
+                        fluxvector[i][j] =
+                                        Array<OneD, NekDouble>(nPointsTot, 0.0);
+                        addfluxvector[i][j] =
+                                        Array<OneD, NekDouble>(nPointsTot, 0.0);
+                        JacTransVec[i][j] =
+                                        Array<OneD, NekDouble>(nPointsTot, 0.0);
+                        addJacTransVec[i][j] =
+                                        Array<OneD, NekDouble>(nPointsTot,0.0);
+                    }
+                }
+                
+                m_fluxVector(inarray, fluxvector);
+                m_AddfluxVector(inarray, addfluxvector);
+                
+                m_JacTransposeDivVector(inarray, JacTransVec);
+                m_AddJacTransposeDivVector(inarray, addJacTransVec);
+                
                 // Get the advection part (without numerical flux)
                 for(i = 0; i < nConvectiveFields; ++i)
                 {
                     tmp[i] = Array<OneD, NekDouble>(nCoeffs, 0.0);
                     
                     outarray_tmp[i] = Array<OneD, NekDouble>(nCoeffs, 0.0);
+                    outarray_tmp2[i] = Array<OneD, NekDouble>(nCoeffs, 0.0);
+                    outarray_tmp3[i] = Array<OneD, NekDouble>(nCoeffs, 0.0);
+                    outarray_tmp4[i] = Array<OneD, NekDouble>(nCoeffs, 0.0);
+                    outarray_tmp5[i] = Array<OneD, NekDouble>(nCoeffs, 0.0);
                     
                     for (j = 0; j < nDim; ++j)
                     {
                         fields[i]->IProductWRTDerivBase(j,
-                                        fluxvector[i][j],
-                                        outarray[i]);
+                                                        fluxvector[i][j],
+                                                        outarray[i]);
                         
+                        fields[i]->IProductWRTDerivBase(j,
+                                                        addfluxvector[i][j],
+                                                        outarray_tmp3[i]);
+                        
+                        // since the adjoint for the convective part is NOT given in conservative form, an additional term where the derivatives of the transposed jacobians are multiplied with the basis hence,
+                        
+                        fields[i]->IProductWRTBase(JacTransVec[i][j],
+                                                   outarray_tmp[i]);
+                        
+                        fields[i]->IProductWRTBase(addJacTransVec[i][j],
+                                                   outarray_tmp5[i]);
+                        
+                        Vmath::Vadd(nCoeffs,
+                                    outarray[i], 1,
+                                    outarray_tmp[i], 1,
+                                    outarray_tmp2[i], 1);
+                        
+                        Vmath::Vadd(nCoeffs,
+                                    outarray_tmp2[i], 1,
+                                    outarray_tmp3[i], 1,
+                                    outarray_tmp4[i], 1);
+                        
+                        Vmath::Vadd(nCoeffs,
+                                    outarray_tmp4[i], 1,
+                                    outarray_tmp5[i], 1,
+                                    outarray[i], 1);
                         
                         Vmath::Vadd(nCoeffs,
                                     outarray[i], 1,
@@ -192,17 +300,19 @@ namespace Nektar
                     }
                 }
             }
-
+            
             // Store forwards/backwards space along trace space
             Array<OneD, Array<OneD, NekDouble> > Fwd    (nConvectiveFields);
             Array<OneD, Array<OneD, NekDouble> > Bwd    (nConvectiveFields);
             Array<OneD, Array<OneD, NekDouble> > numflux(nConvectiveFields);
+            Array<OneD, Array<OneD, NekDouble> > numflux2(nConvectiveFields);
 
             for(i = 0; i < nConvectiveFields; ++i)
             {
-                Fwd[i]     = Array<OneD, NekDouble>(nTracePointsTot, 0.0);
-                Bwd[i]     = Array<OneD, NekDouble>(nTracePointsTot, 0.0);
-                numflux[i] = Array<OneD, NekDouble>(nTracePointsTot, 0.0);
+                Fwd[i]      = Array<OneD, NekDouble>(nTracePointsTot, 0.0);
+                Bwd[i]      = Array<OneD, NekDouble>(nTracePointsTot, 0.0);
+                numflux[i]  = Array<OneD, NekDouble>(nTracePointsTot, 0.0);
+                numflux2[i] = Array<OneD, NekDouble>(nTracePointsTot, 0.0);
                 fields[i]->GetFwdBwdTracePhys(inarray[i], Fwd[i], Bwd[i]);
             }
 

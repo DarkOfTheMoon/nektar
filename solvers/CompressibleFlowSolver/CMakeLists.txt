@@ -6,6 +6,7 @@ IF( NEKTAR_SOLVER_COMPRESSIBLE_FLOW )
     SET(CompressibleFlowSolverSource 
        ./CompressibleFlowSolver.cpp 
        ./EquationSystems/CompressibleFlowSystem.cpp
+       ./EquationSystems/EulerADCFE.cpp
        ./EquationSystems/EulerCFE.cpp
        ./EquationSystems/EulerArtificialDiffusionCFE.cpp
        ./EquationSystems/NavierStokesCFE.cpp

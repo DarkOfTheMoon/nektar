@@ -141,7 +141,97 @@ namespace Nektar
         }
         else
         {
-            v_ArrayAdjointSolve(Fwd, Bwd, FwdDir, BwdDir, flux);
+            v_ArrayAdjointSolve(Fwd, Bwd, FwdDir, BwdDir,flux);
+        }
+    }
+    void  CompressibleSolver::v_AdjointNSSolve(
+            const Array<OneD, const Array<OneD, NekDouble> > &Fwd,
+            const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
+            const Array<OneD, const Array<OneD, NekDouble> > &FwdDir,
+            const Array<OneD, const Array<OneD, NekDouble> > &BwdDir,
+            Array<OneD, Array<OneD, Array<OneD, NekDouble > > > &FwdDirDIFF,
+            Array<OneD, Array<OneD, Array<OneD, NekDouble > > > &BwdDirDIFF,
+                  Array<OneD,       Array<OneD, NekDouble> > &flux)
+    {
+        
+        if (m_pointSolve)
+        {
+            int expDim = Fwd.num_elements()-2;
+            NekDouble rhouf, rhovf;
+            
+            if (expDim == 1)
+            {
+                for (int i = 0; i < Fwd[0].num_elements(); ++i)
+                {
+                    v_PointAdjointNSSolve(
+                        Fwd [0][i], Fwd [1][i], 0.0,   0.0,   Fwd [2][i],
+                        Bwd [0][i], Bwd [1][i], 0.0,   0.0,   Bwd [2][i],
+                        FwdDir[0][i], FwdDir[1][i], 0.0,   0.0,   FwdDir[2][i],
+                        BwdDir[0][i], BwdDir[1][i], 0.0,   0.0,   BwdDir[2][i],
+                        FwdDirDIFF[0][0][i], FwdDirDIFF[0][1][i], 0.0,   0.0,
+                                          FwdDirDIFF[0][2][i],
+                        BwdDirDIFF[0][0][i], BwdDirDIFF[0][1][i], 0.0,   0.0,
+                                          BwdDirDIFF[0][2][i],
+                        0.0, 0.0, 0.0, 0.0, 0.0,
+                        0.0, 0.0, 0.0, 0.0, 0.0,
+                        0.0, 0.0, 0.0, 0.0, 0.0,
+                        0.0, 0.0, 0.0, 0.0, 0.0,
+                        flux[0][i], flux[1][i], rhouf, rhovf, flux[2][i]);
+                }
+            }
+            else if (expDim == 2)
+            {
+                for (int i = 0; i < Fwd[0].num_elements(); ++i)
+                {
+                    v_PointAdjointNSSolve(
+                        Fwd [0][i], Fwd [1][i], Fwd [2][i], 0.0,   Fwd [3][i],
+                        Bwd [0][i], Bwd [1][i], Bwd [2][i], 0.0,   Bwd [3][i],
+                        FwdDir[0][i], FwdDir[1][i], FwdDir[2][i], 0.0, FwdDir[3][i],
+                        BwdDir[0][i], BwdDir[1][i], BwdDir[2][i], 0.0, BwdDir[3][i],
+                        FwdDirDIFF[0][0][i], FwdDirDIFF[0][1][i], FwdDirDIFF[0][2][i],
+                                          0.0,   FwdDirDIFF[0][3][i],
+                        BwdDirDIFF[0][0][i], BwdDirDIFF[0][1][i], BwdDirDIFF[0][2][i],
+                                          0.0,   BwdDirDIFF[0][3][i],
+                        FwdDirDIFF[1][0][i], FwdDirDIFF[1][1][i], FwdDirDIFF[1][2][i],
+                                          0.0,   FwdDirDIFF[1][3][i],
+                        BwdDirDIFF[1][0][i], BwdDirDIFF[1][1][i], BwdDirDIFF[1][2][i],
+                                          0.0,   BwdDirDIFF[1][3][i],
+                        0.0, 0.0, 0.0, 0.0, 0.0,
+                        0.0, 0.0, 0.0, 0.0, 0.0,
+                        flux[0][i], flux[1][i], flux[2][i], rhovf, flux[3][i]);
+                }
+            }
+            else if (expDim == 3)
+            {
+                for (int i = 0; i < Fwd[0].num_elements(); ++i)
+                {
+                    v_PointAdjointNSSolve(
+                        Fwd [0][i], Fwd [1][i], Fwd [2][i], Fwd [3][i], Fwd [4][i],
+                        Bwd [0][i], Bwd [1][i], Bwd [2][i], Bwd [3][i], Bwd [4][i],
+                        FwdDir[0][i], FwdDir[1][i], FwdDir[2][i], FwdDir[3][i], FwdDir[4][i],
+                        BwdDir[0][i], BwdDir[1][i], BwdDir[2][i], BwdDir[3][i], BwdDir[4][i],
+                        FwdDirDIFF[0][0][i], FwdDirDIFF[0][1][i], FwdDirDIFF[0][2][i],
+                                          FwdDirDIFF[0][3][i],   FwdDirDIFF[0][4][i],
+                        BwdDirDIFF[0][0][i], BwdDirDIFF[0][1][i], BwdDirDIFF[0][2][i],
+                                          BwdDirDIFF[0][3][i],   BwdDirDIFF[0][4][i],
+                        FwdDirDIFF[1][0][i], FwdDirDIFF[1][1][i], FwdDirDIFF[1][2][i],
+                                          FwdDirDIFF[1][3][i],   FwdDirDIFF[1][4][i],
+                        BwdDirDIFF[1][0][i], BwdDirDIFF[1][1][i], BwdDirDIFF[1][2][i],
+                                          BwdDirDIFF[1][3][i],   BwdDirDIFF[1][4][i],
+                        FwdDirDIFF[2][0][i], FwdDirDIFF[2][1][i], FwdDirDIFF[2][2][i],
+                                        FwdDirDIFF[2][3][i],   FwdDirDIFF[2][4][i],
+                        BwdDirDIFF[2][0][i], BwdDirDIFF[2][1][i], BwdDirDIFF[2][2][i],
+                                          BwdDirDIFF[2][3][i],   BwdDirDIFF[2][4][i],
+                        flux[0][i], flux[1][i], flux[2][i], flux[3][i], flux[4][i]);
+                }
+            }
+        }
+        else
+        {
+             v_ArrayAdjointNSSolve(Fwd, Bwd,
+                                  FwdDir, BwdDir,
+                                  FwdDirDIFF, BwdDirDIFF,
+                                  flux);
         }
     }
 }

@@ -102,9 +102,21 @@ namespace Nektar
             }
             
             template<typename FuncPointerT, typename ObjectPointerT>
+            void SetAddFluxVector(FuncPointerT func, ObjectPointerT obj)
+            {
+                m_AddfluxVector = boost::bind(func, obj, _1, _2);
+            }
+            
+            template<typename FuncPointerT, typename ObjectPointerT>
             void SetJacTransposeDivVector(FuncPointerT func, ObjectPointerT obj)
             {
                 m_JacTransposeDivVector = boost::bind(func, obj, _1, _2);
+            }
+            
+            template<typename FuncPointerT, typename ObjectPointerT>
+            void SetAddJacTransposeDivVector(FuncPointerT func, ObjectPointerT obj)
+            {
+                m_AddJacTransposeDivVector = boost::bind(func, obj, _1, _2);
             }
             
             template<typename FuncPointerT, typename ObjectPointerT>
@@ -133,9 +145,19 @@ namespace Nektar
                 m_fluxVector = fluxVector;
             }
             
+            inline void SetAddFluxVector(AdvectionFluxVecCB fluxVector)
+            {
+                m_AddfluxVector = fluxVector;
+            }
+            
             inline void SetJacTransposeDivVector(AdvectionJacTransDivVecCB JacTransDivVector)
             {
                 m_JacTransposeDivVector = JacTransDivVector;
+            }
+            
+            inline void SetAddJacTransposeDivVector(AdvectionJacTransDivVecCB JacTransDivVector)
+            {
+                m_AddJacTransposeDivVector = JacTransDivVector;
             }
             
             inline void SetDirectSolution(DirectSolVecCB directSol)
@@ -157,9 +179,10 @@ namespace Nektar
 
             /// Callback function to the flux vector (set when advection is in
             /// conservative form).
-            AdvectionJacTransDivVecCB m_JacTransposeDivVector;
-            
-            AdvectionFluxVecCB     m_fluxVector;
+            AdvectionJacTransDivVecCB   m_JacTransposeDivVector;
+            AdvectionJacTransDivVecCB   m_AddJacTransposeDivVector;
+            AdvectionFluxVecCB          m_fluxVector;
+            AdvectionFluxVecCB          m_AddfluxVector;
             /// Callback function to the forward solution given in the xml
             DirectSolVecCB         m_directSolution;
             /// Riemann solver for DG-type schemes.

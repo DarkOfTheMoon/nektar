@@ -75,7 +75,10 @@ namespace Nektar
          */
         
         RiemannSolver::RiemannSolver() : m_requiresRotation(false),
-                                         m_rotStorage      (3),
+                                         m_rotStorage              (3),
+                                         m_rotStoragetmp           (3),
+                                         m_rotStorageDirDIFFXSol   (3),
+                                         m_rotStorageDirDIFFYSol   (3),
                                          m_rotStorageDirSol(3)
         {
             
@@ -96,9 +99,9 @@ namespace Nektar
          * @param flux  Resultant flux along trace space.
          */
         void RiemannSolver::Solve(
-            const Array<OneD, const Array<OneD, NekDouble> > &Fwd,
-            const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
-                  Array<OneD,       Array<OneD, NekDouble> > &flux)
+                                  const Array<OneD, const Array<OneD, NekDouble> > &Fwd,
+                                  const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
+                                  Array<OneD,       Array<OneD, NekDouble> > &flux)
         {
             
             // Check if an adjoitn problem is solved or a primal problem
@@ -106,8 +109,9 @@ namespace Nektar
             
             int nFields = Fwd   .num_elements();
             int nPts    = Fwd[0].num_elements();
+            int nDim    = nFields - 2;
             
-            if (adjointSwitch == 1)
+            if (adjointSwitch != 0.0)
             {
                 Array<OneD, Array<OneD, NekDouble> > BwdDir(
                                                             nFields);
@@ -131,15 +135,26 @@ namespace Nektar
                         {
                             m_rotStorage[i] =
                             Array<OneD, Array<OneD, NekDouble> >(nFields);
+                            m_rotStoragetmp[i] =
+                            Array<OneD, Array<OneD, NekDouble> >(nFields);
                             
                             m_rotStorageDirSol[i] =
                             Array<OneD, Array<OneD, NekDouble> >(nFields);
                             
+                            m_rotStorageDirDIFFXSol[i] =
+                            Array<OneD, Array<OneD, NekDouble> >(nFields);
+                            m_rotStorageDirDIFFYSol[i] =
+                            Array<OneD, Array<OneD, NekDouble> >(nFields);
+                            
                             for (int j = 0; j < nFields; ++j)
                             {
-                              m_rotStorage[i][j] = Array<OneD, NekDouble>(nPts);
+                                m_rotStorage[i][j] = Array<OneD, NekDouble>(nPts);
+                                m_rotStoragetmp[i][j] = Array<OneD, NekDouble>(nPts);
                                 
-                              m_rotStorageDirSol[i][j] = Array<OneD, NekDouble>(nPts);
+                                m_rotStorageDirSol[i][j] = Array<OneD, NekDouble>(nPts);
+                                
+                                m_rotStorageDirDIFFXSol[i][j] = Array<OneD, NekDouble>(nPts);
+                                m_rotStorageDirDIFFYSol[i][j] = Array<OneD, NekDouble>(nPts);
                             }
                         }
                     }
@@ -160,10 +175,100 @@ namespace Nektar
                                      m_rotStorage[2]);
                     
                     rotateFromNormal(m_rotStorage[2], normals, flux);
+                    
+                    // Do an averaging of the linearised viscous fluxes that are included into the convective part of the equations
+                    // An extra penalty term is added to the Riemann problem due to the linearisation of the viscous fluxes with respect to the conservative variables.
+                    
+                    if (adjointSwitch == 2)
+                    {
+                     
+                        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > BwdDirDIFF(nDim);
+                        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > FwdDirDIFF(nDim);
+                        
+                        for (int i = 0; i < nDim; ++i)
+                        {
+                            BwdDirDIFF[i] = Array<OneD, Array<OneD, NekDouble> >(nFields);
+                            FwdDirDIFF[i] = Array<OneD, Array<OneD, NekDouble> >(nFields);
+                            
+                            for (int j = 0; j < nFields; ++j)
+                            {
+                                BwdDirDIFF[i][j] = Array<OneD, NekDouble>(nPts, 0.0);
+                                FwdDirDIFF[i][j] = Array<OneD, NekDouble>(nPts, 0.0);
+                            }
+                            
+                        }
+                        
+                        Array<OneD, Array<OneD, NekDouble> > tmpflux(nFields);
+                        
+                        for (int i=0; i < nFields; ++i)
+                        {
+                            tmpflux[i] = Array<OneD, NekDouble>(nPts, 0.0);
+                        }
+                        
+                        
+                        m_FwdBwdDIFFDirectSolution(FwdDir,
+                                                   BwdDir,
+                                                   FwdDirDIFF,
+                                                   BwdDirDIFF);
+                        
+                        
+                        rotateToNormal(Fwd, normals, m_rotStoragetmp[0]);
+                        rotateToNormal(Bwd, normals, m_rotStoragetmp[1]);
+                        
+                        rotateToNormal(FwdDir, normals, m_rotStorageDirSol[0]);
+                        rotateToNormal(BwdDir, normals, m_rotStorageDirSol[1]);
+                        
+                        rotateToNormal(FwdDirDIFF[0], normals, m_rotStorageDirDIFFXSol[0]);
+                        rotateToNormal(BwdDirDIFF[0], normals, m_rotStorageDirDIFFXSol[1]);
+                        
+                        rotateToNormal(FwdDirDIFF[1], normals, m_rotStorageDirDIFFYSol[0]);
+                        rotateToNormal(BwdDirDIFF[1], normals, m_rotStorageDirDIFFYSol[1]);
+                        
+                        for (int i = 0; i < nFields; ++i)
+                        {
+                            Vmath::Vcopy(nPts,
+                                         m_rotStorageDirDIFFXSol[0][i], 1,
+                                         FwdDirDIFF[0][i], 1);
+                            Vmath::Vcopy(nPts,
+                                         m_rotStorageDirDIFFXSol[1][i], 1,
+                                         BwdDirDIFF[0][i], 1);
+                            
+                            Vmath::Vcopy(nPts,
+                                         m_rotStorageDirDIFFYSol[0][i], 1,
+                                         FwdDirDIFF[1][i], 1);
+                            Vmath::Vcopy(nPts,
+                                         m_rotStorageDirDIFFYSol[1][i], 1,
+                                         BwdDirDIFF[1][i], 1);
+                        }
+                        
+                        
+                        v_AdjointNSSolve(m_rotStoragetmp[0],
+                                         m_rotStoragetmp[1],
+                                         m_rotStorageDirSol[0],
+                                         m_rotStorageDirSol[1],
+                                         FwdDirDIFF,
+                                         BwdDirDIFF,
+                                         m_rotStoragetmp[2]);
+                        
+                        
+                        rotateFromNormal(m_rotStoragetmp[2], normals, tmpflux);
+                        
+                        for (int i = 0; i < nFields; ++i)
+                        {
+                            Vmath::Vadd(nPts,
+                                        tmpflux[i], 1,
+                                        flux[i], 1,
+                                        flux[i], 1);
+                        }
+                    }
                 }
                 else
                 {
-                    v_AdjointSolve(Fwd, Bwd, FwdDir, BwdDir, flux);
+                    v_AdjointSolve(Fwd,
+                                   Bwd,
+                                   FwdDir,
+                                   BwdDir,
+                                   flux);
                 }
             }
             else
@@ -206,7 +311,7 @@ namespace Nektar
 
         /**
          * @brief Rotate velocity field to trace normal.
-         * 
+         *
          * This function performs a rotation of the velocity components provided
          * in inarray so that the first component aligns with the trace normal
          * direction.

@@ -65,6 +65,15 @@ namespace Nektar
             const Array<OneD, const Array<OneD, NekDouble> > &FwdDir,
             const Array<OneD, const Array<OneD, NekDouble> > &BwdDir,
                   Array<OneD,       Array<OneD, NekDouble> > &flux);
+        
+        virtual void v_ArrayAdjointNSSolve(
+            const Array<OneD, const Array<OneD, NekDouble> > &Fwd,
+            const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
+            const Array<OneD, const Array<OneD, NekDouble> > &FwdDir,
+            const Array<OneD, const Array<OneD, NekDouble> > &BwdDir,
+            Array<OneD, Array<OneD, Array<OneD, NekDouble > > > &FwdDirDiff,
+            Array<OneD, Array<OneD, Array<OneD, NekDouble > > > &BwdDirDiff,
+                  Array<OneD,       Array<OneD, NekDouble> > &flux);
     };
 }
 

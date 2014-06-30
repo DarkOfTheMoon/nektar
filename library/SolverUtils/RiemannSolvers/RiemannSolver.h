@@ -63,6 +63,13 @@ namespace Nektar
         Array<OneD, Array<OneD, NekDouble> >&,
         Array<OneD, Array<OneD, NekDouble> >&)>
         FwdBwdDirectSolutionVecCB;
+        
+        typedef boost::function<void (
+        Array<OneD, Array<OneD, NekDouble> >&,
+        Array<OneD, Array<OneD, NekDouble> >&,
+        Array<OneD, Array<OneD, Array<OneD, NekDouble > > >&,
+        Array<OneD, Array<OneD, Array<OneD, NekDouble > > >&)>
+        FwdBwdDIFFDirectSolutionVecCB;
 
         class RiemannSolver
         {
@@ -118,6 +125,12 @@ namespace Nektar
             }
             
             template<typename FuncPointerT, typename ObjectPointerT>
+            void SetFwdBwdDIFFDirectSolution(FuncPointerT func, ObjectPointerT obj)
+            {
+                m_FwdBwdDIFFDirectSolution = boost::bind(func, obj, _1, _2, _3, _4);
+            }
+            
+            template<typename FuncPointerT, typename ObjectPointerT>
             void SetAuxiliary(std::string    name,
                               FuncPointerT   func,
                               ObjectPointerT obj)
@@ -144,6 +157,11 @@ namespace Nektar
             {
                 m_FwdBwdDirectSolution = FwdBwdDirectSol;
             }
+            
+            inline void SetFwdBwdDIFFDirectSolution(FwdBwdDIFFDirectSolutionVecCB FwdBwdDirectSol)
+            {
+                m_FwdBwdDIFFDirectSolution = FwdBwdDirectSol;
+            }
 
         protected:
             /// Indicates whether the Riemann solver requires a rotation to be
@@ -161,7 +179,12 @@ namespace Nektar
             Array<OneD, Array<OneD, NekDouble> >    m_rotMat;
             /// Rotation storage
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_rotStorage;
+            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_rotStoragetmp;
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_rotStorageDirSol;
+            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_rotStorageDirDIFFXSol;
+            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_rotStorageDirDIFFYSol;
+            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_rotStorageDirDIFFZSol;
+            
             SOLVER_UTILS_EXPORT RiemannSolver();
 
             virtual void v_Solve(
@@ -174,6 +197,15 @@ namespace Nektar
                 const Array<OneD, const Array<OneD, NekDouble> > &BwdDir,
                 const Array<OneD, const Array<OneD, NekDouble> > &Fwd,
                 const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
+                      Array<OneD,       Array<OneD, NekDouble> > &flux) = 0;
+            
+            virtual void v_AdjointNSSolve(
+                const Array<OneD, const Array<OneD, NekDouble> > &FwdDir,
+                const Array<OneD, const Array<OneD, NekDouble> > &BwdDir,
+                const Array<OneD, const Array<OneD, NekDouble> > &Fwd,
+                const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
+                Array<OneD, Array<OneD, Array<OneD, NekDouble > > > &FwdDIFF,
+                Array<OneD, Array<OneD, Array<OneD, NekDouble > > > &BwdDIFF,
                       Array<OneD,       Array<OneD, NekDouble> > &flux) = 0;
 
             void GenerateRotationMatrices(
@@ -194,7 +226,8 @@ namespace Nektar
             bool CheckVectors(std::string name);
             bool CheckParams (std::string name);
             
-            FwdBwdDirectSolutionVecCB     m_FwdBwdDirectSolution;
+            FwdBwdDirectSolutionVecCB         m_FwdBwdDirectSolution;
+            FwdBwdDIFFDirectSolutionVecCB     m_FwdBwdDIFFDirectSolution;
         };
 
         /// A shared pointer to an EquationSystem object
