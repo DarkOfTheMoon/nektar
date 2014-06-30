@@ -286,19 +286,6 @@ namespace Nektar
                                 "compressible Navier-Stokes equations");
             }
             
-            // Pressure outflow non-reflective Boundary Condition
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                SpatialDomains::ePressureOutflowNonReflective)
-            {
-                PressureOutflowNonReflectiveBC(n, cnt, inarray);
-            }
-            
-            // Pressure outflow Boundary Condition
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                SpatialDomains::ePressureOutflow)
-            {
-                PressureOutflowBC(n, cnt, inarray);
-            }
             // Wall Boundary Condition
             if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
                 SpatialDomains::eWallViscous)
