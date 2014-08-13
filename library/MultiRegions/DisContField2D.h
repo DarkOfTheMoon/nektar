@@ -82,6 +82,17 @@ namespace Nektar
 
             MULTI_REGIONS_EXPORT void EvaluateHDGPostProcessing(
                 Array<OneD, NekDouble> &outarray);
+            
+            virtual ExpListSharedPtr &v_GetTrace()
+            {
+                if(m_trace == NullExpListSharedPtr)
+                {
+                    SetUpDG();
+                }
+                
+                return m_trace;
+            }
+
 
         protected:
             /**
@@ -108,7 +119,7 @@ namespace Nektar
             
             Array<OneD, Array<OneD, unsigned int> >     m_mapEdgeToElmn;
             Array<OneD, Array<OneD, unsigned int> >     m_signEdgeToElmn;
-            Array<OneD,StdRegions::Orientation>    m_edgedir;
+            Array<OneD,StdRegions::Orientation>         m_edgedir;
 
             /**
              * @brief A set storing the global IDs of any boundary edges.
@@ -116,14 +127,15 @@ namespace Nektar
             std::set<int> m_boundaryEdges;
             
             /**
+             * @brief A map which identifies groups of periodic vertices.
+             */
+            PeriodicMap m_periodicVerts;
+
+            /**
              * @brief A map which identifies pairs of periodic edges.
              */
             PeriodicMap m_periodicEdges;
             
-            /**
-             * @brief A map which identifies groups of periodic vertices.
-             */
-            PeriodicMap m_periodicVerts;
             
             /**
              * @brief A vector indicating degress of freedom which need to be
@@ -139,7 +151,7 @@ namespace Nektar
              */
             vector<bool> m_leftAdjacentEdges;
 
-            void SetUpDG();
+            void SetUpDG(const std::string  = "DefaultVar");
             bool SameTypeOfBoundaryConditions(const DisContField2D &In);
             void GenerateBoundaryConditionExpansion(
                 const SpatialDomains::MeshGraphSharedPtr &graph2D,
@@ -175,6 +187,7 @@ namespace Nektar
                       Array<OneD,       NekDouble> &outarray);
             virtual void v_ExtractTracePhys(
                       Array<OneD,       NekDouble> &outarray);
+            virtual void v_FillBndCondFromField();
             virtual void v_HelmSolve(
                 const Array<OneD, const NekDouble> &inarray,
                       Array<OneD,       NekDouble> &outarray,
@@ -195,24 +208,16 @@ namespace Nektar
              * @brief Obtain a copy of the periodic edges and vertices for this
              * field.
              */
-            virtual void v_GetPeriodicEdges(
+            virtual void v_GetPeriodicEntities(
                 PeriodicMap &periodicVerts,
-                PeriodicMap &periodicEdges)
+                PeriodicMap &periodicEdges,
+                PeriodicMap &periodicFaces)
             {
                 periodicVerts = m_periodicVerts;
                 periodicEdges = m_periodicEdges;
             }
 
-            virtual ExpListSharedPtr &v_GetTrace()
-            {
-                if(m_trace == NullExpListSharedPtr)
-                {
-                    SetUpDG();
-                }
-
-                return m_trace;
-            }
-
+            
             virtual AssemblyMapDGSharedPtr &v_GetTraceMap()
             {
                 return m_traceMap;
@@ -244,9 +249,10 @@ namespace Nektar
             }
 
             virtual void v_EvaluateBoundaryConditions(
-                const NekDouble time = 0.0,
-                const NekDouble x2_in = NekConstants::kNekUnsetDouble,
-                const NekDouble x3_in = NekConstants::kNekUnsetDouble);
+                const NekDouble   time    = 0.0,
+                const std::string varName = "",
+                const NekDouble   x2_in   = NekConstants::kNekUnsetDouble,
+                const NekDouble   x3_in   = NekConstants::kNekUnsetDouble);
 
             virtual map<int, RobinBCInfoSharedPtr> v_GetRobinBCInfo();
         };

@@ -69,7 +69,11 @@ namespace Nektar
         /// Advection velocity
         Array<OneD, Array<OneD, NekDouble> >    m_velocity;
         Array<OneD, NekDouble>                  m_traceVn;
-
+        
+        // Plane (used only for Discontinous projection
+        //        with 3DHomogenoeus1D expansion)
+        int                                     m_planeNumber;
+        
         /// Session reader
         UnsteadyAdvection(const LibUtilities::SessionReaderSharedPtr& pSession);
 
@@ -102,7 +106,10 @@ namespace Nektar
         virtual void v_InitObject();
         
         /// Print Summary
-        virtual void v_PrintSummary(std::ostream &out);
+        virtual void v_GenerateSummary(SummaryList& s);
+
+    private:
+        NekDouble m_waveFreq;
     };
 }
 

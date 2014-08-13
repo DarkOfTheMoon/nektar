@@ -36,6 +36,7 @@
 #include <MultiRegions/ContField3D.h>
 #include <MultiRegions/AssemblyMap/AssemblyMapCG3D.h>
 
+#include <LibUtilities/BasicUtils/DBUtils.hpp>
 namespace Nektar
 {
   namespace MultiRegions
@@ -74,18 +75,23 @@ namespace Nektar
          */
         ContField3D::ContField3D(const LibUtilities::SessionReaderSharedPtr &pSession,
                                  const SpatialDomains::MeshGraphSharedPtr &graph3D,
-                                 const std::string &variable):
+                                 const std::string &variable,
+                                 const bool CheckIfSingularSystem):
                 DisContField3D(pSession,graph3D,variable,false),
                 m_globalMat(MemoryManager<GlobalMatrixMap>::AllocateSharedPtr()),
                 m_globalLinSysManager(
                         boost::bind(&ContField3D::GenGlobalLinSys, this, _1),
                         std::string("GlobalLinSys"))
         {
-            SpatialDomains::BoundaryConditions bcs(m_session, graph3D);
-            
             m_locToGloMap = MemoryManager<AssemblyMapCG3D>::AllocateSharedPtr(
                 m_session,m_ncoeffs,*this,m_bndCondExpansions,m_bndConditions,
-                m_periodicVerts, m_periodicEdges, m_periodicFaces);
+                m_periodicVerts, m_periodicEdges, m_periodicFaces,
+                CheckIfSingularSystem, variable);
+
+            if (m_session->DefinesCmdLineArgument("verbose"))
+            {
+                m_locToGloMap->PrintStats(std::cout, variable);
+            }
         }
 
 
@@ -114,19 +120,26 @@ namespace Nektar
          */
         ContField3D::ContField3D(const ContField3D &In,
                                  const SpatialDomains::MeshGraphSharedPtr &graph3D,
-                                 const std::string &variable):
+                                 const std::string &variable,
+                                 const bool CheckIfSingularSystem):
 	    DisContField3D(In,graph3D,variable,false),
             m_globalMat   (MemoryManager<GlobalMatrixMap>::AllocateSharedPtr()),
             m_globalLinSysManager(boost::bind(&ContField3D::GenGlobalLinSys, this, _1),
                                   std::string("GlobalLinSys"))
 
         {
-            if(!SameTypeOfBoundaryConditions(In))
+            if(!SameTypeOfBoundaryConditions(In) || CheckIfSingularSystem)
             {
                 SpatialDomains::BoundaryConditions bcs(m_session, graph3D);
                 m_locToGloMap = MemoryManager<AssemblyMapCG3D>::AllocateSharedPtr(
                     m_session,m_ncoeffs,*this,m_bndCondExpansions,m_bndConditions,
-                    m_periodicVerts, m_periodicEdges, m_periodicFaces);
+                    m_periodicVerts, m_periodicEdges, m_periodicFaces,
+                    CheckIfSingularSystem,variable);
+
+                if (m_session->DefinesCmdLineArgument("verbose"))
+                {
+                    m_locToGloMap->PrintStats(std::cout, variable);
+                }
             }
             else
             {
@@ -312,7 +325,7 @@ namespace Nektar
                                                   Array<OneD, NekDouble> &outarray)
       {
           int bndcnt=0;
-          const Array<OneD,const int>& map  = m_locToGloMap->GetBndCondCoeffsToGlobalCoeffsMap();
+          const Array<OneD,const int>& map = m_locToGloMap->GetBndCondCoeffsToGlobalCoeffsMap();
           NekDouble sign;
           
           for(int i = 0; i < m_bndCondExpansions.num_elements(); ++i)
@@ -418,19 +431,23 @@ namespace Nektar
               m_locToGloMap->GetNumGlobalBndCoeffs(), 0.0);
 
           // Fill in Dirichlet coefficients that are to be sent to other
-          // processors.
-          map<int, vector<pair<int, int> > > &extraDirDofs = 
+          // processors.  This code block uses a tuple<int,int.NekDouble> which
+          // stores the local id of coefficent the global id of the data
+          // location and the inverse of the values of the data (arising from
+          // periodic boundary conditiosn)
+          map<int, vector<ExtraDirDof> > &extraDirDofs =
               m_locToGloMap->GetExtraDirDofs();
-          map<int, vector<pair<int, int> > >::iterator it;
+          map<int, vector<ExtraDirDof> >::iterator it;
           for (it = extraDirDofs.begin(); it != extraDirDofs.end(); ++it)
           {
               for (i = 0; i < it->second.size(); ++i)
               {
-                  tmp[it->second.at(i).second] = 
+                  tmp[it->second.at(i).get<1>()] = 
                       m_bndCondExpansions[it->first]->GetCoeffs()[
-                          it->second.at(i).first];
+                           it->second.at(i).get<0>()]*it->second.at(i).get<2>();
               }
           }
+
           m_locToGloMap->UniversalAssembleBnd(tmp);
           
           // Now fill in all other Dirichlet coefficients.
@@ -456,6 +473,29 @@ namespace Nektar
           
           Vmath::Vcopy(nDir, tmp, 1, outarray, 1);
       }          
+      
+      void ContField3D::v_FillBndCondFromField(void)
+      {
+          NekDouble sign;
+          int bndcnt = 0;
+          const Array<OneD,const int> &bndMap = 
+              m_locToGloMap->GetBndCondCoeffsToGlobalCoeffsMap();
+
+          Array<OneD, NekDouble> tmp(m_locToGloMap->GetNumGlobalCoeffs());
+          LocalToGlobal(m_coeffs,tmp);
+                    
+          // Now fill in all other Dirichlet coefficients.
+          for(int i = 0; i < m_bndCondExpansions.num_elements(); ++i)
+          {
+              Array<OneD, NekDouble>& coeffs = m_bndCondExpansions[i]->UpdateCoeffs();
+
+              for(int j = 0; j < (m_bndCondExpansions[i])->GetNcoeffs(); ++j)
+              {
+                  sign = m_locToGloMap->GetBndCondCoeffsToGlobalCoeffsSign(bndcnt);
+                  coeffs[j] = sign * tmp[bndMap[bndcnt++]];
+              }
+          }
+      }
 
       void ContField3D::v_LocalToGlobal(void)
       {

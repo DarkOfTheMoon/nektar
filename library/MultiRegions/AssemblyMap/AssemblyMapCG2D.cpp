@@ -37,6 +37,7 @@
 #include <MultiRegions/AssemblyMap/AssemblyMapCG2D.h>
 #include <MultiRegions/ExpList.h>
 #include <LocalRegions/SegExp.h>
+#include <LocalRegions/Expansion2D.h>
 
 #include <boost/config.hpp>
 #include <boost/graph/adjacency_list.hpp>
@@ -67,8 +68,9 @@ namespace Nektar
          *
          */
         AssemblyMapCG2D::AssemblyMapCG2D(
-                const LibUtilities::SessionReaderSharedPtr &pSession):
-            AssemblyMapCG(pSession)
+                const LibUtilities::SessionReaderSharedPtr &pSession,
+                const std::string variable):
+            AssemblyMapCG(pSession,variable)
         {
         }
 
@@ -87,8 +89,9 @@ namespace Nektar
                                                             &bndConditions,
                 const PeriodicMap& periodicVertsId,
                 const PeriodicMap& periodicEdgesId,
-                const bool checkIfSystemSingular) :
-            AssemblyMapCG(pSession)
+                const bool checkIfSystemSingular,
+                const std::string variable) :
+            AssemblyMapCG(pSession,variable)
         {
             SetUp2DExpansionC0ContMap(numLocalCoeffs,
                                       locExp,
@@ -109,8 +112,9 @@ namespace Nektar
         AssemblyMapCG2D::AssemblyMapCG2D(
                 const LibUtilities::SessionReaderSharedPtr &pSession,
                 const int numLocalCoeffs,
-                const ExpList &locExp):
-            AssemblyMapCG(pSession)
+                const ExpList &locExp,
+                const std::string variable):
+            AssemblyMapCG(pSession,variable)
         {
             SetUp2DExpansionC0ContMap(numLocalCoeffs, locExp);
             CalculateBndSystemBandWidth();
@@ -157,29 +161,31 @@ namespace Nektar
             int nLocBndCondDofs = 0;
             int nLocDirBndCondDofs = 0;
             int nExtraDirichlet = 0;
-            StdRegions::StdExpansion2DSharedPtr locExpansion;
+            LocalRegions::Expansion2DSharedPtr  locExpansion;
             LocalRegions::SegExpSharedPtr       bndSegExp;
             LibUtilities::BasisType             bType;
-            StdRegions::Orientation         edgeOrient;
+            StdRegions::Orientation             edgeOrient;
             Array<OneD, unsigned int>           edgeInteriorMap;
             Array<OneD, int>                    edgeInteriorSign;
-            const StdRegions::StdExpansionVector &locExpVector = *(locExp.GetExp());
+            const LocalRegions::ExpansionVector &locExpVector = *(locExp.GetExp());
             m_signChange = false;
             m_systemSingular = false;
             Array<OneD, map<int,int> > ReorderedGraphVertId(2);
             Array<OneD, map<int,int> > Dofs(2);
             BottomUpSubStructuredGraphSharedPtr bottomUpGraph;
             set<int> extraDirVerts;
+            LocalRegions::Expansion2DSharedPtr exp2d;
             
             for(i = 0; i < locExpVector.size(); ++i)
             {
+                exp2d = locExpVector[i]->as<LocalRegions::Expansion2D>();
                 for(j = 0; j < locExpVector[i]->GetNverts(); ++j)
                 {
                     // Vert Dofs
-                    Dofs[0][(locExpVector[i]->GetGeom2D())->GetVid(j)] = 1;
+                    Dofs[0][(exp2d->GetGeom2D())->GetVid(j)] = 1;
                     // Edge Dofs
-                    Dofs[1][(locExpVector[i]->GetGeom2D())->GetEid(j)] = 
-                        locExpVector[i]->GetEdgeNcoeffs(j)-2;
+                    Dofs[1][(exp2d->GetGeom2D())->GetEid(j)] =
+                        exp2d->GetEdgeNcoeffs(j)-2;
                 }
             }
 
@@ -210,7 +216,7 @@ namespace Nektar
             {
                 for(j = 0; j < bndCondExp[i]->GetExpSize(); j++)
                 {
-                    bndSegExp = boost::dynamic_pointer_cast<LocalRegions::SegExp>(bndCondExp[i]->GetExp(j));
+                    bndSegExp = bndCondExp[i]->GetExp(j)->as<LocalRegions::SegExp>();
                     if(bndConditions[i]->GetBoundaryConditionType()==SpatialDomains::eDirichlet)
                     {
                         nLocDirBndCondDofs += bndSegExp->GetNcoeffs();
@@ -246,7 +252,7 @@ namespace Nektar
             m_numLocalBndCoeffs = 0;
             for(i = 0; i < locExpVector.size(); ++i)
             {
-                locExpansion = boost::dynamic_pointer_cast<StdRegions::StdExpansion2D>(locExpVector[locExp.GetOffset_Elmt_Id(i)]);
+                locExpansion = locExpVector[locExp.GetOffset_Elmt_Id(i)]->as<LocalRegions::Expansion2D>();
                 for(j = 0; j < locExpansion->GetNedges(); ++j)
                 {
                     nEdgeCoeffs = locExpansion->GetEdgeNcoeffs(j);
@@ -302,8 +308,7 @@ namespace Nektar
             for(i = 0; i < m_numPatches; ++i)
             {
                 int elmtid = locExp.GetOffset_Elmt_Id(i);
-                locExpansion = boost::dynamic_pointer_cast<
-                    StdRegions::StdExpansion2D>(locExpVector[elmtid]);
+                locExpansion = locExpVector[elmtid]->as<LocalRegions::Expansion2D>();
                 m_numLocalBndCoeffsPerPatch[i] = (unsigned int) 
                     locExpVector[elmtid]->NumBndryCoeffs();
                 m_numLocalIntCoeffsPerPatch[i] = (unsigned int) 
@@ -324,7 +329,7 @@ namespace Nektar
             // Loop over all the elements in the domain
             for(i = 0; i < locExpVector.size(); ++i)
             {
-                locExpansion = boost::dynamic_pointer_cast<StdRegions::StdExpansion2D>(locExpVector[i]);
+                locExpansion = locExpVector[i]->as<LocalRegions::Expansion2D>();
 
                 cnt = locExp.GetCoeff_Offset(i);
 
@@ -388,7 +393,7 @@ namespace Nektar
                 set<int> foundExtraVerts;
                 for(j = 0; j < bndCondExp[i]->GetExpSize(); j++)
                 {
-                    bndSegExp  = boost::dynamic_pointer_cast<LocalRegions::SegExp>(bndCondExp[i]->GetExp(j));
+                    bndSegExp  = bndCondExp[i]->GetExp(j)->as<LocalRegions::SegExp>();
 
                     cnt = offset + bndCondExp[i]->GetCoeff_Offset(j);
                     for(k = 0; k < 2; k++)
@@ -404,7 +409,8 @@ namespace Nektar
                                 bndSegExp->GetVertexMap(k);
                             int gid = graphVertOffset[
                                 ReorderedGraphVertId[0][meshVertId]];
-                            m_extraDirDofs[i].push_back(make_pair(loc,gid));
+                            ExtraDirDof t(loc, gid, 1.0);
+                            m_extraDirDofs[i].push_back(t);
                             foundExtraVerts.insert(meshVertId);
                         }
                     }
@@ -426,6 +432,7 @@ namespace Nektar
 
             globalId = Vmath::Vmax(m_numLocalCoeffs,&m_localToGlobalMap[0],1)+1;
             m_numGlobalBndCoeffs = globalId;
+
 
             /**
              * STEP 5: The boundary condition mapping is generated from the
@@ -451,6 +458,35 @@ namespace Nektar
 
             SetUpUniversalC0ContMap(locExp, periodicVertsId, periodicEdgesId);
 
+            // Since we can now have multiple entries to m_extraDirDofs due to
+            // periodic boundary conditions we make a call to work out the
+            // multiplicity of all entries and invert
+            Array<OneD, NekDouble> valence(m_numGlobalBndCoeffs,0.0);
+            
+            // Fill in Dirichlet coefficients that are to be sent to other
+            // processors with a value of 1 
+            map<int, vector<ExtraDirDof> >::iterator Tit;
+
+            // Generate valence for extraDirDofs 
+            for (Tit = m_extraDirDofs.begin(); Tit != m_extraDirDofs.end(); ++Tit)
+            {
+                for (i = 0; i < Tit->second.size(); ++i)
+                {
+                    valence[Tit->second[i].get<1>()] = 1.0;
+                }
+            }
+          
+            UniversalAssembleBnd(valence);
+
+            // Set third argument of tuple to inverse of valence. 
+            for (Tit = m_extraDirDofs.begin(); Tit != m_extraDirDofs.end(); ++Tit)
+            {
+                for (i = 0; i < Tit->second.size(); ++i)
+                {
+                    boost::get<2>(Tit->second.at(i)) = 1.0/valence[Tit->second.at(i).get<1>()];
+                }
+            }
+
             // Set up the local to global map for the next level when using
             // multi-level static condensation
             if ((m_solnType == eDirectMultiLevelStaticCond ||
@@ -465,8 +501,7 @@ namespace Nektar
                     for(i = 0; i < locExpVector.size(); ++i)
                     {
                         int eid = locExp.GetOffset_Elmt_Id(i);
-                        locExpansion = boost::dynamic_pointer_cast<
-                            StdRegions::StdExpansion2D>(locExpVector[eid]);
+                        locExpansion = locExpVector[eid]->as<LocalRegions::Expansion2D>();
                         for(j = 0; j < locExpansion->GetNverts(); ++j)
                         {
                             meshEdgeId = (locExpansion->GetGeom2D())->GetEid(j);
@@ -555,15 +590,15 @@ namespace Nektar
                 int mdswitch,
                 bool doInteriorMap)
         {
-            int i,j,k,l,m;
+            int i,j,k,l;
             int cnt = 0;
             int meshVertId, meshVertId2;
-            int meshEdgeId, meshEdgeId2;
+            int meshEdgeId;
             int graphVertId = 0;
             StdRegions::StdExpansion2DSharedPtr  locExpansion;
             LocalRegions::SegExpSharedPtr        bndSegExp;
             MultiRegions::ExpList0DSharedPtr     bndVertExp;
-            const StdRegions::StdExpansionVector &locExpVector = *(locExp.GetExp());
+            const LocalRegions::ExpansionVector &locExpVector = *(locExp.GetExp());
             map<int,int>::iterator mapIt;
             map<int,int>::const_iterator mapConstIt;
             bool systemSingular = true;
@@ -596,8 +631,7 @@ namespace Nektar
                 {
                     for(j = 0; j < bndCondExp[i]->GetNumElmts(); j++)
                     {
-                        bndSegExp = boost::dynamic_pointer_cast<
-                            LocalRegions::SegExp>(bndCondExp[i]->GetExp(j));
+                        bndSegExp = bndCondExp[i]->GetExp(j)->as<LocalRegions::SegExp>();
                         meshEdgeId = (bndSegExp->GetGeom1D())->GetEid();
                         ReorderedGraphVertId[1][meshEdgeId] = graphVertId++;
                         for(k = 0; k < 2; k++)
@@ -648,7 +682,9 @@ namespace Nektar
                     ASSERTL1(s_eid < locExpVector.size(),
                              "SingularElement Parameter is too large");
 
-                    meshVertId = locExpVector[s_eid]->GetGeom2D()->GetVid(0);
+                    meshVertId = locExpVector[s_eid]
+                                      ->as<LocalRegions::Expansion2D>()
+                                      ->GetGeom2D()->GetVid(0);
                 }
                 else if (m_session->DefinesParameter("SingularVertex"))
                 {
@@ -657,13 +693,14 @@ namespace Nektar
                 else if (bndCondExp.num_elements() == 0)
                 {
                     // All boundaries are periodic.
-                    meshVertId = locExpVector[0]->GetGeom2D()->GetVid(0);
+                    meshVertId = locExpVector[0]
+                                      ->as<LocalRegions::Expansion2D>()
+                                      ->GetGeom2D()->GetVid(0);
                 }
                 else
                 {
-                    bndSegExp = boost::dynamic_pointer_cast<
-                        LocalRegions::SegExp>(
-                            bndCondExp[bndCondExp.num_elements()-1]->GetExp(0));
+                    bndSegExp = bndCondExp[bndCondExp.num_elements()-1]
+                                      ->GetExp(0)->as<LocalRegions::SegExp>();
                     meshVertId = bndSegExp->GetGeom1D()->GetVid(0);
                 }
 
@@ -678,28 +715,88 @@ namespace Nektar
             // When running in parallel, we need to ensure that the singular
             // mesh vertex is communicated to any periodic vertices, otherwise
             // the system may diverge.
-            if(systemSingular == true && checkIfSystemSingular && maxBCIdx != p)
+            if(systemSingular == true && checkIfSystemSingular)
             {
-                // Scan through all periodic vertices
+                // Firstly, we check that no other processors have this
+                // vertex. If they do, then we mark the vertex as also being
+                // Dirichlet.
+                if (maxBCIdx != p)
+                {
+                    if (Dofs[0].count(meshVertId) > 0)
+                    {
+                        if (ReorderedGraphVertId[0].count(meshVertId) == 0)
+                        {
+                            ReorderedGraphVertId[0][meshVertId] = graphVertId++;
+                        }
+                    }
+                }
+
+                // In the case that meshVertId is periodic with other vertices,
+                // this process and all other processes need to make sure that
+                // the periodic vertices are also marked as Dirichlet.
+                int gId;
+
+                // At least one process (maxBCidx) will have already associated
+                // a graphVertId with meshVertId. Others won't even have any of
+                // the vertices. The logic below is designed to handle both
+                // cases.
+                if (ReorderedGraphVertId[0].count(meshVertId) == 0)
+                {
+                    gId = -1;
+                }
+                else
+                {
+                    gId = ReorderedGraphVertId[0][meshVertId];
+                }
+
                 for (pIt  = periodicVerts.begin();
                      pIt != periodicVerts.end(); ++pIt)
                 {
-                    if (ReorderedGraphVertId[0].count(pIt->first) != 0)
+                    // Either the vertex is local to this processor (in which
+                    // case it will be in the pIt->first position) or else
+                    // meshVertId might be contained within another processor's
+                    // vertex list. The if statement below covers both cases. If
+                    // we find it, set as Dirichlet with the vertex id gId.
+                    if (pIt->first == meshVertId)
                     {
-                        continue;
-                    }
+                        ReorderedGraphVertId[0][meshVertId] =
+                            gId < 0 ? graphVertId++ : gId;
 
-                    for (i = 0; i < pIt->second.size(); ++i)
-                    {
-                        if (pIt->second[i].isLocal ||
-                            pIt->second[i].id != meshVertId)
+                        for (i = 0; i < pIt->second.size(); ++i)
                         {
-                            continue;
+                            if (pIt->second[i].isLocal)
+                            {
+                                ReorderedGraphVertId[0][pIt->second[i].id] =
+                                    gId;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        bool found = false;
+                        for (i = 0; i < pIt->second.size(); ++i)
+                        {
+                            if (pIt->second[i].id == meshVertId)
+                            {
+                                found = true;
+                                break;
+                            }
                         }
 
-                        // Mark this periodic vertex as Dirichlet.
-                        ReorderedGraphVertId[0][pIt->first] =
-                            graphVertId++;
+                        if (found)
+                        {
+                            ReorderedGraphVertId[0][pIt->first] =
+                                gId < 0 ? graphVertId++ : gId;
+
+                            for (i = 0; i < pIt->second.size(); ++i)
+                            {
+                                if (pIt->second[i].isLocal)
+                                {
+                                    ReorderedGraphVertId[0][
+                                        pIt->second[i].id] = gId;
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -750,7 +847,9 @@ namespace Nektar
                     
                     for(k = 0; k < locExpansion->GetNverts(); k++)
                     {
-                        meshVertId = locExpansion->GetGeom2D()->GetVid(k);
+                        meshVertId = locExpansion
+                                        ->as<LocalRegions::Expansion2D>()
+                                        ->GetGeom2D()->GetVid(k);
                         if (ReorderedGraphVertId[0].count(meshVertId) != 0)
                         {
                             continue;
@@ -818,7 +917,6 @@ namespace Nektar
              * edges.
              */
             typedef boost::adjacency_list<boost::setS, boost::vecS, boost::undirectedS> BoostGraph;
-            typedef boost::graph_traits<BoostGraph>::vertex_descriptor BoostVertex;
             BoostGraph boostGraphObj;
 
             int tempGraphVertId = 0;
@@ -919,7 +1017,8 @@ namespace Nektar
                 }
             }
             
-            /// - Local periodic edges.
+            /// - Local periodic edges. !! SJS: This will need pushing
+            /// - further down for block precodnitioner
             for (pIt = periodicEdges.begin(); pIt != periodicEdges.end(); ++pIt)
             {
                 if (!pIt->second[0].isLocal)
@@ -965,14 +1064,16 @@ namespace Nektar
             for(i = 0; i < locExpVector.size(); ++i)
             {
                 elmtid = locExp.GetOffset_Elmt_Id(i);
-                if((locExpansion = boost::dynamic_pointer_cast<StdRegions::StdExpansion2D>(
-                        locExpVector[elmtid])))
+                if((locExpansion = locExpVector[elmtid]
+                                        ->as<StdRegions::StdExpansion2D>()))
                 {
                     vertCnt = 0;
                     nVerts = locExpansion->GetNverts();
                     for(j = 0; j < nVerts; ++j)
                     {
-                        meshVertId = (locExpansion->GetGeom2D())->GetVid(j);
+                        meshVertId = locExpansion
+                                        ->as<LocalRegions::Expansion2D>()
+                                        ->GetGeom2D()->GetVid(j);
                         if(ReorderedGraphVertId[0].count(meshVertId) == 0)
                         {
                             // non-periodic & non-Dirichlet vertex 
@@ -994,14 +1095,16 @@ namespace Nektar
             for(i = 0; i < locExpVector.size(); ++i)
             {
                 elmtid = locExp.GetOffset_Elmt_Id(i);
-                if((locExpansion = boost::dynamic_pointer_cast<StdRegions::StdExpansion2D>(
-                        locExpVector[elmtid])))
+                if((locExpansion = locExpVector[elmtid]
+                                        ->as<StdRegions::StdExpansion2D>()))
                 {
                     edgeCnt = 0;
                     nVerts = locExpansion->GetNverts();
                     for(j = 0; j < nVerts; ++j)
                     {
-                        meshEdgeId = (locExpansion->GetGeom2D())->GetEid(j);
+                        meshEdgeId = locExpansion
+                                        ->as<LocalRegions::Expansion2D>()
+                                        ->GetGeom2D()->GetEid(j);
                         if(ReorderedGraphVertId[1].count(meshEdgeId) == 0)
                         {
                             // non-periodic & non-Dirichlet edge
@@ -1171,8 +1274,12 @@ namespace Nektar
                     {
                         for (j = 0; j < locExpansion->GetNverts(); ++j, ++cnt)
                         {
-                            int vid = locExpansion->GetGeom2D()->GetVid(j)+1;
-                            int eid = locExpansion->GetGeom2D()->GetEid(j)+1;
+                            int vid = locExpansion
+                                            ->as<LocalRegions::Expansion2D>()
+                                            ->GetGeom2D()->GetVid(j)+1;
+                            int eid = locExpansion
+                                            ->as<LocalRegions::Expansion2D>()
+                                            ->GetGeom2D()->GetEid(j)+1;
                         
                             if (foundVerts.count(vid) == 0)
                             {
