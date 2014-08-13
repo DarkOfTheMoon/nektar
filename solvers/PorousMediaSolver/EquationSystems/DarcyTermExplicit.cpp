@@ -62,7 +62,8 @@ namespace Nektar
      */
     void DarcyTermExplicit::v_SetupPermeability()
     {
-        int nDim = m_fields.num_elements()-1; 
+        int nDim = m_fields.num_elements()-1;
+        cout<<"Dimensions:"<<nDim<<endl; 
         switch(nDim)
         {
             case 2:
@@ -183,6 +184,11 @@ namespace Nektar
         }
     }
 
+    Array<OneD, NekDouble> DarcyTermExplicit::v_GetInversePermeability()
+    {
+        return m_perm_inv;
+    }
+
     void DarcyTermExplicit::v_GetImplicitDarcyFactor(
         Array<OneD, NekDouble> &permCoeff)
     {
@@ -198,7 +204,7 @@ namespace Nektar
      */
     std::string DarcyTermExplicitSpatial::className = GetDarcyTermFactory().RegisterCreatorFunction(
         "ExplicitSpatiallyVarying",
-        DarcyTermExplicit::create,
+        DarcyTermExplicitSpatial::create,
         "Explicit spatially varying Darcy term");
 
     DarcyTermExplicitSpatial::DarcyTermExplicitSpatial(
@@ -219,7 +225,7 @@ namespace Nektar
     void DarcyTermExplicitSpatial::v_SetupPermeability()
     {
         int nqtot = m_fields[0]->GetTotPoints();
-        int nDim = m_fields.num_elements()-1;
+        int nDim = 3;
             
         switch(nDim)
         {

@@ -108,10 +108,10 @@ namespace Nektar
                 break;
             }
         }
-        //ASSERTL0(i != SIZE_DarcyTerm,"PERMEABILITYADVANCEMENT not found in SOLVERINFO section");
+        ASSERTL0(i != SIZE_DarcyTerm,"PERMEABILITYADVANCEMENT not found in SOLVERINFO section");
 
-        m_session->MatchSolverInfo("PERMEABILITYADVANCEMENT", "Explicit",
-                                   m_explicitPermeability, true);
+        //m_session->MatchSolverInfo("PERMEABILITYADVANCEMENT", "Explicit",
+        //                           m_explicitPermeability, true);
         
         // This probably should to into specific implementations 
         // Equation specific Setups 
@@ -145,7 +145,9 @@ namespace Nektar
             ASSERTL0(false,"Unknown or undefined equation type");
         }
 
-        m_darcyEvaluation=GetDarcyTermFactory().CreateInstance(DarcyTermMethodStr[m_darcyType],m_session,m_fields);
+
+        //m_darcyEvaluation=GetDarcyTermFactory().CreateInstance(DarcyTermMethodStr[m_darcyType],m_session,m_fields);
+        m_darcyEvaluation=GetDarcyTermFactory().CreateInstance("Explicit",m_session,m_fields);
 
         //Setup permeability matrix
         m_darcyEvaluation->SetupPermeability();
@@ -157,7 +159,7 @@ namespace Nektar
         //temp - need to decide if we keep the implicit implementation
         m_perm_inv = Array<OneD, NekDouble> (3*(m_spacedim-1));
         m_darcyEvaluation->GetImplicitDarcyFactor(m_perm_inv);
-
+        //m_darcyEvaluation->GetInversePermeability(m_perm_inv)
         //Kinematic viscosity
         m_session->LoadParameter("Kinvis", m_kinvis);
 
@@ -408,7 +410,7 @@ namespace Nektar
 
             for(int i=0; i<6; ++i)
             {
-                cout<<m_perm_inv[i]<<endl;
+                cout<<"perm"<<m_perm_inv[i]<<endl;
             }
             
             Vmath::Smul(6, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
