@@ -59,6 +59,13 @@ namespace Nektar
             Array<OneD, Array<OneD, NekDouble> > m_traceNormals;
             LibUtilities::SessionReaderSharedPtr m_session;
             NekDouble                            m_gamma;
+	    NekDouble                            m_rhoInfPrimal;
+	    NekDouble                            m_pInfPrimal;
+	    NekDouble                            m_uInfPrimal;
+	    NekDouble                            m_vInfPrimal;
+	    NekDouble                            m_wInfPrimal;
+	    NekDouble                            m_alphaInfDir;
+	    NekDouble                            m_Lref;
             NekDouble                            m_gasConstant;
             NekDouble                            m_Twall;
             std::string                          m_ViscosityType;
@@ -85,7 +92,7 @@ namespace Nektar
                 const Array<OneD, Array<OneD, NekDouble> >        &inarray,
                       Array<OneD, Array<OneD, NekDouble> >        &outarray);
             
-            virtual void v_NumericalFluxO1(
+	    virtual void v_NumericalFluxO1(
                 const Array<OneD, MultiRegions::ExpListSharedPtr>      &fields,
                 const Array<OneD, Array<OneD, NekDouble> >             &inarray,
                       Array<OneD, Array<OneD, Array<OneD, NekDouble> > >
@@ -95,7 +102,7 @@ namespace Nektar
                 const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
                 const Array<OneD, Array<OneD, NekDouble> >        &inarray,
                       Array<OneD, Array<OneD, NekDouble> >      &penaltyfluxO1);
-            
+
             virtual void v_NumericalFluxO2(
                 const Array<OneD, MultiRegions::ExpListSharedPtr>       &fields,
                 const Array<OneD, Array<OneD, NekDouble> >              &ufield,

@@ -179,7 +179,7 @@ namespace Nektar
                     // Do an averaging of the linearised viscous fluxes that are included into the convective part of the equations
                     // An extra penalty term is added to the Riemann problem due to the linearisation of the viscous fluxes with respect to the conservative variables.
                     
-                    if (adjointSwitch == 2)
+                    /*if (adjointSwitch == 2)
                     {
                      
                         Array<OneD, Array<OneD, Array<OneD, NekDouble> > > BwdDirDIFF(nDim);
@@ -260,7 +260,7 @@ namespace Nektar
                                         flux[i], 1,
                                         flux[i], 1);
                         }
-                    }
+			}*/
                 }
                 else
                 {

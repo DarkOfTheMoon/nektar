@@ -211,6 +211,7 @@ namespace Nektar
         
         if (m_adjointSwitch == 2.0)
         {
+            // Advection term in physical rhs form
             for (i = 0; i < nvariables; ++i)
             {
                 outarrayAdv[i] = Array<OneD, NekDouble>(npoints, 0.0);
@@ -224,11 +225,11 @@ namespace Nektar
             
             for (i = 0; i < nvariables; ++i)
             {
-                Vmath::Vadd(npoints,
-                            outarrayAdv[i], 1,
-                            outarrayDiff[i], 1,
-                            outarray[i], 1);
-            }
+	      Vmath::Vadd(npoints, 
+			  outarrayAdv[i], 1,
+			  outarrayDiff[i], 1,
+			  outarray[i], 1);
+	    }
         }
     }
 
