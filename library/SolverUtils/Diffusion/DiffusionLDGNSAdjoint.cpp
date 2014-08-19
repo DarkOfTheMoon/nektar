@@ -190,11 +190,11 @@ namespace Nektar
             }
             
             m_fluxVectorNS(inarray, derivativesO1, m_viscTensor);
-
+	    
             // Compute u from q_{\eta} and q_{\xi}
             // Obtain numerical fluxes
             v_NumericalFluxO2(fields, inarray, m_viscTensor, viscousFlux);
-
+	    
             for (i = 0; i < nConvectiveFields; ++i)
             {
                 tmp2[i] = Array<OneD, NekDouble>(nCoeffs, 0.0);
@@ -259,7 +259,7 @@ namespace Nektar
             {
                 v_WeakPenaltyO1(fields, inarray, numflux);
             }
-            
+	    
             // Splitting the numerical flux into the dimensions
             for (j = 0; j < m_spaceDim; ++j)
             {
@@ -280,79 +280,155 @@ namespace Nektar
             const Array<OneD, Array<OneD, NekDouble> >        &inarray,
                   Array<OneD, Array<OneD, NekDouble> >        &penaltyfluxO1)
         {            
-            int cnt;
+            int cnt = 0;
             int i, j, e;            
             int id1, id2;
+	    int eMax;
             
-            int nBndEdgePts, nBndEdges, nBndRegions;
+            int nBCEdgePts, nBndEdges, nBndRegions;
             
             int nTracePts = fields[0]->GetTrace()->GetTotPoints();
             int nScalars  = inarray.num_elements();
+	    const Array<OneD, const int> &traceBndMap
+	      = fields[0]->GetTraceBndMap();
             
             Array<OneD, NekDouble> tmp1(nTracePts, 0.0);
             Array<OneD, NekDouble> tmp2(nTracePts, 0.0);
             
             Array< OneD, Array<OneD, NekDouble > > scalarVariables(nScalars);
-            Array< OneD, Array<OneD, NekDouble > > uplus(nScalars);
-            
+            Array< OneD, Array<OneD, NekDouble > > Fwd(nScalars);
+            Array< OneD, Array<OneD, NekDouble > > Fwdnew(nScalars);
             // Extract internal values of the scalar variables for Neumann bcs
             for (i = 0; i < nScalars; ++i)
             {
                 scalarVariables[i] = Array<OneD, NekDouble>(nTracePts, 0.0);
                 
-                uplus[i] = Array<OneD, NekDouble>(nTracePts, 0.0);
-                fields[i]->ExtractTracePhys(inarray[i], uplus[i]);
+                Fwd[i] = Array<OneD, NekDouble>(nTracePts, 0.0);
+		Fwdnew[i] = Array<OneD, NekDouble>(nTracePts);
+                fields[i]->ExtractTracePhys(inarray[i], Fwd[i]);
+		fields[i]->ExtractTracePhys(inarray[i], Fwdnew[i]);
             }
-            
-            // Compute boundary conditions for velocities
-            for (i = 0; i < nScalars; ++i)
-            {
-                // Note that cnt has to loop on nBndRegions and nBndEdges
-                // and has to be reset to zero per each equation
-                cnt = 0;
-                nBndRegions = fields[i]->
-                GetBndCondExpansions().num_elements();
-                for (j = 0; j < nBndRegions; ++j)
-                {
-                    nBndEdges = fields[i]->
-                    GetBndCondExpansions()[j]->GetExpSize();
-                    for (e = 0; e < nBndEdges; ++e)
-                    {
-                        nBndEdgePts = fields[i]->
-                        GetBndCondExpansions()[j]->GetExp(e)->GetNumPoints(0);
-                        
-                        id1 = fields[i]->
-                        GetBndCondExpansions()[j]->GetPhys_Offset(e);
-                        
-                        id2 = fields[0]->GetTrace()->
-                        GetPhys_Offset(fields[0]->GetTraceMap()->
-                                       GetBndCondTraceToGlobalTraceMap(cnt++));
+	    
+	    nBndRegions = fields[0]->
+            GetBndCondExpansions().num_elements();
+	    
+	     for (int n = 0; n < nBndRegions; ++n)
+	     {
+	       eMax = fields[0]->GetBndCondExpansions()[n]->GetExpSize();
 
-                        // For Dirichlet boundary condition: uflux = u_bcs
-                        if (fields[i]->GetBndConditions()[j]->
-                            GetBoundaryConditionType() == 
-                            SpatialDomains::eDirichlet)
-                        {
-                            Vmath::Vcopy(nBndEdgePts, 
-                                         &scalarVariables[i][id2], 1, 
-                                         &penaltyfluxO1[i][id2], 1);
-                        }
-                        
-                        // For Neumann boundary condition: uflux = u_+
-                        else if ((fields[i]->GetBndConditions()[j])->
-                                 GetBoundaryConditionType() == 
-                                 SpatialDomains::eNeumann)
-                        {
-                            Vmath::Vcopy(nBndEdgePts, 
-                                         &uplus[i][id2], 1, 
-                                         &penaltyfluxO1[i][id2], 1);
-                        }
-                    }
-                }
-            }
+	       if (fields[0]->GetBndConditions()[n]->
+                        GetUserDefined() == 
+                        SpatialDomains::eAdjointWall)
+	       {
+		  for (e = 0; e < eMax; ++e)
+	          {
+		    nBCEdgePts = fields[0]->GetBndCondExpansions()[n]->
+		      GetExp(e)->GetTotPoints();
+		    id1 = fields[0]->GetBndCondExpansions()[n]->
+		      GetPhys_Offset(e);
+		    id2 = fields[0]->GetTrace()->GetPhys_Offset(traceBndMap[cnt+e]);
+		    
+		    Array<OneD, NekDouble> tmp(nBCEdgePts, 0.0);
+		    Array<OneD, NekDouble> tmp1(nBCEdgePts, 0.0);
+		    Array<OneD, NekDouble> tmp2(nBCEdgePts, 0.0);
+		    Array<OneD, NekDouble> tmp3(nBCEdgePts, 0.0);
+		    
+		    NekDouble norm_fac = 1.0;
+
+		    Array<OneD, Array<OneD, NekDouble> > DragDir(m_spaceDim);
+		    Array<OneD, Array<OneD, NekDouble> > LiftDir(m_spaceDim);
+		    
+		    if(m_spaceDim == 2)
+		      {
+			
+			NekDouble Dx = norm_fac * cos (m_alphaInfDir);
+			NekDouble Dy = norm_fac * sin (m_alphaInfDir);
+			
+			NekDouble Lx = -norm_fac * sin (m_alphaInfDir);
+			NekDouble Ly =  norm_fac * cos (m_alphaInfDir);
+			
+			DragDir[0] = Array<OneD, NekDouble> (nBCEdgePts, Dx);
+			DragDir[1] = Array<OneD, NekDouble> (nBCEdgePts, Dy);
+			
+			LiftDir[0] = Array<OneD, NekDouble> (nBCEdgePts, Lx);
+			LiftDir[1] = Array<OneD, NekDouble> (nBCEdgePts, Ly);
+		      }
+		    
+		    if(m_spaceDim == 3)
+		      {
+		       NekDouble Dx = 0.0;
+		       NekDouble Dy = 0.0;
+		       NekDouble Dz = 0.0;
+		       
+		       NekDouble Lx = 0.0;
+		       NekDouble Ly = 0.0;
+		       NekDouble Lz = 0.0;
+		       
+		       DragDir[0] = Array<OneD, NekDouble> (nBCEdgePts, Dx);
+		       DragDir[1] = Array<OneD, NekDouble> (nBCEdgePts, Dy);
+		       DragDir[2] = Array<OneD, NekDouble> (nBCEdgePts, Dz);
+		       
+		       LiftDir[0] = Array<OneD, NekDouble> (nBCEdgePts, Lx);
+		       LiftDir[1] = Array<OneD, NekDouble> (nBCEdgePts, Ly);
+		       DragDir[2] = Array<OneD, NekDouble> (nBCEdgePts, Lz);
+		      }
+		    
+		    
+		    for (i = 0; i < m_spaceDim; ++i)
+		      {
+			
+			Vmath::Vvtvp(nBCEdgePts,
+				     &Fwd[1+i][id2], 1,
+				     &m_traceNormals[i][id2], 1,
+				     &tmp[0], 1,
+				     &tmp[0], 1);
+			
+			Vmath::Vvtvp(nBCEdgePts,
+				     &DragDir[i][0], 1,
+				     &m_traceNormals[i][id2], 1,
+				     &tmp1[0], 1,
+				     &tmp1[0], 1);
+			
+			
+			Vmath::Vvtvp(nBCEdgePts,
+				     &LiftDir[i][0], 1,
+				     &m_traceNormals[i][id2], 1,
+				     &tmp2[0], 1,
+				     &tmp2[0], 1);
+		      }
+		    //
+		    
+		    Vmath::Vsub(nBCEdgePts, &tmp1[0], 1, &tmp[0], 1, &tmp3[0], 1);
+		    // Calculate 2.0(1/Cinf(phi.n)-v.n)
+		    Vmath::Smul(nBCEdgePts, 2.0, &tmp3[0], 1, &tmp3[0], 1);
+		    // Calculate 1/Cinf(phi.n)
+		    
+		    // Calculate v* = v - 2.0(1/Cinf(phi.n)-v.n)n
+		    for (i = 0; i < m_spaceDim; ++i)
+		      {
+			Vmath::Vvtvp(nBCEdgePts,
+				     &tmp3[0], 1,
+				     &m_traceNormals[i][id2], 1,
+				     &Fwdnew[1+i][id2], 1,
+				     &penaltyfluxO1[1+i][id2], 1);
+		      }
+		    
+		    Array<OneD, NekDouble> zeros(nBCEdgePts, 0.0);
+
+		    Vmath::Vcopy(nBCEdgePts, 
+				 &zeros[0], 1,
+				 &penaltyfluxO1[0][id2], 1);
+
+		    Vmath::Vcopy(nBCEdgePts, 
+				 &zeros[0], 1,
+				 &penaltyfluxO1[m_spaceDim+1][id2], 1);
+		  }
+		  
+		  cnt += fields[0]->GetBndCondExpansions()[n]->GetExpSize();
+	       }
+	     }
         }
-        
-        /**
+        /** 
          * @brief Build the numerical flux for the 2nd order derivatives
          *
          */
