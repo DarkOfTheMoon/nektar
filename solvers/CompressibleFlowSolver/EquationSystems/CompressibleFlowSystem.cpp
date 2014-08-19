@@ -492,7 +492,7 @@ namespace Nektar
 	    Array<OneD, NekDouble> ones(nBCEdgePts, 1.0);
             
             //Vmath::Neg(nBCEdgePts,&Fwdnew[0][id2], 1);
-            //Vmath::Neg(nBCEdgePts,&Fwdnew[nVariables-1][id2], 1);
+            Vmath::Neg(nBCEdgePts,&Fwdnew[nVariables-1][id2], 1);
             // Copy boundary adjusted values into the boundary expansion
             
             for (i = 0; i < nVariables; ++i)
@@ -2414,7 +2414,7 @@ namespace Nektar
                         
                     }
 
-                    // Calculate (v.n) and (phi.n)
+                    /*// Calculate (v.n) and (phi.n)
                     for (int i = 0; i < m_spacedim; ++i)
                     {
                         Vmath::Vvtvp(nBCEdgePts,
@@ -2435,8 +2435,13 @@ namespace Nektar
                                      &m_traceNormals[i][id2], 1,
                                      &BwdDir[1+i][id2], 1,
                                      &BwdDir[1+i][id2], 1);
-                    }
+                    }*/
                     
+		    for (int i = 0; i < m_spacedim; i++)
+		    {
+		       Vmath::Neg(nBCEdgePts, &BwdDir[i+1][id2], 1);
+		    }
+
                     for (int i = 0; i < nConvectiveFields; ++i)
                     {
                         Vmath::Vcopy(nBCEdgePts, &BwdDir[i][id2], 1,

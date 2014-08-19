@@ -412,11 +412,11 @@ namespace Nektar
 				     &Fwdnew[1+i][id2], 1,
 				     &penaltyfluxO1[1+i][id2], 1);
 		      }
-		    
+
 		    Array<OneD, NekDouble> zeros(nBCEdgePts, 0.0);
 
 		    Vmath::Vcopy(nBCEdgePts, 
-				 &zeros[0], 1,
+				 &Fwdnew[0][id2], 1,
 				 &penaltyfluxO1[0][id2], 1);
 
 		    Vmath::Vcopy(nBCEdgePts, 
