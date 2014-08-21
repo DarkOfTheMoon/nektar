@@ -946,6 +946,74 @@ namespace Nektar
         }
     }
 
+    
+    void CompressibleFlowSystem::AdjointPressureOutflow(
+                            int                                   bcRegion,
+                            int                                   cnt,
+                            Array<OneD, Array<OneD, NekDouble> > &physarray)
+    {
+        int i;
+        int nTracePts = GetTraceTotPoints();
+        int nVariables = physarray.num_elements();
+        int nq = physarray[0].num_elements();
+        
+        const Array<OneD, const int> &traceBndMap
+        = m_fields[0]->GetTraceBndMap();
+        
+        // Get physical values of the forward trace
+        Array<OneD, Array<OneD, NekDouble> > Fwd(nVariables);
+        Array<OneD, Array<OneD, NekDouble> > Fwdnew(nVariables);
+        
+        Array<OneD, Array<OneD, NekDouble> > BwdDir(nVariables);
+        Array<OneD, Array<OneD, NekDouble> > FwdDir(nVariables);
+        
+        for (i = 0; i < nVariables; ++i)
+        {
+            Fwd[i] = Array<OneD, NekDouble>(nTracePts);
+            Fwdnew[i] = Array<OneD, NekDouble>(nTracePts);
+            m_fields[i]->ExtractTracePhys(physarray[i], Fwd[i]);
+            m_fields[i]->ExtractTracePhys(physarray[i], Fwdnew[i]);
+        }
+        
+        // Adjust the physical values of the trace to take
+        // user defined boundaries into account
+        
+        int e, id1, id2, nBCEdgePts, eMax;
+        
+        eMax = m_fields[0]->GetBndCondExpansions()[bcRegion]->GetExpSize();
+        for (e = 0; e < eMax; ++e)
+        {
+            nBCEdgePts = m_fields[0]->GetBndCondExpansions()[bcRegion]->
+            GetExp(e)->GetTotPoints();
+            id1 = m_fields[0]->GetBndCondExpansions()[bcRegion]->
+            GetPhys_Offset(e);
+            id2 = m_fields[0]->GetTrace()->GetPhys_Offset(traceBndMap[cnt+e]);
+            
+            Array<OneD, NekDouble> qterm    (nBCEdgePts,     0.0);
+            
+            for (int i = 0; i < m_spacedim; ++i)
+            {
+                Vmath::Vvtvp(nBCEdgePts,
+                             &Fwd[i+1][id2], 1,
+                             &Fwd[i+1][id2], 1,
+                             &qterm[0],         1,
+                             &qterm[0],         1);
+            }
+            //Calculate Bwd[1]^2/Bwd[0] + Bwd[2]^2/Bwd[0]
+            /*Vmath::Vdiv(nBCEdgePts,
+                        &qterm[0], 1,
+                        &Fwd[0][id2], 1,
+                        &Fwdnew[m_spacedim+1][id2], 1);*/
+            
+            for (i = 0; i < nVariables; ++i)
+            {
+                Vmath::Vcopy(nBCEdgePts, &Fwdnew[i][id2], 1,
+                             &(m_fields[i]->GetBndCondExpansions()[bcRegion]->
+                               UpdatePhys())[id1], 1);
+            }
+        }
+    }
+    
     /**
      * @brief Return the flux vector for the compressible Euler equations.
      *
@@ -2405,15 +2473,9 @@ namespace Nektar
                     Array<OneD, NekDouble> tmp1(nBCEdgePts, 0.0);
                     Array<OneD, NekDouble> tmpfwdnew(nBCEdgePts, 0.0);
                     Array<OneD, NekDouble> tmpfwd(nBCEdgePts, 0.0);
-                    
-                    for (int i = 0; i < nConvectiveFields; ++i)
-                    {
-                        Vmath::Vcopy(nBCEdgePts,
-                                     &FwdDir[i][id2], 1,
-                                     &BwdDir[i][id2], 1);
-                        
-                    }
-
+                   
+                    //==========================================================
+                    // For Euler
                     /*// Calculate (v.n) and (phi.n)
                     for (int i = 0; i < m_spacedim; ++i)
                     {
@@ -2437,11 +2499,55 @@ namespace Nektar
                                      &BwdDir[1+i][id2], 1);
                     }*/
                     
-		    for (int i = 0; i < m_spacedim; i++)
-		    {
-		       Vmath::Neg(nBCEdgePts, &BwdDir[i+1][id2], 1);
-		    }
-
+                    //==========================================================
+                    // For Navier Stokes
+                    Vmath::Vcopy(nBCEdgePts,
+                                 &FwdDir[0][id2], 1,
+                                 &BwdDir[0][id2], 1);
+                    
+                    for (int i = 0; i < m_spacedim; i++)
+                    {
+                        Vmath::Neg(nBCEdgePts, &BwdDir[i+1][id2], 1);
+                    }
+                    
+                    // T = Twall at the wall hence,
+                    // P = rho * R * T
+                    // => T = P/(rho * R)
+                    // => T = ((gamma - 1) * (rhoE - rho * q^2)/(rho * R)
+                    // => rhoE = (T * (rho * R) / (gamma - 1) + rho * q^2
+                    
+                    NekDouble TwallFac =
+                                (m_Twall * m_gasConstant) / (m_gamma - 1.0);
+                    
+                    Array<OneD, NekDouble> TwallVec (nBCEdgePts, TwallFac);
+                    Array<OneD, NekDouble> qterm    (nBCEdgePts,     0.0);
+                    
+                    for (int i = 0; i < m_spacedim; ++i)
+                    {
+                        Vmath::Vvtvp(nBCEdgePts,
+                                     &BwdDir[i+1][id2], 1,
+                                     &BwdDir[i+1][id2], 1,
+                                     &qterm[0],         1,
+                                     &qterm[0],         1);
+                    }
+                    
+                    Vmath::Vdiv(nBCEdgePts,
+                                &qterm[0], 1,
+                                &BwdDir[0][id2], 1,
+                                &BwdDir[m_spacedim+1][id2], 1);
+                    
+                    Vmath::Vadd(nBCEdgePts,
+                                &TwallVec[0], 1,
+                                &BwdDir[0][id2], 1,
+                                &TwallVec[0], 1);
+                    
+                    Vmath::Vadd(nBCEdgePts,
+                                &TwallVec[0], 1,
+                                &BwdDir[m_spacedim+1][id2], 1,
+                                &BwdDir[m_spacedim+1][id2], 1);
+                    
+                    //==========================================================
+                    
                     for (int i = 0; i < nConvectiveFields; ++i)
                     {
                         Vmath::Vcopy(nBCEdgePts, &BwdDir[i][id2], 1,
@@ -2452,7 +2558,84 @@ namespace Nektar
                 
                 cnt += m_fields[0]->GetBndCondExpansions()[k]->GetExpSize();
             }
-            else // Deals with farfield BC only so far
+            
+            if (m_fields[0]->GetBndConditions()[k]->GetUserDefined() ==
+                SpatialDomains::eAdjointPressureOutflow)
+            {
+                eMax = m_fields[0]->GetBndCondExpansions()[k]->GetExpSize();
+                
+                for (int e = 0; e < eMax; ++e)
+                {
+                    int nBCEdgePts = m_primal[0]->GetBndCondExpansions()[k]->
+                    GetExp(e)->GetTotPoints();
+                    int id1 = m_primal[0]->GetBndCondExpansions()[k]->
+                    GetPhys_Offset(e);
+                    int id2 = m_primal[0]->GetTrace()->GetPhys_Offset(traceBndMap[cnt+e]);
+                    
+                    // T = Pinf at outflow condition,
+                    // P = (gamma - 1) (rhoE - rho * q^2)
+                    // => rhoE = Pinf/ (gamma - 1) + rho * q^2;
+                    
+                    // at pressure outflow for 2 D:
+                    
+                    // rho =>  Bwd[0] = Fwd[0]
+                    // rhou => Bwd[1] = Fwd[1]
+                    // rhov => Bwd[2] = Fwd[2]
+                    // rhoE => Bwd[3] = (Pinf + Bwd[1]^2/Bwd[0] + Bwd[2]^2/Bwd[0]) / (gamma - 1);
+                    
+                    Vmath::Vcopy(nBCEdgePts,
+                                 &FwdDir[0][id2], 1,
+                                 &BwdDir[0][id2], 1);
+                    
+                    Vmath::Vcopy(nBCEdgePts,
+                                 &FwdDir[1][id2], 1,
+                                 &BwdDir[1][id2], 1);
+                    
+                    Vmath::Vcopy(nBCEdgePts,
+                                 &FwdDir[2][id2], 1,
+                                 &BwdDir[2][id2], 1);
+                    
+                    NekDouble pInfInv = m_pInfPrimal / (m_gamma - 1.0);
+                    
+                    Array<OneD, NekDouble> pInfFac (nBCEdgePts, pInfInv);
+                    Array<OneD, NekDouble> qterm    (nBCEdgePts,     0.0);
+                    
+                    // Calculate qterm = Bwd[1]^2 + Bwd[2]^2
+                    for (int i = 0; i < m_spacedim; ++i)
+                    {
+                        Vmath::Vvtvp(nBCEdgePts,
+                                     &BwdDir[i+1][id2], 1,
+                                     &BwdDir[i+1][id2], 1,
+                                     &qterm[0],         1,
+                                     &qterm[0],         1);
+                    }
+                    //Calculate Bwd[1]^2/Bwd[0] + Bwd[2]^2/Bwd[0]
+                    Vmath::Vdiv(nBCEdgePts,
+                                &qterm[0], 1,
+                                &BwdDir[0][id2], 1,
+                                &BwdDir[m_spacedim+1][id2], 1);
+                    //Calculate pInf/(gamma-1) + Bwd[1]^2/Bwd[0] + Bwd[2]^2/Bwd[0]
+                    Vmath::Vadd(nBCEdgePts,
+                                &pInfFac[0], 1,
+                                &BwdDir[m_spacedim+1][id2], 1,
+                                &BwdDir[m_spacedim+1][id2], 1);
+                    
+                    //==========================================================
+                    
+                    for (int i = 0; i < nConvectiveFields; ++i)
+                    {
+                        Vmath::Vcopy(nBCEdgePts, &BwdDir[i][id2], 1,
+                                     &(m_primal[i]->GetBndCondExpansions()[k]->
+                                       UpdatePhys())[id1], 1);
+                    }
+                }
+                
+                cnt += m_fields[0]->GetBndCondExpansions()[k]->GetExpSize();
+            }
+            
+            if (m_fields[0]->GetBndConditions()[k]->GetUserDefined() !=
+                SpatialDomains::eAdjointPressureOutflow && m_fields[0]->GetBndConditions()[k]->GetUserDefined() !=
+                SpatialDomains::eAdjointWall)
             {
                 
               eMax = m_fields[0]->GetBndCondExpansions()[k]->GetExpSize();

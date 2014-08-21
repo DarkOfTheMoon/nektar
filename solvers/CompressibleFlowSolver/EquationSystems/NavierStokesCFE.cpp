@@ -322,6 +322,12 @@ namespace Nektar
                 ExtrapOrder0BC(n, cnt, inarray);
             }
             
+            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
+                SpatialDomains::eAdjointPressureOutflow)
+            {
+                AdjointPressureOutflow(n, cnt, inarray);
+            }
+            
             // Time Dependent Boundary Condition (specified in meshfile)
             if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() 
                 == SpatialDomains::eTimeDependent)

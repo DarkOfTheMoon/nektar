@@ -238,6 +238,10 @@ namespace Nektar
             int                                                 bcRegion, 
             int                                                 cnt, 
             Array<OneD, Array<OneD, NekDouble> >               &physarray);
+        void AdjointPressureOutflow(
+            int                                                 bcRegion,
+            int                                                 cnt,
+            Array<OneD, Array<OneD, NekDouble> >                &physarray);
         void GetVelocityVector(
             const Array<OneD,       Array<OneD,       NekDouble> >&physfield,
                   Array<OneD,       Array<OneD,       NekDouble> >&velocity);
