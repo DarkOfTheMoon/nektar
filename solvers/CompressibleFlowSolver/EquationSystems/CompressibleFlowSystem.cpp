@@ -593,7 +593,7 @@ namespace Nektar
 
             // For 2D/3D, define: v* = v - 2(v.n)n
             Array<OneD, NekDouble> tmp(nBCEdgePts, 0.0);
-
+            
             // Calculate (v.n)
             for (i = 0; i < m_spacedim; ++i)
             {
@@ -616,7 +616,7 @@ namespace Nektar
                              &Fwd[1+i][id2], 1,
                              &Fwd[1+i][id2], 1);
             }
-
+            
             // Copy boundary adjusted values into the boundary expansion
             for (i = 0; i < nVariables; ++i)
             {
@@ -989,21 +989,9 @@ namespace Nektar
             GetPhys_Offset(e);
             id2 = m_fields[0]->GetTrace()->GetPhys_Offset(traceBndMap[cnt+e]);
             
-            Array<OneD, NekDouble> qterm    (nBCEdgePts,     0.0);
+            Array<OneD, NekDouble> zeros(nBCEdgePts, 0.0);
             
-            for (int i = 0; i < m_spacedim; ++i)
-            {
-                Vmath::Vvtvp(nBCEdgePts,
-                             &Fwd[i+1][id2], 1,
-                             &Fwd[i+1][id2], 1,
-                             &qterm[0],         1,
-                             &qterm[0],         1);
-            }
-            //Calculate Bwd[1]^2/Bwd[0] + Bwd[2]^2/Bwd[0]
-            /*Vmath::Vdiv(nBCEdgePts,
-                        &qterm[0], 1,
-                        &Fwd[0][id2], 1,
-                        &Fwdnew[m_spacedim+1][id2], 1);*/
+            Vmath::Neg(nBCEdgePts, &Fwdnew[m_spacedim+1][id2], 1);
             
             for (i = 0; i < nVariables; ++i)
             {
@@ -2634,7 +2622,8 @@ namespace Nektar
             }
             
             if (m_fields[0]->GetBndConditions()[k]->GetUserDefined() !=
-                SpatialDomains::eAdjointPressureOutflow && m_fields[0]->GetBndConditions()[k]->GetUserDefined() !=
+                SpatialDomains::eAdjointPressureOutflow
+                && m_fields[0]->GetBndConditions()[k]->GetUserDefined() !=
                 SpatialDomains::eAdjointWall)
             {
                 
@@ -6103,7 +6092,6 @@ namespace Nektar
                             &Jac[1][3][3][0], 1);
                 
                 Vmath::Neg(nq, &Jac[1][3][3][0], 1);
-                
             }
         }
     }

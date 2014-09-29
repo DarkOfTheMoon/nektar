@@ -230,6 +230,10 @@ namespace Nektar
             int                                                 bcRegion,
             int                                                 cnt,
             Array<OneD, Array<OneD, NekDouble> >               &physarray);
+        void PressureOutflowBC(
+            int                                                 bcRegion,
+            int                                                 cnt,
+            Array<OneD, Array<OneD, NekDouble> >               &physarray);
         void RiemannInvariantBC(
             int                                                 bcRegion, 
             int                                                 cnt, 

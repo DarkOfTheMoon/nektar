@@ -438,7 +438,7 @@ namespace Nektar
                     {
                         for (e = 0; e < eMax; ++e)
                         {
-                            nBCEdgePts = fields[0]->GetBndCondExpansions()[n]->
+                            /*nBCEdgePts = fields[0]->GetBndCondExpansions()[n]->
                             GetExp(e)->GetTotPoints();
                             id1 = fields[0]->GetBndCondExpansions()[n]->
                             GetPhys_Offset(e);
@@ -461,7 +461,7 @@ namespace Nektar
                                              &Fwdnew[i+1][id2], 1,
                                              &qterm[0],         1,
                                              &penaltyfluxO1[m_spaceDim+1][id2], 1);
-                            }
+                            }*/
                             
                             /*Vmath::Vdiv(nBCEdgePts,
                                         &qterm[0], 1,
