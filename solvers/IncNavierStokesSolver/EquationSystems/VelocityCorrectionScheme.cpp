@@ -328,6 +328,7 @@ namespace Nektar
 	
         // Set up forcing term and coefficients for pressure Poisson equation
         SetUpPressureForcing(inarray, F, aii_Dt);
+
         factors[StdRegions::eFactorLambda] = 0.0;
 
         // Solver Pressure Poisson Equation

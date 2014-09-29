@@ -198,10 +198,10 @@ namespace Nektar
             (*x)->Apply(m_fields, inarray, outarray, time);
         }
 */       
-        cout<<"before evaluate pressure"<<endl;
+        //m_darcyEvaluation->EvaluateDarcyTerm(inarray,outarray,m_kinvis);
+
         // Calculate High-Order pressure boundary conditions
         m_extrapolation->EvaluatePressureBCs(inarray,outarray,m_kinvis);
-        cout<<"after evaluate pressure"<<endl;
     }
     
     /**
@@ -230,6 +230,7 @@ namespace Nektar
 	
         // Set up forcing term and coefficients for pressure Poisson equation
         SetUpPressureForcing(inarray, F, aii_Dt);
+
         factors[StdRegions::eFactorLambda] = 0.0;
 
         // Solver Pressure Poisson Equation
@@ -238,6 +239,7 @@ namespace Nektar
 
         // Set up forcing term and coefficients for Helmholtz problems
         SetUpViscousForcing(inarray, F, aii_Dt);
+
         factors[StdRegions::eFactorLambda] = 1.0/aii_Dt/m_kinvis;
 
         // Solve Helmholtz system and put in Physical space
@@ -281,6 +283,7 @@ namespace Nektar
         const NekDouble aii_Dt)
     {
         NekDouble aii_dtinv = 1.0/aii_Dt;
+        cout<<"aii_dtinv"<<aii_dtinv<<endl;
         int phystot = m_fields[0]->GetTotPoints();
 
         // Grad p
@@ -296,7 +299,7 @@ namespace Nektar
             m_pressure->PhysDeriv(m_pressure->GetPhys(), Forcing[0], Forcing[1],
                                   Forcing[2]);
         }
-        
+
         // Subtract inarray/(aii_dt) and divide by kinvis. Kinvis will
         // need to be updated for the convected fields.
         for(int i = 0; i < nvel; ++i)

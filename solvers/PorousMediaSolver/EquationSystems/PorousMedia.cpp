@@ -152,6 +152,10 @@ namespace Nektar
         // Initialise advection
         m_advObject = GetAdvectionTermFactory().CreateInstance("NoAdvection", m_session, m_graph);
 
+        //Kinematic viscosity
+        m_session->LoadParameter("Kinvis", m_kinvis);
+
+
         m_darcyEvaluation=GetDarcyTermFactory().CreateInstance(DarcyTermMethodStr[m_darcyType],m_session,m_fields);
         cout<<"Permeability advacement: "<<DarcyTermMethodStr[m_darcyType]<<endl;
         //m_darcyEvaluation=GetDarcyTermFactory().CreateInstance("Explicit",m_session,m_fields);
@@ -182,6 +186,7 @@ namespace Nektar
             m_fields,
             m_pressure,
             m_velocity);
+        m_extrapolation->TimeIntegrationSteps(m_intScheme->GetIntegrationMethod(), m_intScheme);
         cout<<"after extrapolate"<<endl;
 
 
