@@ -198,7 +198,7 @@ namespace Nektar
             (*x)->Apply(m_fields, inarray, outarray, time);
         }
 */       
-        //m_darcyEvaluation->EvaluateDarcyTerm(inarray,outarray,m_kinvis);
+        m_darcyEvaluation->EvaluateDarcyTerm(inarray,outarray,m_kinvis);
 
         // Calculate High-Order pressure boundary conditions
         m_extrapolation->EvaluatePressureBCs(inarray,outarray,m_kinvis);
