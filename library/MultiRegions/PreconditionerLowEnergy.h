@@ -106,6 +106,8 @@ namespace Nektar
             Array<OneD, NekDouble>  m_multiplicity;
             Array<OneD, int>        m_map;
 
+	    vector<pair<int,int> >  m_expCommonNcoeffs;
+	    
 	private:
 
             void SetUpReferenceElements(void);

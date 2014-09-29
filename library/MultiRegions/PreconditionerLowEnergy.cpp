@@ -43,51 +43,51 @@
 
 namespace Nektar
 {
-    namespace MultiRegions
-    {
-        /**
-         * Registers the class with the Factory.
-         */
-        string PreconditionerLowEnergy::className
-                = GetPreconFactory().RegisterCreatorFunction(
-                    "LowEnergyBlock",
-                    PreconditionerLowEnergy::create,
-                    "LowEnergy Preconditioning");
+  namespace MultiRegions
+  {
+    /**
+     * Registers the class with the Factory.
+     */
+    string PreconditionerLowEnergy::className
+    = GetPreconFactory().RegisterCreatorFunction(
+						 "LowEnergyBlock",
+						 PreconditionerLowEnergy::create,
+						 "LowEnergy Preconditioning");
  
-       /**
-         * @class PreconditionerLowEnergy
-         *
-         * This class implements low energy preconditioning for the conjugate
-	 * gradient matrix solver.
-	 */
+    /**
+     * @class PreconditionerLowEnergy
+     *
+     * This class implements low energy preconditioning for the conjugate
+     * gradient matrix solver.
+     */
         
-        PreconditionerLowEnergy::PreconditionerLowEnergy(
-            const boost::shared_ptr<GlobalLinSys> &plinsys,
-            const AssemblyMapSharedPtr &pLocToGloMap)
-            : Preconditioner(plinsys, pLocToGloMap),
-              m_linsys(plinsys),
-              m_locToGloMap(pLocToGloMap)
-        {
-        }
+    PreconditionerLowEnergy::PreconditionerLowEnergy(
+						     const boost::shared_ptr<GlobalLinSys> &plinsys,
+						     const AssemblyMapSharedPtr &pLocToGloMap)
+      : Preconditioner(plinsys, pLocToGloMap),
+	m_linsys(plinsys),
+	m_locToGloMap(pLocToGloMap)
+    {
+    }
         
-        void PreconditionerLowEnergy::v_InitObject()
-        {
-            GlobalSysSolnType solvertype=m_locToGloMap->GetGlobalSysSolnType();
-            ASSERTL0(solvertype == MultiRegions::eIterativeStaticCond,"Solver type not valid");
+    void PreconditionerLowEnergy::v_InitObject()
+    {
+      GlobalSysSolnType solvertype=m_locToGloMap->GetGlobalSysSolnType();
+      ASSERTL0(solvertype == MultiRegions::eIterativeStaticCond,"Solver type not valid");
 
-            boost::shared_ptr<MultiRegions::ExpList> 
-                expList=((m_linsys.lock())->GetLocMat()).lock();
+      boost::shared_ptr<MultiRegions::ExpList> 
+	expList=((m_linsys.lock())->GetLocMat()).lock();
             
-            StdRegions::StdExpansionSharedPtr locExpansion;
+      StdRegions::StdExpansionSharedPtr locExpansion;
 
-            locExpansion = expList->GetExp(0);
+      locExpansion = expList->GetExp(0);
             
-            int nDim = locExpansion->GetShapeDimension();
+      int nDim = locExpansion->GetShapeDimension();
             
-            ASSERTL0(nDim==3,
-                     "Preconditioner type only valid in 3D");
+      ASSERTL0(nDim==3,
+	       "Preconditioner type only valid in 3D");
             
-            //Sets up reference element and builds transformation matrix
+      //Sets up reference element and builds transformation matrix
             SetUpReferenceElements();
 
             //Set up block transformation matrix
@@ -95,6 +95,25 @@ namespace Nektar
 
             //Sets up multiplicity map for transformation from global to local
             CreateMultiplicityMap();
+	    
+	    //Set up expsize vector
+	    int ncoeffs = expList->GetExp(0)->GetNcoeffs();
+	    int nexp   = 1; 
+	    for(int i = 1; i < expList->GetExpSize(); ++i)
+	    {
+	        if(ncoeffs != expList->GetExp(i)->GetNcoeffs())
+		{
+		    m_expCommonNcoeffs.push_back(pair<int,int>(nexp,ncoeffs));
+		    ncoeffs = expList->GetExp(i)->NumBndryCoeffs();
+		    nexp = 1;
+		}
+		else
+		{
+		    nexp++;
+		}
+	    }
+	    // last block
+	    m_expCommonNcoeffs.push_back(pair<int,int>(nexp,ncoeffs));
 	}
         
 
@@ -1010,15 +1029,41 @@ namespace Nektar
             NekVector<NekDouble> F_LocBnd(nLocBndDofs,pLocal,eWrapper);
             m_map = m_locToGloMap->GetLocalToGlobalBndMap();
 
+#if 0
             //Not actually needed but we should only work with the Global boundary dofs
             Array<OneD,NekDouble> tmp(nGlobBndDofs,0.0);
             Vmath::Vcopy(nGlobBndDofs, pInOut.get(), 1, tmp.get(), 1);
 
-            //Global boundary (with dirichlet values) to local boundary with multiplicity
-            Vmath::Gathr(m_map.num_elements(), m_locToGloSignMult.get(), tmp.get(), m_map.get(), pLocal.get());
+            //Global boundary (with dirichlet values) to local
+            //boundary with multiplicity
+            Vmath::Gathr(m_map.num_elements(), m_locToGloSignMult.get(), 
+			 tmp.get(), m_map.get(), pLocal.get());
 
             //Multiply by the block transformation matrix
             F_LocBnd=R*F_LocBnd;
+#else
+            Array<OneD, NekDouble> pLocalIn(nLocBndDofs, 0.0);
+
+            //Global boundary (with dirichlet values) to local
+            //boundary with multiplicity
+            Vmath::Gathr(m_map.num_elements(), m_locToGloSignMult.get(), 
+			 pInOut.get(), m_map.get(), pLocalIn.get());
+
+            //Multiply by the block transformation matrix
+	    int cnt = 0; 
+	    int cnt1 = 0;
+	    for(int i = 0; i < m_expCommonNcoeffs.size(); ++i)
+	      {
+	        int nexp    = m_expCommonNcoeffs[i].first;
+		int ncoeffs = m_expCommonNcoeffs[i].second; 
+		Blas::Dgemm('N','N', ncoeffs, nexp, ncoeffs,
+			    1.0, &(R.GetBlock(cnt1,cnt1)->GetOwnedMatrix()->GetPtr())[0], ncoeffs,
+			    pLocalIn.get() + cnt,  ncoeffs, 
+			    0.0, pLocal.get() + cnt, ncoeffs);
+		cnt  += ncoeffs*nexp;
+		cnt1 += nexp;
+	    }
+#endif
 
             //Assemble local boundary to global non-dirichlet Dofs
             m_locToGloMap->AssembleBnd(F_LocBnd,F_HomBnd, nDirBndDofs);
@@ -1063,12 +1108,32 @@ namespace Nektar
             Array<OneD,NekDouble> tmp(nGlobBndDofs,0.0);
             Vmath::Vcopy(nGlobHomBndDofs, pInput.get(), 1, tmp.get() + nDirBndDofs, 1);
             
+#if 0 
             //Global boundary dofs (with zeroed dirichlet values) to local boundary dofs
             Vmath::Gathr(m_map.num_elements(), m_locToGloSignMult.get(), tmp.get(), m_map.get(), pLocal.get());
 
             //Multiply by the block transformation matrix
             F_LocBnd=R*F_LocBnd;
+#else
+            Array<OneD,NekDouble> pLocalIn(nGlobBndDofs,0.0);
+            //Global boundary dofs (with zeroed dirichlet values) to local boundary dofs
+            Vmath::Gathr(m_map.num_elements(), m_locToGloSignMult.get(), tmp.get(), m_map.get(), pLocalIn.get());
 
+            //Multiply by the block transformation matrix
+	    int cnt = 0; 
+	    int cnt1 = 0;
+	    for(int i = 0; i < m_expCommonNcoeffs.size(); ++i)
+	      {
+	        int nexp    = m_expCommonNcoeffs[i].first;
+		int ncoeffs = m_expCommonNcoeffs[i].second; 
+		Blas::Dgemm('N','N', ncoeffs, nexp, ncoeffs,
+			    1.0, &(R.GetBlock(cnt1,cnt1)->GetOwnedMatrix()->GetPtr())[0], ncoeffs,
+			    pLocalIn.get() + cnt,  ncoeffs, 
+			    0.0, pLocal.get() + cnt, ncoeffs);
+		cnt  += ncoeffs*nexp;
+		cnt1 += nexp;
+	    }
+#endif
             //Assemble local boundary to global non-dirichlet boundary
             m_locToGloMap->AssembleBnd(F_LocBnd,F_HomBnd,nDirBndDofs);
         }
@@ -1104,12 +1169,34 @@ namespace Nektar
             m_map = m_locToGloMap->GetLocalToGlobalBndMap();
             Array<OneD,NekDouble> tmp(nGlobBndDofs,0.0);
 
+#if 0 
             //Global boundary (less dirichlet) to local boundary
             m_locToGloMap->GlobalToLocalBnd(V_GlobHomBnd,V_LocBnd, nDirBndDofs);
 
             //Multiply by the block transposed transformation matrix
             V_LocBnd=RT*V_LocBnd;
+#else
+            Array<OneD, NekDouble> pLocalIn(nLocBndDofs, 0.0);
+            NekVector<NekDouble> V_LocBndIn(nLocBndDofs,pLocalIn,eWrapper);
 
+            //Global boundary (less dirichlet) to local boundary
+            m_locToGloMap->GlobalToLocalBnd(V_GlobHomBnd,V_LocBndIn, nDirBndDofs);
+
+            //Multiply by the block transformation matrix
+	    int cnt = 0; 
+	    int cnt1 = 0;
+	    for(int i = 0; i < m_expCommonNcoeffs.size(); ++i)
+	      {
+	        int nexp    = m_expCommonNcoeffs[i].first;
+		int ncoeffs = m_expCommonNcoeffs[i].second; 
+		Blas::Dgemm('N','N', ncoeffs, nexp, ncoeffs,
+			    1.0, &(RT.GetBlock(cnt1,cnt1)->GetOwnedMatrix()->GetPtr())[0], ncoeffs,
+			    pLocalIn.get() + cnt,  ncoeffs, 
+			    0.0, pLocal.get() + cnt, ncoeffs);
+		cnt  += ncoeffs*nexp;
+		cnt1 += nexp;
+	    }
+#endif
 
             //Assemble local boundary to global boundary
             Vmath::Assmb(nLocBndDofs, m_locToGloSignMult.get(),pLocal.get(), m_map.get(), tmp.get());
@@ -1155,12 +1242,33 @@ namespace Nektar
             Array<OneD,NekDouble> tmp(nGlobBndDofs,0.0);
             Vmath::Vcopy(nGlobHomBndDofs, pInput.get(), 1, tmp.get() + nDirBndDofs, 1);
 
+#if 0 
             //Global boundary dofs (with zeroed dirichlet values) to local boundary dofs
             Vmath::Gathr(m_map.num_elements(), m_locToGloSignMult.get(), tmp.get(), m_map.get(), pLocal.get());
 
             //Multiply by block inverse transformation matrix
             F_LocBnd=invR*F_LocBnd;
+#else
+            Array<OneD, NekDouble> pLocalIn(nLocBndDofs, 0.0);
 
+            //Global boundary dofs (with zeroed dirichlet values) to local boundary dofs
+            Vmath::Gathr(m_map.num_elements(), m_locToGloSignMult.get(), tmp.get(), m_map.get(), pLocalIn.get());
+
+            //Multiply by the block transformation matrix
+	    int cnt = 0; 
+	    int cnt1 = 0;
+	    for(int i = 0; i < m_expCommonNcoeffs.size(); ++i)
+	      {
+	        int nexp    = m_expCommonNcoeffs[i].first;
+		int ncoeffs = m_expCommonNcoeffs[i].second; 
+		Blas::Dgemm('N','N', ncoeffs, nexp, ncoeffs,
+			    1.0, &(invR.GetBlock(cnt1,cnt1)->GetOwnedMatrix()->GetPtr())[0], ncoeffs,
+			    pLocalIn.get() + cnt,  ncoeffs, 
+			    0.0, pLocal.get() + cnt, ncoeffs);
+		cnt  += ncoeffs*nexp;
+		cnt1 += nexp;
+	    }
+#endif 
             //Assemble local boundary to global non-dirichlet boundary
             m_locToGloMap->AssembleBnd(F_LocBnd,F_HomBnd,nDirBndDofs);
 
@@ -1194,11 +1302,31 @@ namespace Nektar
             NekVector<NekDouble> F_LocBnd(nLocBndDofs,pLocal,eWrapper);
             m_map = m_locToGloMap->GetLocalToGlobalBndMap();
 
+#if 0
             m_locToGloMap->GlobalToLocalBnd(pInput,pLocal, nDirBndDofs);
 
             //Multiply by the block transposed transformation matrix
             F_LocBnd=invRT*F_LocBnd;
+#else
+            Array<OneD, NekDouble> pLocalIn(nLocBndDofs, 0.0);
 
+            m_locToGloMap->GlobalToLocalBnd(pInput,pLocalIn, nDirBndDofs);
+
+            //Multiply by the block transformation matrix
+	    int cnt = 0; 
+	    int cnt1 = 0;
+	    for(int i = 0; i < m_expCommonNcoeffs.size(); ++i)
+	      {
+	        int nexp    = m_expCommonNcoeffs[i].first;
+		int ncoeffs = m_expCommonNcoeffs[i].second; 
+		Blas::Dgemm('N','N', ncoeffs, nexp, ncoeffs,
+			    1.0, &(invRT.GetBlock(cnt1,cnt1)->GetOwnedMatrix()->GetPtr())[0], ncoeffs,
+			    pLocalIn.get() + cnt,  ncoeffs, 
+			    0.0, pLocal.get() + cnt, ncoeffs);
+		cnt  += ncoeffs*nexp;
+		cnt1 += nexp;
+	    }
+#endif
             m_locToGloMap->AssembleBnd(pLocal,pOutput, nDirBndDofs);
 
             Vmath::Vmul(nGlobHomBndDofs,pOutput,1,m_multiplicity,1,pOutput,1);
