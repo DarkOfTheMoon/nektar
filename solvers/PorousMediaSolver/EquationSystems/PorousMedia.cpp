@@ -125,19 +125,23 @@ namespace Nektar
             // check to see if any user defined boundary condition is
             // indeed implemented
             for(int n = 0; n < m_fields[0]->GetBndConditions().num_elements(); ++n)
-            {	
+            {
                 // Time Dependent Boundary Condition (if no user
                 // defined then this is empty)
-                if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() != SpatialDomains::eNoUserDefined)
-                {
-                    if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() != SpatialDomains::eTimeDependent)
-                    {                     	     
-                        if(m_fields[0]->GetBndConditions()[n]->GetUserDefined() != SpatialDomains::eI)
-                        {  	 	 
-                            ASSERTL0(false,"Unknown USERDEFINEDTYPE boundary condition");
-                        }
-                    }
-                }
+                ASSERTL0 (
+                    m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
+                    SpatialDomains::eNoUserDefined ||
+                    m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
+                    SpatialDomains::eWall_Forces ||
+                    m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
+                    SpatialDomains::eTimeDependent ||
+                    m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
+                    SpatialDomains::eRadiation ||
+                    m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
+                    SpatialDomains::eI ||
+                    m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
+                    SpatialDomains::eHighOutflow,
+                    "Unknown USERDEFINEDTYPE boundary condition");
             }
             break;
         case eNoEquationType:
@@ -145,14 +149,17 @@ namespace Nektar
             ASSERTL0(false,"Unknown or undefined equation type");
         }
 
+        // Initialise advection
+        m_advObject = GetAdvectionTermFactory().CreateInstance("NoAdvection", m_session, m_graph);
 
-        //m_darcyEvaluation=GetDarcyTermFactory().CreateInstance(DarcyTermMethodStr[m_darcyType],m_session,m_fields);
-        m_darcyEvaluation=GetDarcyTermFactory().CreateInstance("Explicit",m_session,m_fields);
+        m_darcyEvaluation=GetDarcyTermFactory().CreateInstance(DarcyTermMethodStr[m_darcyType],m_session,m_fields);
+        cout<<"Permeability advacement: "<<DarcyTermMethodStr[m_darcyType]<<endl;
+        //m_darcyEvaluation=GetDarcyTermFactory().CreateInstance("Explicit",m_session,m_fields);
 
         //Setup permeability matrix
         m_darcyEvaluation->SetupPermeability();
 
-        //Set Darcy factor for implicit step
+        /*     //Set Darcy factor for implicit step
         m_darcy_fac = Array<OneD, NekDouble> (3*(m_spacedim-1));
         m_darcyEvaluation->GetImplicitDarcyFactor(m_darcy_fac);
 
@@ -169,269 +176,15 @@ namespace Nektar
 
         // Inverted Permeability Matrix
         //m_perm_inv = Array<OneD, NekDouble> (3*(m_spacedim-1));
-
-        //Setup of spatially varying anisotropic permeability
-        if(m_session->DefinesFunction("SpatialAnisotropicPermeability"))
-        {
-            ASSERTL0(m_explicitPermeability,"implicit spatially varying permeability not implemented");
-
-            int nq = m_fields[0]->GetNpoints();
-            
-            if (m_spacedim == 2)
-            {
-                std::string varCoeffs[2] = {
-                    "kxx",
-                    "kyy",
-                };
-
-                Array<OneD, NekDouble> vTemp;
-                for (int i = 0; i < m_spacedim; ++i)
-                {
-                    EvaluateFunction(varCoeffs[0], vTemp, "SpatialAnisotropicPermeability");
-                    m_spatialperm[i] = Array<OneD, NekDouble>(nq);
-                    Vmath::Sdiv(nq,1.0,vTemp,1,m_spatialperm[i],1);
-                }
+        */
+        m_extrapolation = MemoryManager<Extrapolate>::AllocateSharedPtr(
+            m_session,
+            m_fields,
+            m_pressure,
+            m_velocity);
+        cout<<"after extrapolate"<<endl;
 
 
-                //------------------------------------------------
-                //Coordinate arrays
-                Array<OneD, NekDouble> x1(nq,0.0);
-                Array<OneD, NekDouble> y1(nq,0.0);
-                Array<OneD, NekDouble> z1(nq,0.0);
-                
-                //coordinates of quadrature points
-                m_fields[0]->GetCoords(x1,y1,z1);
-
-                NekDouble scalefac = 100.0;
-                for(int n=0; n<nq; ++n)
-                {
-                    NekDouble x=x1[n];
-                    NekDouble y=y1[n];
-                    NekDouble z=z1[n];
-
-                    NekDouble x1=-0.328;
-                    NekDouble y1=-0.328;
-                    NekDouble x2=0.328;
-                    NekDouble y2=0.328;
-
-                    NekDouble r1=sqrt((x-x1)*(x-x1)+(y-y1)*(y-y1));
-                    NekDouble r2=sqrt((x-0)*(x-0)+(y-y1)*(y-y1));
-                    NekDouble r3=sqrt((x-x2)*(x-x2)+(y-y1)*(y-y1));
-                    NekDouble r4=sqrt((x-x1)*(x-x1)+(y-0)*(y-0));
-                    NekDouble r5=sqrt((x-0)*(x-0)+(y-0)*(y-0));
-                    NekDouble r6=sqrt((x-x2)*(x-x2)+(y-0)*(y-0));
-                    NekDouble r7=sqrt((x-x1)*(x-x1)+(y-y2)*(y-y2));
-                    NekDouble r8=sqrt((x-0)*(x-0)+(y-y2)*(y-y2));
-                    NekDouble r9=sqrt((x-x2)*(x-x2)+(y-y2)*(y-y2));
-
-                    NekDouble r=0.10965874404;
-
-                    if(r1 < r || r2 < r || r3 < r || r4 < r || r5 < r || r6 < r || r7 < r || r8 < r || r9 < r)
-                    {
-                        m_spatialperm[0][n]=m_spatialperm[0][n]*scalefac;
-                        m_spatialperm[1][n]=m_spatialperm[1][n]*scalefac;
-                    }
-
-                }
-                //--------------------------------------------------
-
-                // Transform variable coefficient and write out to file.
-                m_fields[0]->FwdTrans_IterPerExp(m_spatialperm[i],
-                                                 m_fields[0]->UpdateCoeffs());
-                std::stringstream filename;
-                filename << "AnisotropicPerm_" << varCoeffs[i];
-                if (m_comm->GetSize() > 1)
-                {
-                    filename << "_P" << m_comm->GetRank();
-                }
-                filename << ".fld";
-                WriteFld(filename.str());
-                
-            }
-            if(m_spacedim == 3)
-            {
-                //std::string varName = "k";
-                std::string varCoeffs[3] = {
-                    "kxx",
-                    "kyy",
-                    "kzz",
-                }; 
-
-
-                Array<OneD, NekDouble> vTemp;
-                for (int i = 0; i < m_spacedim; ++i)
-                {
-                    EvaluateFunction(varCoeffs[0], vTemp, "SpatialAnisotropicPermeability");
-                    m_spatialperm[i] = Array<OneD, NekDouble>(nq);
-                    Vmath::Sdiv(nq,1.0,vTemp,1,m_spatialperm[i],1);
-
-                    /*for(j=0; j<nq; ++j)
-                    {
-                        if(m_spatialperm[i][j]>5)
-                        {
-                            m_spatialperm[i][j]=5000;
-                            cout<<"here"<<endl;
-                        }
-                    }
-                    cout<<endl;*/
-
-                }
-
-
-
-                //Coordinate arrays
-                Array<OneD, NekDouble> xc0(nq,0.0);
-                Array<OneD, NekDouble> xc1(nq,0.0);
-                Array<OneD, NekDouble> xc2(nq,0.0);
-                
-                //coordinates of quadrature points
-                m_fields[0]->GetCoords(xc0,xc1,xc2);
-
-                //NekDouble scalefac = 0.0;
-                NekDouble scalefac = 10.0;
-                for(int n=0; n<nq; ++n)
-                {
-                    NekDouble x=xc0[n];
-                    NekDouble y=xc1[n];
-                    NekDouble z=xc2[n];
-                    
-                    NekDouble r=sqrt((x-0.5)*(x-0.5)+(y-0.5)*(y-0.5)+(z-0.5)*(z-0.5));
-
-                    if(r<0.125)
-                    {
-                        cout<<"x: "<<x<<"y: "<<y<<"z: "<<z<<endl;
-                        m_spatialperm[0][n]=m_spatialperm[0][n]*scalefac;
-                        m_spatialperm[1][n]=m_spatialperm[1][n]*scalefac;
-                        m_spatialperm[2][n]=m_spatialperm[2][n]*scalefac;
-                    }
-                }
-
-            }
-        }
-        else if (m_session->DefinesFunction("AnisotropicPermeability"))
-        {
-            /*if (m_spacedim == 2)
-            {
-                std::string varCoeffs[3] = {
-                    "kxx",
-                    "kyy",
-                    "kxy"
-                };
-                for (int i = 0; i < (3*(m_spacedim-1)); ++i)
-                {
-                    ASSERTL0(m_session->DefinesFunction("AnisotropicPermeability", varCoeffs[i]),
-                             "Function '" + varCoeffs[i] + "' not correctly defined.");
-                    m_perm[i] = m_session->GetFunction("AnisotropicPermeability", varCoeffs[i])->Evaluate();
-                }
-
-                NekDouble detTemp = m_perm[0]*m_perm[1]-m_perm[2]*m_perm[2];
-                
-                // Check if permeability matrix is positive definite
-                ASSERTL0(m_perm[0] > 0,"Permeability Matrix is not positive definite");
-                ASSERTL0(detTemp > 0,"Permeability Matrix is not positive definite");
-            
-                m_perm_inv[0] = m_perm[1];
-                m_perm_inv[1] = m_perm[0];
-                m_perm_inv[2] = -m_perm[2];
-                Vmath::Smul(3, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
-            }
-            else
-            {
-                std::string varCoeffs[6] = {
-                    "kxx",
-                    "kyy",
-                    "kzz",
-                    "kxy",
-                    "kxz",
-                    "kyz"
-                };                
-                for (int i = 0; i < (3*(m_spacedim-1)); ++i)
-                {
-                    ASSERTL0(m_session->DefinesFunction("AnisotropicPermeability", varCoeffs[i]),
-                             "Function '" + varCoeffs[i] + "' not correctly defined.");
-                    m_perm[i] = m_session->GetFunction("AnisotropicPermeability", varCoeffs[i])->Evaluate();
-                }
-
-                NekDouble detTemp = m_perm[0]*(m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5])
-                    -m_perm[3]*(m_perm[2]*m_perm[3]-m_perm[4]*m_perm[5])
-                    +m_perm[4]*(m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4]);
-                
-                // Check if permeability matrix is positive definite
-                ASSERTL0(m_perm[0] > 0,"Permeability Matrix is not positive definite");
-                NekDouble pd_chk = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
-                ASSERTL0(pd_chk > 0,"Permeability Matrix is not positive definite");
-                ASSERTL0(detTemp > 0,"Permeability Matrix is not positive definite");
-
-                m_perm_inv[0] = m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5];
-                m_perm_inv[1] = m_perm[0]*m_perm[2]-m_perm[4]*m_perm[4];
-                m_perm_inv[2] = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
-                m_perm_inv[3] = m_perm[4]*m_perm[5]-m_perm[2]*m_perm[3];
-                m_perm_inv[4] = m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4];
-                m_perm_inv[5] = m_perm[3]*m_perm[4]-m_perm[0]*m_perm[5];
-                
-                Vmath::Smul(6, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
-            }*/
-        }
-        else if (m_session->DefinesParameter("Permeability"))
-        {
-            NekDouble kTemp;
-            m_session->LoadParameter("Permeability", kTemp);
-            
-            for (int i = 0; i < m_spacedim; ++i)
-            {
-                cout<<"i: "<<i<<endl;
-                m_perm[i] = kTemp;
-            }
-
-            cout<<"m_spacedim: "<<m_spacedim<<endl;
-
-            for (int i = (m_spacedim+1); i < (3*(m_spacedim-1)); ++i)
-            {
-                cout<<"i: "<<i<<endl;
-                m_perm[i] = 0;
-            }
-
-            NekDouble detTemp = m_perm[0]*(m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5])
-                -m_perm[3]*(m_perm[2]*m_perm[3]-m_perm[4]*m_perm[5])
-                +m_perm[4]*(m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4]);
-            
-            // Check if permeability matrix is positive definite
-            ASSERTL0(m_perm[0] > 0,"Permeability Matrix is not positive definite");
-            NekDouble pd_chk = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
-            ASSERTL0(pd_chk > 0,"Permeability Matrix is not positive definite");
-            ASSERTL0(detTemp > 0,"Permeability Matrix is not positive definite");
-            
-            m_perm_inv[0] = m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5];
-            m_perm_inv[1] = m_perm[0]*m_perm[2]-m_perm[4]*m_perm[4];
-            m_perm_inv[2] = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
-            m_perm_inv[3] = m_perm[4]*m_perm[5]-m_perm[2]*m_perm[3];
-            m_perm_inv[4] = m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4];
-            m_perm_inv[5] = m_perm[3]*m_perm[4]-m_perm[0]*m_perm[5];
-
-            for(int i=0; i<6; ++i)
-            {
-                cout<<"perm"<<m_perm_inv[i]<<endl;
-            }
-            
-            Vmath::Smul(6, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
-        }
-        else
-        {
-            ASSERTL0(0,"Permeability not defined");
-        }
-
-        std::string vConvectiveType = "NoAdvection";
-        m_advObject = GetAdvectionTermFactory().CreateInstance(vConvectiveType, m_session, m_graph);
-	
-#if 0 // Not required if building on an UnsteadySystem rather than an EquationSystem
-        // Set up filters
-        LibUtilities::FilterMap::const_iterator x;
-        LibUtilities::FilterMap f = m_session->GetFilters();
-        for (x = f.begin(); x != f.end(); ++x)
-        {
-            m_filters.push_back(SolverUtils::GetFilterFactory().CreateInstance(x->first, m_session, x->second));
-        }
-#endif
     }
 
     PorousMedia::~PorousMedia(void)

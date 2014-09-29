@@ -1,5 +1,4 @@
 ADD_UTILITIES_EXECUTABLE(AddModeTo2DFld    util AddModeTo2DFld.cpp)
-ADD_UTILITIES_EXECUTABLE(CalcEffPerm       util CalcEffPerm.cpp)
 ADD_UTILITIES_EXECUTABLE(CombinePartitions util-extra CombinePartitions.cpp)
 ADD_UTILITIES_EXECUTABLE(ExtractMeanModeFromHomo1DFld  util ExtractMeanModeFromHomo1DFld.cpp)
 ADD_UTILITIES_EXECUTABLE(ExtractSurface2DCFS  util ExtractSurface2DCFS.cpp)

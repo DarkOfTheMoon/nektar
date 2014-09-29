@@ -40,6 +40,7 @@
 #include <IncNavierStokesSolver/AdvectionTerms/AdvectionTerm.h>
 #include <LibUtilities/BasicUtils/SessionReader.h>
 #include <PorousMediaSolver/EquationSystems/DarcyTerm.h>
+#include <PorousMediaSolver/EquationSystems/Extrapolate.h>
 
 namespace Nektar
 {     
@@ -128,12 +129,15 @@ namespace Nektar
         /// Advection term
         AdvectionTermSharedPtr m_advObject;
 
+        ExtrapolateSharedPtr m_extrapolation;
+
         /// Number of fields to be convected; 
         int   m_nConvectiveFields;  
 
         /// int which identifies which components of m_fields contains the velocity (u,v,w);
         Array<OneD, int> m_velocity; 
  
+
         /// Pointer to field holding pressure field
         MultiRegions::ExpListSharedPtr m_pressure;  
         

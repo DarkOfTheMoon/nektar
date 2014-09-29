@@ -184,10 +184,10 @@ namespace Nektar
         }
     }
 
-    Array<OneD, NekDouble> DarcyTermExplicit::v_GetInversePermeability()
+    /*Array<OneD, NekDouble> DarcyTermExplicit::v_GetInversePermeability()
     {
         return m_perm_inv;
-    }
+        }*/
 
     void DarcyTermExplicit::v_GetImplicitDarcyFactor(
         Array<OneD, NekDouble> &permCoeff)
