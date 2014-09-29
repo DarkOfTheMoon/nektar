@@ -1302,7 +1302,7 @@ namespace Nektar
             NekVector<NekDouble> F_LocBnd(nLocBndDofs,pLocal,eWrapper);
             m_map = m_locToGloMap->GetLocalToGlobalBndMap();
 
-#if 0
+#if 1
             m_locToGloMap->GlobalToLocalBnd(pInput,pLocal, nDirBndDofs);
 
             //Multiply by the block transposed transformation matrix
