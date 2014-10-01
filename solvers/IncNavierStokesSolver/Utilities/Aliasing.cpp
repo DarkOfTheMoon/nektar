@@ -66,13 +66,42 @@ int main(int argc, char *argv[])
                                             IncNav->GetVelocity(), VelFields, 
                                             NonLinearDealiased, 0.0);
 
+        Array<OneD, NekDouble> MagNonLinear(nphys,0);
         // Evaulate Difference and put into fields;
         for(i = 0; i < nConvectiveFields; ++i)
         {
             Vmath::Vsub(nphys,NonLinearDealiased[i],1,NonLinear[i],1,NonLinear[i],1);
+            Vmath::Vvtvp(nphys,NonLinearDealiased[i],1,NonLinearDealiased[i],1,
+                         MagNonLinear,1);
+        }
+
+        // normalise error by Dealiased magnitude if(MagNonLinear > 1) otherwise set to zero
+        for(int j = 0; j < nphys; ++j)
+        {
+            if(MagNonLinear[j] > 1)
+            {
+                for(i = 0; i < nConvectiveFields; ++i)
+                {
+                    NonLinear[i][j] /= NonLinearDealiased[i][j];
+                }
+            }
+            else
+            {
+                for(i = 0; i < nConvectiveFields; ++i)
+                {
+                    NonLinear[i][j]  = 0.0;;
+                }
+            }
+        }
+
+
+        // Puterror into fields;
+        for(i = 0; i < nConvectiveFields; ++i)
+        {
+
             fields[i]->FwdTrans_IterPerExp(NonLinear[i],fields[i]->UpdateCoeffs());
             // Need to reset varibale name for output
-            string name = "NL_Aliasing_"+session->GetVariable(i);
+            string name = "NL_AliasingError_"+session->GetVariable(i);
             session->SetVariable(i,name.c_str());
         }
 
