@@ -42,6 +42,16 @@ namespace Nektar
 {
     namespace SpatialDomains
     {
+		
+		BoundaryConditionsFactory& GetBoundaryConditionsFactory()
+        {
+            typedef Loki::SingletonHolder<BoundaryConditionsFactory,
+			Loki::CreateUsingNew,
+			Loki::NoDestroy > Type;
+            return Type::Instance();
+        }
+		
+		
         BoundaryConditions::BoundaryConditions(const LibUtilities::SessionReaderSharedPtr &pSession, const MeshGraphSharedPtr &meshGraph)
             : m_meshGraph(meshGraph), 
               m_session  (pSession)
@@ -192,15 +202,20 @@ namespace Nektar
                     std::string attrName;
 
                     attrData = conditionElement->Attribute("VAR");
-
+					
                     if (!attrData.empty())
                     {
                         iter = std::find(vars.begin(), vars.end(), attrData);
                         ASSERTL0(iter != vars.end(), (std::string("Cannot find variable: ") + attrData).c_str());
                     }
 
+					//I need to create an instance of the new Boundary condition here through the factory
+					
+					
                     if (conditionType == "N")
                     {
+						
+						
                         if (attrData.empty())
                         {
                             // All variables are Neumann and are set to zero.
@@ -274,6 +289,7 @@ namespace Nektar
                     }
                     else if (conditionType == "D")
                     {
+						/*
                         if (attrData.empty())
                         {
                             // All variables are Dirichlet and are set to zero.
@@ -341,7 +357,8 @@ namespace Nektar
                                 BoundaryConditionShPtr dirichletCondition(MemoryManager<DirichletBoundaryCondition>::AllocateSharedPtr(m_session, "0"));
                                 (*boundaryConditions)[*iter]  = dirichletCondition;
                             }
-                        }
+                        }*/
+						 
                     }
                     else if (conditionType == "R") // Read du/dn +  PRIMCOEFF u = VALUE
                     {

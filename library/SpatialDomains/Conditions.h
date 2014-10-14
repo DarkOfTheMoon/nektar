@@ -50,6 +50,19 @@ namespace Nektar
 
     namespace SpatialDomains
     {
+		class BoundaryConditionBase;
+		
+		/// Declaration of the boundary condition factory
+		typedef LibUtilities::NekFactory< 
+		std::pair<std::string,std::string>,
+		BoundaryConditionBase,
+		const LibUtilities::SessionReaderSharedPtr&,
+		const TiXmlElement*,
+		std::string,
+		std::string> BoundaryConditionsFactory;
+	
+		SPATIAL_DOMAINS_EXPORT BoundaryConditionsFactory& GetBoundaryConditionsFactory();
+
         enum BoundaryConditionType
         {
             eDirichlet,
@@ -195,7 +208,33 @@ namespace Nektar
 
         struct DirichletBoundaryCondition : public BoundaryConditionBase
         {
+			
+		
+			DirichletBoundaryCondition(const LibUtilities::SessionReaderSharedPtr &pSession,
+									   const TiXmlElement* pBoundaryConditions):
+			BoundaryConditionBase(eDirichlet, std::string(""))
+		    {
+				 TiXmlAttribute *attr = pBoundaryConditions->FirstAttribute();
+			     std::vector<std::string>::iterator iter;
+				 std::string attrName;
+				 std::vector<std::string> vars = pSession->GetVariables();
+				 std::string attrData = pBoundaryConditions->Attribute("VAR");
+				
+				if (!attrData.empty())
+				{
+					iter = std::find(vars.begin(), vars.end(), attrData);
+					ASSERTL0(iter != vars.end(), (std::string("Cannot find variable: ") + attrData).c_str());
+				}
+				
+				 const std::string& eqn=std::string("a");
+			      
+				 LibUtilities::Equation m_dirichletCondition(pSession, eqn);
 
+			}
+		
+
+			
+			/*
             DirichletBoundaryCondition(
                 const LibUtilities::SessionReaderSharedPtr &pSession,
                 const std::string& eqn,
@@ -205,14 +244,32 @@ namespace Nektar
                     m_dirichletCondition(pSession, eqn),
                     m_filename(filename)
             {
+				
+				
             }
-
-            LibUtilities::Equation m_dirichletCondition;
+			 */
+		
+           // LibUtilities::Equation m_dirichletCondition;
             std::string m_filename;
         };
 
         struct NeumannBoundaryCondition : public BoundaryConditionBase
         {
+			
+			
+			
+			NeumannBoundaryCondition(const LibUtilities::SessionReaderSharedPtr &pSession,
+									   const TiXmlElement* pBoundaryConditions
+									   ):
+			BoundaryConditionBase(eNeumann, std::string("")),
+			m_neumannCondition(pSession, std::string("a"))
+
+			{
+				
+				//m_dirichletCondition(pSession, eqn),
+				
+			}			
+			
             NeumannBoundaryCondition(
                 const LibUtilities::SessionReaderSharedPtr &pSession,
                 const std::string& eqn,
@@ -222,7 +279,8 @@ namespace Nektar
                     m_neumannCondition(pSession, eqn),
                     m_filename(filename)
             {
-            }
+				
+            } 
 
             LibUtilities::Equation m_neumannCondition;
             std::string m_filename;
@@ -230,7 +288,19 @@ namespace Nektar
 
         struct RobinBoundaryCondition : public BoundaryConditionBase
         {
-            RobinBoundaryCondition(
+            
+			RobinBoundaryCondition(const LibUtilities::SessionReaderSharedPtr &pSession,
+									 const TiXmlElement* pBoundaryConditions
+									 ):
+			BoundaryConditionBase(eRobin, std::string("")),
+			m_robinFunction(pSession, std::string("a")),
+			m_robinPrimitiveCoeff(pSession, std::string("b"))
+			{
+				
+				
+			}	
+			
+			RobinBoundaryCondition(
                 const LibUtilities::SessionReaderSharedPtr &pSession,
                 const std::string &a,
                 const std::string &b,
@@ -252,6 +322,18 @@ namespace Nektar
 
         struct PeriodicBoundaryCondition : public BoundaryConditionBase
         {
+			
+			PeriodicBoundaryCondition(const LibUtilities::SessionReaderSharedPtr &pSession,
+									 const TiXmlElement* pBoundaryConditions
+									 ):
+			BoundaryConditionBase(ePeriodic, "")
+			{
+				
+				//m_dirichletCondition(pSession, eqn),
+				
+			}	
+			
+			
             PeriodicBoundaryCondition(const unsigned int n):
                 BoundaryConditionBase(ePeriodic),
                 m_connectedBoundaryRegion(n)
@@ -264,6 +346,7 @@ namespace Nektar
         struct NotDefinedBoundaryCondition : public BoundaryConditionBase
         {
             
+		
                NotDefinedBoundaryCondition(
                     const LibUtilities::SessionReaderSharedPtr &pSession,
                     const std::string& eqn,
@@ -277,6 +360,7 @@ namespace Nektar
 
             LibUtilities::Equation m_notDefinedCondition;
             std::string m_filename;
+			 
         };
 
 

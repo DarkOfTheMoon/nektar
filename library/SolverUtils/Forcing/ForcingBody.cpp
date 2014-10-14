@@ -46,8 +46,8 @@ namespace SolverUtils
                                                         ForcingBody::create,
                                                         "Body Forcing");
 
-    ForcingBody::ForcingBody(
-            const LibUtilities::SessionReaderSharedPtr& pSession)
+
+	const LibUtilities::SessionReaderSharedPtr& pSession)
         : Forcing(pSession)
     {
     }
