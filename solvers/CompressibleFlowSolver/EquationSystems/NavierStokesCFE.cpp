@@ -100,13 +100,50 @@ namespace Nektar
         bool dumpInitialConditions,
         const int domain)
     {
-        EquationSystem::v_SetInitialConditions(initialtime, false);
+        const int nPoints = m_fields[0]->GetNpoints();
 
-        // insert white noise in initial condition
+        if (m_session->DefinesFunction("IncompressibleIC"))
+        {
+            // Evaluate velocity and pressure fields.
+
+            Array<OneD, NekDouble> u(nPoints), v(nPoints), p(nPoints);
+            EvaluateFunction("u", u, "IncompressibleIC", initialtime);
+            EvaluateFunction("v", v, "IncompressibleIC", initialtime);
+            EvaluateFunction("p", p, "IncompressibleIC", initialtime);
+
+            // rho = p / (GasConstant * Tinf)
+            Vmath::Smul(nPoints, 1.0/m_gasConstant/m_Twall, p, 1, m_fields[0]->UpdatePhys(), 1);
+            // rhou = rho * u
+            Vmath::Vmul(nPoints, m_fields[0]->GetPhys(), 1, u, 1, m_fields[1]->UpdatePhys(), 1);
+            // rhov = rho * v
+            Vmath::Vmul(nPoints, m_fields[0]->GetPhys(), 1, v, 1, m_fields[2]->UpdatePhys(), 1);
+            // E = p / (Gamma-1) + 0.5 * rho * ||u||^2
+            for (int i = 0; i < nPoints; ++i)
+            {
+                m_fields[3]->UpdatePhys()[i] = 1.0 / (m_gamma-1.0)
+                    + m_fields[0]->GetPhys()[i] + (u[i]*u[i] + v[i]*v[i]);
+            }
+            /*
+            Vmath::Vvtvvtp(nPoints, u, 1, u, 1, v, 1, v, 1, m_fields[3]->UpdatePhys(), 1);
+            Vmath::Vmul   (nPoints, m_fields[0]->GetPhys(), 1, m_fields[3]->GetPhys(), 1,
+                           m_fields[3]->UpdatePhys(), 1);
+            Vmath::Smul   (nPoints, 0.5, m_fields[3]->GetPhys(), 1, m_fields[3]->UpdatePhys(), 1);
+            Vmath::Sadd   (nPoints, 1.0 / (m_gamma-1.0), p, 1, m_fields[3]->UpdatePhys(), 1);
+            */
+
+            for (int i = 0; i < m_fields.num_elements(); ++i)
+            {
+                m_fields[i]->FwdTrans_IterPerExp(
+                    m_fields[i]->GetPhys(), m_fields[i]->UpdateCoeffs());
+            }
+        }
+        else
+        {
+            EquationSystem::v_SetInitialConditions(initialtime, false);
+        }
+
         NekDouble Noise;
-        int phystot = m_fields[0]->GetTotPoints();
-        Array<OneD, NekDouble> noise(phystot);
-
+        Array<OneD, NekDouble> noise(nPoints);
         m_session->LoadParameter("Noise", Noise,0.0);
         int m_nConvectiveFields =  m_fields.num_elements();
 
