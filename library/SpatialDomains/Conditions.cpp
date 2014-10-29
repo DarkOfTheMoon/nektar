@@ -215,7 +215,7 @@ namespace Nektar
                     if (conditionType == "N")
                     {
 						
-						
+						/*
                         if (attrData.empty())
                         {
                             // All variables are Neumann and are set to zero.
@@ -285,11 +285,12 @@ namespace Nektar
                                 BoundaryConditionShPtr neumannCondition(MemoryManager<NeumannBoundaryCondition>::AllocateSharedPtr(m_session, "0"));
                                 (*boundaryConditions)[*iter]  = neumannCondition;
                             }
-                        }
+                        }*/
                     }
                     else if (conditionType == "D")
                     {
-						/*
+						
+						/*//start comment
                         if (attrData.empty())
                         {
                             // All variables are Dirichlet and are set to zero.
@@ -357,11 +358,13 @@ namespace Nektar
                                 BoundaryConditionShPtr dirichletCondition(MemoryManager<DirichletBoundaryCondition>::AllocateSharedPtr(m_session, "0"));
                                 (*boundaryConditions)[*iter]  = dirichletCondition;
                             }
-                        }*/
+                        }
+						 //end comment */
 						 
                     }
                     else if (conditionType == "R") // Read du/dn +  PRIMCOEFF u = VALUE
                     {
+						/*
                         if (attrData.empty())
                         {
                             // All variables are Robin and are set to zero.
@@ -450,10 +453,11 @@ namespace Nektar
                                 BoundaryConditionShPtr robinCondition(MemoryManager<RobinBoundaryCondition>::AllocateSharedPtr(m_session, "0", "0"));
                                 (*boundaryConditions)[*iter]  = robinCondition;
                             }
-                        }
+                        }*/
                     }
                     else if (conditionType == "P")
                     {
+						/*
                         if (attrData.empty())
                         {
                             attr = attr->Next();
@@ -524,7 +528,7 @@ namespace Nektar
                             {
                                 ASSERTL0(false, "Periodic boundary conditions should be explicitely defined");
                             }
-                        }
+                        }*/
                     }
                     else if (conditionType == "C")
                     {

@@ -218,6 +218,9 @@ namespace Nektar
             int          m_expr_id;
             AnalyticExpressionEvaluator&  m_evaluator;
         };
+		
+		typedef boost::shared_ptr<Equation> EquationSharedPtr;
+
     }
 }
 
