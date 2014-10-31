@@ -42,7 +42,7 @@ namespace Nektar
 {
     namespace SpatialDomains
     {
-		
+
 		BoundaryConditionsFactory& GetBoundaryConditionsFactory()
         {
             typedef Loki::SingletonHolder<BoundaryConditionsFactory,
@@ -188,7 +188,7 @@ namespace Nektar
 
                 TiXmlElement *conditionElement = regionElement->FirstChildElement();
                 std::vector<std::string> vars = m_session->GetVariables();
-
+				
                 while (conditionElement)
                 {
                     // Check type.
@@ -197,18 +197,11 @@ namespace Nektar
 
                     // All have var specified, or else all variables are zero.
                     TiXmlAttribute *attr = conditionElement->FirstAttribute();
-
-                    std::vector<std::string>::iterator iter;
-                    std::string attrName;
-
-                    attrData = conditionElement->Attribute("VAR");
+					std::string userdefined = conditionElement->Attribute("USERDEFINEDTYPE");
 					
-                    if (!attrData.empty())
-                    {
-                        iter = std::find(vars.begin(), vars.end(), attrData);
-                        ASSERTL0(iter != vars.end(), (std::string("Cannot find variable: ") + attrData).c_str());
-                    }
-
+					BoundaryConditionShPtr m_bnd=GetBoundaryConditionsFactory().CreateInstance(make_pair(conditionType,userdefined),m_session, conditionElement);
+					
+					
 					//I need to create an instance of the new Boundary condition here through the factory
 					
 					

@@ -200,8 +200,8 @@ namespace Nektar
             }
 
         protected:
-            BoundaryConditionType m_boundaryConditionType;
-            BndUserDefinedType    m_userDefined;
+            BoundaryConditionType  m_boundaryConditionType;
+            BndUserDefinedType     m_userDefined;
         };
 
 
