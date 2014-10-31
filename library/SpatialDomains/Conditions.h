@@ -442,6 +442,8 @@ namespace Nektar
             std::string m_filename;
         };
 
+		
+		//Periodic need to set up extra parameters...from xml file
 
         struct PeriodicBoundaryCondition : public BoundaryConditionBase
         {
