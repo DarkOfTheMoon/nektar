@@ -351,7 +351,7 @@ namespace Nektar
         };
         typedef std::map<tKey, ModuleEntry, tPredicator> TMapFactory;
         typedef typename TMapFactory::iterator TMapFactoryIterator;
-
+		
         NekFactory() {}
         
         tBaseSharedPtr CreateInstance(tKey idKey BOOST_PP_COMMA_IF(n)

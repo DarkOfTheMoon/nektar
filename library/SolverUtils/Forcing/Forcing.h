@@ -42,7 +42,7 @@
 #include <LibUtilities/BasicUtils/SharedArray.hpp>
 #include <MultiRegions/ExpList.h>
 #include <SolverUtils/SolverUtilsDeclspec.h>
-g
+
 namespace Nektar
 {
 namespace SolverUtils
@@ -70,6 +70,8 @@ namespace SolverUtils
     class Forcing
     {
         public:
+            SOLVER_UTILS_EXPORT virtual ~Forcing() {}
+
             /// Initialise the forcing object
             SOLVER_UTILS_EXPORT void InitObject(
                 const Array<OneD, MultiRegions::ExpListSharedPtr>&       pFields,

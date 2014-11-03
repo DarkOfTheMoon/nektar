@@ -52,15 +52,17 @@ namespace Nektar
     {
 		class BoundaryConditionBase;
 		
+		std::ostream &operator<<(std::ostream &os, boost::tuple<std::string,std::string> &p);
+		
 		/// Declaration of the boundary condition factory
 		typedef LibUtilities::NekFactory< 
-		std::pair<std::string,std::string>,
+		boost::tuple<std::string,std::string>,
 		BoundaryConditionBase,
 		const LibUtilities::SessionReaderSharedPtr&,
 		const TiXmlElement*> BoundaryConditionsFactory;
 	
 		SPATIAL_DOMAINS_EXPORT BoundaryConditionsFactory& GetBoundaryConditionsFactory();
-
+		
         enum BoundaryConditionType
         {
             eDirichlet,
@@ -216,7 +218,6 @@ namespace Nektar
 			
 				TiXmlAttribute *attr = pBoundaryConditions->FirstAttribute();
 				 
-				
 				 std::vector<std::string>::iterator iter;
 				 std::string attrName;
 				 std::vector<std::string> vars = pSession->GetVariables();

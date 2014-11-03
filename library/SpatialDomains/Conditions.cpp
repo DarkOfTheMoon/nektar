@@ -86,6 +86,13 @@ namespace Nektar
                 ReadBoundaryConditions(conditions);
             }
         }
+		
+		std::ostream &operator<<(std::ostream &os, boost::tuple<std::string,std::string> &p)
+        {
+            os << boost::get<0>(p)  << " "
+			   << boost::get<1>(p);
+            return os;
+        }
 
 
         /**
@@ -194,17 +201,30 @@ namespace Nektar
                     // Check type.
                     std::string conditionType = conditionElement->Value();
                     std::string attrData;
-
+					//for the inner map
+					std::vector<std::string>::iterator iter;
+                    std::string attrName;
+					
+                    attrData = conditionElement->Attribute("VAR");
+					
+                    if (!attrData.empty())
+                    {
+                        iter = std::find(vars.begin(), vars.end(), attrData);
+                        ASSERTL0(iter != vars.end(), (std::string("Cannot find variable: ") + attrData).c_str());
+                    }
+					//end for the inner map
+					
                     // All have var specified, or else all variables are zero.
                     TiXmlAttribute *attr = conditionElement->FirstAttribute();
 					std::string userdefined = conditionElement->Attribute("USERDEFINEDTYPE");
 					
-					//I need to initialise a factory which loops over the elements
-					//and create the pointer to the base (should it be an array of shrPtr?)
-					BoundaryConditionShPtr m_bnd=GetBoundaryConditionsFactory().CreateInstance(make_pair(conditionType,userdefined),m_session, conditionElement);
+					boost::tuple<std::string,std::string> bnd_pair=boost::make_tuple(conditionType,userdefined);
+					BoundaryConditionShPtr bnd=GetBoundaryConditionsFactory().CreateInstance(bnd_pair,m_session, conditionElement);
+					//I need to put bnd it inside a map 
+					(*boundaryConditions)[*iter]=bnd;
+				}						
 					
-										
-					
+				//outer mapping to regions ID
                 m_boundaryConditions[boundaryRegionID] = boundaryConditions;
                 regionElement = regionElement->NextSiblingElement("REGION");
             }
