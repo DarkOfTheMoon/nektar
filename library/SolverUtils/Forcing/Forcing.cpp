@@ -54,9 +54,9 @@ namespace Nektar
         }
 
         void Forcing::InitObject(
-                const Array<OneD, MultiRegions::ExpListSharedPtr>& pFields,
-                const unsigned int& pNumForcingFields,
-                const TiXmlElement* pForce)
+            const Array<OneD, MultiRegions::ExpListSharedPtr>& pFields,
+            const unsigned int& pNumForcingFields,
+            const TiXmlElement* pForce)
         {
             v_InitObject(pFields, pNumForcingFields, pForce);
         }
@@ -68,10 +68,10 @@ namespace Nektar
          * @param   outarray    output array to append forcing to
          */
         void Forcing::Apply(
-                const Array<OneD, MultiRegions::ExpListSharedPtr>& fields,
-                const Array<OneD, Array<OneD, NekDouble> >&        inarray,
-                Array<OneD, Array<OneD, NekDouble> >&              outarray,
-                const NekDouble&                                   time)
+            const Array<OneD, MultiRegions::ExpListSharedPtr>& fields,
+            const Array<OneD, Array<OneD, NekDouble> >&        inarray,
+            Array<OneD, Array<OneD, NekDouble> >&              outarray,
+            const NekDouble&                                   time)
         {
             v_Apply(fields, inarray, outarray, time);
         }
@@ -81,9 +81,9 @@ namespace Nektar
          *
          */
         vector<ForcingSharedPtr> Forcing::Load(
-                            const LibUtilities::SessionReaderSharedPtr& pSession,
-                            const Array<OneD, MultiRegions::ExpListSharedPtr>& pFields,
-                            const unsigned int& pNumForcingFields)
+            const LibUtilities::SessionReaderSharedPtr& pSession,
+            const Array<OneD, MultiRegions::ExpListSharedPtr>& pFields,
+            const unsigned int& pNumForcingFields)
         {
             vector<ForcingSharedPtr> vForceList;
 
@@ -116,11 +116,11 @@ namespace Nektar
         }
 
         void Forcing::EvaluateTimeFunction(
-                LibUtilities::SessionReaderSharedPtr              pSession,
-                std::string                                       pFieldName,
-                Array<OneD, NekDouble>&                           pArray,
-                const std::string&                                pFunctionName,
-                NekDouble                                         pTime)
+            LibUtilities::SessionReaderSharedPtr              pSession,
+            std::string                                       pFieldName,
+            Array<OneD, NekDouble>&                           pArray,
+            const std::string&                                pFunctionName,
+            NekDouble                                         pTime)
         {
             ASSERTL0(pSession->DefinesFunction(pFunctionName),
                      "Function '" + pFunctionName + "' does not exist.");
@@ -137,12 +137,12 @@ namespace Nektar
 
 
         void Forcing::EvaluateFunction(
-                Array<OneD, MultiRegions::ExpListSharedPtr>       pFields,
-                LibUtilities::SessionReaderSharedPtr              pSession,
-                std::string                                       pFieldName,
-                Array<OneD, NekDouble>&                           pArray,
-                const std::string&                                pFunctionName,
-                NekDouble                                         pTime)
+            Array<OneD, MultiRegions::ExpListSharedPtr>       pFields,
+            LibUtilities::SessionReaderSharedPtr              pSession,
+            std::string                                       pFieldName,
+            Array<OneD, NekDouble>&                           pArray,
+            const std::string&                                pFunctionName,
+            NekDouble                                         pTime)
         {
             ASSERTL0(pSession->DefinesFunction(pFunctionName),
                      "Function '" + pFunctionName + "' does not exist.");
@@ -179,7 +179,8 @@ namespace Nektar
                 Vmath::Zero(vCoeffs.num_elements(), vCoeffs, 1);
 
                 LibUtilities::FieldIOSharedPtr fld =
-                    MemoryManager<LibUtilities::FieldIO>::AllocateSharedPtr(m_session->GetComm());
+                    MemoryManager<LibUtilities::FieldIO>::
+                        AllocateSharedPtr(m_session->GetComm());
                 fld->Import(filename, FieldDef, FieldData);
 
                 int idx = -1;

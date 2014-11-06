@@ -40,6 +40,7 @@
 #include <SolverUtils/RiemannSolvers/RiemannSolver.h>
 #include <SolverUtils/Advection/Advection.h>
 #include <SolverUtils/Diffusion/Diffusion.h>
+#include <SolverUtils/Forcing/Forcing.h>
 #include <StdRegions/StdQuadExp.h>
 #include <StdRegions/StdHexExp.h>
 
@@ -80,6 +81,9 @@ namespace Nektar
       
         virtual ~CompressibleFlowSystem();
         
+        /// Add forcing term (body force, adsorbing region, etc.)
+        void AddForcing(const SolverUtils::ForcingSharedPtr& pForce);
+        
         /// Function to calculate the stability limit for DG/CG.
         NekDouble GetStabilityLimit(int n);
         
@@ -89,10 +93,12 @@ namespace Nektar
             const Array<OneD,int> &ExpOrder);
       
     protected:
-        SolverUtils::RiemannSolverSharedPtr m_riemannSolver;
-        SolverUtils::RiemannSolverSharedPtr m_riemannSolverLDG;
-        SolverUtils::AdvectionSharedPtr     m_advection;
-        SolverUtils::DiffusionSharedPtr     m_diffusion;
+        SolverUtils::RiemannSolverSharedPtr        m_riemannSolver;
+        SolverUtils::RiemannSolverSharedPtr        m_riemannSolverLDG;
+        SolverUtils::AdvectionSharedPtr            m_advection;
+        SolverUtils::DiffusionSharedPtr            m_diffusion;
+        std::vector<SolverUtils::ForcingSharedPtr> m_forcing;
+        
         Array<OneD, Array<OneD, NekDouble> >m_vecLocs;
         NekDouble                           m_gamma;
         NekDouble                           m_pInf;
@@ -104,7 +110,7 @@ namespace Nektar
         NekDouble                           m_Twall;
         std::string                         m_ViscosityType;
         std::string                         m_shockCaptureType;
-	std::string                         m_EqTypeStr;
+        std::string                         m_EqTypeStr;
         NekDouble                           m_mu;
         NekDouble                           m_Skappa;
         NekDouble                           m_Kappa;
@@ -121,7 +127,7 @@ namespace Nektar
         StdRegions::StdQuadExpSharedPtr     m_OrthoQuadExp;
         StdRegions::StdHexExpSharedPtr      m_OrthoHexExp;
         bool                                m_smoothDiffusion;
-
+        
         CompressibleFlowSystem(
             const LibUtilities::SessionReaderSharedPtr& pSession);
 
@@ -199,18 +205,18 @@ namespace Nektar
             const Array<OneD, const NekDouble>               &temperature,
                   Array<OneD,       NekDouble>               &entropy);
         void GetSmoothArtificialViscosity(
-                    const Array<OneD, Array<OneD, NekDouble> > &physfield,
-                          Array<OneD,             NekDouble  > &eps_bar);
+            const Array<OneD, Array<OneD, NekDouble> > &physfield,
+                  Array<OneD,             NekDouble  > &eps_bar);
         void GetDynamicViscosity(
             const Array<OneD,                   const NekDouble>  &temperature,
-                  Array<OneD,                         NekDouble  >&mu);
+                  Array<OneD,                         NekDouble>  &mu);
         void GetStdVelocity(
             const Array<OneD, const Array<OneD,       NekDouble> >&inarray,
                   Array<OneD,                         NekDouble>  &stdV);
         void GetSensor(
-            const Array<OneD, const Array<OneD,       NekDouble> > &physarray,
-                  Array<OneD,                         NekDouble>   &Sensor,
-                  Array<OneD,                         NekDouble>   &SensorKappa);
+            const Array<OneD, const Array<OneD,       NekDouble> >&physarray,
+                  Array<OneD,                         NekDouble>  &Sensor,
+                  Array<OneD,                         NekDouble>  &SensorKappa);
         void GetElementDimensions(
                   Array<OneD,       Array<OneD, NekDouble> > &outarray,
                   Array<OneD,       NekDouble > &hmin);
@@ -254,6 +260,8 @@ namespace Nektar
         {
             return m_traceNormals;
         }
+        
+        //virtual int v_GetForceDimension()=0;
 
         virtual void v_ExtraFldOutput(
             std::vector<Array<OneD, NekDouble> > &fieldcoeffs,

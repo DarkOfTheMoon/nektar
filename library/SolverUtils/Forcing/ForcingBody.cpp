@@ -115,8 +115,29 @@ namespace SolverUtils
     {
         for (int i = 0; i < m_NumVariable; i++)
         {
+            /*
+            cout << "i = " << i << endl;
+            for (int j = 0; j < m_Forcing[i].num_elements(); ++j)
+            {
+                cout << "m_Forcing = " << m_Forcing[i][j] << endl;
+            }
+            
+            for (int j = 0; j < outarray[i].num_elements(); ++j)
+            {
+                cout << "outarray1 = " << outarray[i][j] << endl;
+            }*/
+            
             Vmath::Vadd(outarray[i].num_elements(), outarray[i], 1,
                         m_Forcing[i], 1, outarray[i], 1);
+            
+            /*
+            for (int j = 0; j < outarray[i].num_elements(); ++j)
+            {
+                cout << "outarray2 = " << outarray[i][j] << endl;
+            }
+            int num;
+            cin >> num;
+             */
         }
     }
 

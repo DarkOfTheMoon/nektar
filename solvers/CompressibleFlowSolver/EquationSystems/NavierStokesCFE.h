@@ -99,6 +99,8 @@ namespace Nektar
       void SetBoundaryConditions(
         Array<OneD, Array<OneD, NekDouble> >             &physarray, 
         NekDouble                                         time);
+      
+      //virtual int v_GetForceDimension(void);
   };
 }
 #endif

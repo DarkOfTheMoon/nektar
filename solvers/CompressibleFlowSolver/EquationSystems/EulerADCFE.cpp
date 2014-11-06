@@ -161,7 +161,7 @@ namespace Nektar
                             outarray[i], 1);
             }
         }
-        if(m_shockCaptureType == "Smooth")
+        if (m_shockCaptureType == "Smooth")
         {
             const Array<OneD, int> ExpOrder = GetNumExpModesPerExp();
             
@@ -220,6 +220,13 @@ namespace Nektar
                             outarrayForcing[i], 1,
                             outarray[i], 1);
             }
+        }
+        
+        // Add forcing terms
+        std::vector<SolverUtils::ForcingSharedPtr>::const_iterator x;
+        for (x = m_forcing.begin(); x != m_forcing.end(); ++x)
+        {
+            (*x)->Apply(m_fields, inarray, outarray, time);
         }
     }
 
@@ -318,4 +325,9 @@ namespace Nektar
             cnt += m_fields[0]->GetBndCondExpansions()[n]->GetExpSize();
         }
     }
+    /*
+    int EulerADCFE::v_GetForceDimension()
+    {
+        return m_session->GetVariables().size();
+    }*/
 }

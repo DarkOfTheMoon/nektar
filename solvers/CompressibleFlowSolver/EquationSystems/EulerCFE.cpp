@@ -172,6 +172,13 @@ namespace Nektar
         {
             Vmath::Neg(npoints, outarray[i], 1);
         }
+        
+        // Add forcing terms
+        std::vector<SolverUtils::ForcingSharedPtr>::const_iterator x;
+        for (x = m_forcing.begin(); x != m_forcing.end(); ++x)
+        {
+            (*x)->Apply(m_fields, inarray, outarray, time);
+        }
     }
     
     /**
@@ -326,6 +333,12 @@ namespace Nektar
             }
         }
     }
+    
+    /*
+    int EulerCFE::v_GetForceDimension()
+    {
+        return m_session->GetVariables().size();
+    }*/
     
     void EulerCFE::EvaluateIsentropicVortex(
         const Array<OneD, NekDouble>               &x,

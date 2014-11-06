@@ -138,6 +138,8 @@ namespace Nektar
             NekDouble                                        time, 
             int                                              cnt, 
             Array<OneD, Array<OneD, NekDouble> >            &physarray);
+        
+        //virtual int v_GetForceDimension(void);
     };
 }
 #endif
