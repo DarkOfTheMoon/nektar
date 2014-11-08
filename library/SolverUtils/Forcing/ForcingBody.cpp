@@ -121,11 +121,15 @@ namespace SolverUtils
             {
                 cout << "m_Forcing = " << m_Forcing[i][j] << endl;
             }
+            int num;
+            cin >> num;*/
             
+            /*
             for (int j = 0; j < outarray[i].num_elements(); ++j)
             {
                 cout << "outarray1 = " << outarray[i][j] << endl;
-            }*/
+            }
+            cin >> num;*/
             
             Vmath::Vadd(outarray[i].num_elements(), outarray[i], 1,
                         m_Forcing[i], 1, outarray[i], 1);
@@ -135,9 +139,7 @@ namespace SolverUtils
             {
                 cout << "outarray2 = " << outarray[i][j] << endl;
             }
-            int num;
-            cin >> num;
-             */
+            cin >> num;*/
         }
     }
 

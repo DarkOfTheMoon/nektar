@@ -171,18 +171,53 @@ namespace Nektar
         for (i = 0; i < nvariables; ++i)
         {
             Vmath::Neg(npoints, outarray[i], 1);
+            /*
+            for (int j = 0; j < npoints; j++)
+            {
+                cout << "outarray_1 = "<< outarray[i][j] << endl;
+            }
+            int num;
+            cin >> num;
+             */
         }
         
+        for (i = 0; i < nvariables; ++i)
+        {
+            Vmath::Vsub(npoints, outarray[i], 1, outarray[i], 1, outarray[i], 1);
+            /*
+             for (int j = 0; j < npoints; j++)
+             {
+             cout << "outarray_1 = "<< outarray[i][j] << endl;
+             }
+             int num;
+             cin >> num;
+             */
+        }
+        
+        /*
+        cout << "Ciao 1" << endl;
+         */
         // Add forcing terms
         std::vector<SolverUtils::ForcingSharedPtr>::const_iterator x;
         for (x = m_forcing.begin(); x != m_forcing.end(); ++x)
         {
             (*x)->Apply(m_fields, inarray, outarray, time);
         }
+        /*
+        for (i = 0; i < nvariables; i++)
+        {
+            for (int j = 0; j < npoints; j++)
+            {
+                cout << "outarray_2 = "<< outarray[i][j] << endl;
+            }
+            int num;
+            cin >> num;
+        }
+         */
     }
     
     /**
-     * @brief Compute the projection and call the method for imposing the 
+     * @brief Compute the projection and call the method for imposing the
      * boundary conditions in case of discontinuous projection.
      */
     void EulerCFE::DoOdeProjection(

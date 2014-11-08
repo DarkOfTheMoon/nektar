@@ -845,10 +845,11 @@ namespace Nektar
             }
             
         }
-        void ExpListHomogeneous1D::v_PhysDeriv(const Array<OneD, const NekDouble> &inarray,
-                                               Array<OneD, NekDouble> &out_d0,
-                                               Array<OneD, NekDouble> &out_d1, 
-                                               Array<OneD, NekDouble> &out_d2)
+        void ExpListHomogeneous1D::v_PhysDeriv(
+            const Array<OneD, const NekDouble> &inarray,
+                  Array<OneD, NekDouble>       &out_d0,
+                  Array<OneD, NekDouble>       &out_d1,
+                  Array<OneD, NekDouble>       &out_d2)
         {
             int nT_pts = inarray.num_elements();          //number of total points = n. of Fourier points * n. of points per plane (nT_pts)
             int nP_pts = nT_pts/m_planes.num_elements();    //number of points per plane = n of Fourier transform required (nP_pts)
@@ -945,117 +946,147 @@ namespace Nektar
             }
         }
 	
-        void ExpListHomogeneous1D::v_PhysDeriv(Direction edir,
-                                               const Array<OneD, const NekDouble> &inarray, Array<OneD, NekDouble> &out_d)
+        void ExpListHomogeneous1D::v_PhysDeriv(
+            Direction                          edir,
+            const Array<OneD, const NekDouble> &inarray,
+                  Array<OneD, NekDouble>       &out_d)
             
         {
-            int nT_pts = inarray.num_elements();        //number of total points = n. of Fourier points * n. of points per plane (nT_pts)
-            int nP_pts = nT_pts/m_planes.num_elements();  //number of points per plane = n of Fourier transform required (nP_pts)
+            // Number of total points =
+            // n. of Fourier points * n. of points per plane (nT_pts)
+            int nT_pts = inarray.num_elements();
             
-            int dir= (int)edir;
+            // Number of points per plane =
+            // n of Fourier transform required (nP_pts)
+            int nP_pts = nT_pts / m_planes.num_elements();
+            
+            int dir = (int)edir;
             
             Array<OneD, NekDouble> temparray(nT_pts);
-            Array<OneD, NekDouble> outarray(nT_pts);
+            Array<OneD, NekDouble> outarray (nT_pts);
             Array<OneD, NekDouble> tmp1;
             Array<OneD, NekDouble> tmp2;
             
             if (dir < 2)
             {
-                for(int i=0; i < m_planes.num_elements(); i++)
+                for (int i = 0; i < m_planes.num_elements(); i++)
                 {
-                    m_planes[i]->PhysDeriv(edir, inarray + i*nP_pts ,tmp2 = out_d + i*nP_pts);
+                    m_planes[i]->PhysDeriv(edir, inarray + i*nP_pts,
+                                           tmp2 = out_d + i*nP_pts);
                 }
             }
             else
             {
-                if(m_homogeneousBasis->GetBasisType() == LibUtilities::eFourier || m_homogeneousBasis->GetBasisType() == LibUtilities::eFourierSingleMode || 
-                   m_homogeneousBasis->GetBasisType() == LibUtilities::eFourierHalfModeRe || m_homogeneousBasis->GetBasisType() == LibUtilities::eFourierHalfModeIm)	
+                if (m_homogeneousBasis->GetBasisType() ==
+                    LibUtilities::eFourier             ||
+                    m_homogeneousBasis->GetBasisType() ==
+                    LibUtilities::eFourierSingleMode   ||
+                    m_homogeneousBasis->GetBasisType() ==
+                    LibUtilities::eFourierHalfModeRe   ||
+                    m_homogeneousBasis->GetBasisType() ==
+                    LibUtilities::eFourierHalfModeIm)
                 {
-                    if(m_WaveSpace)
+                    if (m_WaveSpace)
                     {
                         temparray = inarray;
                     }
                     else 
                     { 
-                        HomogeneousFwdTrans(inarray,temparray);
+                        HomogeneousFwdTrans(inarray, temparray);
                     }
                     
                     NekDouble sign = -1.0;
                     NekDouble beta;
                     
-                    //HalfMode
-                    if(m_homogeneousBasis->GetBasisType() == LibUtilities::eFourierHalfModeRe)
+                    // HalfMode
+                    if (m_homogeneousBasis->GetBasisType() ==
+                        LibUtilities::eFourierHalfModeRe)
                     {
-                        beta = 2*M_PI*(m_transposition->GetK(0))/m_lhom;
+                        beta = 2 * M_PI * (m_transposition->GetK(0)) / m_lhom;
 			
-                        Vmath::Smul(nP_pts,beta,temparray,1,outarray,1);
+                        Vmath::Smul(nP_pts, beta, temparray, 1, outarray, 1);
                     }
-                    else if(m_homogeneousBasis->GetBasisType() == LibUtilities::eFourierHalfModeIm)
+                    else if (m_homogeneousBasis->GetBasisType() ==
+                             LibUtilities::eFourierHalfModeIm)
                     {
-                        beta = -2*M_PI*(m_transposition->GetK(0))/m_lhom;
+                        beta = -2 * M_PI * (m_transposition->GetK(0)) / m_lhom;
 			
-                        Vmath::Smul(nP_pts,beta,temparray,1,outarray,1);
+                        Vmath::Smul(nP_pts, beta, temparray, 1, outarray, 1);
                     }
-                    //Fully complex
+                    // Fully complex
                     else
                     {
-                        for(int i = 0; i < m_planes.num_elements(); i++)
+                        for (int i = 0; i < m_planes.num_elements(); i++)
                         {
-                            beta = -sign*2*M_PI*(m_transposition->GetK(i))/m_lhom;
+                            beta = -sign * 2 * M_PI *
+                                    (m_transposition->GetK(i)) / m_lhom;
                             
-                            Vmath::Smul(nP_pts,beta,tmp1 = temparray + i*nP_pts,1,tmp2 = outarray + (i-int(sign))*nP_pts,1);
+                            Vmath::Smul(
+                                nP_pts, beta,
+                                tmp1 = temparray + i*nP_pts, 1, 
+                                tmp2 = outarray + (i-int(sign)) * nP_pts, 1);
                             
-                            sign = -1.0*sign;
+                            sign = -1.0 * sign;
                         }
                     }
-                    if(m_WaveSpace)
+                    if (m_WaveSpace)
                     {
                         out_d = outarray;
                     }
                     else 
                     {
-                        HomogeneousBwdTrans(outarray,out_d);
+                        HomogeneousBwdTrans(outarray, out_d);
                     }
                 }
                 else 
                 {
-                    ASSERTL0(m_comm->GetColumnComm()->GetSize() == 1,"Parallelisation in the homogeneous direction implemented just for Fourier basis");
+                    ASSERTL0(m_comm->GetColumnComm()->GetSize() == 1,
+                             "Parallelisation in the homogeneous direction "
+                             "implemented just for Fourier basis");
                     
-                    if(m_WaveSpace)
+                    if (m_WaveSpace)
                     {
-                        ASSERTL0(false,"Semi-phyisical time-stepping not implemented yet for non-Fourier basis");
+                        ASSERTL0(false,"Semi-phyisical time-stepping not "
+                                 "implemented yet for non-Fourier basis");
                     }
                     else 
                     {
-                        StdRegions::StdSegExp StdSeg(m_homogeneousBasis->GetBasisKey());
+                        StdRegions::StdSegExp StdSeg(m_homogeneousBasis->
+                                                     GetBasisKey());
                         
-                        m_transposition->Transpose(inarray,temparray,false,LibUtilities::eXYtoZ);
+                        m_transposition->Transpose(inarray, temparray,
+                                                   false, LibUtilities::eXYtoZ);
                         
-                        for(int i = 0; i < nP_pts; i++)
+                        for (int i = 0; i < nP_pts; i++)
                         {
-                            StdSeg.PhysDeriv(temparray + i*m_planes.num_elements(), tmp2 = outarray + i*m_planes.num_elements());
+                            StdSeg.PhysDeriv(
+                                temparray + i*m_planes.num_elements(),
+                                tmp2 = outarray + i*m_planes.num_elements());
                         }
 			
-                        m_transposition->Transpose(outarray,out_d,false,LibUtilities::eZtoXY);
+                        m_transposition->Transpose(outarray, out_d,
+                                                   false, LibUtilities::eZtoXY);
                         
-                        Vmath::Smul(nT_pts,2.0/m_lhom,out_d,1,out_d,1);
+                        Vmath::Smul(nT_pts, 2.0 / m_lhom, out_d, 1, out_d, 1);
                     }
                 }
             }
         }
         
-        void ExpListHomogeneous1D::PhysDeriv(const Array<OneD, const NekDouble> &inarray,
-                                             Array<OneD, NekDouble> &out_d0,
-                                             Array<OneD, NekDouble> &out_d1, 
-                                             Array<OneD, NekDouble> &out_d2)
+        void ExpListHomogeneous1D::PhysDeriv(
+            const Array<OneD, const NekDouble> &inarray,
+                  Array<OneD, NekDouble>       &out_d0,
+                  Array<OneD, NekDouble>       &out_d1,
+                  Array<OneD, NekDouble>       &out_d2)
             
         {
             v_PhysDeriv(inarray,out_d0,out_d1,out_d2);
         }
 	
-        void ExpListHomogeneous1D::PhysDeriv(Direction edir,
-                                             const Array<OneD, const NekDouble> &inarray,
-                                             Array<OneD, NekDouble> &out_d)
+        void ExpListHomogeneous1D::PhysDeriv(
+            Direction                          edir,
+            const Array<OneD, const NekDouble> &inarray,
+                  Array<OneD, NekDouble>       &out_d)
         {
             v_PhysDeriv(edir,inarray,out_d);
         }

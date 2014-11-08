@@ -234,7 +234,12 @@ namespace Nektar
             {
                 fields[0]->PhysDeriv(2, m_fluxVecStore[i][2], tmp);
 
-                Vmath::Vadd(m_numPoints, outarray[i], 1, tmp, 1,
+                // Does not look right
+                //Vmath::Vadd(m_numPoints, outarray[i], 1, tmp, 1,
+                //            outarray[i], 1);
+                
+                // Possible fix
+                Vmath::Vsub(m_numPoints, outarray[i], 1, tmp, 1,
                                          outarray[i], 1);
             }
         }
