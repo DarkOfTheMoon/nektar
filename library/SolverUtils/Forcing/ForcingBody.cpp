@@ -119,11 +119,12 @@ namespace SolverUtils
             cout << "i = " << i << endl;
             for (int j = 0; j < m_Forcing[i].num_elements(); ++j)
             {
-                cout << "m_Forcing = " << m_Forcing[i][j] << endl;
+                cout << "j = " << j << ",\t m_Forcing = " << m_Forcing[i][j] << endl;
             }
             int num;
-            cin >> num;*/
-            
+            cin >> num;
+             */
+
             /*
             for (int j = 0; j < outarray[i].num_elements(); ++j)
             {

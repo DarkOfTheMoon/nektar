@@ -193,6 +193,7 @@ namespace Nektar
             const Array<OneD, Array<OneD, NekDouble> >        &inarray,
                   Array<OneD, Array<OneD, NekDouble> >        &outarray)
         {
+            std::cout << std::setprecision(16);
             Array<OneD, NekDouble> tmp(m_numPoints), tmp2;
             int nVel = advVel.num_elements();
 
@@ -232,15 +233,51 @@ namespace Nektar
             // Calculate Fourier derivative and add to final result.
             for (int i = 0; i < nConvectiveFields; ++i)
             {
-                fields[0]->PhysDeriv(2, m_fluxVecStore[i][2], tmp);
-
-                // Does not look right
-                //Vmath::Vadd(m_numPoints, outarray[i], 1, tmp, 1,
-                //            outarray[i], 1);
+                /*
+                cout << "i = " << i<<",\t ========================" << endl;
+                for (int j = 0; j < m_numPoints; ++j)
+                {
+                    cout <<"j = "<< j << ",\t m_fluxVecStore_X = "
+                    << m_fluxVecStore[i][0][j] << endl;
+                }
+                cout << "----------" << endl;
+                for (int j = 0; j < m_numPoints; ++j)
+                {
+                    cout <<"j = "<< j << ",\t m_fluxVecStore_Y = "
+                    << m_fluxVecStore[i][1][j] << endl;
+                }
+                cout << "----------" << endl;
+                for (int j = 0; j < m_numPoints; ++j)
+                {
+                    cout <<"j = "<< j << ",\t m_fluxVecStore_Z = "
+                         << m_fluxVecStore[i][2][j] << endl;
+                }
+                cout << "----------" << endl;
+                int num;
+                cin >> num;
+                 */
                 
-                // Possible fix
-                Vmath::Vsub(m_numPoints, outarray[i], 1, tmp, 1,
-                                         outarray[i], 1);
+                fields[0]->PhysDeriv(2, m_fluxVecStore[i][2], tmp);
+                
+                /*
+                for (int j = 0; j < m_numPoints; ++j)
+                {
+                    cout <<"j = "<< j << ",\t outarray1 = "
+                    << outarray[i][j] << endl;
+                }
+                cin >> num;
+                 */
+                
+                Vmath::Vadd(m_numPoints, outarray[i], 1, tmp, 1,
+                            outarray[i], 1);
+                /*
+                for (int j = 0; j < m_numPoints; ++j)
+                {
+                    cout <<"j = "<< j << ",\t outarray2 = "
+                    << outarray[i][j] << endl;
+                }
+                cin >> num;
+                 */
             }
         }
 

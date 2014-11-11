@@ -127,6 +127,7 @@ namespace Nektar
         StdRegions::StdQuadExpSharedPtr     m_OrthoQuadExp;
         StdRegions::StdHexExpSharedPtr      m_OrthoHexExp;
         bool                                m_smoothDiffusion;
+        MultiRegions::CoeffState            m_CoeffState;
         
         CompressibleFlowSystem(
             const LibUtilities::SessionReaderSharedPtr& pSession);
@@ -142,6 +143,9 @@ namespace Nektar
         void GetFluxVectorDeAlias(
             const Array<OneD, Array<OneD, NekDouble> >         &physfield,
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &flux);
+        void GetFluxVectorDeAliasHomogen(
+            const Array<OneD, Array<OneD, NekDouble> >         &physfield,
+                  Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &flux);
         void GetViscousFluxVector(
             const Array<OneD, Array<OneD, NekDouble> >         &physfield,
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &derivatives,

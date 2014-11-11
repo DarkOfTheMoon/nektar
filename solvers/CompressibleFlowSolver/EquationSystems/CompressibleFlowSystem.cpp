@@ -66,6 +66,9 @@ namespace Nektar
         ASSERTL0(m_session->DefinesSolverInfo("UPWINDTYPE"),
                  "No UPWINDTYPE defined in session.");
 
+        // Not really necessary for discontinuous projection
+        m_CoeffState = MultiRegions::eLocal;
+        
         // Do not forwards transform initial condition
         m_homoInitialFwd = false;
 
@@ -165,7 +168,18 @@ namespace Nektar
                 m_diffusion = SolverUtils::GetDiffusionFactory()
                                             .CreateInstance(diffName, diffName);
 
-                if (m_specHP_dealiasing)
+                if (m_homogen_dealiasing)
+                {
+                    m_advection->SetFluxVector(&CompressibleFlowSystem::
+                                               GetFluxVectorDeAliasHomogen,
+                                               this);
+                    
+                    // Note that the below diffusion term is the normal one
+                    m_diffusion->SetFluxVectorNS(
+                        &CompressibleFlowSystem::GetViscousFluxVector,
+                        this);
+                }
+                else if (m_specHP_dealiasing)
                 {
                     m_advection->SetFluxVector(&CompressibleFlowSystem::
                                                GetFluxVectorDeAlias, this);
@@ -1003,6 +1017,60 @@ namespace Nektar
                 OneDptscale,
                 flux_interp[m_spacedim+1][j],
                 flux[m_spacedim+1][j]);
+        }
+    }
+    
+    /**
+     * @brief Return the flux vector for the compressible Euler equations
+     * by using the de-aliasing technique.
+     *
+     * @param i           Component of the flux vector to calculate.
+     * @param physfield   Fields.
+     * @param flux        Resulting flux.
+     */
+    void CompressibleFlowSystem::GetFluxVectorDeAliasHomogen(
+        const Array<OneD, Array<OneD, NekDouble> >               &physfield,
+              Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &flux)
+    {
+        int i, j;
+        int nq = physfield[0].num_elements();
+        int nVariables = m_fields.num_elements();
+        
+        Array<OneD, NekDouble> pressure(nq, 0.0);
+        Array<OneD, Array<OneD, NekDouble> > velocity(m_spacedim);
+        
+        // Flux vector for the rho equation
+        for (i = 0; i < m_spacedim; ++i)
+        {
+            velocity[i] = Array<OneD, NekDouble>(nq, 0.0);
+            
+            // Galerkin project solution back to original space
+            Vmath::Vcopy(nq, physfield[i+1], 1, flux[0][i], 1);
+        }
+        
+        GetVelocityVector(physfield, velocity);
+        GetPressure      (physfield, velocity, pressure);
+        
+        // Evaluation of flux vector for the velocity fields
+        for (i = 0; i < m_spacedim; ++i)
+        {
+            for (j = 0; j < m_spacedim; ++j)
+            {
+                m_fields[0]->DealiasedProd(velocity[j], physfield[i+1],
+                                           flux[i+1][j], m_CoeffState);
+            }
+            
+            // Add pressure to appropriate field
+            Vmath::Vadd(nq, flux[i+1][i], 1, pressure,1, flux[i+1][i], 1);
+        }
+        
+        // Evaluation of flux vector for energy
+        Vmath::Vadd(nq, physfield[m_spacedim+1], 1, pressure, 1, pressure, 1);
+        
+        for (j = 0; j < m_spacedim; ++j)
+        {
+            m_fields[0]->DealiasedProd(velocity[j], pressure,
+                                       flux[m_spacedim+1][j], m_CoeffState);
         }
     }
 

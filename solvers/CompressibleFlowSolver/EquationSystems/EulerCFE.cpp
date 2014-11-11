@@ -171,29 +171,18 @@ namespace Nektar
         for (i = 0; i < nvariables; ++i)
         {
             Vmath::Neg(npoints, outarray[i], 1);
+            
             /*
+            cout << "i = " << i << endl;
             for (int j = 0; j < npoints; j++)
             {
-                cout << "outarray_1 = "<< outarray[i][j] << endl;
+                cout << "j = " << j << ",\t outarray_1 = "<< outarray[i][j] << endl;
             }
             int num;
             cin >> num;
              */
         }
-        
-        /*
-        for (i = 0; i < nvariables; ++i)
-        {
-            Vmath::Vsub(npoints, outarray[i], 1, outarray[i], 1, outarray[i], 1);
-            for (int j = 0; j < npoints; j++)
-            {
-                cout << "outarray_1 = "<< outarray[i][j] << endl;
-            }
-            int num;
-            cin >> num;
-        }
-        */
-        
+                
         // Add forcing terms
         std::vector<SolverUtils::ForcingSharedPtr>::const_iterator x;
         for (x = m_forcing.begin(); x != m_forcing.end(); ++x)
@@ -204,9 +193,10 @@ namespace Nektar
         /*
         for (i = 0; i < nvariables; i++)
         {
+            cout << "i = " << i << endl;
             for (int j = 0; j < npoints; j++)
             {
-                cout << "outarray_2 = "<< outarray[i][j] << endl;
+                cout << "j = " << j << ",\toutarray_2 = "<< outarray[i][j] << endl;
             }
             int num;
             cin >> num;
@@ -362,6 +352,7 @@ namespace Nektar
             }
             default:
             {
+                EquationSystem::v_EvaluateExactSolution(field, outfield, time);
                 break;
             }
         }

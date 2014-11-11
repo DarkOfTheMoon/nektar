@@ -128,13 +128,13 @@ namespace Nektar
             m_spacedim = m_graph->GetSpaceDimension();
         
             // Setting parameteres for homogenous problems
-            m_HomoDirec			= 0;
-            m_useFFT			= false;
-            m_homogen_dealiasing	= false;
-            m_SingleMode		= false;
-            m_HalfMode			= false;
-            m_MultipleModes		= false;
-            m_HomogeneousType           = eNotHomogeneous;
+            m_HomoDirec			 = 0;
+            m_useFFT			 = false;
+            m_homogen_dealiasing = false;
+            m_SingleMode		 = false;
+            m_HalfMode			 = false;
+            m_MultipleModes		 = false;
+            m_HomogeneousType    = eNotHomogeneous;
 
             if (m_session->DefinesSolverInfo("HOMOGENEOUS"))
             {
@@ -215,6 +215,8 @@ namespace Nektar
                     m_session->MatchSolverInfo("DEALIASING", "On", 
                                                m_homogen_dealiasing, false);
                 }
+                
+                cout << "m_homogen_dealiasing" << m_homogen_dealiasing << endl;
             }
             else
             {
