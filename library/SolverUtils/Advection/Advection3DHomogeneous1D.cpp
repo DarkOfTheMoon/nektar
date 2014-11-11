@@ -260,8 +260,7 @@ namespace Nektar
                 fields[0]->PhysDeriv(2, m_fluxVecStore[i][2], tmp);
 
                 Vmath::Vadd(m_numPoints, outarray[i], 1, tmp, 1,
-                            outarray[i], 1);
-
+                                         outarray[i], 1);
                 /*
                 for (int j = 0; j < m_numPoints; ++j)
                 {
