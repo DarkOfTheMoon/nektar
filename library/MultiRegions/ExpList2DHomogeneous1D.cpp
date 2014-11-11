@@ -455,6 +455,9 @@ namespace Nektar
                                  &normals[i][n*nPtsPlane], 1);
                 }
             }
+
+            // Zero third component.
+            Vmath::Zero(normals[2].num_elements(), normals[2], 1);
         }
     } //end of namespace
 } //end of namespace

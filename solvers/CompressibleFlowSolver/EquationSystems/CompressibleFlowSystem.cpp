@@ -2759,6 +2759,7 @@ namespace Nektar
         std::vector<Array<OneD, NekDouble> > &fieldcoeffs,
         std::vector<std::string>             &variables)
     {
+#if 0
         const int nPhys   = m_fields[0]->GetNpoints();
         const int nCoeffs = m_fields[0]->GetNcoeffs();
         Array<OneD, Array<OneD, NekDouble> > tmp(m_fields.num_elements());
@@ -2794,6 +2795,7 @@ namespace Nektar
         fieldcoeffs.push_back(mFwd);
         fieldcoeffs.push_back(sensFwd);
         fieldcoeffs.push_back(smoothFwd);
+#endif
     }
 }
 
