@@ -200,12 +200,56 @@ namespace Nektar
                         outarray[i], 1);
         }
         
+        for (i = 0; i < nvariables; i++)
+        {
+            cout << "i = " << i << endl;
+            for (int j = 0; j < npoints; j++)
+            {
+                cout << "j = " << j << ",\tRHS = "<< outarray[i][j] << endl;
+            }
+            int num;
+            cin >> num;
+        }
+        
         // Add forcing terms
         std::vector<SolverUtils::ForcingSharedPtr>::const_iterator x;
         for (x = m_forcing.begin(); x != m_forcing.end(); ++x)
         {
             (*x)->Apply(m_fields, inarray, outarray, time);
         }
+
+        Array<OneD, NekDouble> xx(npoints, 0.0);
+        Array<OneD, NekDouble> yy(npoints, 0.0);
+        Array<OneD, NekDouble> zz(npoints, 0.0);
+        
+        m_fields[0]->GetCoords(xx,yy,zz);
+        
+        /*
+        for (i = 0; i < nvariables; i++)
+        {
+            cout << "i = " << i << endl;
+            for (int j = 0; j < npoints; j++)
+            {
+                cout << "j = " << j << ",\t(x, y, z) = "
+                     << "(" << xx[j] << ",  " << yy[j] << ",  " << zz[j] << ")"
+                     << ",\toutarrayTotal = "<< outarray[i][j] << endl;
+            }
+            int num;
+            cin >> num;
+        }
+        */
+        
+        for (i = 0; i < nvariables; i++)
+        {
+            cout << "i = " << i << endl;
+            for (int j = 0; j < npoints; j++)
+            {
+                cout << "j = " << j << ",\toutarrayTotal = "<< outarray[i][j] << endl;
+            }
+            int num;
+            cin >> num;
+        }
+
     }
 
     void NavierStokesCFE::DoOdeProjection(
@@ -302,6 +346,24 @@ namespace Nektar
             }
     
             cnt += m_fields[0]->GetBndCondExpansions()[n]->GetExpSize();
+        }
+    }
+    
+    /**
+     * @brief Get the exact solution.
+     */
+    void NavierStokesCFE::v_EvaluateExactSolution(
+        unsigned int                         field,
+        Array<OneD, NekDouble>              &outfield,
+        const NekDouble                      time)
+    {
+        switch(m_problemType)
+        {
+            default:
+            {
+                EquationSystem::v_EvaluateExactSolution(field, outfield, time);
+                break;
+            }
         }
     }
     

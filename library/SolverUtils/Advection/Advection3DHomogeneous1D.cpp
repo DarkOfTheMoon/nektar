@@ -234,7 +234,7 @@ namespace Nektar
             for (int i = 0; i < nConvectiveFields; ++i)
             {
                 /*
-                cout << "i = " << i<<",\t ========================" << endl;
+                cout << "i = " << i <<",\t ========================" << endl;
                 for (int j = 0; j < m_numPoints; ++j)
                 {
                     cout <<"j = "<< j << ",\t m_fluxVecStore_X = "
@@ -261,14 +261,15 @@ namespace Nektar
 
                 Vmath::Vadd(m_numPoints, outarray[i], 1, tmp, 1,
                                          outarray[i], 1);
-                /*
+
+                cout << "i = " << i <<",\t ========================" << endl;
                 for (int j = 0; j < m_numPoints; ++j)
                 {
-                    cout <<"j = "<< j << ",\t outarray1 = "
+                    cout <<"j = "<< j << ",\t outarrayAdvection = "
                     << outarray[i][j] << endl;
                 }
+                int num;
                 cin >> num;
-                 */
                 
                 //Vmath::Vsub(m_numPoints, outarray[i], 1, tmp, 1,
                 //                         outarray[i], 1);

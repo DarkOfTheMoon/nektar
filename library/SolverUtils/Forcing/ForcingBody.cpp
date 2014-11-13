@@ -115,7 +115,6 @@ namespace SolverUtils
     {
         for (int i = 0; i < m_NumVariable; i++)
         {
-            /*
             cout << "i = " << i << endl;
             for (int j = 0; j < m_Forcing[i].num_elements(); ++j)
             {
@@ -123,7 +122,6 @@ namespace SolverUtils
             }
             int num;
             cin >> num;
-             */
 
             /*
             for (int j = 0; j < outarray[i].num_elements(); ++j)

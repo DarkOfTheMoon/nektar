@@ -171,7 +171,6 @@ namespace Nektar
         for (i = 0; i < nvariables; ++i)
         {
             Vmath::Neg(npoints, outarray[i], 1);
-            
             /*
             cout << "i = " << i << endl;
             for (int j = 0; j < npoints; j++)
