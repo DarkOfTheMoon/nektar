@@ -226,28 +226,14 @@ namespace Nektar
             int nScalars   = inarray.num_elements();
             int nDim       = fields[0]->GetCoordim(0);
             
-            Array<OneD, NekDouble > Vn      (nTracePts, 0.0);
-            Array<OneD, NekDouble > fluxtemp(nTracePts, 0.0);
-       
-            // Get the normal velocity Vn
-            for(i = 0; i < nDim; ++i)
-            {
-                Vmath::Svtvp(nTracePts, 1.0, m_traceNormals[i], 1, 
-                             Vn, 1, Vn, 1);
-            }
-
             // Store forwards/backwards space along trace space
-            Array<OneD, Array<OneD, NekDouble> > Fwd    (nScalars);
-            Array<OneD, Array<OneD, NekDouble> > Bwd    (nScalars);
+            Array<OneD, NekDouble> BwdTmp(nTracePts);
             Array<OneD, Array<OneD, NekDouble> > numflux(nScalars);
             
             for (i = 0; i < nScalars; ++i)
             {
-                Fwd[i]     = Array<OneD, NekDouble>(nTracePts);
-                Bwd[i]     = Array<OneD, NekDouble>(nTracePts);
                 numflux[i] = Array<OneD, NekDouble>(nTracePts);
-                fields[i]->GetFwdBwdTracePhys(inarray[i], Fwd[i], Bwd[i]);
-                fields[0]->GetTrace()->Upwind(Vn, Fwd[i], Bwd[i], numflux[i]);
+                fields[i]->GetFwdBwdTracePhys(inarray[i], numflux[i], BwdTmp);
             }
              
             // Modify the values in case of boundary interfaces
@@ -476,24 +462,12 @@ namespace Nektar
                   Array<OneD, Array<OneD, NekDouble> >               &qflux)
         {
             int i, j;
-            int nTracePts = fields[0]->GetTrace()->GetTotPoints();
-            int nVariables   = fields.num_elements();
-            int nDim         = fields[0]->GetCoordim(0);
+            int nTracePts  = fields[0]->GetTrace()->GetTotPoints();
+            int nVariables = fields.num_elements();
+            int nDim       = fields[0]->GetCoordim(0);
             
-            Array<OneD, NekDouble > Fwd(nTracePts);
-            Array<OneD, NekDouble > Bwd(nTracePts);
-            Array<OneD, NekDouble > Vn (nTracePts, 0.0);
-            
-            Array<OneD, NekDouble > qFwd     (nTracePts);
-            Array<OneD, NekDouble > qBwd     (nTracePts);
-            Array<OneD, NekDouble > qfluxtemp(nTracePts, 0.0);
-                                    
-            // Get the normal velocity Vn
-            for(i = 0; i < nDim; ++i)
-            {
-                Vmath::Svtvp(nTracePts, 1.0, m_traceNormals[i], 1, 
-                             Vn, 1, Vn, 1);
-            }
+            Array<OneD, NekDouble > qFwdTmp  (nTracePts);
+            Array<OneD, NekDouble > qfluxtemp(nTracePts);
                         
             // Evaulate Riemann flux 
             // qflux = \hat{q} \cdot u = q \cdot n 
@@ -504,11 +478,8 @@ namespace Nektar
                 for (j = 0; j < nDim; ++j)
                 {
                     // Compute qFwd and qBwd value of qfield in position 'ji'
-                    fields[i]->GetFwdBwdTracePhys(qfield[j][i], qFwd, qBwd);
-                    
-                    // Get Riemann flux of qflux --> LDG implies upwind
-                    fields[i]->GetTrace()->Upwind(Vn, qBwd, qFwd, qfluxtemp);
-                    
+                    fields[i]->GetFwdBwdTracePhys(qfield[j][i], qFwdTmp, qfluxtemp);
+
                     // Multiply the Riemann flux by the trace normals
                     Vmath::Vmul(nTracePts, m_traceNormals[j], 1, qfluxtemp, 1, 
                                 qfluxtemp, 1);
