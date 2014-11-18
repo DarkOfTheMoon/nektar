@@ -213,7 +213,7 @@ namespace Nektar
             NekDouble fac;
             Array<OneD, unsigned int> planes = m_fields[0]->GetZIDs();
             int nPlanes = planes.num_elements();
-            int nPointsPlane = npoints / m_fields[0]->GetPlane(0)->GetNpoints();
+            int nPointsPlane = m_fields[0]->GetPlane(0)->GetNpoints();
             int kmodes = m_fields[0]->GetHomogeneousBasis()->GetNumModes();
             int pstart = SVVCutoffRatio*kmodes;
 
@@ -248,9 +248,9 @@ namespace Nektar
                                 &tmp[0] + i*nPointsPlane, 1);
                 }
 
-                m_fields[0]->HomogeneousBwdTrans(tmp, tmp);
+                m_fields[j]->HomogeneousBwdTrans(tmp, tmp);
 
-                Vmath::Vadd(npoints, outarray[j], 1, tmp, 1, outarray[j], 1);
+                Vmath::Vsub(npoints, outarray[j], 1, tmp, 1, outarray[j], 1);
             }
         }
 
