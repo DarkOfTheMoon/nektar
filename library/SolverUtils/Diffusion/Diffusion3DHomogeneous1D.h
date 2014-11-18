@@ -72,6 +72,8 @@ namespace Nektar
             Array<OneD, Array<OneD, NekDouble> >               m_outarrayPlane;
             Array<OneD, MultiRegions::ExpListSharedPtr>        m_fieldsPlane;
             Array<OneD, Array<OneD, NekDouble> >               m_advVelPlane;
+            bool                                               m_useHomo1DSVV;
+            Array<OneD, NekDouble>                             m_svvConstants;
 
             virtual void v_InitObject(
                 LibUtilities::SessionReaderSharedPtr               pSession,

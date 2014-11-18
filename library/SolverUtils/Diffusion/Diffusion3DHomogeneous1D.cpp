@@ -112,6 +112,34 @@ namespace Nektar
             m_trans          = pFields[0]->GetTransposition();
             m_planeCounter = 0;
             m_planeDiff->SetFluxVectorNS(m_fluxVectorNS);
+            
+            
+            NekDouble SVVCutoffRatio, SVVDiffCoeff;//, mu;
+            pSession->LoadParameter("SVVCutoffRatio", SVVCutoffRatio, 0.75);
+            pSession->LoadParameter("SVVDiffCoeff", SVVDiffCoeff, 0.1);
+            //pSession->LoadParameter("mu",mu, 1.0);
+            
+            pSession->MatchSolverInfo("SpectralVanishingViscosityHomo1D","True",
+                                      m_useHomo1DSVV,false);
+
+            m_svvConstants = Array<OneD, NekDouble>(m_numPlanes, 0.0);
+
+            if(m_useHomo1DSVV)
+            {
+                NekDouble fac;
+                int kmodes = pFields[0]->GetHomogeneousBasis()->GetNumModes();
+                int pstart = SVVCutoffRatio*kmodes;
+                
+                for(int n = 0; n < m_numPlanes; ++n)
+                {
+                    if(m_planes[n] > pstart)
+                    {
+                        fac = (NekDouble)((m_planes[n] - kmodes)*(m_planes[n] - kmodes))/
+                        ((NekDouble)((m_planes[n] - pstart)*(m_planes[n] - pstart)));
+                        m_svvConstants[n] = SVVDiffCoeff*exp(-fac);
+                    }
+                }
+            }
 
             if (m_riemann)
             {
@@ -253,14 +281,13 @@ namespace Nektar
                 }
             }
             
-
-
             if (m_fluxVectorNS)
             {
                 for (j = 0; j < nConvectiveFields - 1; ++j)
                 {
                     fields[j+1]->PhysDeriv(2, viscHComp[j], tmp);
-                    Vmath::Vadd(nPointsTot, outarray[j+1], 1, tmp, 1, outarray[j+1], 1);
+                    Vmath::Vadd(nPointsTot, outarray[j+1], 1, tmp, 1,
+                                outarray[j+1], 1);
                 }
             }
             else
@@ -274,14 +301,37 @@ namespace Nektar
                         beta  = 2*M_PI*m_trans->GetK(i)/m_homoLen;
                         beta *= beta;
 
-                        Vmath::Smul(m_numPointsPlane,
-                                    beta,
+                        Vmath::Smul(m_numPointsPlane, beta,
                                     &tmp[0] + i*m_numPointsPlane, 1,
                                     &tmp[0] + i*m_numPointsPlane, 1);
                     }
 
                     fields[0]->HomogeneousBwdTrans(tmp, tmp);
 
+                    Vmath::Vsub(nPointsTot, outarray[j], 1, tmp, 1,
+                                outarray[j], 1);
+                }
+            }
+
+            if (m_useHomo1DSVV && m_fluxVectorNS)
+            {
+                for (j = 1; j < nConvectiveFields; ++j)
+                {
+                    fields[j]->HomogeneousFwdTrans(viscHComp[j-1], tmp);
+                    
+                    for (i = 0; i < m_numPlanes; ++i)
+                    {
+                        beta  = 2*M_PI*m_trans->GetK(i)/m_homoLen;
+                        beta *= beta;
+                        beta *= m_svvConstants[i];
+                        
+                        Vmath::Smul(m_numPointsPlane, beta,
+                                    &tmp[0] + i*m_numPointsPlane, 1,
+                                    &tmp[0] + i*m_numPointsPlane, 1);
+                    }
+                    
+                    fields[0]->HomogeneousBwdTrans(tmp, tmp);
+                    
                     Vmath::Vsub(nPointsTot, outarray[j], 1, tmp, 1,
                                 outarray[j], 1);
                 }
