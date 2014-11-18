@@ -200,6 +200,61 @@ namespace Nektar
                         outarray[i], 1);
         }
         
+        // Add SVV
+        NekDouble SVVCutoffRatio, SVVDiffCoeff;
+        bool useHomo1DSVV;
+        m_session->LoadParameter("SVVCutoffRatio", SVVCutoffRatio, 0.75);
+        m_session->LoadParameter("SVVDiffCoeff", SVVDiffCoeff, 0.1);
+        m_session->MatchSolverInfo("SpectralVanishingViscosityHomo1D","True",
+                                   useHomo1DSVV,false);
+
+        if (useHomo1DSVV)
+        {
+            NekDouble fac;
+            Array<OneD, unsigned int> planes = m_fields[0]->GetZIDs();
+            int nPlanes = planes.num_elements();
+            int nPointsPlane = npoints / m_fields[0]->GetPlane(0)->GetNpoints();
+            int kmodes = m_fields[0]->GetHomogeneousBasis()->GetNumModes();
+            int pstart = SVVCutoffRatio*kmodes;
+
+            Array<OneD, NekDouble> svvConstants(nPlanes, 0.0);
+            LibUtilities::TranspositionSharedPtr trans =
+                m_fields[0]->GetTransposition();
+
+            for (int n = 0; n < nPlanes; ++n)
+            {
+                if(planes[n] > pstart)
+                {
+                    fac = (NekDouble)((planes[n] - kmodes)*(planes[n] - kmodes))/
+                        ((NekDouble)((planes[n] - pstart)*(planes[n] - pstart)));
+                    svvConstants[n] = SVVDiffCoeff*exp(-fac);
+                }
+            }
+
+            for (int j = 0; j < inarray.num_elements(); ++j)
+            {
+                NekDouble beta;
+                Array<OneD, NekDouble> tmp(npoints);
+                m_fields[j]->HomogeneousFwdTrans(inarray[j], tmp);
+
+                for (i = 0; i < nPlanes; ++i)
+                {
+                    beta  = 2*M_PI*trans->GetK(i)/m_LhomZ;
+                    beta *= beta;
+                    beta *= svvConstants[i];
+
+                    Vmath::Smul(nPointsPlane, beta,
+                                &tmp[0] + i*nPointsPlane, 1,
+                                &tmp[0] + i*nPointsPlane, 1);
+                }
+
+                m_fields[0]->HomogeneousBwdTrans(tmp, tmp);
+
+                Vmath::Vadd(npoints, outarray[j], 1, tmp, 1, outarray[j], 1);
+            }
+        }
+
+
         // Add forcing terms
         std::vector<SolverUtils::ForcingSharedPtr>::const_iterator x;
         for (x = m_forcing.begin(); x != m_forcing.end(); ++x)

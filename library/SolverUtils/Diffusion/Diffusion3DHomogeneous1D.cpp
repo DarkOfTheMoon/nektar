@@ -113,11 +113,9 @@ namespace Nektar
             m_planeCounter = 0;
             m_planeDiff->SetFluxVectorNS(m_fluxVectorNS);
             
-            
-            NekDouble SVVCutoffRatio, SVVDiffCoeff;//, mu;
+            NekDouble SVVCutoffRatio, SVVDiffCoeff;
             pSession->LoadParameter("SVVCutoffRatio", SVVCutoffRatio, 0.75);
             pSession->LoadParameter("SVVDiffCoeff", SVVDiffCoeff, 0.1);
-            //pSession->LoadParameter("mu",mu, 1.0);
             
             pSession->MatchSolverInfo("SpectralVanishingViscosityHomo1D","True",
                                       m_useHomo1DSVV,false);
@@ -260,8 +258,6 @@ namespace Nektar
                     m_planeDiff->SetHomoDerivs(m_homoDerivPlane[i]);
                 }
 
-
-                
                 m_planeDiff->Diffuse(nConvectiveFields,
                                      m_fieldsPlane,
                                      m_inarrayPlane,
@@ -313,6 +309,7 @@ namespace Nektar
                 }
             }
 
+#if 0
             if (m_useHomo1DSVV && m_fluxVectorNS)
             {
                 for (j = 1; j < nConvectiveFields; ++j)
@@ -336,6 +333,7 @@ namespace Nektar
                                 outarray[j], 1);
                 }
             }
+#endif
         }
     }// close namespace SolverUtils
 }// close namespace nektar++
