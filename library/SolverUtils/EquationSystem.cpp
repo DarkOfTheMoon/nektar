@@ -215,8 +215,6 @@ namespace Nektar
                     m_session->MatchSolverInfo("DEALIASING", "On", 
                                                m_homogen_dealiasing, false);
                 }
-                
-                cout << "m_homogen_dealiasing" << m_homogen_dealiasing << endl;
             }
             else
             {
