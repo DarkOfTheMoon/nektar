@@ -335,7 +335,7 @@ namespace Nektar
                         id1 = fields[0]->GetBndCondExpansions()[n]->
                         GetPhys_Offset(e);
                         id2 = fields[0]->GetTrace()->GetPhys_Offset(traceBndMap[cnt+e]);
-                        
+                    
                         Array<OneD, NekDouble> tmp(nBCEdgePts, 0.0);
                         Array<OneD, NekDouble> tmp1(nBCEdgePts, 0.0);
                         Array<OneD, NekDouble> tmp2(nBCEdgePts, 0.0);
@@ -350,67 +350,62 @@ namespace Nektar
                         Array<OneD, Array<OneD, NekDouble> > DragDir(m_spaceDim);
                         Array<OneD, Array<OneD, NekDouble> > LiftDir(m_spaceDim);
                         
-                        if(m_spaceDim == 2)
+                        NekDouble Dx = norm_fac * cos (m_alphaInfDir);
+                        NekDouble Dy = norm_fac * sin (m_alphaInfDir);
+                            
+                        NekDouble Lx = -norm_fac * sin (m_alphaInfDir);
+                        NekDouble Ly =  norm_fac * cos (m_alphaInfDir);
+                            
+                        DragDir[0] = Array<OneD, NekDouble> (nBCEdgePts, Dx);
+                        DragDir[1] = Array<OneD, NekDouble> (nBCEdgePts, Dy);
+                            
+                        LiftDir[0] = Array<OneD, NekDouble> (nBCEdgePts, Lx);
+                        LiftDir[1] = Array<OneD, NekDouble> (nBCEdgePts, Ly);
+                            
+                            
+                        Array<OneD, NekDouble> zeros(nBCEdgePts, 0.0);
+                            
+                        Vmath::Vcopy(nBCEdgePts,
+                                        &zeros[0], 1,
+                                        &penaltyfluxO1[0][id2], 1);
+                            
+                        Vmath::Vcopy(nBCEdgePts,
+                                        &zeros[0], 1,
+                                        &penaltyfluxO1[1][id2], 1);
+                        
+                        Vmath::Vcopy(nBCEdgePts,
+                                        &zeros[0], 1,
+                                        &penaltyfluxO1[2][id2], 1);
+                        
+                        Vmath::Vcopy(nBCEdgePts,
+                                        &zeros[0], 1,
+                                        &penaltyfluxO1[m_spaceDim+1][id2], 1);
+                            
+                        if (m_Target == "Lift")
                         {
-                            
-                            NekDouble Dx = norm_fac * cos (m_alphaInfDir);
-                            NekDouble Dy = norm_fac * sin (m_alphaInfDir);
-                            
-                            NekDouble Lx = -norm_fac * sin (m_alphaInfDir);
-                            NekDouble Ly =  norm_fac * cos (m_alphaInfDir);
-                            
-                            DragDir[0] = Array<OneD, NekDouble> (nBCEdgePts, Dx);
-                            DragDir[1] = Array<OneD, NekDouble> (nBCEdgePts, Dy);
-                            
-                            LiftDir[0] = Array<OneD, NekDouble> (nBCEdgePts, Lx);
-                            LiftDir[1] = Array<OneD, NekDouble> (nBCEdgePts, Ly);
-                            
-                            
-                            Array<OneD, NekDouble> zeros(nBCEdgePts, 0.0);
+                                
+                            Vmath::Vcopy(nBCEdgePts,
+                                            &LiftDir[0][0], 1,
+                                            &penaltyfluxO1[1][id2], 1);
                             
                             Vmath::Vcopy(nBCEdgePts,
-                                         &zeros[0], 1,
-                                         &penaltyfluxO1[0][id2], 1);
+                                            &LiftDir[1][0], 1,
+                                            &penaltyfluxO1[2][id2], 1);
+                            
+                        }
+                        if (m_Target == "Drag")
+                        {
+                            Vmath::Vcopy(nBCEdgePts,
+                                            &DragDir[0][0], 1,
+                                            &penaltyfluxO1[1][id2], 1);
                             
                             Vmath::Vcopy(nBCEdgePts,
-                                         &zeros[0], 1,
-                                         &penaltyfluxO1[1][id2], 1);
-                            
-                            Vmath::Vcopy(nBCEdgePts,
-                                         &zeros[0], 1,
-                                         &penaltyfluxO1[2][id2], 1);
-                            
-                            Vmath::Vcopy(nBCEdgePts,
-                                         &zeros[0], 1,
-                                         &penaltyfluxO1[m_spaceDim+1][id2], 1);
-                            
-                            if (m_Target == "Lift")
-                            {
-                                
-                                Vmath::Vcopy(nBCEdgePts,
-                                             &LiftDir[0][0], 1,
-                                             &penaltyfluxO1[1][id2], 1);
-                                
-                                Vmath::Vcopy(nBCEdgePts,
-                                             &LiftDir[1][0], 1,
-                                             &penaltyfluxO1[2][id2], 1);
-                                
-                            }
-                            if (m_Target == "Drag")
-                            {
-                                Vmath::Vcopy(nBCEdgePts,
-                                             &DragDir[0][0], 1,
-                                             &penaltyfluxO1[1][id2], 1);
-                                
-                                Vmath::Vcopy(nBCEdgePts,
-                                             &DragDir[1][0], 1,
-                                             &penaltyfluxO1[2][id2], 1);
-                            }
+                                            &DragDir[1][0], 1,
+                                            &penaltyfluxO1[2][id2], 1);
                         }
                     }
                     
                     cnt += fields[0]->GetBndCondExpansions()[n]->GetExpSize();
-                    
                 }
         
                 if (fields[0]->GetBndConditions()[n]->
@@ -420,9 +415,11 @@ namespace Nektar
                     GetUserDefined() !=
                     SpatialDomains::eAdjointWall)
                 {
-                
+                    //cout << n << "  " << eMax << endl;
+                    
                     for (e = 0; e < eMax; ++e)
                     {
+
                         nBCEdgePts = fields[0]->GetBndCondExpansions()[n]->
                         GetExp(e)->GetTotPoints();
                         id1 = fields[0]->GetBndCondExpansions()[n]->
@@ -431,10 +428,11 @@ namespace Nektar
                         
                         // Standard value 0 for farfield BCs
                         Array<OneD, NekDouble> zeros(nBCEdgePts, 0.0);
+                        
                         for (i = 0;i < nScalars; ++i)
                         {
                             Vmath::Vcopy(nBCEdgePts,
-                                         &(fields[i]->GetBndCondExpansions()[j]->
+                                         &(fields[i]->GetBndCondExpansions()[n]->
                                            UpdatePhys())[id1], 1,
                                          &penaltyfluxO1[i][id2], 1);
                         }
