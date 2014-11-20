@@ -118,6 +118,8 @@ namespace Nektar
         NekDouble                           m_Kappa;
         NekDouble                           m_mu0;
 
+        Array<OneD, Array<OneD, NekDouble> > m_un;
+        
         CompressibleFlowSystem(
             const LibUtilities::SessionReaderSharedPtr& pSession);
 
@@ -222,6 +224,10 @@ namespace Nektar
             int                                                 bcRegion,
             int                                                 cnt,
             Array<OneD, Array<OneD, NekDouble> >               &physarray);
+        void AdjointWallForceBC(
+                           int                                                 bcRegion,
+                           int                                                 cnt,
+                           Array<OneD, Array<OneD, NekDouble> >               &physarray);
         void WallViscousBC(
             int                                                 bcRegion,
             int                                                 cnt,
@@ -282,6 +288,9 @@ namespace Nektar
             const Array<OneD,  Array<OneD, NekDouble> > &physfield,
                   Array<OneD,                    NekDouble  > &mu_var);
       
+        virtual bool v_PostIntegrate(int step);
+        NekDouble CalcSteadyState();
+        
         virtual NekDouble v_GetTimeStep(
             const Array<OneD, const Array<OneD, NekDouble> > &inarray);
         

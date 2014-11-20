@@ -28,7 +28,7 @@
 #include <SpatialDomains/MeshGraph2D.h>
 
 #include <SolverUtils/SolverUtilsDeclspec.h>
-
+#define PI 3.14159265
 using namespace Nektar;
 
 int main(int argc, char *argv[])
@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 
     //--------------------------------------------------------------------------
     // Define Expansion
-    int nfields = fieldDef[0]->m_fields.size();
+    int nfields = 4;//fieldDef[0]->m_fields.size();
     Array<OneD, MultiRegions::ExpListSharedPtr> Exp(nfields);
     Array<OneD, MultiRegions::ExpListSharedPtr> pFields(nfields);
         
@@ -136,15 +136,24 @@ int main(int argc, char *argv[])
     // Copy data from field file
     Array<OneD, Array<OneD, NekDouble> > uFields(nfields);
     Array<OneD, Array<OneD, NekDouble> > traceFields(nfields);
+    
+    Array<OneD, Array<OneD, NekDouble> > BwdtraceFields(nfields);
+    Array<OneD, Array<OneD, NekDouble> > FwdtraceFields(nfields);
+    
     Array<OneD, Array<OneD, NekDouble> > surfaceFields(nfields);
-
+    Array<OneD, Array<OneD, NekDouble> > BwdsurfaceFields(nfields);
+    Array<OneD, Array<OneD, NekDouble> > FwdsurfaceFields(nfields);
 
     // Extract the physical values of the solution at the boundaries
     for (j = 0; j < nfields; ++j)
     {
         uFields[j]       = Array<OneD, NekDouble>(nSolutionPts, 0.0);
         traceFields[j]   = Array<OneD, NekDouble>(nTracePts, 0.0);
+        BwdtraceFields[j]   = Array<OneD, NekDouble>(nTracePts, 0.0);
+        FwdtraceFields[j]   = Array<OneD, NekDouble>(nTracePts, 0.0);
         surfaceFields[j] = Array<OneD, NekDouble>(nTracePts, 0.0);
+        BwdsurfaceFields[j] = Array<OneD, NekDouble>(nTracePts, 0.0);
+        FwdsurfaceFields[j] = Array<OneD, NekDouble>(nTracePts, 0.0);
 
 
         for (i = 0; i < fieldData.size(); ++i)
@@ -155,7 +164,12 @@ int main(int argc, char *argv[])
         }
         Exp[j]->BwdTrans(Exp[j]->GetCoeffs(), Exp[j]->UpdatePhys());
         Vmath::Vcopy(nSolutionPts, Exp[j]->GetPhys(), 1, uFields[j], 1);
+        
         pFields[0]->ExtractTracePhys(uFields[j], traceFields[j]);
+        
+        pFields[0]->GetFwdBwdTracePhys(uFields[j],
+                                     FwdtraceFields[j],
+                                     BwdtraceFields[j]);
     }
     //--------------------------------------------------------------------------
     
@@ -179,7 +193,9 @@ int main(int argc, char *argv[])
                 if (pFields[0]->GetBndConditions()[b]->
                     GetUserDefined() == SpatialDomains::eWallViscous || 
                     pFields[0]->GetBndConditions()[b]->
-                    GetUserDefined() == SpatialDomains::eWall)
+                    GetUserDefined() == SpatialDomains::eWall ||
+                    pFields[0]->GetBndConditions()[b]->
+                    GetUserDefined() == SpatialDomains::eAdjointWall)
                 {       
                     Vmath::Vcopy(nBndEdgePts, &traceX[id2], 1,
                                  &surfaceX[id1], 1);
@@ -196,6 +212,15 @@ int main(int argc, char *argv[])
         }
     }
     
+    
+    Array<OneD, Array<OneD, NekDouble> > LiftDir(2.0);
+    NekDouble alpha = 2.0*PI/180;
+    
+    NekDouble Lx = -sin (alpha);
+    NekDouble Ly =  cos (alpha);
+
+
+    
     if (pFields[0]->GetBndCondExpansions().num_elements())
     {
         for (j = 0; j < nfields; ++j)
@@ -206,6 +231,10 @@ int main(int argc, char *argv[])
             for (b = 0; b < nBndRegions; ++b)
             {
                 nBndEdges = pFields[j]->GetBndCondExpansions()[b]->GetExpSize();
+                
+                LiftDir[0] = Array<OneD, NekDouble> (nBndEdgePts, Lx);
+                LiftDir[1] = Array<OneD, NekDouble> (nBndEdgePts, Ly);
+                
                 for (e = 0; e < nBndEdges; ++e)
                 {
                     nBndEdgePts = pFields[j]->
@@ -218,10 +247,51 @@ int main(int argc, char *argv[])
                     if (pFields[j]->GetBndConditions()[b]->
                         GetUserDefined() == SpatialDomains::eWallViscous || 
                         pFields[j]->GetBndConditions()[b]->
-                        GetUserDefined() == SpatialDomains::eWall)
+                        GetUserDefined() == SpatialDomains::eWall ||
+                        pFields[0]->GetBndConditions()[b]->
+                        GetUserDefined() == SpatialDomains::eAdjointWall)
                     {
+                        
                         Vmath::Vcopy(nBndEdgePts, &traceFields[j][id2], 1,
                                      &surfaceFields[j][id1], 1);
+                        
+                        Vmath::Vcopy(nBndEdgePts, &FwdtraceFields[j][id2], 1,
+                                     &BwdsurfaceFields[j][id1], 1);
+                        
+                        if (j == 0 || j == 3)
+                        {
+                            Vmath::Neg(nBndEdgePts,
+                                       &BwdsurfaceFields[j][id2], 1);
+                            
+                        }
+                        
+                        if (j == 1)
+                        {
+                            Vmath::Neg(nBndEdgePts,
+                                       &BwdsurfaceFields[j][id2], 1);
+                            
+                            Vmath::Vadd(nBndEdgePts,
+                                       &BwdsurfaceFields[j][id2], 1,
+                                       &LiftDir[0][0], 1,
+                                       &BwdsurfaceFields[j][id1], 1);
+                            
+                        }
+                        
+                        if (j == 2)
+                        {
+                            Vmath::Neg(nBndEdgePts,
+                                       &BwdsurfaceFields[j][id2], 1);
+                            
+                            Vmath::Vadd(nBndEdgePts,
+                                        &BwdsurfaceFields[j][id2], 1,
+                                        &LiftDir[1][0], 1,
+                                        &BwdsurfaceFields[j][id1], 1);
+                            
+                        }
+                        
+                        
+                        Vmath::Vcopy(nBndEdgePts, &FwdtraceFields[j][id2], 1,
+                                     &FwdsurfaceFields[j][id1], 1);
                                                 
                         id1 += nBndEdgePts;
                     }
@@ -245,6 +315,14 @@ int main(int argc, char *argv[])
         << surfaceFields[1][i] << " \t " 
         << surfaceFields[2][i] << " \t "
         << surfaceFields[3][i] << " \t "
+        << FwdsurfaceFields[0][i] << " \t "
+        << FwdsurfaceFields[1][i] << " \t "
+        << FwdsurfaceFields[2][i] << " \t "
+        << FwdsurfaceFields[3][i] << " \t "
+        << BwdsurfaceFields[0][i] << " \t "
+        << BwdsurfaceFields[1][i] << " \t "
+        << BwdsurfaceFields[2][i] << " \t "
+        << BwdsurfaceFields[3][i] << " \t "
         << endl;
     }
     outfile << endl << endl;

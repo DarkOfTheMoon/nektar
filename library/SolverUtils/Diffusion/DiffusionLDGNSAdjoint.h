@@ -59,13 +59,13 @@ namespace Nektar
             Array<OneD, Array<OneD, NekDouble> > m_traceNormals;
             LibUtilities::SessionReaderSharedPtr m_session;
             NekDouble                            m_gamma;
-	    NekDouble                            m_rhoInfPrimal;
-	    NekDouble                            m_pInfPrimal;
-	    NekDouble                            m_uInfPrimal;
-	    NekDouble                            m_vInfPrimal;
-	    NekDouble                            m_wInfPrimal;
-	    NekDouble                            m_alphaInfDir;
-	    NekDouble                            m_Lref;
+            NekDouble                            m_rhoInfPrimal;
+            NekDouble                            m_pInfPrimal;
+            NekDouble                            m_uInfPrimal;
+            NekDouble                            m_vInfPrimal;
+            NekDouble                            m_wInfPrimal;
+            NekDouble                            m_alphaInfDir;
+            NekDouble                            m_Lref;
             NekDouble                            m_gasConstant;
             NekDouble                            m_Twall;
             std::string                          m_ViscosityType;
@@ -74,6 +74,7 @@ namespace Nektar
             NekDouble                            m_rhoInf;
             NekDouble                            m_pInf;
             NekDouble                            m_AlphaInf;
+            std::string                          m_Target;
             
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_viscTensor;
             
