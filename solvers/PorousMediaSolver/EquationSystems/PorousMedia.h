@@ -41,6 +41,7 @@
 #include <LibUtilities/BasicUtils/SessionReader.h>
 #include <PorousMediaSolver/EquationSystems/DarcyTerm.h>
 #include <PorousMediaSolver/EquationSystems/Extrapolate.h>
+#include <SolverUtils/Forcing/Forcing.h>
 
 namespace Nektar
 {     
@@ -116,6 +117,7 @@ namespace Nektar
 
         virtual void v_InitObject();
 
+        void AddForcing(const SolverUtils::ForcingSharedPtr& pForce);
         
     protected: 
 
@@ -128,6 +130,9 @@ namespace Nektar
 
         /// Advection term
         AdvectionTermSharedPtr m_advObject;
+
+        /// Forcing terms
+        std::vector<SolverUtils::ForcingSharedPtr> m_forcing;
 
         ExtrapolateSharedPtr m_extrapolation;
 
@@ -164,6 +169,8 @@ namespace Nektar
         {
             return m_equationType;
         }
+
+        virtual int v_GetForceDimension()=0;
 
         void EvaluateAdvectionTerms(const Array<OneD, 
                                     const Array<OneD, NekDouble> > &inarray, 

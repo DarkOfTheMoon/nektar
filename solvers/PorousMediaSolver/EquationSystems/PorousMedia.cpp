@@ -152,9 +152,12 @@ namespace Nektar
         // Initialise advection
         m_advObject = GetAdvectionTermFactory().CreateInstance("NoAdvection", m_session, m_graph);
 
+        // Forcing terms
+        m_forcing = SolverUtils::Forcing::Load(m_session, m_fields,
+                                               v_GetForceDimension());
+
         //Kinematic viscosity
         m_session->LoadParameter("Kinvis", m_kinvis);
-
 
         m_darcyEvaluation=GetDarcyTermFactory().CreateInstance(DarcyTermMethodStr[m_darcyType],m_session,m_fields);
         cout<<"Permeability advacement: "<<DarcyTermMethodStr[m_darcyType]<<endl;
@@ -245,6 +248,16 @@ namespace Nektar
         }
     }
     
+
+    /**
+     * Add an additional forcing term programmatically.
+     */
+    void PorousMedia::AddForcing(const SolverUtils::ForcingSharedPtr& pForce)
+    {
+        m_forcing.push_back(pForce);
+    }
+
+
     // Decide if at a steady state if the discrerte L2 sum of the
     // coefficients is the same as the previous step to within the
     // tolerance m_steadyStateTol;
