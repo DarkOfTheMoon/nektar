@@ -1484,6 +1484,63 @@ namespace Nektar
                 }
             }
         }
+        
+        void DisContField2D::v_AverageTracePhys(
+                const Array<OneD, const NekDouble> &inarray,
+                      Array<OneD,       NekDouble> &outarray)
+        {
+            // Loop over elemente and collect forward expansion
+            int nexp = GetExpSize();
+            int n, e, offset, phys_offset;
+            Array<OneD,NekDouble> e_tmp;
+            Array<OneD, Array<OneD, StdRegions::StdExpansionSharedPtr> >
+            &elmtToTrace = m_traceMap->GetElmtToTrace();
+            
+            ASSERTL1(outarray.num_elements() >= m_trace->GetNpoints(),
+                     "input array is of insufficient length");
+            
+            Vmath::Zero(m_trace->GetNpoints(), outarray, 1);
+            
+            // use m_trace tmp space in element to fill values
+            for(n  = 0; n < nexp; ++n)
+            {
+                phys_offset = GetPhys_Offset(n);
+                
+                for(e = 0; e < (*m_exp)[n]->GetNedges(); ++e)
+                {
+                    int nPts = (*m_exp)[n]->GetEdgeNumPoints(e);
+                    Array<OneD, NekDouble> tmp((*m_exp)[n]->GetEdgeNumPoints(e));
+                    offset = m_trace->GetPhys_Offset(
+                                                     elmtToTrace[n][e]->GetElmtId());
+                    (*m_exp)[n]->GetEdgePhysVals(e,  elmtToTrace[n][e],
+                                                 inarray + phys_offset,
+                                                 e_tmp = tmp);
+                    
+                    /*LocalRegions::Expansion1DSharedPtr traceEl =
+                    elmtToTrace[n][e]->as<LocalRegions::Expansion1D>();*/
+                    
+                    //==================OLD IMPLEMENTATION REMOVE ==============
+                    LocalRegions::Expansion1DSharedPtr traceEl = boost::dynamic_pointer_cast<LocalRegions::Expansion1D>(m_trace->GetExp(e));
+                    //==========================================================
+                    
+                    
+                    if (traceEl->GetRightAdjacentElementEdge() == -1)
+                    {
+                        Vmath::Vcopy(nPts, tmp, 1, e_tmp = outarray + offset, 1);
+                    }
+                    else
+                    {
+                        Vmath::Svtvp(nPts, 0.5, tmp, 1, outarray + offset, 1, e_tmp = outarray + offset, 1);
+                    }
+                }
+            }
+            
+            // Calculate parallel valency
+            Array<OneD, NekDouble> valency(m_trace->GetNpoints(), 1.0);
+            m_traceMap->UniversalTraceAssemble(valency);
+            m_traceMap->UniversalTraceAssemble(outarray);
+            Vmath::Vdiv(m_trace->GetNpoints(), outarray, 1, valency, 1, outarray, 1);
+        }
 
         void DisContField2D::v_AddTraceIntegral(
             const Array<OneD, const NekDouble> &Fx,

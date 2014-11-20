@@ -237,12 +237,14 @@ namespace Nektar
             // Get the normal velocity Vn
             for(i = 0; i < nDim; ++i)
             {
-                fields[0]->ExtractTracePhys(inarray[i], m_traceVel[i]);
-                /* Vmath::Vvtvp(nTracePts, m_traceNormals[i], 1,
-                 m_traceVel[i], 1, Vn, 1, Vn, 1);
-                fields[0]->AverageTracePhys(inarray[i], m_traceVel[i]);*/
+                
+                fields[0]->AverageTracePhys(inarray[i], m_traceVel[i]);
                 Vmath::Vvtvp(nTracePts, m_traceNormals[i], 1,
                              m_traceVel[i], 1, Vn, 1, Vn, 1);
+                
+                //fields[0]->ExtractTracePhys(inarray[i], m_traceVel[i]);
+                //Vmath::Vvtvp(nTracePts, m_traceNormals[i], 1,
+                //             m_traceVel[i], 1, Vn, 1, Vn, 1);
             }
             
             // Store forwards/backwards space along trace space
@@ -469,12 +471,13 @@ namespace Nektar
             // Get the normal velocity Vn
             for(i = 0; i < nDim; ++i)
             {
-                fields[0]->ExtractTracePhys(ufield[i], m_traceVel[i]);
-                /*Vmath::Vvtvp(nTracePts, m_traceNormals[i], 1,
-                 m_traceVel[i], 1, Vn, 1, Vn, 1);
-                fields[0]->AverageTracePhys(ufield[i], m_traceVel[i]);*/
+                fields[0]->AverageTracePhys(ufield[i], m_traceVel[i]);
                 Vmath::Vvtvp(nTracePts, m_traceNormals[i], 1,
                              m_traceVel[i], 1, Vn, 1, Vn, 1);
+                
+                //fields[0]->ExtractTracePhys(ufield[i], m_traceVel[i]);
+                //Vmath::Vvtvp(nTracePts, m_traceNormals[i], 1,
+                //             m_traceVel[i], 1, Vn, 1, Vn, 1);
             }
             
             // Evaulate Riemann flux

@@ -686,6 +686,10 @@ namespace Nektar
             inline void GetFwdBwdTracePhys(
                 Array<OneD,NekDouble> &Fwd,
                 Array<OneD,NekDouble> &Bwd);
+            
+            inline void AverageTracePhys(
+                const Array<OneD, const NekDouble> &inarray,
+                      Array<OneD,NekDouble> &outarray);
 
             inline void GetFwdBwdTracePhys(
                 const Array<OneD,const NekDouble> &field,
@@ -1061,6 +1065,10 @@ namespace Nektar
                 Array<OneD,NekDouble> &Fwd,
                 Array<OneD,NekDouble> &Bwd);
 
+            virtual void v_AverageTracePhys(
+                const Array<OneD, const NekDouble> &inarray,
+                      Array<OneD,NekDouble> &outarray);
+            
             virtual void v_GetFwdBwdTracePhys(
                 const Array<OneD,const NekDouble>  &field,
                       Array<OneD,NekDouble> &Fwd,
@@ -1980,6 +1988,13 @@ namespace Nektar
         inline const Array<OneD, const int> &ExpList::GetTraceBndMap()
         {
             return v_GetTraceBndMap();
+        }
+        
+        inline void ExpList::AverageTracePhys(
+            const Array<OneD, const NekDouble> &inarray,
+                  Array<OneD,NekDouble> &outarray)
+        {
+            v_AverageTracePhys(inarray,outarray);
         }
 
         inline void ExpList::GetNormals(
