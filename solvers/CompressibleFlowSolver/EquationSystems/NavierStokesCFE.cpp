@@ -232,7 +232,7 @@ namespace Nektar
                 {
                     svvConstants[n]  = (NekDouble)(n - kmodes)*(n - kmodes);
                     svvConstants[n] /= (NekDouble)(n - pstart)*(n - pstart);
-                    svvConstants[n] *= SVVDiffCoeff;
+                    svvConstants[n]  = SVVDiffCoeff * exp(-svvConstants[n]);
                 }
             }
 
