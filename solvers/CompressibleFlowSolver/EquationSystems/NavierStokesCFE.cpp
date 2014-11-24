@@ -212,22 +212,27 @@ namespace Nektar
         {
             NekDouble fac;
             Array<OneD, unsigned int> planes = m_fields[0]->GetZIDs();
+
+            // Number of Fourier planes
             int nPlanes = planes.num_elements();
+            // Points per plane
             int nPointsPlane = m_fields[0]->GetPlane(0)->GetNpoints();
-            int kmodes = m_fields[0]->GetHomogeneousBasis()->GetNumModes();
+            // Number of Fourier modes
+            int kmodes = m_fields[0]->GetHomogeneousBasis()->GetNumModes() / 2;
+            // Start of Fourier mode
             int pstart = SVVCutoffRatio*kmodes;
 
-            Array<OneD, NekDouble> svvConstants(nPlanes, 0.0);
+            Array<OneD, NekDouble> svvConstants(kmodes, 0.0);
             LibUtilities::TranspositionSharedPtr trans =
                 m_fields[0]->GetTransposition();
 
-            for (int n = 0; n < nPlanes; ++n)
+            for (int n = 0; n < kmodes; ++n)
             {
-                if(planes[n] > pstart)
+                if (n >= pstart)
                 {
-                    fac = (NekDouble)((planes[n] - kmodes)*(planes[n] - kmodes))/
-                        ((NekDouble)((planes[n] - pstart)*(planes[n] - pstart)));
-                    svvConstants[n] = SVVDiffCoeff*exp(-fac);
+                    svvConstants[n]  = (NekDouble)(n - kmodes)*(n - kmodes);
+                    svvConstants[n] /= (NekDouble)(n - pstart)*(n - pstart);
+                    svvConstants[n] *= SVVDiffCoeff;
                 }
             }
 
@@ -237,15 +242,16 @@ namespace Nektar
                 Array<OneD, NekDouble> tmp(npoints);
                 m_fields[j]->HomogeneousFwdTrans(inarray[j], tmp);
 
-                for (i = 0; i < nPlanes; ++i)
+                for (int n = 0; n < nPlanes; ++n)
                 {
-                    beta  = 2*M_PI*trans->GetK(i)/m_LhomZ;
+                    int k = trans->GetK(n);
+                    beta  = 2*M_PI*k/m_LhomZ;
                     beta *= beta;
-                    beta *= svvConstants[i];
+                    beta *= svvConstants[k];
 
                     Vmath::Smul(nPointsPlane, beta,
-                                &tmp[0] + i*nPointsPlane, 1,
-                                &tmp[0] + i*nPointsPlane, 1);
+                                &tmp[0] + n * nPointsPlane, 1,
+                                &tmp[0] + n * nPointsPlane, 1);
                 }
 
                 m_fields[j]->HomogeneousBwdTrans(tmp, tmp);
@@ -253,7 +259,6 @@ namespace Nektar
                 Vmath::Vsub(npoints, outarray[j], 1, tmp, 1, outarray[j], 1);
             }
         }
-
 
         // Add forcing terms
         std::vector<SolverUtils::ForcingSharedPtr>::const_iterator x;
