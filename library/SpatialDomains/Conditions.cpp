@@ -81,13 +81,6 @@ namespace Nektar
                 ReadBoundaryConditions(conditions);
             }
         }
-		
-		//std::ostream &operator<<(std::ostream &os, BCKey const &p)
-       // {
-        //    os << boost::get<0>(p)  << " "
-	//		   << boost::get<1>(p);
-      //      return os;
-       // }
 
 
         /**
