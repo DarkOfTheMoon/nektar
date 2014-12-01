@@ -1,4 +1,6 @@
 SET(SPATIAL_DOMAINS_SOURCES
+    BoundaryConditionBase.cpp
+    BoundaryConditionTypes.cpp
 Conditions.cpp
 GeomFactors.cpp
 Geometry0D.cpp
@@ -24,6 +26,8 @@ TriGeom.cpp
 )
 
 SET(SPATIAL_DOMAINS_HEADERS
+    BoundaryConditionBase.h
+    BoundaryConditionTypes.h
 Conditions.h
 Curve.hpp
 GeomFactors.h

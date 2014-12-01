@@ -34,8 +34,12 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <LibUtilities/BasicUtils/ParseUtils.hpp>
+//#include <LibUtilities/BasicUtils/ParseUtils.hpp>
+#include <SpatialDomains/BoundaryConditionBase.h>
 #include <SpatialDomains/Conditions.h>
+#include <LibUtilities/BasicUtils/SessionReader.h>
+
+
 #include <tinyxml.h>
 
 namespace Nektar
@@ -43,15 +47,6 @@ namespace Nektar
     namespace SpatialDomains
     {
 
-		BoundaryConditionsFactory& GetBoundaryConditionsFactory()
-        {
-            typedef Loki::SingletonHolder<BoundaryConditionsFactory,
-			Loki::CreateUsingNew,
-			Loki::NoDestroy > Type;
-            return Type::Instance();
-        }
-		
-		
         BoundaryConditions::BoundaryConditions(const LibUtilities::SessionReaderSharedPtr &pSession, const MeshGraphSharedPtr &meshGraph)
             : m_meshGraph(meshGraph), 
               m_session  (pSession)
@@ -87,12 +82,12 @@ namespace Nektar
             }
         }
 		
-		std::ostream &operator<<(std::ostream &os, boost::tuple<std::string,std::string> &p)
-        {
-            os << boost::get<0>(p)  << " "
-			   << boost::get<1>(p);
-            return os;
-        }
+		//std::ostream &operator<<(std::ostream &os, BCKey const &p)
+       // {
+        //    os << boost::get<0>(p)  << " "
+	//		   << boost::get<1>(p);
+      //      return os;
+       // }
 
 
         /**
