@@ -201,15 +201,14 @@ namespace Nektar
                                                GetFluxVector, this);
                     
                     m_diffusion->SetArtificialDiffusionVector(
-                                                              &CompressibleFlowSystem::GetSmoothArtificialViscosity, this);
-                }
+                                                              &CompressibleFlowSystem::GetSmoothArtificialViscosity, this);                }
                 if (m_shockCaptureType=="NonSmooth" && m_EqTypeStr=="EulerADCFE")
                 {
                     m_advection->SetFluxVector(&CompressibleFlowSystem::
                                                GetFluxVector, this);
                     
                     m_diffusion->SetArtificialDiffusionVector(
-                                                              &CompressibleFlowSystem::GetArtificialDynamicViscosity, this);
+                  &CompressibleFlowSystem::GetArtificialDynamicViscosity, this);
                 }
 
                 // Setting up Riemann solver for advection operator
