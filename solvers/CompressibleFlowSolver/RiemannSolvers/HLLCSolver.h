@@ -45,8 +45,7 @@ namespace Nektar
     public:
         static RiemannSolverSharedPtr create()
         {
-            return RiemannSolverSharedPtr(
-                new HLLCSolver());
+            return RiemannSolverSharedPtr(new HLLCSolver());
         }
         
         static std::string solverName;
@@ -55,17 +54,34 @@ namespace Nektar
         HLLCSolver();
         
         virtual void v_PointSolve(
-            double  rhoL, double  rhouL, double  rhovL, double  rhowL, double  EL,
-            double  rhoR, double  rhouR, double  rhovR, double  rhowR, double  ER,
-            double &rhof, double &rhouf, double &rhovf, double &rhowf, double &Ef);
+            NekDouble  rhoL, NekDouble  rhouL, NekDouble  rhovL, NekDouble  rhowL, NekDouble  EL,
+            NekDouble  rhoR, NekDouble  rhouR, NekDouble  rhovR, NekDouble  rhowR, NekDouble  ER,
+            NekDouble &rhof, NekDouble &rhouf, NekDouble &rhovf, NekDouble &rhowf, NekDouble &Ef);
         
         virtual void v_PointAdjointSolve(
-            double  rhoL, double  rhouL, double  rhovL, double  rhowL, double  EL,
-            double  rhoR, double  rhouR, double  rhovR, double  rhowR, double  ER,
-            double  rhoLdir, double  rhouLdir, double  rhovLdir, double  rhowLdir, double  ELdir,
-            double  rhoRdir, double  rhouRdir, double  rhovRdir, double  rhowRdir, double  ERdir,
-            double &rhof, double &rhouf, double &rhovf, double &rhowf, double &Ef);
-
+            NekDouble  rhoL, NekDouble  rhouL, NekDouble  rhovL, NekDouble  rhowL, NekDouble  EL,
+            NekDouble  rhoR, NekDouble  rhouR, NekDouble  rhovR, NekDouble  rhowR, NekDouble  ER,
+            NekDouble  rhoLdir, NekDouble  rhouLdir, NekDouble  rhovLdir, NekDouble  rhowLdir, NekDouble  ELdir,
+            NekDouble  rhoRdir, NekDouble  rhouRdir, NekDouble  rhovRdir, NekDouble  rhowRdir, NekDouble  ERdir,
+            NekDouble &rhof, NekDouble &rhouf, NekDouble &rhovf, NekDouble &rhowf, NekDouble &Ef);
+        
+        virtual void v_PointSolveVisc(
+            NekDouble  rhoL, NekDouble  rhouL, NekDouble  rhovL, NekDouble  rhowL, NekDouble  EL, NekDouble  EpsL,
+            NekDouble  rhoR, NekDouble  rhouR, NekDouble  rhovR, NekDouble  rhowR, NekDouble  ER, NekDouble  EpsR,
+            NekDouble &rhof, NekDouble &rhouf, NekDouble &rhovf, NekDouble &rhowf, NekDouble &Ef, NekDouble &Epsf);
+        
+        virtual void v_PointAdjointNSSolve(
+                                           double  rhoL, double  rhouL, double  rhovL, double  rhowL, double  EL,
+                                           double  rhoR, double  rhouR, double  rhovR, double  rhowR, double  ER,
+                                           double  rhoLdir, double  rhouLdir, double  rhovLdir, double  rhowLdir, double  ELdir,
+                                           double  rhoRdir, double  rhouRdir, double  rhovRdir, double  rhowRdir, double  ERdir,
+                                           double  DrhoLdirDX, double  DrhouLdirDX, double  DrhovLdirDX, double  DrhowLdirDX, double  DELdirDX,
+                                           double  DrhoRdirDX, double  DrhouRdirDX, double  DrhovRdirDX, double  DrhowRdirDX, double  DERdirDX,
+                                           double  DrhoLdirDY, double  DrhouLdirDY, double  DrhovLdirDY, double  DrhowLdirDY, double  DELdirDY,
+                                           double  DrhoRdirDY, double  DrhouRdirDY, double  DrhovRdirDY, double  DrhowRdirDY, double  DERdirDY,
+                                           double  DrhoLdirDZ, double  DrhouLdirDZ, double  DrhovLdirDZ, double  DrhowLdirDZ, double  DELdirDZ,
+                                           double  DrhoRdirDZ, double  DrhouRdirDZ, double  DrhovRdirDZ, double  DrhowRdirDZ, double  DERdirDZ,
+                                           double &rhof, double &rhouf, double &rhovf, double &rhowf, double &Ef);
     };
 }
 

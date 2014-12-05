@@ -50,6 +50,7 @@ namespace Nektar
         CompressibleSolver();
         
         virtual void v_Solve(
+            const int                                         nDim,
             const Array<OneD, const Array<OneD, NekDouble> > &Fwd,
             const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
                   Array<OneD,       Array<OneD, NekDouble> > &flux);
@@ -78,7 +79,7 @@ namespace Nektar
         {
             ASSERTL0(false, "This function should be defined by subclasses.");
         }
-
+        
         virtual void v_PointSolve(
             NekDouble  rhoL, NekDouble  rhouL, NekDouble  rhovL, NekDouble  rhowL, NekDouble  EL,
             NekDouble  rhoR, NekDouble  rhouR, NekDouble  rhovR, NekDouble  rhowR, NekDouble  ER,
@@ -131,6 +132,14 @@ namespace Nektar
             NekDouble  DrhoLDirDZ, NekDouble  DrhouLDirDZ, NekDouble  DrhovLDirDZ, NekDouble  DrhowLDirDZ, NekDouble  DELDirDZ,
             NekDouble  DrhoRDirDZ, NekDouble  DrhouRDirDZ, NekDouble  DrhovRDirDZ, NekDouble  DrhowRDirDZ, NekDouble  DERDirDZ,
             NekDouble &rhof, NekDouble &rhouf, NekDouble &rhovf, NekDouble &rhowf, NekDouble &Ef)
+        {
+            ASSERTL0(false, "This function should be defined by subclasses.");
+        }
+
+        virtual void v_PointSolveVisc(
+            NekDouble  rhoL, NekDouble  rhouL, NekDouble  rhovL, NekDouble  rhowL, NekDouble  EL, NekDouble EpsL,
+            NekDouble  rhoR, NekDouble  rhouR, NekDouble  rhovR, NekDouble  rhowR, NekDouble  ER, NekDouble EpsR,
+            NekDouble &rhof, NekDouble &rhouf, NekDouble &rhovf, NekDouble &rhowf, NekDouble &Ef, NekDouble &Epsf)
         {
             ASSERTL0(false, "This function should be defined by subclasses.");
         }

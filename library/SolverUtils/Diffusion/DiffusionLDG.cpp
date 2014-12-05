@@ -56,6 +56,10 @@ namespace Nektar
             
             m_EqTypeStr = pSession->GetSolverInfo("EQTYPE");
             // Setting up the normals
+	    m_session->LoadSolverInfo("ShockCaptureType",
+                                  m_shockCaptureType,    "Off");		
+            
+	    // Setting up the normals
             int i;
             int nDim = pFields[0]->GetCoordim(0);
             int nTracePts = pFields[0]->GetTrace()->GetTotPoints();
@@ -130,84 +134,71 @@ namespace Nektar
                     fields[i]->BwdTrans             (qcoeffs, qfield[j][i]);
                 }
             }
-            
             // Compute u from q_{\eta} and q_{\xi}
             // Obtain numerical fluxes
             v_NumFluxforVector(fields, inarray, qfield, flux[0]);
 
-            if (m_EqTypeStr == "EulerADCFE")
+            if (m_ArtificialDiffusionVector)
             {
                 Array<OneD, NekDouble> muvar(nPts, 0.0);
-                
                 m_ArtificialDiffusionVector(inarray, muvar);
+	        
+	        int numConvFields = nConvectiveFields;
                 
+                if (m_shockCaptureType == "Smooth")
+                {
+                    numConvFields = nConvectiveFields - 1;
+                }
+	
                 for (j = 0; j < nDim; ++j)
                 {
-                    for (i = 0; i < nConvectiveFields; ++i)
+                    for (i = 0; i < numConvFields; ++i)
                     {
                         Vmath::Vmul(nPts,qfield[j][i],1,muvar,1,qfield[j][i],1);
                     }
                 }
-                
-                Array<OneD, NekDouble > FwdMuVar(nTracePts,0.0);
-                Array<OneD, NekDouble > BwdMuVar(nTracePts,0.0);
-                
+
+                Array<OneD, NekDouble> FwdMuVar(nTracePts, 0.0);
+                Array<OneD, NekDouble> BwdMuVar(nTracePts, 0.0);
+
                 fields[0]->GetFwdBwdTracePhys(muvar,FwdMuVar,BwdMuVar);
-                
-                NekDouble DiffBwd = Vmath::Vmax(nTracePts, BwdMuVar, 1);
-                NekDouble DiffFwd = Vmath::Vmax(nTracePts, FwdMuVar, 1);
-                
-                int nBndRegions = fields[0]->GetBndCondExpansions().num_elements();
-                //cout << "nBndRegions = " << nBndRegions << endl;
+
+                int nBndRegions = fields[0]->GetBndCondExpansions().
+                    num_elements();
                 int cnt = 0;
+
                 for (int i = 0; i < nBndRegions; ++i)
                 {
                     // Number of boundary expansion related to that region
                     int nBndEdges = fields[0]->
-                    GetBndCondExpansions()[i]->GetExpSize();
-                    //cout << "nBndEdges = " << nBndEdges << endl;
-                    // Weakly impose boundary conditions by modifying flux values
-                    for (int e = 0; e < nBndEdges; ++e)
+                        GetBndCondExpansions()[i]->GetExpSize();
+
+                    // Weakly impose boundary conditions by modifying flux
+                    // values
+                    for (int e = 0; e < nBndEdges ; ++e)
                     {
-                        nBndEdgePts = 0;
-                        // Number of points on the expansion
-                        if (nDim == 2)
-                        {
-                            nBndEdgePts = fields[0]->
-                            GetBndCondExpansions()[i]->GetExp(e)->GetNumPoints(0);
-                        }
-                        if (nDim == 3)
-                        {
-                            int nBndEdgePts1 = fields[0]->
-                            GetBndCondExpansions()[i]->GetExp(e)->GetNumPoints(0);
-                            int nBndEdgePts2 = fields[0]->
-                            GetBndCondExpansions()[i]->GetExp(e)->GetNumPoints(1);
-                            
-                            nBndEdgePts = nBndEdgePts1*nBndEdgePts2;
-                        }
-                        
-                        int id1 = fields[0]->
-                        GetBndCondExpansions()[i]->GetPhys_Offset(e);
-                        
-                        int id2 = fields[0]->GetTrace()->
-                        GetPhys_Offset(fields[0]->GetTraceMap()->
-                                       GetBndCondTraceToGlobalTraceMap(cnt++));
-                        
+                        nBndEdgePts = fields[0]->GetBndCondExpansions()[i]
+                            ->GetExp(e)->GetTotPoints();
+
+                        int id2 = fields[0]->GetTrace()->GetPhys_Offset(
+                            fields[0]->GetTraceMap()
+                                ->GetBndCondTraceToGlobalTraceMap(cnt++));
+
                         for (int k = 0; k < nBndEdgePts; ++k)
                         {
-                          BwdMuVar[id2+k] = 0.0;
+                            BwdMuVar[id2+k] = 0.0;
                         }
                     }
                 }
-                
-                for(i = 0; i < nConvectiveFields; ++i)
+
+                for(i = 0; i < numConvFields; ++i)
                 {
-                    for(int k=0; k<nTracePts; ++k)
+                    for(int k = 0; k < nTracePts; ++k)
                     {
-                        flux[0][i][k] = 0.5*(FwdMuVar[k]+BwdMuVar[k])*flux[0][i][k];
+                        flux[0][i][k] =
+                            0.5 * (FwdMuVar[k] + BwdMuVar[k]) * flux[0][i][k];
                     }
                 }
-                
             }
 
             for (i = 0; i < nConvectiveFields; ++i)
@@ -220,7 +211,7 @@ namespace Nektar
                     fields[i]->IProductWRTDerivBase(j, fluxvector[j], qcoeffs);
                     Vmath::Vadd(nCoeffs, qcoeffs, 1, tmp[i], 1, tmp[i], 1);
                 }
-                
+
                 // Evaulate  <\phi, \hat{F}\cdot n> - outarray[i]
                 Vmath::Neg                      (nCoeffs, tmp[i], 1);
                 fields[i]->AddTraceIntegral     (flux[0][i], tmp[i]);
@@ -320,7 +311,6 @@ namespace Nektar
             int cnt         = 0;
             int nBndRegions = fields[var]->GetBndCondExpansions().num_elements();
             int nTracePts   = fields[0]->GetTrace()->GetTotPoints();
-            
             Array<OneD, NekDouble > uplus(nTracePts);
             
             fields[var]->ExtractTracePhys(ufield, uplus);
@@ -333,9 +323,8 @@ namespace Nektar
                 // Weakly impose boundary conditions by modifying flux values
                 for (e = 0; e < nBndEdges ; ++e)
                 {
-                    // Number of points on the expansion
                     nBndEdgePts = fields[var]->
-                    GetBndCondExpansions()[i]->GetExp(e)->GetNumPoints(0);
+                    GetBndCondExpansions()[i]->GetExp(e)->GetTotPoints();
                     
                     id1 = fields[var]->
                     GetBndCondExpansions()[i]->GetPhys_Offset(e);
@@ -519,7 +508,7 @@ namespace Nektar
                 for (e = 0; e < nBndEdges ; ++e)
                 {
                     nBndEdgePts = fields[var]->
-                    GetBndCondExpansions()[i]->GetExp(e)->GetNumPoints(0);
+                    GetBndCondExpansions()[i]->GetExp(e)->GetTotPoints();
                     
                     id1 = fields[var]->
                     GetBndCondExpansions()[i]->GetPhys_Offset(e);

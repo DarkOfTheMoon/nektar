@@ -1,3 +1,4 @@
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 // File: RoeSolver.h
@@ -78,7 +79,6 @@ namespace Nektar
             double  DrhoLdirDZ, double  DrhouLdirDZ, double  DrhovLdirDZ, double  DrhowLdirDZ, double  DELdirDZ,
             double  DrhoRdirDZ, double  DrhouRdirDZ, double  DrhovRdirDZ, double  DrhowRdirDZ, double  DERdirDZ,
             double &rhof, double &rhouf, double &rhovf, double &rhowf, double &Ef);
-
     };
 }
 

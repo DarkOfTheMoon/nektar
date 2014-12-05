@@ -90,7 +90,7 @@ namespace Nektar
             int nCoeffs         = fields[0]->GetNcoeffs();
             int nTracePointsTot = fields[0]->GetTrace()->GetTotPoints();
             int i, j;
-
+            
             Array<OneD, Array<OneD, NekDouble> >        outarray_tmp(nConvectiveFields);
             Array<OneD, Array<OneD, NekDouble> >        outarray_tmp2(nConvectiveFields);
             Array<OneD, Array<OneD, NekDouble> >        outarray_tmp3(nConvectiveFields);
@@ -246,6 +246,13 @@ namespace Nektar
                 m_fluxVector(inarray, fluxvector);
                 m_AddfluxVector(inarray, addfluxvector);
                 
+                /*for (int i = 0; i < nConvectiveFields; ++i)
+                {
+                    Vmath::Vabs(nPointsTot, fluxvector[i][0], 1, fluxvector[i][0], 1);
+                    cout << Vmath::Vmin(nPointsTot, fluxvector[i][0], 1) << endl;
+                }
+                cout << endl;*/
+                
                 m_JacTransposeDivVector(inarray, JacTransVec);
                 m_AddJacTransposeDivVector(inarray, addJacTransVec);
                 
@@ -316,9 +323,9 @@ namespace Nektar
                 fields[i]->GetFwdBwdTracePhys(inarray[i], Fwd[i], Bwd[i]);
             }
 
-            m_riemann->Solve(Fwd, Bwd, numflux);
-            
-            // Evaulate <\phi, \hat{F}\cdot n> - OutField[i]g
+            m_riemann->Solve(m_spaceDim, Fwd, Bwd, numflux);
+
+            // Evaulate <\phi, \hat{F}\cdot n> - OutField[i]
             for(i = 0; i < nConvectiveFields; ++i)
             {
                 Vmath::Neg                      (nCoeffs, tmp[i], 1);

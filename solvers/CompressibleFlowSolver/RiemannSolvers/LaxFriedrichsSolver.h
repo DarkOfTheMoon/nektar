@@ -45,8 +45,7 @@ namespace Nektar
     public:
         static RiemannSolverSharedPtr create()
         {
-            return RiemannSolverSharedPtr(
-                new LaxFriedrichsSolver());
+            return RiemannSolverSharedPtr(new LaxFriedrichsSolver());
         }
         
         static std::string solverName;
@@ -55,16 +54,21 @@ namespace Nektar
         LaxFriedrichsSolver();
         
         virtual void v_PointSolve(
-            double  rhoL, double  rhouL, double  rhovL, double  rhowL, double  EL,
-            double  rhoR, double  rhouR, double  rhovR, double  rhowR, double  ER,
-            double &rhof, double &rhouf, double &rhovf, double &rhowf, double &Ef);
+            NekDouble  rhoL, NekDouble  rhouL, NekDouble  rhovL, NekDouble  rhowL, NekDouble  EL,
+            NekDouble  rhoR, NekDouble  rhouR, NekDouble  rhovR, NekDouble  rhowR, NekDouble  ER,
+            NekDouble &rhof, NekDouble &rhouf, NekDouble &rhovf, NekDouble &rhowf, NekDouble &Ef);
         
         virtual void v_PointAdjointSolve(
-          double  rhoL, double  rhouL, double  rhovL, double  rhowL, double  EL,
-          double  rhoR, double  rhouR, double  rhovR, double  rhowR, double  ER,
-          double  rhoLdir, double  rhouLdir, double  rhovLdir, double  rhowLdir, double  ELdir,
-          double  rhoRdir, double  rhouRdir, double  rhovRdir, double  rhowRdir, double  ERdir,
-          double &rhof, double &rhouf, double &rhovf, double &rhowf, double &Ef);
+            NekDouble  rhoL, NekDouble  rhouL, NekDouble  rhovL, NekDouble  rhowL, NekDouble  EL,
+            NekDouble  rhoR, NekDouble  rhouR, NekDouble  rhovR, NekDouble  rhowR, NekDouble  ER,
+            NekDouble  rhoLdir, NekDouble  rhouLdir, NekDouble  rhovLdir, NekDouble  rhowLdir, NekDouble  ELdir,
+            NekDouble  rhoRdir, NekDouble  rhouRdir, NekDouble  rhovRdir, NekDouble  rhowRdir, NekDouble  ERdir,
+            NekDouble &rhof, NekDouble &rhouf, NekDouble &rhovf, NekDouble &rhowf, NekDouble &Ef);
+        
+        virtual void v_PointSolveVisc(
+            NekDouble  rhoL, NekDouble  rhouL, NekDouble  rhovL, NekDouble  rhowL, NekDouble  EL, NekDouble  EpsL,
+            NekDouble  rhoR, NekDouble  rhouR, NekDouble  rhovR, NekDouble  rhowR, NekDouble  ER, NekDouble  EpsR,
+            NekDouble &rhof, NekDouble &rhouf, NekDouble &rhovf, NekDouble &rhowf, NekDouble &Ef, NekDouble  &Epsf);
     };
 }
 

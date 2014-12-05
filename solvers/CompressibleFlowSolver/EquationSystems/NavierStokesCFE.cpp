@@ -80,7 +80,6 @@ namespace Nektar
         {
             ASSERTL0(false, "Implicit CFE not set up.");
         }
-
     }
 
     NavierStokesCFE::~NavierStokesCFE()
@@ -96,7 +95,8 @@ namespace Nektar
 
     void NavierStokesCFE::v_SetInitialConditions(
         NekDouble initialtime, 
-        bool dumpInitialConditions)
+        bool dumpInitialConditions,
+        const int domain)
     {
         EquationSystem::v_SetInitialConditions(initialtime, false);
         
@@ -134,6 +134,7 @@ namespace Nektar
         int i;
         int nvariables = inarray.num_elements();
         int npoints    = GetNpoints();
+        
         
         Array<OneD, Array<OneD, NekDouble> > advVel(m_spacedim);
         Array<OneD, Array<OneD, NekDouble> > outarrayAdv(nvariables);
@@ -220,16 +221,26 @@ namespace Nektar
             
             // Advection term in physical rhs form
             m_advection->Advect(nvariables, m_fields, advVel, inarray, outarrayAdv);
+            
+            /*for (int i = 0; i < nvariables; ++i)
+            {
+                Vmath::Vabs(npoints, outarrayAdv[i], 1, outarrayAdv[i], 1);
+                cout << Vmath::Vmin(npoints, outarrayAdv[i], 1) << endl;
+            }
+            cout << endl;*/
+            
             // Diffusion term in physical rhs form
-            m_diffusion->Diffuse(nvariables, m_fields, inarray, outarrayDiff);
+            //m_diffusion->Diffuse(nvariables, m_fields, inarray, outarrayDiff);
+            
+            
             
             for (i = 0; i < nvariables; ++i)
             {
-	      Vmath::Vadd(npoints, 
-			  outarrayAdv[i], 1,
-			  outarrayDiff[i], 1,
-			  outarray[i], 1);
-	    }
+                Vmath::Vadd(npoints,
+                            outarrayAdv[i], 1,
+                            outarrayDiff[i], 1,
+                            outarray[i], 1);
+            }
         }
     }
 
@@ -320,12 +331,6 @@ namespace Nektar
                 SpatialDomains::eExtrapOrder0)
             {
                 ExtrapOrder0BC(n, cnt, inarray);
-            }
-            
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                SpatialDomains::eAdjointPressureOutflow)
-            {
-                AdjointPressureOutflow(n, cnt, inarray);
             }
             
             // Time Dependent Boundary Condition (specified in meshfile)

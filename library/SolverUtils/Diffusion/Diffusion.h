@@ -61,12 +61,17 @@ namespace Nektar
             const Array<OneD, Array<OneD, NekDouble> >&,
                   Array<OneD, Array<OneD, Array<OneD, NekDouble> > >&,
                   Array<OneD, Array<OneD, Array<OneD, NekDouble> > >&)> 
-                                                        DiffusionFluxVecCBNS;
+                                            DiffusionFluxVecCBNS;
         
         typedef boost::function<void (
-                                      const Array<OneD, Array<OneD, NekDouble> >&,
-                                      Array<OneD,             NekDouble  >&)>
-                                        DiffusionArtificialDiffusion;
+            const Array<OneD, Array<OneD, NekDouble> >&,
+                  Array<OneD,             NekDouble  >&)>
+                                            DiffusionArtificialDiffusion;
+        
+        typedef boost::function<void (
+            const Array<OneD, Array<OneD, NekDouble> >&,
+                  Array<OneD,             NekDouble  >&)>
+                                            DiffusionArtificialDiffusion;
         
         class Diffusion
         {
@@ -101,18 +106,18 @@ namespace Nektar
             {
                 m_fluxVectorNS = boost::bind(func, obj, _1, _2, _3);
             }
-            
-            void SetFluxVectorNS(DiffusionFluxVecCBNS fluxVector)
-            {
-                m_fluxVectorNS = fluxVector;
-            }
-            
+
             template<typename FuncPointerT, typename ObjectPointerT>
             void SetArtificialDiffusionVector(FuncPointerT func, ObjectPointerT obj)
             {
                 m_ArtificialDiffusionVector = boost::bind(func, obj, _1, _2);
             }
-                        
+
+            void SetFluxVectorNS(DiffusionFluxVecCBNS fluxVector)
+            {
+                m_fluxVectorNS = fluxVector;
+            }
+            
             inline void SetRiemannSolver(RiemannSolverSharedPtr riemann)
             {
                 m_riemann = riemann;
@@ -129,6 +134,11 @@ namespace Nektar
             }
             
         protected:
+            DiffusionFluxVecCB              m_fluxVector;
+            DiffusionFluxVecCBNS            m_fluxVectorNS;
+            RiemannSolverSharedPtr          m_riemann;
+            DiffusionArtificialDiffusion    m_ArtificialDiffusionVector;
+
             virtual void v_InitObject(
                 LibUtilities::SessionReaderSharedPtr              pSession,
                 Array<OneD, MultiRegions::ExpListSharedPtr>       pFields)
@@ -153,11 +163,6 @@ namespace Nektar
                 static Array<OneD, Array<OneD, Array<OneD, NekDouble> > > tmp;
                 return tmp;
             }
-
-            DiffusionFluxVecCB     m_fluxVector;
-            DiffusionFluxVecCBNS   m_fluxVectorNS;
-            RiemannSolverSharedPtr m_riemann;
-            DiffusionArtificialDiffusion    m_ArtificialDiffusionVector;
         }; 
         
         /// A shared pointer to an EquationSystem object

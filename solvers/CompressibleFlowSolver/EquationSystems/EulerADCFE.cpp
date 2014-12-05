@@ -29,11 +29,13 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 //
-// Description: Euler equations in conservative variables with artificial diffusion
+// Description: Euler equations in conservative variables with artificial
+// diffusion
 //
 ///////////////////////////////////////////////////////////////////////////////
 
 #include <CompressibleFlowSolver/EquationSystems/EulerADCFE.h>
+#include <boost/algorithm/string.hpp>
 
 namespace Nektar
 {
@@ -53,14 +55,24 @@ namespace Nektar
     {
         CompressibleFlowSystem::v_InitObject();
 
+        if (m_shockCaptureType == "Smooth")
+        {
+            ASSERTL0(m_fields.num_elements() == m_spacedim + 3,
+                     "Not enough variables for smooth shock capturing; "
+                     "make sure you have added eps to variable list.");
+            m_smoothDiffusion = true;
+        }
+
+        m_diffusion->SetArtificialDiffusionVector(
+            &EulerADCFE::GetArtificialDynamicViscosity, this);
+
         if(m_session->DefinesSolverInfo("PROBLEMTYPE"))
         {
-
             std::string ProblemTypeStr = m_session->GetSolverInfo("PROBLEMTYPE");
             int i;
             for(i = 0; i < (int) SIZE_ProblemType; ++i)
             {
-                if(NoCaseStringCompare(ProblemTypeMap[i],ProblemTypeStr) == 0)
+                if(boost::iequals(ProblemTypeMap[i], ProblemTypeStr))
                 {
                     m_problemType = (ProblemType)i;
                     break;
@@ -83,12 +95,6 @@ namespace Nektar
         {
             ASSERTL0(false, "Implicit CFE not set up.");
         }
-        
-        m_checkpointFuncs["Sensor"] = boost::bind(&EulerADCFE::CPSensor, this, _1, _2);
-        //m_checkpointFuncs["Mach"] = boost::bind(&EulerADCFE::CPMach, this, _1, _2);
-        m_checkpointFuncs["ADViscCoeff"] = boost::bind(&EulerADCFE::CPArtificialDynamicViscosity, this, _1, _2);
-        //m_checkpointFuncs["VariableP"] = boost::bind(&EulerADCFE::CPGetVariableP, this, _1, _2);
-
     }
 
     EulerADCFE::~EulerADCFE()
@@ -99,12 +105,14 @@ namespace Nektar
     void EulerADCFE::v_GenerateSummary(SolverUtils::SummaryList& s)
     {
         CompressibleFlowSystem::v_GenerateSummary(s);
-        SolverUtils::AddSummaryItem(s, "Problem Type", ProblemTypeMap[m_problemType]);
+        SolverUtils::AddSummaryItem(
+            s, "Problem Type", ProblemTypeMap[m_problemType]);
     }
 
     void EulerADCFE::v_SetInitialConditions(
         NekDouble initialtime, 
-        bool      dumpInitialConditions)
+        bool      dumpInitialConditions,
+        const int domain)
     {
         EquationSystem::v_SetInitialConditions(initialtime, false);
 
@@ -135,25 +143,84 @@ namespace Nektar
         }
         
         m_advection->Advect(nvariables, m_fields, advVel, inarray, outarrayAdv);
-       
-        if (m_adjointSwitch == 0.0)
+        
+        for (i = 0; i < nvariables; ++i)
         {
-            for (i = 0; i < nvariables; ++i)
-            {
-                Vmath::Neg(npoints, outarray[i], 1);
-            }
+            Vmath::Neg(npoints, outarrayAdv[i], 1);
         }
         
         m_diffusion->Diffuse(nvariables, m_fields, inarray, outarrayDiff);
         
-        for (i = 0; i < nvariables; ++i)
+        if (m_shockCaptureType == "NonSmooth")
         {
-            Vmath::Vadd(npoints,
-                        outarrayAdv[i], 1,
-                        outarrayDiff[i], 1,
-                        outarray[i], 1);
+            for (i = 0; i < nvariables; ++i)
+            {
+                Vmath::Vadd(npoints,
+                            outarrayAdv[i], 1,
+                            outarrayDiff[i], 1,
+                            outarray[i], 1);
+            }
         }
-        
+        if(m_shockCaptureType == "Smooth")
+        {
+            const Array<OneD, int> ExpOrder = GetNumExpModesPerExp();
+            
+            NekDouble pOrder = Vmath::Vmax(ExpOrder.num_elements(), ExpOrder, 1);
+            
+            Array <OneD, NekDouble > a_vel  (npoints, 0.0);
+            Array <OneD, NekDouble > u_abs  (npoints, 0.0);
+            Array <OneD, NekDouble > pres   (npoints, 0.0);
+            Array <OneD, NekDouble > wave_sp(npoints, 0.0);
+            
+            GetPressure(inarray, pres);
+            GetSoundSpeed(inarray, pres, a_vel);
+            GetAbsoluteVelocity(inarray, u_abs);
+            
+            Vmath::Vadd(npoints, a_vel, 1, u_abs, 1, wave_sp, 1);
+            
+            NekDouble max_wave_sp = Vmath::Vmax(npoints, wave_sp, 1);
+            
+            Vmath::Smul(npoints,
+                        m_C2,
+                        outarrayDiff[nvariables-1], 1,
+                        outarrayDiff[nvariables-1], 1);
+            
+            Vmath::Smul(npoints,
+                        max_wave_sp,
+                        outarrayDiff[nvariables-1], 1,
+                        outarrayDiff[nvariables-1], 1);
+            
+            Vmath::Smul(npoints,
+                        pOrder,
+                        outarrayDiff[nvariables-1], 1,
+                        outarrayDiff[nvariables-1], 1);
+            
+            for (i = 0; i < nvariables; ++i)
+            {
+                Vmath::Vadd(npoints,
+                            outarrayAdv[i], 1,
+                            outarrayDiff[i], 1,
+                            outarray[i], 1);
+            }
+            
+            Array<OneD, Array<OneD, NekDouble> > outarrayForcing(nvariables);
+            
+            for (i = 0; i < nvariables; ++i)
+            {
+                outarrayForcing[i] = Array<OneD, NekDouble>(npoints, 0.0);
+            }
+            
+            GetForcingTerm(inarray, outarrayForcing);
+            
+            for (i = 0; i < nvariables; ++i)
+            {
+                // Add Forcing Term
+                Vmath::Vadd(npoints,
+                            outarray[i], 1,
+                            outarrayForcing[i], 1,
+                            outarray[i], 1);
+            }
+        }
     }
 
     void EulerADCFE::DoOdeProjection(
@@ -194,19 +261,13 @@ namespace Nektar
         Array<OneD, Array<OneD, NekDouble> > &inarray,
         NekDouble                             time)
     {    
+        std::string varName;
         int nvariables = m_fields.num_elements();
         int cnt        = 0;
     
         // loop over Boundary Regions
         for (int n = 0; n < m_fields[0]->GetBndConditions().num_elements(); ++n)
         {
-            // Wall Boundary Condition
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                SpatialDomains::eAdjointWall)
-            {
-                AdjointWallBC(n, cnt, inarray);
-            }
-            
             // Wall Boundary Condition
             if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
                 SpatialDomains::eWall)
@@ -249,77 +310,12 @@ namespace Nektar
             {
                 for (int i = 0; i < nvariables; ++i)
                 {
-                    m_fields[i]->EvaluateBoundaryConditions(time);
+                    varName = m_session->GetVariable(i);
+                    m_fields[i]->EvaluateBoundaryConditions(time, varName);
                 }
             }
     
             cnt += m_fields[0]->GetBndCondExpansions()[n]->GetExpSize();
         }
-    }
-    
-    void EulerADCFE::CPSensor(
-            const Array<OneD, const Array<OneD, NekDouble> > &inarray,
-                Array<OneD, NekDouble> &outarray)
-    {
-        const int npts = m_fields[0]->GetTotPoints();
-        outarray = Array<OneD, NekDouble>(GetNcoeffs());
-        Array<OneD, Array<OneD, NekDouble> > physfield(m_spacedim+2);
-        
-        for (int i = 0; i < m_spacedim+2; ++i)
-        {
-            physfield[i] = Array<OneD, NekDouble>(npts);
-            m_fields[i]->BwdTrans(m_primal[i]->GetCoeffs(), physfield[i]);
-        }
-        
-        Array<OneD, NekDouble> sensor(npts,0.0);
-        Array<OneD, NekDouble> SensorKappa(npts,0.0);
-        GetSensor(physfield, sensor, SensorKappa);
-        m_fields[0]->FwdTrans(sensor, outarray);
-    }
-    
-    void EulerADCFE::CPMach(
-                          const Array<OneD, const Array<OneD, NekDouble> > &inarray,
-                          Array<OneD, NekDouble> &outarray)
-    {
-        const int npts = m_fields[0]->GetTotPoints();
-        outarray = Array<OneD, NekDouble>(GetNcoeffs());
-        
-        Array<OneD, Array<OneD, NekDouble> > physfield(m_spacedim+2);
-        
-        for (int i = 0; i < m_spacedim+2; ++i)
-        {
-            physfield[i] = Array<OneD, NekDouble>(npts);
-            m_fields[i]->BwdTrans(inarray[i], physfield[i]);
-        }
-        
-        Array<OneD, NekDouble> pressure(npts);
-        Array<OneD, NekDouble> soundspeed(npts);
-        Array<OneD, NekDouble> mach(npts);
-        
-        GetPressure(physfield, pressure);
-        GetSoundSpeed(physfield, pressure, soundspeed);
-        GetMach(physfield, soundspeed, mach);
-        
-        m_fields[0]->FwdTrans(mach, outarray);
-    }
-    
-    void EulerADCFE::CPArtificialDynamicViscosity(
-                        const Array<OneD, const Array<OneD, NekDouble> > &inarray,
-                              Array<OneD, NekDouble> &outarray)
-    {
-        const int npts = m_fields[0]->GetTotPoints();
-        outarray = Array<OneD, NekDouble>(GetNcoeffs());
-        Array<OneD, Array<OneD, NekDouble> > physfield(m_spacedim+2);
-        
-        for (int i = 0; i < m_spacedim+2; ++i)
-        {
-            physfield[i] = Array<OneD, NekDouble>(npts);
-            m_fields[i]->BwdTrans(inarray[i], physfield[i]);
-        }
-        
-        Array<OneD, NekDouble> muvar(npts,0.0);
-        GetArtificialDynamicViscosity(physfield, muvar);
-        
-        m_fields[0]->FwdTrans(muvar, outarray);
     }
 }

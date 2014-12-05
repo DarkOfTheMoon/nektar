@@ -108,10 +108,10 @@ namespace Nektar
          *
          */
         void DiffusionLDGNSAdjoint::v_Diffuse(
-                    const int                                         nConvectiveFields,
-                    const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
-                    const Array<OneD, Array<OneD, NekDouble> >        &inarray,
-                          Array<OneD, Array<OneD, NekDouble> >        &outarray)
+                                              const int                                         nConvectiveFields,
+                                              const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
+                                              const Array<OneD, Array<OneD, NekDouble> >        &inarray,
+                                              Array<OneD, Array<OneD, NekDouble> >        &outarray)
         {
             int i, j;
             int nDim      = fields[0]->GetCoordim(0);
@@ -133,9 +133,9 @@ namespace Nektar
             for (j = 0; j < m_spaceDim; ++j)
             {
                 numericalFluxO1[j] = Array<OneD, Array<OneD, NekDouble> >(
-                                                                nScalars);
+                                                                          nScalars);
                 derivativesO1[j]   = Array<OneD, Array<OneD, NekDouble> >(
-                                                                nScalars);
+                                                                          nScalars);
                 
                 for (i = 0; i < nScalars; ++i)
                 {
@@ -221,10 +221,10 @@ namespace Nektar
          *
          */
         void DiffusionLDGNSAdjoint::v_NumericalFluxO1(
-                const Array<OneD, MultiRegions::ExpListSharedPtr>        &fields,
-                const Array<OneD, Array<OneD, NekDouble> >               &inarray,
-                      Array<OneD, Array<OneD, Array<OneD, NekDouble> > >
-                                                &numericalFluxO1)
+                                                      const Array<OneD, MultiRegions::ExpListSharedPtr>        &fields,
+                                                      const Array<OneD, Array<OneD, NekDouble> >               &inarray,
+                                                      Array<OneD, Array<OneD, Array<OneD, NekDouble> > >
+                                                      &numericalFluxO1)
         {
             int i, j;
             int nTracePts  = fields[0]->GetTrace()->GetTotPoints();
@@ -283,9 +283,9 @@ namespace Nektar
          *
          */
         void DiffusionLDGNSAdjoint::v_WeakPenaltyO1(
-                const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
-                const Array<OneD, Array<OneD, NekDouble> >        &inarray,
-                      Array<OneD, Array<OneD, NekDouble> >        &penaltyfluxO1)
+                                                    const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
+                                                    const Array<OneD, Array<OneD, NekDouble> >        &inarray,
+                                                    Array<OneD, Array<OneD, NekDouble> >        &penaltyfluxO1)
         {
             int cnt = 0;
             int i, j, e;
@@ -337,7 +337,7 @@ namespace Nektar
                         id1 = fields[0]->GetBndCondExpansions()[n]->
                         GetPhys_Offset(e);
                         id2 = fields[0]->GetTrace()->GetPhys_Offset(traceBndMap[cnt+e]);
-                    
+                        
                         Array<OneD, NekDouble> tmp(nBCEdgePts, 0.0);
                         Array<OneD, NekDouble> tmp1(nBCEdgePts, 0.0);
                         Array<OneD, NekDouble> tmp2(nBCEdgePts, 0.0);
@@ -354,62 +354,63 @@ namespace Nektar
                         
                         NekDouble Dx = norm_fac * cos (m_alphaInfDir);
                         NekDouble Dy = norm_fac * sin (m_alphaInfDir);
-                            
+                        
                         NekDouble Lx = -norm_fac * sin (m_alphaInfDir);
                         NekDouble Ly =  norm_fac * cos (m_alphaInfDir);
-                            
+                        
                         DragDir[0] = Array<OneD, NekDouble> (nBCEdgePts, Dx);
                         DragDir[1] = Array<OneD, NekDouble> (nBCEdgePts, Dy);
-                            
+                        
                         LiftDir[0] = Array<OneD, NekDouble> (nBCEdgePts, Lx);
                         LiftDir[1] = Array<OneD, NekDouble> (nBCEdgePts, Ly);
-                            
-                            
+                        
+                        
                         Array<OneD, NekDouble> zeros(nBCEdgePts, 0.0);
-                            
-                        Vmath::Vcopy(nBCEdgePts,
-                                        &zeros[0], 1,
-                                        &penaltyfluxO1[0][id2], 1);
-                            
-                        Vmath::Vcopy(nBCEdgePts,
-                                        &zeros[0], 1,
-                                        &penaltyfluxO1[1][id2], 1);
                         
                         Vmath::Vcopy(nBCEdgePts,
-                                        &zeros[0], 1,
-                                        &penaltyfluxO1[2][id2], 1);
+                                     &zeros[0], 1,
+                                     &penaltyfluxO1[0][id2], 1);
                         
                         Vmath::Vcopy(nBCEdgePts,
-                                        &zeros[0], 1,
-                                        &penaltyfluxO1[m_spaceDim+1][id2], 1);
-                            
+                                     &zeros[0], 1,
+                                     &penaltyfluxO1[1][id2], 1);
+                        
+                        Vmath::Vcopy(nBCEdgePts,
+                                     &zeros[0], 1,
+                                     &penaltyfluxO1[2][id2], 1);
+                        
+                        Vmath::Vcopy(nBCEdgePts,
+                                     &zeros[0], 1,
+                                     &penaltyfluxO1[m_spaceDim+1][id2], 1);
+                        
                         if (m_Target == "Lift")
                         {
-                                
-                            Vmath::Vcopy(nBCEdgePts,
-                                            &LiftDir[0][0], 1,
-                                            &penaltyfluxO1[1][id2], 1);
                             
                             Vmath::Vcopy(nBCEdgePts,
-                                            &LiftDir[1][0], 1,
-                                            &penaltyfluxO1[2][id2], 1);
+                                         &LiftDir[0][0], 1,
+                                         &penaltyfluxO1[1][id2], 1);
+                            
+                            Vmath::Vcopy(nBCEdgePts,
+                                         &LiftDir[1][0], 1,
+                                         &penaltyfluxO1[2][id2], 1);
                             
                         }
                         if (m_Target == "Drag")
                         {
-                            Vmath::Vcopy(nBCEdgePts,
-                                            &DragDir[0][0], 1,
-                                            &penaltyfluxO1[1][id2], 1);
                             
                             Vmath::Vcopy(nBCEdgePts,
-                                            &DragDir[1][0], 1,
-                                            &penaltyfluxO1[2][id2], 1);
+                                         &DragDir[0][0], 1,
+                                         &penaltyfluxO1[1][id2], 1);
+                            
+                            Vmath::Vcopy(nBCEdgePts,
+                                         &DragDir[1][0], 1,
+                                         &penaltyfluxO1[2][id2], 1);
                         }
                     }
                     
                     cnt += fields[0]->GetBndCondExpansions()[n]->GetExpSize();
                 }
-        
+                
                 if (fields[0]->GetBndConditions()[n]->
                     GetBoundaryConditionType() ==
                     SpatialDomains::eDirichlet &&
@@ -417,11 +418,9 @@ namespace Nektar
                     GetUserDefined() !=
                     SpatialDomains::eAdjointWall)
                 {
-                    //cout << n << "  " << eMax << endl;
-                    
                     for (e = 0; e < eMax; ++e)
                     {
-
+                        
                         nBCEdgePts = fields[0]->GetBndCondExpansions()[n]->
                         GetExp(e)->GetTotPoints();
                         id1 = fields[0]->GetBndCondExpansions()[n]->
@@ -450,10 +449,10 @@ namespace Nektar
          *
          */
         void DiffusionLDGNSAdjoint::v_NumericalFluxO2(
-                const Array<OneD, MultiRegions::ExpListSharedPtr>        &fields,
-                const Array<OneD, Array<OneD, NekDouble> >               &ufield,
-                      Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &qfield,
-                      Array<OneD, Array<OneD, NekDouble> >               &qflux)
+                                                      const Array<OneD, MultiRegions::ExpListSharedPtr>        &fields,
+                                                      const Array<OneD, Array<OneD, NekDouble> >               &ufield,
+                                                      Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &qfield,
+                                                      Array<OneD, Array<OneD, NekDouble> >               &qflux)
         {
             int i, j;
             int nTracePts = fields[0]->GetTrace()->GetTotPoints();
@@ -516,11 +515,11 @@ namespace Nektar
          *
          */
         void DiffusionLDGNSAdjoint::v_WeakPenaltyO2(
-                const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
-                const int                                          var,
-                const int                                          dir,
-                const Array<OneD, const NekDouble>                &qfield,
-                      Array<OneD,       NekDouble>                &penaltyflux)
+                                                    const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
+                                                    const int                                          var,
+                                                    const int                                          dir,
+                                                    const Array<OneD, const NekDouble>                &qfield,
+                                                    Array<OneD,       NekDouble>                &penaltyflux)
         {
             int cnt = 0;
             int nBndEdges, nBndEdgePts;
@@ -558,17 +557,17 @@ namespace Nektar
                     if(fields[var]->GetBndConditions()[i]->
                        GetBoundaryConditionType() == SpatialDomains::eDirichlet)
                     {
-                        Vmath::Vmul(nBndEdgePts, 
-                                    &m_traceNormals[dir][id2], 1, 
-                                    &qtemp[id2], 1, 
+                        Vmath::Vmul(nBndEdgePts,
+                                    &m_traceNormals[dir][id2], 1,
+                                    &qtemp[id2], 1,
                                     &penaltyflux[id2], 1);
                     }
-                    // 3.4) In case of Neumann bcs: 
+                    // 3.4) In case of Neumann bcs:
                     // uflux = u+
                     else if((fields[var]->GetBndConditions()[i])->
                             GetBoundaryConditionType() == SpatialDomains::eNeumann)
                     {
-                        ASSERTL0(false, 
+                        ASSERTL0(false,
                                  "Neumann bcs not implemented for LDGNS");
                         
                         /*
