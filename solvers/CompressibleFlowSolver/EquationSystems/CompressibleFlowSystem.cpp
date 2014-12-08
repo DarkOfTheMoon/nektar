@@ -115,34 +115,34 @@ namespace Nektar
                      "for 3D problems.");
             m_session->LoadParameter("wInf", m_wInf, 0.0);
         }
-        m_session->LoadParameter ("GasConstant",    m_gasConstant,   287.058);
-        m_session->LoadParameter ("Twall",          m_Twall,         300.15);
-        m_session->LoadSolverInfo("ViscosityType",  m_ViscosityType, "Constant");
-        m_session->LoadSolverInfo("Target",         m_Target,        "NoN");
-        m_session->LoadParameter ("mu",             m_mu,            1.78e-05);
+        m_session->LoadParameter ("GasConstant",    m_gasConstant,     287.058);
+        m_session->LoadParameter ("Twall",          m_Twall,            300.15);
+        m_session->LoadSolverInfo("ViscosityType",  m_ViscosityType,"Constant");
+        m_session->LoadSolverInfo("Target",         m_Target,            "NoN");
+        m_session->LoadParameter ("mu",             m_mu,             1.78e-05);
         m_session->LoadParameter ("thermalConductivity",
-                                  m_thermalConductivity, 0.0257);
-        m_session->LoadParameter ("adjointSwitch",  m_adjointSwitch, 0.0);
-        m_session->LoadParameter ("rhoInfPrimal",   m_rhoInfPrimal,  0.0);
-        m_session->LoadParameter ("uInfPrimal",     m_uInfPrimal,    1.0);
-        m_session->LoadParameter ("vInfPrimal",     m_vInfPrimal,    1.0);
-        m_session->LoadParameter ("pInfPrimal",     m_pInfPrimal,    1.0);
-        m_session->LoadParameter ("alphaInfPrimal", m_alphaInfDir,   0.0);
-        m_session->LoadParameter ("Lref",           m_Lref,          1.0);
-        m_session->LoadParameter ("alpha",          m_alpha,         0.0);
-        m_session->LoadParameter ("Skappa",         m_Skappa,        -2.048);
-        m_session->LoadParameter ("Kappa",          m_Kappa,         0.0);
-        m_session->LoadParameter ("mu0",            m_mu0,           1.0);
-        m_session->LoadParameter ("FL",             m_FacL,          0.0);
-        m_session->LoadParameter ("FH",             m_FacH,          0.0);
-        m_session->LoadParameter ("hFactor",        m_hFactor,       1.0);
-        m_session->LoadParameter ("epsMax",         m_eps_max,       1.0);
-        m_session->LoadParameter ("C1",             m_C1,            3.0);
-        m_session->LoadParameter ("C2",             m_C2,            5.0);
+                                           m_thermalConductivity,       0.0257);
+        m_session->LoadParameter ("adjointSwitch",  m_adjointSwitch,       0.0);
+        m_session->LoadParameter ("rhoInfPrimal",   m_rhoInfPrimal,        0.0);
+        m_session->LoadParameter ("uInfPrimal",     m_uInfPrimal,          1.0);
+        m_session->LoadParameter ("vInfPrimal",     m_vInfPrimal,          1.0);
+        m_session->LoadParameter ("pInfPrimal",     m_pInfPrimal,          1.0);
+        m_session->LoadParameter ("alphaInfPrimal", m_alphaInfDir,         0.0);
+        m_session->LoadParameter ("Lref",           m_Lref,                1.0);
+        m_session->LoadParameter ("alpha",          m_alpha,               0.0);
+        m_session->LoadParameter ("Skappa",         m_Skappa,           -2.048);
+        m_session->LoadParameter ("Kappa",          m_Kappa,               0.0);
+        m_session->LoadParameter ("mu0",            m_mu0,                 1.0);
+        m_session->LoadParameter ("FL",             m_FacL,                0.0);
+        m_session->LoadParameter ("FH",             m_FacH,                0.0);
+        m_session->LoadParameter ("hFactor",        m_hFactor,             1.0);
+        m_session->LoadParameter ("epsMax",         m_eps_max,             1.0);
+        m_session->LoadParameter ("C1",             m_C1,                  3.0);
+        m_session->LoadParameter ("C2",             m_C2,                  5.0);
         m_session->LoadSolverInfo("ShockCaptureType",
-                                  m_shockCaptureType,    "Off");
+                                                  m_shockCaptureType,    "Off");
         m_session->LoadParameter ("thermalConductivity",
-                                  m_thermalConductivity, 0.0257);
+                                                 m_thermalConductivity, 0.0257);
         
         m_EqTypeStr = m_session->GetSolverInfo("EQTYPE");
 
@@ -150,6 +150,7 @@ namespace Nektar
         m_Prandtl = m_Cp * m_mu / m_thermalConductivity;
         
         const int nPoints = m_fields[0]->GetTotPoints();
+        const int nVar    = m_fields.num_elements();
         m_un = Array<OneD, Array<OneD, NekDouble> > (m_fields.num_elements());
         for (int i = 0; i < m_fields.num_elements(); ++i)
         {
@@ -182,10 +183,9 @@ namespace Nektar
                 if (m_specHP_dealiasing)
                 {
                     m_advection->SetFluxVector(&CompressibleFlowSystem::
-                                               GetFluxVectorDeAlias, this);
+                                                    GetFluxVectorDeAlias, this);
                     m_diffusion->SetFluxVectorNS(
-                                                 &CompressibleFlowSystem::GetViscousFluxVectorDeAlias,
-                                                 this);
+                    &CompressibleFlowSystem::GetViscousFluxVectorDeAlias, this);
                 }
                 else
                 {
@@ -201,7 +201,8 @@ namespace Nektar
                                                GetFluxVector, this);
                     
                     m_diffusion->SetArtificialDiffusionVector(
-                                                              &CompressibleFlowSystem::GetSmoothArtificialViscosity, this);                }
+                   &CompressibleFlowSystem::GetSmoothArtificialViscosity, this);
+                }
                 if (m_shockCaptureType=="NonSmooth" && m_EqTypeStr=="EulerADCFE")
                 {
                     m_advection->SetFluxVector(&CompressibleFlowSystem::
@@ -221,23 +222,23 @@ namespace Nektar
                 .CreateInstance("UpwindLDG");
                 
                 m_riemannSolver->SetParam ("adjointSwitch",
-                                           &CompressibleFlowSystem::GetAdjointSwitch,   this);
+                            &CompressibleFlowSystem::GetAdjointSwitch,   this);
                 
                 // Setting up parameters for advection operator Riemann solver
                 m_riemannSolver->SetParam (
-                                           "gamma",  &CompressibleFlowSystem::GetGamma,   this);
+                          "gamma",  &CompressibleFlowSystem::GetGamma,   this);
                 m_riemannSolver->SetAuxVec(
-                                           "vecLocs", &CompressibleFlowSystem::GetVecLocs, this);
+                         "vecLocs", &CompressibleFlowSystem::GetVecLocs, this);
                 m_riemannSolver->SetVector(
-                                           "N",      &CompressibleFlowSystem::GetNormals, this);
+                          "N",      &CompressibleFlowSystem::GetNormals, this);
                 
                 // Setting up parameters for diffusion operator Riemann solver
                 m_riemannSolverLDG->SetParam (
-                                              "gamma",  &CompressibleFlowSystem::GetGamma,   this);
+                          "gamma",  &CompressibleFlowSystem::GetGamma,   this);
                 m_riemannSolverLDG->SetVector(
-                                              "vecLocs", &CompressibleFlowSystem::GetVecLocs, this);
+                         "vecLocs", &CompressibleFlowSystem::GetVecLocs, this);
                 m_riemannSolverLDG->SetVector(
-                                              "N",      &CompressibleFlowSystem::GetNormals, this);
+                          "N",      &CompressibleFlowSystem::GetNormals, this);
                 
                 if (m_adjointSwitch != 0.0)
                 {
@@ -247,35 +248,287 @@ namespace Nektar
                                                    GetDirectSolution, this);
                     
                     m_riemannSolver->SetFwdBwdDirectSolution(
-                        &CompressibleFlowSystem::GetFwdBwdDirectSolution, this);
-                    
+                     &CompressibleFlowSystem::GetFwdBwdDirectSolution, this);
                     
                     m_riemannSolver->SetFwdBwdDIFFDirectSolution(
-                    &CompressibleFlowSystem::GetFwdBwdDIFFDirectSolution, this);
-                    
-                    //===============Set the appropriate fluxes=================
-                    //                      Advection
-                    //m_advection->SetFluxVector(&CompressibleFlowSystem::
-                    //         GetAdjointConvFluxVectorFromPrimitiveVar, this);
-                    
+                     &CompressibleFlowSystem::GetFwdBwdDIFFDirectSolution, this);
+
                     m_advection->SetFluxVector(
                             &CompressibleFlowSystem::GetAdjointFluxVector, this);
                     
-                    m_advection->SetAddFluxVector(
-    &CompressibleFlowSystem::GetAdjointAddConvFluxVectorFromPrimitiveVar, this);
-                    
                     m_advection->SetJacTransposeDivVector(
-            &CompressibleFlowSystem::GetDerivJacVectorFromPrimitiveVar, this);
+                        &CompressibleFlowSystem::GetAdjointDerivJacVector, this);
                     
-                    //m_advection->SetJacTransposeDivVector(&CompressibleFlowSystem::GetJacTransposeDivVector, this);
                     
-                    m_advection->SetAddJacTransposeDivVector(&CompressibleFlowSystem::GetDerivAddJacVectorFromPrimitiveVar, this);
+                    m_dirFlds = Array<OneD, Array<OneD, NekDouble> >(nVar);
                     
-                    //                      Diffusion
-                    m_diffusion->SetFluxVectorNS(&CompressibleFlowSystem::
-                        GetAdjointViscousFluxVectorFromPrimitiveVar, this);
+                    for (int i = 0; i < nVar; ++i)
+                    {
+                        m_dirFlds[i] = Array<OneD, NekDouble> (nPoints, 0.0);
+                    }
+                    
+                    GetDirectSolution(m_dirFlds);
+                    
+                    /* 
+                    For the adjoint of the Navier-Stokes equations, the viscous
+                    fluxes have to be linearised. That is why a change of variables 
+                    is applied moving from U = [rho, rhou, rhov, rhow, rhoE]^t
+                    to V = [rho, u, v, w, p]. The viscous fluxes are linearised
+                    with respect to V and a matrix M = dVdU and dMdxi = d(dVdU)dXi
+                    is set up using the function "GetConservToPrimVariableInvMat"
+                    and "GetConservToPrimVariableInvMatDiv" respectively.
+                    
+                     for the steady case the linear adjoint equations for the 
+                     Navier-Stokes equations look as follows:
+                    -{dFc/dU-dFvdU}.nabla z + nabla.{(dFvd(dU/dxi))nabla z} = 0
+                     */
+                    
+                    if (m_adjointSwitch == 2)
+                    {
+                        m_dVdUdXi = Array<OneD, Array<OneD, Array<OneD,
+                                      Array<OneD, NekDouble> > > > (m_spacedim);
+                        
+                        m_JacPrim = Array<OneD, Array<OneD, Array<OneD,
+                                      Array<OneD, NekDouble> > > > (m_spacedim);
+                        
+                        m_JacAddPrim = Array<OneD, Array<OneD, Array<OneD,
+                                      Array<OneD, NekDouble> > > > (m_spacedim);
+                        m_JacAddDivPrim = Array<OneD, Array<OneD, Array<OneD,
+                        Array<OneD, NekDouble> > > > (m_spacedim);
+
+                        m_JacDivPrim = Array<OneD, Array<OneD, Array<OneD,
+                                      Array<OneD, NekDouble> > > > (m_spacedim);
+                        
+                        m_JacDivCons = Array<OneD, Array<OneD, Array<OneD,
+                                      Array<OneD, NekDouble> > > > (m_spacedim);
+                        
+                        m_JacAddDivCons = Array<OneD, Array<OneD, Array<OneD,
+                                      Array<OneD, NekDouble> > > > (m_spacedim);
+                        
+                        for (int i = 0; i < m_spacedim; ++i)
+                        {
+                            m_dVdUdXi[i] = Array<OneD, Array<OneD,
+                                              Array<OneD, NekDouble> > > (nVar);
+                            
+                            m_JacPrim[i] = Array<OneD, Array<OneD,
+                                              Array<OneD, NekDouble> > > (nVar);
+                            
+                            m_JacAddPrim[i] = Array<OneD, Array<OneD,
+                                              Array<OneD, NekDouble> > > (nVar);
+                            
+                            m_JacAddDivPrim[i] = Array<OneD, Array<OneD,
+                                              Array<OneD, NekDouble> > > (nVar);
+                            
+                            m_JacDivPrim[i] = Array<OneD, Array<OneD,
+                                              Array<OneD, NekDouble> > > (nVar);
+                            
+                            m_JacDivCons[i] = Array<OneD, Array<OneD,
+                                              Array<OneD, NekDouble> > > (nVar);
+                            
+                            m_JacAddDivCons[i] = Array<OneD, Array<OneD,
+                                              Array<OneD, NekDouble> > > (nVar);
+                            
+                            for (int j = 0; j < nVar; ++j)
+                            {
+                                m_dVdUdXi[i][j] = Array<OneD, Array<OneD,
+                                                           NekDouble > > (nVar);
+                                
+                                m_JacPrim[i][j] = Array<OneD, Array<OneD,
+                                                           NekDouble > > (nVar);
+                                
+                                m_JacAddPrim[i][j] = Array<OneD, Array<OneD,
+                                                           NekDouble > > (nVar);
+                                
+                                m_JacAddDivPrim[i][j] = Array<OneD, Array<OneD,
+                                                           NekDouble > > (nVar);
+                                
+                                m_JacDivPrim[i][j] = Array<OneD, Array<OneD,
+                                                           NekDouble > > (nVar);
+                                
+                                m_JacDivCons[i][j] = Array<OneD, Array<OneD,
+                                                           NekDouble > > (nVar);
+                                
+                                m_JacAddDivCons[i][j] = Array<OneD, Array<OneD,
+                                                           NekDouble > > (nVar);
+                                
+                                for (int k = 0; k < nVar; k++)
+                                {
+                                    m_dVdUdXi[i][j][k] = Array<OneD,
+                                                      NekDouble> (nPoints, 0.0);
+                                    
+                                    m_JacPrim[i][j][k] = Array<OneD,
+                                                      NekDouble> (nPoints, 0.0);
+                                    
+                                    m_JacAddPrim[i][j][k] = Array<OneD,
+                                                      NekDouble> (nPoints, 0.0);
+                                    
+                                    m_JacAddDivPrim[i][j][k] = Array<OneD,
+                                                      NekDouble> (nPoints, 0.0);
+                                    
+                                    m_JacDivPrim[i][j][k] = Array<OneD,
+                                                      NekDouble> (nPoints, 0.0);
+                                    
+                                    m_JacDivCons[i][j][k] = Array<OneD,
+                                                      NekDouble> (nPoints, 0.0);
+                                    
+                                    m_JacAddDivCons[i][j][k] = Array<OneD,
+                                                      NekDouble> (nPoints, 0.0);
+                                }
+                            }
+                        }
+                        
+                        m_dVdU = Array<OneD, Array<OneD,
+                                             Array<OneD, NekDouble > > > (nVar);
+                        
+                        for (int i = 0; i < nVar; ++i)
+                        {
+                            m_dVdU[i] = Array<OneD, Array<OneD,
+                                                           NekDouble > > (nVar);
+                            
+                            for (int j = 0; j < nVar; j++)
+                            {
+                                m_dVdU[i][j] = Array<OneD,
+                                                     NekDouble > (nPoints, 0.0);
+                            }
+                        }
+                        
+                        GetConservToPrimVariableInvMat(m_dVdU);
+                        GetConservToPrimVariableInvMatDiv(m_dVdU, m_dVdUdXi);
+                        
+                        
+                        // Get J^c_v = dFcdV
+                        GetJacobianConvFluxPrim(m_JacPrim);
+                        // Get d(J^c_v)/dxi = d(dFcdV)/dxi
+                        GetDerivJacobian(m_JacPrim, m_JacDivPrim);
+                        
+                        // Get J^v_v =dFvdV
+                        GetJacobianAddConvFlux(m_JacAddPrim);
+                        // Get d(J^v_v)/dxi = d(dFv/dV)/dxi
+                        GetDerivJacobian(m_JacAddPrim, m_JacAddDivPrim);
+                        
+                        // Obtain the jacobians in conservative form
+                        
+                        if (m_spacedim == 2)
+                        {
+                            Array<OneD, NekDouble> tmpConsX1(nPoints, 0.0);
+                            Array<OneD, NekDouble> tmpConsX2(nPoints, 0.0);
+                            Array<OneD, NekDouble> tmpConsY1(nPoints, 0.0);
+                            Array<OneD, NekDouble> tmpConsY2(nPoints, 0.0);
+                            
+                            Array<OneD, NekDouble> tmpAddConsX1(nPoints, 0.0);
+                            Array<OneD, NekDouble> tmpAddConsX2(nPoints, 0.0);
+                            Array<OneD, NekDouble> tmpAddConsY1(nPoints, 0.0);
+                            Array<OneD, NekDouble> tmpAddConsY2(nPoints, 0.0);
+                            
+                            for (int i = 0; i < nVar; ++i)
+                            {
+                                for (int j = 0; j < nVar; ++j)
+                                {
+                                    Vmath::Zero(nPoints, &tmpConsX1[0], 1);
+                                    Vmath::Zero(nPoints, &tmpConsX2[0], 1);
+                                    Vmath::Zero(nPoints, &tmpConsY1[0], 1);
+                                    Vmath::Zero(nPoints, &tmpConsY2[0], 1);
+                                    
+                                    Vmath::Zero(nPoints, &tmpAddConsX1[0], 1);
+                                    Vmath::Zero(nPoints, &tmpAddConsX2[0], 1);
+                                    Vmath::Zero(nPoints, &tmpAddConsY1[0], 1);
+                                    Vmath::Zero(nPoints, &tmpAddConsY2[0], 1);
+                                    
+                                    for (int k = 0; k < nVar; ++k)
+                                    {
+                                        
+                                        Vmath::Vvtvp(nPoints,
+                                                &m_dVdUdXi[0][i][k][0], 1,
+                                                &m_JacPrim[0][k][j][0], 1,
+                                                &tmpAddConsX1[0], 1,
+                                                &tmpAddConsX1[0], 1);
+                                        
+                                        Vmath::Vvtvp(nPoints,
+                                                &m_dVdUdXi[1][i][k][0], 1,
+                                                &m_JacPrim[1][k][j][0], 1,
+                                                &tmpAddConsX2[0], 1,
+                                                &tmpAddConsX2[0], 1);
+                                        
+                                        //=============
+                                        
+                                        Vmath::Vvtvp(nPoints,
+                                                &m_dVdU[i][k][0], 1,
+                                                &m_JacDivPrim[0][k][j][0], 1,
+                                                &tmpAddConsY1[0], 1,
+                                                &tmpAddConsY1[0], 1);
+                                        
+                                        Vmath::Vvtvp(nPoints,
+                                                &m_dVdU[i][k][0], 1,
+                                                &m_JacDivPrim[1][k][j][0], 1,
+                                                &tmpAddConsY2[0], 1,
+                                                &tmpAddConsY2[0], 1);
+                                        
+                                        Vmath::Vadd(nPoints,
+                                                &tmpAddConsX1[0], 1,
+                                                &tmpAddConsY1[0], 1,
+                                                &m_JacDivCons[0][i][j][0], 1);
+                                        
+                                        Vmath::Vadd(nPoints,
+                                                &tmpAddConsX2[0], 1,
+                                                &tmpAddConsY2[0], 1,
+                                                &m_JacDivCons[1][i][j][0], 1);
+                                        
+                                        //======================================
+                                        
+                                        //
+                                        Vmath::Vvtvp(nPoints,
+                                                &m_dVdUdXi[0][i][k][0], 1,
+                                                &m_JacAddPrim[0][k][j][0], 1,
+                                                &tmpConsX1[0], 1,
+                                                &tmpConsX1[0], 1);
+                                        
+                                        Vmath::Vvtvp(nPoints,
+                                                &m_dVdUdXi[1][i][k][0], 1,
+                                                &m_JacAddPrim[1][k][j][0], 1,
+                                                &tmpConsX2[0], 1,
+                                                &tmpConsX2[0], 1);
+                                        
+                                        //=============
+                                        
+                                        Vmath::Vvtvp(nPoints,
+                                                &m_dVdU[i][k][0], 1,
+                                                &m_JacAddDivPrim[0][k][j][0], 1,
+                                                &tmpConsY1[0], 1,
+                                                &tmpConsY1[0], 1);
+                                        
+                                        Vmath::Vvtvp(nPoints,
+                                                &m_dVdU[i][k][0], 1,
+                                                &m_JacAddDivPrim[1][k][j][0], 1,
+                                                &tmpConsY2[0], 1,
+                                                &tmpConsY2[0], 1);
+                                        
+                                        Vmath::Vadd(nPoints,
+                                                &tmpConsX1[0], 1,
+                                                &tmpConsY1[0], 1,
+                                                &m_JacAddDivCons[0][i][j][0], 1);
+                                        
+                                        Vmath::Vadd(nPoints,
+                                                &tmpConsX2[0], 1,
+                                                &tmpConsY2[0], 1,
+                                                &m_JacAddDivCons[1][i][j][0], 1);
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Get FvdV*dz/dx
+                        m_advection->SetAddFluxVector(
+                        &CompressibleFlowSystem::GetAdjointAddConvFluxVector, this);
+                        
+                        // Get d(FvdV)dxi
+                        m_advection->SetAddJacTransposeDivVector(
+                        &CompressibleFlowSystem::GetAdjointDerivAddJacVector, this);
+                        
+                        // Get dFv/d(dVdXi).dz/dx
+                        m_diffusion->SetFluxVectorNS(
+                        &CompressibleFlowSystem::GetAdjointViscousFluxVector, this);
+                    }
                 }
-                
                 
                 // Concluding initialisation of advection / diffusion operators
                 m_advection->SetRiemannSolver   (m_riemannSolver);
@@ -283,7 +536,6 @@ namespace Nektar
                 m_advection->InitObject         (m_session, m_fields);
                 m_diffusion->InitObject         (m_session, m_fields);
                 break;
-
             }
             default:
             {
@@ -482,8 +734,15 @@ namespace Nektar
                 DragDir[0] = Array<OneD, NekDouble> (nBCEdgePts, Dx);
                 DragDir[1] = Array<OneD, NekDouble> (nBCEdgePts, Dy);
                 
-                Vmath::Vadd(nBCEdgePts, &Fwdnew[1][id2], 1, &DragDir[0][0], 1, &Fwdnew[1][id2], 1);
-                Vmath::Vadd(nBCEdgePts, &Fwdnew[2][id2], 1, &DragDir[1][0], 1, &Fwdnew[2][id2], 1);
+                Vmath::Vadd(nBCEdgePts,
+                            &Fwdnew[1][id2], 1,
+                            &DragDir[0][0], 1,
+                            &Fwdnew[1][id2], 1);
+                
+                Vmath::Vadd(nBCEdgePts,
+                            &Fwdnew[2][id2], 1,
+                            &DragDir[1][0], 1,
+                            &Fwdnew[2][id2], 1);
             }
             
             if (m_Target == "Lift")
@@ -495,8 +754,15 @@ namespace Nektar
                 LiftDir[0] = Array<OneD, NekDouble> (nBCEdgePts, Lx);
                 LiftDir[1] = Array<OneD, NekDouble> (nBCEdgePts, Ly);
                 
-                Vmath::Vadd(nBCEdgePts, &Fwdnew[1][id2], 1, &LiftDir[0][0], 1, &Fwdnew[1][id2], 1);
-                Vmath::Vadd(nBCEdgePts, &Fwdnew[2][id2], 1, &LiftDir[1][0], 1, &Fwdnew[2][id2], 1);
+                Vmath::Vadd(nBCEdgePts,
+                            &Fwdnew[1][id2], 1,
+                            &LiftDir[0][0], 1,
+                            &Fwdnew[1][id2], 1);
+                
+                Vmath::Vadd(nBCEdgePts,
+                            &Fwdnew[2][id2], 1,
+                            &LiftDir[1][0], 1,
+                            &Fwdnew[2][id2], 1);
             }
             // Copy boundary adjusted values into the boundary expansion
             
@@ -1065,7 +1331,7 @@ namespace Nektar
           const Array<OneD, Array<OneD, NekDouble> > &inarray,
                 Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray)
     {
-        int i, p, o;
+        int i;
         int nq = inarray[0].num_elements();
         int nvar = m_fields.num_elements();
         
@@ -1074,76 +1340,47 @@ namespace Nektar
         Array<OneD, NekDouble> Htmp(nq,0.0);
         Array<OneD, NekDouble> U2(nq,0.0);
         Array<OneD, Array<OneD, NekDouble> > vel(m_spacedim);
-        Array<OneD, Array<OneD, NekDouble> > direct_fields(nvar);
         
-        Array<OneD, NekDouble> dH_dx(nq, 0.0);
-        Array<OneD, NekDouble> dH_dy(nq, 0.0);
-        Array<OneD, NekDouble> dH_dz(nq, 0.0);
+        Array<OneD, NekDouble> du_dx(nq, 0.0), du_dy(nq, 0.0), du_dz(nq, 0.0);
+        Array<OneD, NekDouble> dv_dx(nq, 0.0), dv_dy(nq, 0.0), dv_dz(nq, 0.0);
+        Array<OneD, NekDouble> dw_dx(nq, 0.0), dw_dy(nq, 0.0), dw_dz(nq, 0.0);
+        Array<OneD, NekDouble> dH_dx(nq, 0.0), dH_dy(nq, 0.0), dH_dz(nq, 0.0);
         
-        Array<OneD, NekDouble> du_dx(nq, 0.0);
-        Array<OneD, NekDouble> du_dy(nq, 0.0);
-        Array<OneD, NekDouble> du_dz(nq, 0.0);
+        Array<OneD, NekDouble> duv_dx(nq, 0.0), duv_dy(nq, 0.0), duv_dz(nq, 0.0);
+        Array<OneD, NekDouble> duw_dx(nq, 0.0), duw_dy(nq, 0.0), duw_dz(nq, 0.0);
+        Array<OneD, NekDouble> dvw_dx(nq, 0.0), dvw_dy(nq, 0.0), dvw_dz(nq, 0.0);
         
-        Array<OneD, NekDouble> dv_dx(nq, 0.0);
-        Array<OneD, NekDouble> dv_dy(nq, 0.0);
-        Array<OneD, NekDouble> dv_dz(nq, 0.0);
+        Array<OneD, NekDouble> du2_dx(nq, 0.0), du2_dy(nq, 0.0), du2_dz(nq, 0.0);
+        Array<OneD, NekDouble> dv2_dx(nq, 0.0), dv2_dy(nq, 0.0), dv2_dz(nq, 0.0);
+        Array<OneD, NekDouble> dw2_dx(nq, 0.0), dw2_dy(nq, 0.0), dw2_dz(nq, 0.0);
         
-        Array<OneD, NekDouble> dw_dx(nq, 0.0);
-        Array<OneD, NekDouble> dw_dy(nq, 0.0);
-        Array<OneD, NekDouble> dw_dz(nq, 0.0);
+        Array<OneD, NekDouble> dU2_dx(nq, 0.0), dU2_dy(nq, 0.0), dU2_dz(nq, 0.0);
+        Array<OneD, NekDouble> duU2_dx(nq, 0.0),dvU2_dy(nq, 0.0),dwU2_dz(nq, 0.0);
         
-        Array<OneD, NekDouble> dU2_dx(nq, 0.0);
-        Array<OneD, NekDouble> dU2_dy(nq, 0.0);
-        Array<OneD, NekDouble> dU2_dz(nq, 0.0);
-        
-        Array<OneD, NekDouble> duv_dx(nq, 0.0);
-        Array<OneD, NekDouble> duv_dy(nq, 0.0);
-        Array<OneD, NekDouble> duv_dz(nq, 0.0);
-        
-        Array<OneD, NekDouble> duU2_dx(nq, 0.0);
-        Array<OneD, NekDouble> dvU2_dy(nq, 0.0);
-        Array<OneD, NekDouble> dwU2_dz(nq, 0.0);
-        
-        Array<OneD, NekDouble> duH_dx(nq, 0.0);
-        Array<OneD, NekDouble> dvH_dy(nq, 0.0);
-        Array<OneD, NekDouble> dwH_dz(nq, 0.0);
-        
-        Array<OneD, NekDouble> du2_dx(nq, 0.0);
-        Array<OneD, NekDouble> du2_dy(nq, 0.0);
-        Array<OneD, NekDouble> du2_dz(nq, 0.0);
-        
-        Array<OneD, NekDouble> dv2_dx(nq, 0.0);
-        Array<OneD, NekDouble> dv2_dy(nq, 0.0);
-        Array<OneD, NekDouble> dv2_dz(nq, 0.0);
-        
-        Array<OneD, NekDouble> dw2_dx(nq, 0.0);
-        Array<OneD, NekDouble> dw2_dy(nq, 0.0);
-        Array<OneD, NekDouble> dw2_dz(nq, 0.0);
-        
+        Array<OneD, NekDouble> duH_dx(nq, 0.0), dvH_dy(nq, 0.0), dwH_dz(nq, 0.0);
         NekDouble GammaMinOne     = m_gamma - 1;
         NekDouble HalfGammaMinOne = 0.5*(m_gamma - 1);
         NekDouble ThreeMinGam     = 3.0 - m_gamma;
         
-        for (i = 0; i < nvar; ++i)
-        {
-            direct_fields[i] = Array<OneD, NekDouble>(nq, 0.0);
-        }
-        
-        GetDirectSolution(direct_fields);
-        
         for (i = 0; i < m_spacedim; ++i)
         {
             vel[i] = Array<OneD, NekDouble>(nq, 0.0);
-            Vmath::Vdiv(nq, direct_fields[i+1], 1, direct_fields[0], 1, vel[i], 1);
+            Vmath::Vdiv(nq,
+                        m_primal[i+1]->GetPhys(), 1,
+                        m_primal[0]->GetPhys(), 1,
+                        vel[i], 1);
             Vmath::Vvtvp(nq, &vel[i][0], 1, &vel[i][0], 1, &U2[0], 1, &U2[0], 1);
         }
         
-        GetPressure(direct_fields, vel, pressure);
+        GetPressure(m_dirFlds, vel, pressure);
         
         // determine H = E + p/rho;
-        Vmath::Vdiv(nq, direct_fields[nvar-1], 1, direct_fields[0], 1, H, 1);
+        Vmath::Vdiv(nq,
+                    m_primal[nvar-1]->GetPhys(), 1,
+                    m_primal[0]->GetPhys(), 1,
+                    H, 1);
         
-        Vmath::Vdiv(nq, pressure, 1, direct_fields[0], 1, Htmp, 1);
+        Vmath::Vdiv(nq, pressure, 1, m_primal[0]->GetPhys(), 1, Htmp, 1);
         
         Vmath::Vadd(nq, H, 1, Htmp, 1, H, 1);
         
@@ -1518,14 +1755,6 @@ namespace Nektar
         Array<OneD, NekDouble> Htmp(nq,0.0);
         Array<OneD, NekDouble> velsq(nq,0.0);
         Array<OneD, Array<OneD, NekDouble> > vel(m_spacedim);
-        Array<OneD, Array<OneD, NekDouble> > direct_fields(nvar);
-        
-        for (i = 0; i < nvar; ++i)
-        {
-            direct_fields[i] = Array<OneD, NekDouble>(nq, 0.0);
-        }
-        
-        GetDirectSolution(direct_fields);
         
         // load the physical values to obtain the adjoint vector \phi
         
@@ -1535,8 +1764,8 @@ namespace Nektar
             vel[i] = Array<OneD, NekDouble>(nq);
         }
         
-        GetVelocityVector(direct_fields, vel);
-        GetPressure      (direct_fields, vel, pressure);
+        GetVelocityVector(m_dirFlds, vel);
+        GetPressure      (m_dirFlds, vel, pressure);
         
         Array<OneD, NekDouble> ones(nq, 1.0);
         
@@ -1547,9 +1776,9 @@ namespace Nektar
         }
         
         // determine H = E + p/rho;
-        Vmath::Vdiv(nq, direct_fields[nvar-1], 1, direct_fields[0], 1, H, 1);
+        Vmath::Vdiv(nq, m_dirFlds[nvar-1], 1, m_dirFlds[0], 1, H, 1);
         
-        Vmath::Vdiv(nq, pressure, 1, direct_fields[0], 1, Htmp, 1);
+        Vmath::Vdiv(nq, pressure, 1, m_dirFlds[0], 1, Htmp, 1);
         
         Vmath::Vadd(nq, H, 1, Htmp, 1, H, 1);
         
@@ -2405,9 +2634,6 @@ namespace Nektar
                             Array<OneD, Array<OneD, NekDouble> > &directSol)
     {
         int nConvectiveFields = directSol.num_elements();
-        int npts = GetTotPoints();
-        int nCoeffs = m_primal[0]->GetCoeffs().num_elements();
-        int npts_dir = directSol[0].num_elements();
         
         Array<OneD, Array<OneD, NekDouble> > directSol2(nConvectiveFields);
         
@@ -2424,8 +2650,6 @@ namespace Nektar
         int nConvectiveFields = FwdDir.num_elements();
         Array<OneD, Array<OneD, NekDouble> > directSol(nConvectiveFields);
         
-        Array<OneD, Array<OneD, NekDouble> > absBwdDir(nConvectiveFields);
-        Array<OneD, Array<OneD, NekDouble> > absFwdDir(nConvectiveFields);
         for (int i = 0; i < nConvectiveFields; ++i)
         {
             
@@ -2473,84 +2697,88 @@ namespace Nektar
                     
                     //==========================================================
                     // For Euler
-                    /*// Calculate (v.n) and (phi.n)
-                     for (int i = 0; i < m_spacedim; ++i)
-                     {
-                     Vmath::Vvtvp(nBCEdgePts,
-                     &FwdDir[1+i][id2], 1,
-                     &m_traceNormals[i][id2], 1,
-                     &tmp[0], 1,
-                     &tmp[0], 1);
-                     }
-                     
-                     // Calculate 2.0(v.n)
-                     Vmath::Smul(nBCEdgePts, -2.0, &tmp[0], 1, &tmp1[0], 1);
-                     
-                     // Calculate v* = v - 2.0(v.n)n + 1/Cinf(phi.n)n
-                     for (int i = 0; i < m_spacedim; ++i)
-                     {
-                     Vmath::Vvtvp(nBCEdgePts,
-                     &tmp1[0], 1,
-                     &m_traceNormals[i][id2], 1,
-                     &BwdDir[1+i][id2], 1,
-                     &BwdDir[1+i][id2], 1);
-                     }*/
                     
-                    //==========================================================
-                    // For Navier Stokes
-                    Vmath::Vcopy(nBCEdgePts,
-                                 &FwdDir[0][id2], 1,
-                                 &BwdDir[0][id2], 1);
-                   	
-                    Vmath::Vcopy(nBCEdgePts,
-                                 &FwdDir[1][id2], 1,
-                                 &BwdDir[1][id2], 1);
-                    
-                    Vmath::Vcopy(nBCEdgePts,
-                                 &FwdDir[2][id2], 1,
-                                 &BwdDir[2][id2], 1);
-                    
-                    for (int i = 0; i < m_spacedim; i++)
+                    if (m_EqTypeStr=="EulerCFE")
                     {
-                        Vmath::Neg(nBCEdgePts, &BwdDir[i+1][id2], 1);
+                        for (int i = 0; i < m_spacedim; ++i)
+                        {
+                            Vmath::Vvtvp(nBCEdgePts,
+                                         &FwdDir[1+i][id2], 1,
+                                         &m_traceNormals[i][id2], 1,
+                                         &tmp[0], 1,
+                                         &tmp[0], 1);
+                        }
+                        
+                        // Calculate 2.0(v.n)
+                        Vmath::Smul(nBCEdgePts, -2.0, &tmp[0], 1, &tmp1[0], 1);
+                        
+                        // Calculate v* = v - 2.0(v.n)n + 1/Cinf(phi.n)n
+                        for (int i = 0; i < m_spacedim; ++i)
+                        {
+                            Vmath::Vvtvp(nBCEdgePts,
+                                         &tmp1[0], 1,
+                                         &m_traceNormals[i][id2], 1,
+                                         &BwdDir[1+i][id2], 1,
+                                         &BwdDir[1+i][id2], 1);
+                        }
                     }
                     
-                    // T = Twall at the wall hence,
-                    // P = rho * R * T
-                    // => T = P/(rho * R)
-                    // => T = ((gamma - 1) * (rhoE - rho * q^2)/(rho * R)
-                    // => rhoE = (T * (rho * R) / (gamma - 1) + rho * q^2
-                    
-                    NekDouble TwallFac =
-                    (m_Twall * m_gasConstant) / (m_gamma - 1.0);
-                    
-                    Array<OneD, NekDouble> TwallVec (nBCEdgePts, TwallFac);
-                    Array<OneD, NekDouble> qterm    (nBCEdgePts,     0.0);
-                    
-                    for (int i = 0; i < m_spacedim; ++i)
+                    if (m_EqTypeStr == "NavierStokesCFE")
                     {
-                        Vmath::Vvtvp(nBCEdgePts,
-                                     &BwdDir[i+1][id2], 1,
-                                     &BwdDir[i+1][id2], 1,
-                                     &qterm[0],         1,
-                                     &qterm[0],         1);
+                        Vmath::Vcopy(nBCEdgePts,
+                                     &FwdDir[0][id2], 1,
+                                     &BwdDir[0][id2], 1);
+                        
+                        Vmath::Vcopy(nBCEdgePts,
+                                     &FwdDir[1][id2], 1,
+                                     &BwdDir[1][id2], 1);
+                        
+                        Vmath::Vcopy(nBCEdgePts,
+                                     &FwdDir[2][id2], 1,
+                                     &BwdDir[2][id2], 1);
+                        
+                        for (int i = 0; i < m_spacedim; i++)
+                        {
+                            Vmath::Neg(nBCEdgePts, &BwdDir[i+1][id2], 1);
+                        }
+                        
+                        // T = Twall at the wall hence,
+                        // P = rho * R * T
+                        // => T = P/(rho * R)
+                        // => T = ((gamma - 1) * (rhoE - rho * q^2)/(rho * R)
+                        // => rhoE = (T * (rho * R) / (gamma - 1) + rho * q^2
+                        
+                        NekDouble TwallFac =
+                        (m_Twall * m_gasConstant) / (m_gamma - 1.0);
+                        
+                        Array<OneD, NekDouble> TwallVec (nBCEdgePts, TwallFac);
+                        Array<OneD, NekDouble> qterm    (nBCEdgePts,     0.0);
+                        
+                        for (int i = 0; i < m_spacedim; ++i)
+                        {
+                            Vmath::Vvtvp(nBCEdgePts,
+                                         &BwdDir[i+1][id2], 1,
+                                         &BwdDir[i+1][id2], 1,
+                                         &qterm[0],         1,
+                                         &qterm[0],         1);
+                        }
+                        
+                        Vmath::Vdiv(nBCEdgePts,
+                                    &qterm[0], 1,
+                                    &BwdDir[0][id2], 1,
+                                    &BwdDir[m_spacedim+1][id2], 1);
+                        
+                        Vmath::Vadd(nBCEdgePts,
+                                    &TwallVec[0], 1,
+                                    &BwdDir[0][id2], 1,
+                                    &TwallVec[0], 1);
+                        
+                        Vmath::Vadd(nBCEdgePts,
+                                    &TwallVec[0], 1,
+                                    &BwdDir[m_spacedim+1][id2], 1,
+                                    &BwdDir[m_spacedim+1][id2], 1);
+                        
                     }
-                    
-                    Vmath::Vdiv(nBCEdgePts,
-                                &qterm[0], 1,
-                                &BwdDir[0][id2], 1,
-                                &BwdDir[m_spacedim+1][id2], 1);
-                    
-                    Vmath::Vadd(nBCEdgePts,
-                                &TwallVec[0], 1,
-                                &BwdDir[0][id2], 1,
-                                &TwallVec[0], 1);
-                    
-                    Vmath::Vadd(nBCEdgePts,
-                                &TwallVec[0], 1,
-                                &BwdDir[m_spacedim+1][id2], 1,
-                                &BwdDir[m_spacedim+1][id2], 1);
-                    
                     //==========================================================
                     
                     for (int i = 0; i < nConvectiveFields; ++i)
@@ -2718,7 +2946,7 @@ namespace Nektar
             physfield_interp[i] = Array<OneD, NekDouble>(nq);
             flux_interp[i] = Array<OneD, Array<OneD, NekDouble> >(m_spacedim);
             m_fields[0]->PhysInterp1DScaled(
-                                            OneDptscale, physfield[i], physfield_interp[i]);
+                                OneDptscale, physfield[i], physfield_interp[i]);
             
             for (j = 0; j < m_spacedim; ++j)
             {
@@ -2733,7 +2961,7 @@ namespace Nektar
             
             // Galerkin project solution back to original space
             m_fields[0]->PhysGalerkinProjection1DScaled(
-                                                        OneDptscale, physfield_interp[i+1], flux[0][i]);
+                                OneDptscale, physfield_interp[i+1], flux[0][i]);
         }
         
         GetVelocityVector(physfield_interp, velocity);
@@ -2759,7 +2987,7 @@ namespace Nektar
             for (j = 0; j < m_spacedim; ++j)
             {
                 m_fields[0]->PhysGalerkinProjection1DScaled(
-                                                            OneDptscale, flux_interp[i+1][j], flux[i+1][j]);
+                                OneDptscale, flux_interp[i+1][j], flux[i+1][j]);
             }
         }
         
@@ -2774,9 +3002,9 @@ namespace Nektar
             
             // Galerkin project solution back to origianl space
             m_fields[0]->PhysGalerkinProjection1DScaled(
-                                                        OneDptscale,
-                                                        flux_interp[m_spacedim+1][j],
-                                                        flux[m_spacedim+1][j]);
+                                                OneDptscale,
+                                                flux_interp[m_spacedim+1][j],
+                                                flux[m_spacedim+1][j]);
         }
     }
     
@@ -3118,9 +3346,9 @@ namespace Nektar
      * \todo Complete the viscous flux vector
      */
     void CompressibleFlowSystem::GetViscousFluxVectorDeAlias(
-                                                             const Array<OneD, Array<OneD, NekDouble> >               &physfield,
-                                                             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &derivativesO1,
-                                                             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &viscousTensor)
+        const Array<OneD, Array<OneD, NekDouble> >               &physfield,
+              Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &derivativesO1,
+              Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &viscousTensor)
     {
 #if 0
         int i, j, k;
@@ -3139,9 +3367,9 @@ namespace Nektar
         
         Array<OneD, Array<OneD, NekDouble> > physfield_interp(variables_phys);
         Array<OneD, Array<OneD, Array<OneD, NekDouble> > > derivativesO1_interp(
-                                                                                m_spacedim);
+                                                                    m_spacedim);
         Array<OneD, Array<OneD, Array<OneD, NekDouble> > >viscousTensor_interp(
-                                                                               m_spacedim);
+                                                                    m_spacedim);
         
         for (i = 0; i < m_spacedim; ++ i)
         {
@@ -3166,7 +3394,7 @@ namespace Nektar
         for (i = 0; i < nVariables; ++i)
         {
             m_fields[0]->PhysInterp1DScaled(
-                                            OneDptscale, physfield[i], fields_interp[i]);
+                            OneDptscale, physfield[i], fields_interp[i]);
         }
         
         for (i = 0; i < variables_phys; ++i)
@@ -3174,14 +3402,15 @@ namespace Nektar
             physfield_interp[i] = Array<OneD, NekDouble> (nPts);
             
             // Interpolation to higher space
-            m_fields[0]->PhysInterp1DScaled(OneDptscale, physfield[i],
+            m_fields[0]->PhysInterp1DScaled(OneDptscale,
+                                            physfield[i],
                                             physfield_interp[i]);
         }
         
         for (i = 0; i < m_spacedim; ++i)
         {
             derivativesO1_interp[i] = Array<OneD, Array<OneD, NekDouble> >(
-                                                                           nVariables_aux);
+                                                                nVariables_aux);
             for (j = 0; j < nVariables_aux; ++j)
             {
                 derivativesO1_interp[i][j] = Array<OneD, NekDouble>(nPts);
@@ -3526,9 +3755,9 @@ namespace Nektar
             {
                 // Galerkin project solution back to origianl space
                 m_fields[0]->PhysGalerkinProjection1DScaled(
-                                                            OneDptscale,
-                                                            viscousTensor_interp[i][j],
-                                                            viscousTensor[i][j]);
+                                        OneDptscale,
+                                        viscousTensor_interp[i][j],
+                                        viscousTensor[i][j]);
             }
         }
 #endif
@@ -3543,8 +3772,8 @@ namespace Nektar
      * @param pressure   Computed pressure field.
      */
     void CompressibleFlowSystem::GetPressure(
-                                             const Array<OneD, const Array<OneD, NekDouble> > &physfield,
-                                             Array<OneD,                   NekDouble>   &pressure)
+                const Array<OneD, const Array<OneD, NekDouble> > &physfield,
+                      Array<OneD,                   NekDouble>   &pressure)
     {
         int       nBCEdgePts  = physfield[0].num_elements();
         NekDouble alpha = -0.5;
@@ -3598,9 +3827,9 @@ namespace Nektar
      * @param pressure   Computed pressure field.
      */
     void CompressibleFlowSystem::GetPressure(
-                                             const Array<OneD, const Array<OneD, NekDouble> > &physfield,
-                                             const Array<OneD, const Array<OneD, NekDouble> > &velocity,
-                                             Array<OneD,                   NekDouble>   &pressure)
+            const Array<OneD, const Array<OneD, NekDouble> > &physfield,
+            const Array<OneD, const Array<OneD, NekDouble> > &velocity,
+                  Array<OneD,                   NekDouble>   &pressure)
     {
         int nBCEdgePts = physfield[0].num_elements();
         NekDouble alpha = -0.5;
@@ -3627,8 +3856,8 @@ namespace Nektar
      * @param velocity   Velocity field.
      */
     void CompressibleFlowSystem::GetVelocityVector(
-                                                   const Array<OneD, Array<OneD, NekDouble> > &physfield,
-                                                   Array<OneD, Array<OneD, NekDouble> > &velocity)
+                const Array<OneD, Array<OneD, NekDouble> > &physfield,
+                      Array<OneD, Array<OneD, NekDouble> > &velocity)
     {
         const int nBCEdgePts = physfield[0].num_elements();
         
@@ -3647,9 +3876,9 @@ namespace Nektar
      * @param temperature  The resulting temperature \f$ T \f$.
      */
     void CompressibleFlowSystem::GetTemperature(
-                                                const Array<OneD, const Array<OneD, NekDouble> > &physfield,
-                                                Array<OneD,                         NekDouble  > &pressure,
-                                                Array<OneD,                         NekDouble  > &temperature)
+          const Array<OneD, const Array<OneD, NekDouble> > &physfield,
+                Array<OneD,                         NekDouble  > &pressure,
+                Array<OneD,                         NekDouble  > &temperature)
     {
         const int nq = physfield[0].num_elements();
         
@@ -3665,9 +3894,9 @@ namespace Nektar
      * @param soundspeed   The resulting sound speed \f$ c \f$.
      */
     void CompressibleFlowSystem::GetSoundSpeed(
-                                               const Array<OneD, Array<OneD, NekDouble> > &physfield,
-                                               Array<OneD,             NekDouble  > &pressure,
-                                               Array<OneD,             NekDouble  > &soundspeed)
+                const Array<OneD, Array<OneD, NekDouble> > &physfield,
+                      Array<OneD,             NekDouble  > &pressure,
+                      Array<OneD,             NekDouble  > &soundspeed)
     {
         const int nq = m_fields[0]->GetTotPoints();
         Vmath::Vdiv (nq, pressure, 1, physfield[0], 1, soundspeed, 1);
@@ -3715,8 +3944,8 @@ namespace Nektar
      * @param mu           The resulting dynamic viscosity.
      */
     void CompressibleFlowSystem::GetDynamicViscosity(
-                                                     const Array<OneD, const NekDouble> &temperature,
-                                                     Array<OneD,       NekDouble> &mu)
+                        const Array<OneD, const NekDouble> &temperature,
+                              Array<OneD,       NekDouble> &mu)
     {
         const int nPts    = temperature.num_elements();
         NekDouble mu_star = m_mu;
@@ -3951,7 +4180,7 @@ namespace Nektar
      * @param ExpOrder   Order of expansion element by element.
      */
     Array<OneD, NekDouble> CompressibleFlowSystem::GetStabilityLimitVector(
-                                                                           const Array<OneD,int> &ExpOrder)
+                                                const Array<OneD,int> &ExpOrder)
     {
         int i;
         Array<OneD,NekDouble> returnval(m_fields[0]->GetExpSize(), 0.0);
@@ -3971,11 +4200,8 @@ namespace Nektar
         int i;
         int nq = inarray[0].num_elements();
         int nvar = m_fields.num_elements();
-        int nDimensions = m_fields.num_elements();
         
         NekDouble GamMinOneScalar           = m_gamma - 1.0;
-        NekDouble OneMinGamScalar           = 1.0 - m_gamma;
-        NekDouble GamMinOneOverTwoScalar    = 0.5 * (m_gamma - 1.0);
         NekDouble OneOverGamMinOneScalar    = 1.0 / (m_gamma - 1.0);
         Array<OneD, NekDouble> OneOverGamMinOne(nq, OneOverGamMinOneScalar);
         Array<OneD, NekDouble> GamMinOneVec(nq, GamMinOneScalar);
@@ -3987,22 +4213,14 @@ namespace Nektar
         Array<OneD, NekDouble> HalfVelsq(nq, 0.0);
         
         Array<OneD, Array<OneD, NekDouble> > vel(m_spacedim);
-        Array<OneD, Array<OneD, NekDouble> > direct_fields(nvar);
-        
-        for (i = 0; i < nvar; ++i)
-        {
-            direct_fields[i] = Array<OneD, NekDouble>(nq, 0.0);
-        }
-        
-        GetDirectSolution(direct_fields);
         
         for (i = 0; i < m_spacedim; ++i)
         {
             vel[i] = Array<OneD, NekDouble>(nq);
         }
         
-        GetVelocityVector(direct_fields, vel);
-        GetPressure      (direct_fields, vel, pressure);
+        GetVelocityVector(m_dirFlds, vel);
+        GetPressure      (m_dirFlds, vel, pressure);
         
         // determine u^2+v^2+w^2;
         for (i = 0; i < m_spacedim; ++i)
@@ -4120,14 +4338,6 @@ namespace Nektar
         Array<OneD, Array<OneD, NekDouble> > vel(m_spacedim);
         Array<OneD, Array<OneD, NekDouble> > OneMinGamVel(m_spacedim);
         Array<OneD, Array<OneD, NekDouble> > velOverRho(m_spacedim);
-        Array<OneD, Array<OneD, NekDouble> > direct_fields(nvar);
-        
-        for (i = 0; i < nvar; ++i)
-        {
-            direct_fields[i] = Array<OneD, NekDouble>(nq, 0.0);
-        }
-        
-        GetDirectSolution(direct_fields);
         
         for (i = 0; i < m_spacedim; ++i)
         {
@@ -4136,14 +4346,14 @@ namespace Nektar
             OneMinGamVel[i] = Array<OneD, NekDouble>(nq);
         }
         
-        GetVelocityVector(direct_fields, vel);
-        GetPressure      (direct_fields, vel, pressure);
+        GetVelocityVector(m_dirFlds, vel);
+        GetPressure      (m_dirFlds, vel, pressure);
         
         // determine u^2+v^2+w^2;
         for (i = 0; i < m_spacedim; ++i)
         {
             Vmath::Vvtvp(nq, vel[i], 1, vel[i], 1, velsq, 1, velsq, 1);
-            Vmath::Vdiv(nq, vel[i], 1, direct_fields[0], 1, velOverRho[i], 1);
+            Vmath::Vdiv(nq, vel[i], 1, m_dirFlds[0], 1, velOverRho[i], 1);
             Vmath::Neg(nq, &velOverRho[i][0], 1);
             Vmath::Vmul(nq, &OneMinGamVec[0], 1,
                         &vel[i][0], 1,
@@ -4156,7 +4366,7 @@ namespace Nektar
                     &velsq[0], 1,
                     &GamMinOneOverTwoVelsq[0], 1);
         
-        Vmath::Vdiv(nq, &ones[0], 1, &direct_fields[0][0], 1, &oneOverRho[0], 1);
+        Vmath::Vdiv(nq, &ones[0], 1, &m_dirFlds[0][0], 1, &oneOverRho[0], 1);
         
         if (m_spacedim == 2)
         {
@@ -4239,11 +4449,11 @@ namespace Nektar
     
     void CompressibleFlowSystem::GetConservToPrimVariableInvMatDiv(
                 Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &dUdVInv,
-                Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &dUdVInvdX,
-                Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &dUdVInvdY)
+                Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
+                                                                    &dUdVInvdXi)
     {
-        int i, j, k;
-        int nq = dUdVInvdX[0][0].num_elements();
+        int i, j;
+        int nq = dUdVInvdXi[0][0][0].num_elements();
         int nvar = m_fields.num_elements();
         int nDimensions = m_fields.num_elements();
         
@@ -4288,14 +4498,6 @@ namespace Nektar
         Array<OneD, Array<OneD, NekDouble> > OneMinGamVeldY(m_spacedim);
         
         Array<OneD, Array<OneD, NekDouble> > velOverRho(m_spacedim);
-        Array<OneD, Array<OneD, NekDouble> > dirFlds(nvar);
-        
-        for (i = 0; i < nvar; ++i)
-        {
-            dirFlds[i] = Array<OneD, NekDouble>(nq, 0.0);
-        }
-        
-        GetDirectSolution(dirFlds);
         
         for (i = 0; i < m_spacedim; ++i)
         {
@@ -4317,20 +4519,20 @@ namespace Nektar
             du2i_dy[i]        = Array<OneD, NekDouble>(nq, 0.0);
         }
         
-        GetVelocityVector(dirFlds, vel);
-        GetPressure      (dirFlds, vel, pressure);
+        GetVelocityVector(m_dirFlds, vel);
+        GetPressure      (m_dirFlds, vel, pressure);
         
         // determine u^2+v^2+w^2;
         for (i = 0; i < m_spacedim; ++i)
         {
             Vmath::Vvtvp(nq, vel[i], 1, vel[i], 1, velsq, 1, velsq, 1);
-            Vmath::Vdiv(nq, vel[i], 1, dirFlds[0], 1, velOverRho[i], 1);
+            Vmath::Vdiv(nq, vel[i], 1, m_dirFlds[0], 1, velOverRho[i], 1);
             Vmath::Neg(nq, &velOverRho[i][0], 1);
         }
         
         Vmath::Smul(nq, 0.5, &velsq[0], 1, &HalfVelsq[0], 1);
         
-        Vmath::Vdiv(nq, &ones[0], 1, &dirFlds[0][0], 1, &oneOverRho[0], 1);
+        Vmath::Vdiv(nq, &ones[0], 1, &m_dirFlds[0][0], 1, &oneOverRho[0], 1);
         
         if (m_spacedim == 2)
         {
@@ -4366,9 +4568,20 @@ namespace Nektar
             {
                 for (j = 0; j < nvar; ++j)
                 {
-                    m_primal[0]->PhysDeriv(dUdVInv[i][j],
-                                           dUdVInvdX[i][j],
-                                           dUdVInvdY[i][j]);
+                    if (m_spacedim == 2)
+                    {
+                        m_primal[0]->PhysDeriv(dUdVInv[i][j],
+                                               dUdVInvdXi[0][i][j],
+                                               dUdVInvdXi[1][i][j]);
+                    }
+                    if (m_spacedim == 3)
+                    {
+                        m_primal[0]->PhysDeriv(dUdVInv[i][j],
+                                               dUdVInvdXi[0][i][j],
+                                               dUdVInvdXi[1][i][j],
+                                               dUdVInvdXi[2][i][j]);
+                    }
+                    
                 }
             }
         }
@@ -4381,7 +4594,7 @@ namespace Nektar
     }
     
     
-    void CompressibleFlowSystem::GetJacobianConvFluxPrimitiveVar(
+    void CompressibleFlowSystem::GetJacobianConvFluxPrim(
         Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &Jac)
     {
         int i;
@@ -4402,25 +4615,17 @@ namespace Nektar
         Array<OneD, NekDouble> Htmp(nq, 0.0);
         Array<OneD, NekDouble> velsq(nq, 0.0);
         Array<OneD, Array<OneD, NekDouble> > vel(m_spacedim);
-        Array<OneD, Array<OneD, NekDouble> > dirFlds(nvar);
         
         Array<OneD, Array<OneD, NekDouble> > tmpx(nvar);
         Array<OneD, Array<OneD, NekDouble> > tmpy(nvar);
-        
-        for (i = 0; i < nvar; ++i)
-        {
-            dirFlds[i] = Array<OneD, NekDouble>(nq, 0.0);
-        }
-        
-        GetDirectSolution(dirFlds);
         
         for (i = 0; i < m_spacedim; ++i)
         {
             vel[i]          = Array<OneD, NekDouble>(nq);
         }
         
-        GetVelocityVector(dirFlds, vel);
-        GetPressure      (dirFlds, vel, pressure);
+        GetVelocityVector(m_dirFlds, vel);
+        GetPressure      (m_dirFlds, vel, pressure);
         
         for (i = 0; i < m_spacedim; ++i)
         {
@@ -4428,9 +4633,9 @@ namespace Nektar
         }
         
         // determine H = E + p/rho;
-        Vmath::Vdiv(nq, dirFlds[nvar-1], 1, dirFlds[0], 1, H, 1);
+        Vmath::Vdiv(nq, m_dirFlds[nvar-1], 1, m_dirFlds[0], 1, H, 1);
         
-        Vmath::Vdiv(nq, pressure, 1, dirFlds[0], 1, Htmp, 1);
+        Vmath::Vdiv(nq, pressure, 1, m_dirFlds[0], 1, Htmp, 1);
         
         Vmath::Vadd(nq, H, 1, Htmp, 1, H, 1);
         
@@ -4461,17 +4666,17 @@ namespace Nektar
             
             // row two
             // rho
-            Vmath::Vcopy(nq, &dirFlds[0][0], 1, &Jac[0][1][0][0], 1);
+            Vmath::Vcopy(nq, &m_dirFlds[0][0], 1, &Jac[0][1][0][0], 1);
             // 2 * rho * u
-            Vmath::Vmul(nq, &dirFlds[0][0], 1, &vel[0][0], 1, &Jac[0][1][1][0], 1);
+            Vmath::Vmul(nq, &m_dirFlds[0][0], 1, &vel[0][0], 1, &Jac[0][1][1][0], 1);
             Vmath::Smul(nq, 2.0, &Jac[0][1][1][0], 1, &Jac[0][1][1][0], 1);
             // rho * v
-            Vmath::Vmul(nq, &dirFlds[0][0], 1, &vel[1][0], 1, &Jac[0][1][2][0], 1);
+            Vmath::Vmul(nq, &m_dirFlds[0][0], 1, &vel[1][0], 1, &Jac[0][1][2][0], 1);
             // rho * (H + u^2)
             Vmath::Zero(nq, &tmp[0], 1);
             Vmath::Vmul(nq, &vel[0][0], 1, &vel[0][0], 1, &tmp[0], 1);
             Vmath::Vadd(nq, &tmp[0], 1, &H[0], 1, &tmp[0], 1);
-            Vmath::Vmul(nq, &dirFlds[0][0], 1, &tmp[0], 1, &Jac[0][1][3][0], 1);
+            Vmath::Vmul(nq, &m_dirFlds[0][0], 1, &tmp[0], 1, &Jac[0][1][3][0], 1);
             
             // row three
             // 0
@@ -4479,9 +4684,9 @@ namespace Nektar
             // 0
             Vmath::Vcopy(nq, &zeros[0], 1, &Jac[0][2][1][0], 1);
             // rho * u
-            Vmath::Vmul(nq, &dirFlds[0][0], 1, &vel[0][0], 1, &Jac[0][2][2][0], 1);
+            Vmath::Vmul(nq, &m_dirFlds[0][0], 1, &vel[0][0], 1, &Jac[0][2][2][0], 1);
             // rho * u * v
-            Vmath::Vmul(nq, &dirFlds[0][0], 1, &vel[0][0], 1, &Jac[0][2][3][0], 1);
+            Vmath::Vmul(nq, &m_dirFlds[0][0], 1, &vel[0][0], 1, &Jac[0][2][3][0], 1);
             Vmath::Vmul(nq, &Jac[0][2][3][0], 1, &vel[1][0], 1, &Jac[0][2][3][0], 1);
             
             // row four
@@ -4520,26 +4725,26 @@ namespace Nektar
             // 0
             Vmath::Vcopy(nq, &zeros[0], 1, &Jac[1][1][0][0], 1);
             // rho * v
-            Vmath::Vmul(nq, &dirFlds[0][0], 1, &vel[1][0], 1, &Jac[1][1][1][0], 1);
+            Vmath::Vmul(nq, &m_dirFlds[0][0], 1, &vel[1][0], 1, &Jac[1][1][1][0], 1);
             // 0
             Vmath::Vcopy(nq, &zeros[0], 1, &Jac[1][1][2][0], 1);
             // rho * u * v
-            Vmath::Vmul(nq, &dirFlds[0][0], 1, &vel[0][0], 1, &Jac[1][1][3][0], 1);
+            Vmath::Vmul(nq, &m_dirFlds[0][0], 1, &vel[0][0], 1, &Jac[1][1][3][0], 1);
             Vmath::Vmul(nq, &Jac[1][1][3][0], 1, &vel[1][0], 1, &Jac[1][1][3][0], 1);
             
             // row three
             // rho
-            Vmath::Vcopy(nq, &dirFlds[0][0], 1, &Jac[1][2][0][0], 1);
+            Vmath::Vcopy(nq, &m_dirFlds[0][0], 1, &Jac[1][2][0][0], 1);
             // rho * u
-            Vmath::Vmul(nq, &dirFlds[0][0], 1, &vel[0][0], 1, &Jac[1][2][1][0], 1);
+            Vmath::Vmul(nq, &m_dirFlds[0][0], 1, &vel[0][0], 1, &Jac[1][2][1][0], 1);
             // 2 * rho * v
-            Vmath::Vmul(nq, &dirFlds[0][0], 1, &vel[1][0], 1, &Jac[1][2][2][0], 1);
+            Vmath::Vmul(nq, &m_dirFlds[0][0], 1, &vel[1][0], 1, &Jac[1][2][2][0], 1);
             Vmath::Smul(nq, 2.0, &Jac[1][2][2][0], 1, &Jac[1][2][2][0], 1);
             // rho * (H + v^2)
             Vmath::Zero(nq, &tmp[0], 1);
             Vmath::Vmul(nq, &vel[1][0], 1, &vel[1][0], 1, &tmp[0], 1);
             Vmath::Vadd(nq, &tmp[0], 1, &H[0], 1, &tmp[0], 1);
-            Vmath::Vmul(nq, &dirFlds[0][0], 1, &tmp[0], 1, &Jac[1][2][3][0], 1);
+            Vmath::Vmul(nq, &m_dirFlds[0][0], 1, &tmp[0], 1, &Jac[1][2][3][0], 1);
             
             // row four
             // 0
@@ -4557,549 +4762,68 @@ namespace Nektar
         }
     }
     
-    void CompressibleFlowSystem::GetAdjointConvFluxVectorFromPrimitiveVar(
-                                                                          const Array<OneD, Array<OneD, NekDouble> > &inarray,
-                                                                          Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray)
-    {
-        int i,j,k;
-        
-        int nq = inarray[0].num_elements();
-        int nvar = m_fields.num_elements();
-        
-        Array<OneD, NekDouble> tmp(nq, 0.0);
-        Array<OneD, NekDouble> tmp1(nq, 0.0);
-        Array<OneD, Array<OneD, NekDouble> > tmpx(nvar);
-        Array<OneD, Array<OneD, NekDouble> > tmpy(nvar);
-        
-        
-        Array<OneD, Array<OneD, Array<OneD,
-        Array<OneD, NekDouble > > > > Jac(m_spacedim);
-        Array<OneD, Array<OneD, Array<OneD,
-        Array<OneD, NekDouble > > > >JacCons(m_spacedim);
-        
-        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > dVdU(nvar);
-        
-        // span the required arrays
-        for (i = 0; i < m_spacedim; ++i)
-        {
-            Jac[i]     = Array<OneD, Array<OneD,
-            Array<OneD, NekDouble > > >(nvar);
-            JacCons[i] = Array<OneD, Array<OneD,
-            Array<OneD, NekDouble > > >(nvar);
-            
-            for (j = 0; j < nvar; ++j)
-            {
-                Jac[i][j] = Array<OneD, Array<OneD, NekDouble> >(nvar);
-                JacCons[i][j] = Array<OneD, Array<OneD, NekDouble> >(nvar);
-                
-                for (k = 0; k < nvar; ++k)
-                {
-                    Jac[i][j][k] = Array<OneD, NekDouble>(nq, 0.0);
-                    JacCons[i][j][k] = Array<OneD, NekDouble>(nq, 0.0);
-                }
-            }
-        }
-        
-        for (i = 0; i < nvar; ++i)
-        {
-            dVdU[i] = Array<OneD, Array<OneD, NekDouble > >(nvar);
-            
-            for (j = 0; j < nvar; ++j)
-            {
-                dVdU[i][j] = Array<OneD, NekDouble>(nq, 0.0);
-            }
-        }
-        
-        GetJacobianConvFluxPrimitiveVar(Jac);
-        
-        GetConservToPrimVariableInvMat(dVdU);
-        
-        // Perform tensor product dVdU*dFdV
-        for (i = 0; i < nvar; ++i)
-        {
-            for (j = 0; j < nvar; ++j)
-            {
-                Vmath::Zero(nq, &tmp[0], 1);
-                Vmath::Zero(nq, &tmp1[0], 1);
-                
-                for (k = 0; k < nvar; ++k)
-                {
-                    Vmath::Vvtvp(nq,
-                                 &dVdU[i][k][0], 1,
-                                 &Jac[0][k][j][0], 1,
-                                 &tmp[0], 1,
-                                 &tmp[0], 1);
-                    
-                    Vmath::Vcopy(nq,
-                                 &tmp[0], 1,
-                                 &JacCons[0][i][j][0], 1);
-                    
-                    Vmath::Vvtvp(nq,
-                                 &dVdU[i][k][0], 1,
-                                 &Jac[1][k][j][0], 1,
-                                 &tmp1[0], 1,
-                                 &tmp1[0], 1);
-                    
-                    Vmath::Vcopy(nq,
-                                 &tmp1[0], 1,
-                                 &JacCons[1][i][j][0], 1);
-                }
-            }
-        }
-        
-        for (i = 0; i < nvar; ++i)
-        {
-            tmpx[i] = Array<OneD, NekDouble>(nq, 0.0);
-            tmpy[i] = Array<OneD, NekDouble>(nq, 0.0);
-            
-            for (j = 0; j < nvar; ++j)
-            {
-                if (m_spacedim == 2)
-                {
-                    Vmath::Vvtvp(nq,
-                                 &JacCons[0][i][j][0], 1,
-                                 &inarray[j][0], 1,
-                                 &tmpx[i][0], 1,
-                                 &tmpx[i][0], 1);
-                    
-                    Vmath::Vvtvp(nq,
-                                 &JacCons[1][i][j][0], 1,
-                                 &inarray[j][0], 1,
-                                 &tmpy[i][0], 1,
-                                 &tmpy[i][0], 1);
-                    
-                }
-                
-                if (m_spacedim == 3)
-                {
-                    ASSERTL0(false, "3D adjoint solver is ot implemented yet")
-                }
-                
-            }
-            
-            Vmath::Vcopy(nq, &tmpx[i][0], 1, &outarray[i][0][0], 1);
-            Vmath::Vcopy(nq, &tmpy[i][0], 1, &outarray[i][1][0], 1);
-        }
-    }
-    
-    
-    void CompressibleFlowSystem::GetDerivJacVectorFromPrimitiveVar(
+    void CompressibleFlowSystem::GetAdjointDerivJacVector(
                 const Array<OneD, Array<OneD, NekDouble> > &inarray,
-                Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray)
+                Array<OneD, Array<OneD, Array<OneD, NekDouble > > > &outarray)
     {
         int i,j,k;
         
         int nq = inarray[0].num_elements();
         int nvar = m_fields.num_elements();
         
-        Array<OneD, NekDouble> tmp(nq, 0.0);
-        Array<OneD, NekDouble> tmp1(nq, 0.0);
-        Array<OneD, NekDouble> tmp2(nq, 0.0);
-        Array<OneD, NekDouble> tmp3(nq, 0.0);
-        Array<OneD, NekDouble> tmp4(nq, 0.0);
-        Array<OneD, NekDouble> tmp5(nq, 0.0);
-        
-        Array<OneD, Array<OneD, NekDouble> > tmpx(nvar);
-        Array<OneD, Array<OneD, NekDouble> > tmpy(nvar);
-        
-        Array<OneD, Array<OneD, Array<OneD,
-        Array<OneD, NekDouble > > > > Jac(m_spacedim);
-        Array<OneD, Array<OneD, Array<OneD,
-        Array<OneD, NekDouble > > > > JacCons(m_spacedim);
-        Array<OneD, Array<OneD, Array<OneD,
-        Array<OneD, NekDouble > > > > JacDiv(m_spacedim);
-        Array<OneD, Array<OneD, Array<OneD,
-        Array<OneD, NekDouble > > > >JacConsD(m_spacedim);
-        Array<OneD, Array<OneD, Array<OneD,
-        Array<OneD, NekDouble > > > >JacConsDiv(m_spacedim);
-        
-        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > dVdU(nvar);
-        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > dVdUdX(nvar);
-        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > dVdUdY(nvar);
-        
-        // span the required arrays
-        for (i = 0; i < m_spacedim; ++i)
-        {
-            Jac[i]     = Array<OneD, Array<OneD,
-            Array<OneD, NekDouble > > >(nvar);
-            JacDiv[i]     = Array<OneD, Array<OneD,
-            Array<OneD, NekDouble > > >(nvar);
-            JacConsDiv[i] = Array<OneD, Array<OneD,
-            Array<OneD, NekDouble > > >(nvar);
-            
-            for (j = 0; j < nvar; ++j)
-            {
-                Jac[i][j] = Array<OneD, Array<OneD, NekDouble> >(nvar);
-                JacDiv[i][j] = Array<OneD, Array<OneD, NekDouble> >(nvar);
-                JacConsDiv[i][j] = Array<OneD, Array<OneD, NekDouble> >(nvar);
-                
-                for (k = 0; k < nvar; ++k)
-                {
-                    Jac[i][j][k] = Array<OneD, NekDouble>(nq, 0.0);
-                    JacDiv[i][j][k] = Array<OneD, NekDouble>(nq, 0.0);
-                    JacConsDiv[i][j][k] = Array<OneD, NekDouble>(nq, 0.0);
-                }
-            }
-        }
-        
         for (i = 0; i < nvar; ++i)
         {
-            dVdU[i] = Array<OneD, Array<OneD, NekDouble > >(nvar);
-            dVdUdX[i] = Array<OneD, Array<OneD, NekDouble > >(nvar);
-            dVdUdY[i] = Array<OneD, Array<OneD, NekDouble > >(nvar);
-            
-            for (j = 0; j < nvar; ++j)
-            {
-                dVdU[i][j] = Array<OneD, NekDouble>(nq, 0.0);
-                dVdUdX[i][j] = Array<OneD, NekDouble>(nq, 0.0);
-                dVdUdY[i][j] = Array<OneD, NekDouble>(nq, 0.0);
-            }
-        }
-        
-        GetJacobianConvFluxPrimitiveVar(Jac);
-        
-        GetDerivJacobian(Jac, JacDiv);
-        
-        GetConservToPrimVariableInvMat(dVdU);
-        
-        GetConservToPrimVariableInvMatDiv(dVdU, dVdUdX, dVdUdY);
-        
-        for (i = 0; i < nvar; ++i)
-        {
-            for (j = 0; j < nvar; ++j)
-            {
-                Vmath::Zero(nq, &tmp[0], 1);
-                Vmath::Zero(nq, &tmp1[0], 1);
-                Vmath::Zero(nq, &tmp2[0], 1);
-                Vmath::Zero(nq, &tmp3[0], 1);
-                Vmath::Zero(nq, &tmp4[0], 1);
-                Vmath::Zero(nq, &tmp5[0], 1);
-                
-                for (k = 0; k < nvar; ++k)
-                {
-                    //
-                    Vmath::Vvtvp(nq,
-                                 &dVdUdX[i][k][0], 1,
-                                 &Jac[0][k][j][0], 1,
-                                 &tmp[0], 1,
-                                 &tmp[0], 1);
-                    
-                    Vmath::Vvtvp(nq,
-                                 &dVdUdY[i][k][0], 1,
-                                 &Jac[1][k][j][0], 1,
-                                 &tmp1[0], 1,
-                                 &tmp1[0], 1);
-                    
-                    //=============
-                    
-                    Vmath::Vvtvp(nq,
-                                 &dVdU[i][k][0], 1,
-                                 &JacDiv[0][k][j][0], 1,
-                                 &tmp2[0], 1,
-                                 &tmp2[0], 1);
-                    
-                    Vmath::Vvtvp(nq,
-                                 &dVdU[i][k][0], 1,
-                                 &JacDiv[1][k][j][0], 1,
-                                 &tmp3[0], 1,
-                                 &tmp3[0], 1);
-                    
-                    Vmath::Vadd(nq,
-                                &tmp[0], 1,
-                                &tmp2[0], 1,
-                                &JacConsDiv[0][i][j][0], 1);
-                    
-                    Vmath::Vadd(nq,
-                                &tmp1[0], 1,
-                                &tmp3[0], 1,
-                                &JacConsDiv[1][i][j][0], 1);
-                }
-            }
-        }
-        
-        for (i = 0; i < nvar; ++i)
-        {
-            tmpx[i] = Array<OneD, NekDouble>(nq, 0.0);
-            tmpy[i] = Array<OneD, NekDouble>(nq, 0.0);
-            
             for (j = 0; j < nvar; ++j)
             {
                 Vmath::Vvtvp(nq,
-                             &JacConsDiv[0][i][j][0], 1,
+                             &m_JacDivCons[0][i][j][0], 1,
                              &inarray[j][0], 1,
-                             &tmpx[i][0], 1,
-                             &tmpx[i][0], 1);
+                             &outarray[i][0][0], 1,
+                             &outarray[i][0][0], 1);
                 
                 Vmath::Vvtvp(nq,
-                             &JacConsDiv[1][i][j][0], 1,
+                             &m_JacDivCons[1][i][j][0], 1,
                              &inarray[j][0], 1,
-                             &tmpy[i][0], 1,
-                             &tmpy[i][0], 1);
+                             &outarray[i][1][0], 1,
+                             &outarray[i][1][0], 1);
                 
             }
-            
-            Vmath::Vcopy(nq, &tmpx[i][0], 1, &outarray[i][0][0], 1);
-            Vmath::Vcopy(nq, &tmpy[i][0], 1, &outarray[i][1][0], 1);
         }
     }
     
-    void CompressibleFlowSystem::GetAdjointViscousFluxVectorFromPrimitiveVar(
-          const Array<OneD, Array<OneD, NekDouble> > &inarray,
-                Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &derivatives,
-                Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray)
-    {
-        int i,j,k;
-        
-        int nq = inarray[0].num_elements();
-        int nvar = m_fields.num_elements();
-        
-        Array<OneD, NekDouble> tmp(nq, 0.0);
-        Array<OneD, NekDouble> tmp1(nq, 0.0);
-        Array<OneD, NekDouble> tmp2(nq, 0.0);
-        Array<OneD, NekDouble> tmp3(nq, 0.0);
-        
-        Array<OneD, Array<OneD, NekDouble> > tmpx1(nvar);
-        Array<OneD, Array<OneD, NekDouble> > tmpy1(nvar);
-        Array<OneD, Array<OneD, NekDouble> > tmpx2(nvar);
-        Array<OneD, Array<OneD, NekDouble> > tmpy2(nvar);
-        
-        Array<OneD, Array<OneD, NekDouble> > tmpxtot(nvar);
-        Array<OneD, Array<OneD, NekDouble> > tmpytot(nvar);
-        
-        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > dVdU(nvar);
-        
-        for (i = 0; i < nvar; ++i)
-        {
-            dVdU[i] = Array<OneD, Array<OneD, NekDouble > >(nvar);
-            
-            for (j = 0; j < nvar; ++j)
-            {
-                dVdU[i][j] = Array<OneD, NekDouble>(nq, 0.0);
-            }
-        }
-        
-        Array<OneD, Array<OneD, NekDouble> > dirFlds(nvar);
-        for (i = 0; i < nvar; ++i)
-        {
-            dirFlds[i] = Array<OneD, NekDouble>(nq, 0.0);
-        }
-        
-        GetDirectSolution(dirFlds);
-        
-        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > Dxx(nvar);
-        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > Dyx(nvar);
-        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > Dxy(nvar);
-        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > Dyy(nvar);
-        
-        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > DxxCons(nvar);
-        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > DyxCons(nvar);
-        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > DxyCons(nvar);
-        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > DyyCons(nvar);
-        
-        for (i = 0; i < nvar; ++i)
-        {
-            Dxx[i] = Array<OneD, Array<OneD, NekDouble> >(nvar);
-            Dyx[i] = Array<OneD, Array<OneD, NekDouble> >(nvar);
-            Dxy[i] = Array<OneD, Array<OneD, NekDouble> >(nvar);
-            Dyy[i] = Array<OneD, Array<OneD, NekDouble> >(nvar);
-            
-            DxxCons[i] = Array<OneD, Array<OneD, NekDouble> >(nvar);
-            DyxCons[i] = Array<OneD, Array<OneD, NekDouble> >(nvar);
-            DxyCons[i] = Array<OneD, Array<OneD, NekDouble> >(nvar);
-            DyyCons[i] = Array<OneD, Array<OneD, NekDouble> >(nvar);
-            
-            for (j = 0; j < nvar; ++j)
-            {
-                Dxx[i][j] = Array<OneD, NekDouble>(nq, 0.0);
-                Dyx[i][j] = Array<OneD, NekDouble>(nq, 0.0);
-                Dxy[i][j] = Array<OneD, NekDouble>(nq, 0.0);
-                Dyy[i][j] = Array<OneD, NekDouble>(nq, 0.0);
-                
-                DxxCons[i][j] = Array<OneD, NekDouble>(nq, 0.0);
-                DyxCons[i][j] = Array<OneD, NekDouble>(nq, 0.0);
-                DxyCons[i][j] = Array<OneD, NekDouble>(nq, 0.0);
-                DyyCons[i][j] = Array<OneD, NekDouble>(nq, 0.0);
-            }
-        }
-        
-        GetJacobianViscousFluxFromDiffPrimitiveVar(dirFlds,
-                                                   Dxx, Dxy,
-                                                   Dyx, Dyy);
-        
-        GetConservToPrimVariableInvMat(dVdU);
-        
-        // Perform tensor product dVdU*dFdV
-        /*for (i = 0; i < nvar; ++i)
-         {
-         for (j = 0; j < nvar; ++j)
-         {
-         Vmath::Zero(nq, &tmp[0], 1);
-         Vmath::Zero(nq, &tmp1[0], 1);
-         Vmath::Zero(nq, &tmp2[0], 1);
-         Vmath::Zero(nq, &tmp3[0], 1);
-         
-         for (k = 0; k < nvar; ++k)
-         {
-         Vmath::Vvtvp(nq,
-         &dVdU[i][k][0], 1,
-         &Dxx[k][j][0], 1,
-         &tmp[0], 1,
-         &tmp[0], 1);
-         
-         Vmath::Vcopy(nq,
-         &tmp[0], 1,
-         &DxxCons[i][j][0], 1);
-         
-         Vmath::Vvtvp(nq,
-         &dVdU[i][k][0], 1,
-         &Dyx[k][j][0], 1,
-         &tmp1[0], 1,
-         &tmp1[0], 1);
-         
-         Vmath::Vcopy(nq,
-         &tmp1[0], 1,
-         &DyxCons[i][j][0], 1);
-         
-         Vmath::Vvtvp(nq,
-         &dVdU[i][k][0], 1,
-         &Dxy[k][j][0], 1,
-         &tmp2[0], 1,
-         &tmp2[0], 1);
-         
-         Vmath::Vcopy(nq,
-         &tmp2[0], 1,
-         &DxyCons[i][j][0], 1);
-         
-         Vmath::Vvtvp(nq,
-         &dVdU[i][k][0], 1,
-         &Dyy[k][j][0], 1,
-         &tmp3[0], 1,
-         &tmp3[0], 1);
-         
-         Vmath::Vcopy(nq,
-         &tmp3[0], 1,
-         &DyyCons[i][j][0], 1);
-         }
-         }
-         }
-         
-         cout << "====================================================" << endl;
-         
-         cout << Vmath::Vmax(nq, &DxxCons[0][0][0], 1) << " "
-         << Vmath::Vmax(nq, &DxxCons[0][1][0], 1) << " "
-         << Vmath::Vmax(nq, &DxxCons[0][2][0], 1) << " "
-         << Vmath::Vmax(nq, &DxxCons[0][3][0], 1) << endl;
-         cout << Vmath::Vmax(nq, &DxxCons[1][0][0], 1) << " "
-         << Vmath::Vmax(nq, &DxxCons[1][1][0], 1) << " "
-         << Vmath::Vmax(nq, &DxxCons[1][2][0], 1) << " "
-         << Vmath::Vmax(nq, &DxxCons[1][3][0], 1) << endl;
-         cout << Vmath::Vmax(nq, &DxxCons[2][0][0], 1) << " "
-         << Vmath::Vmax(nq, &DxxCons[2][1][0], 1) << " "
-         << Vmath::Vmax(nq, &DxxCons[2][2][0], 1) << " "
-         << Vmath::Vmax(nq, &DxxCons[2][3][0], 1) << endl;
-         cout << Vmath::Vmax(nq, &DxxCons[3][0][0], 1) << " "
-         << Vmath::Vmax(nq, &DxxCons[3][1][0], 1) <<  " "
-         << Vmath::Vmax(nq, &DxxCons[3][2][0], 1) << " "
-         << Vmath::Vmax(nq, &DxxCons[3][3][0], 1) << endl;
-         
-         cout << "====================================================" << endl;
-         */
-        if (m_spacedim == 2)
-        {
-            for (i = 0; i < nvar; ++i)
-            {
-                tmpx1[i] = Array<OneD, NekDouble>(nq, 0.0);
-                tmpy1[i] = Array<OneD, NekDouble>(nq, 0.0);
-                
-                tmpx2[i] = Array<OneD, NekDouble>(nq, 0.0);
-                tmpy2[i] = Array<OneD, NekDouble>(nq, 0.0);
-                
-                for (j = 0; j < nvar; ++j)
-                {
-                    Vmath::Vvtvp(nq,
-                                 &Dxx[i][j][0], 1,
-                                 &derivatives[0][j][0], 1,
-                                 &tmpx1[i][0], 1,
-                                 &tmpx1[i][0], 1);
-                    
-                    Vmath::Vvtvp(nq,
-                                 &Dyx[i][j][0], 1,
-                                 &derivatives[1][j][0], 1,
-                                 &tmpx2[i][0], 1,
-                                 &tmpx2[i][0], 1);
-                    
-                    Vmath::Vvtvp(nq,
-                                 &Dxy[i][j][0], 1,
-                                 &derivatives[0][j][0], 1,
-                                 &tmpy1[i][0], 1,
-                                 &tmpy1[i][0], 1);
-                    
-                    Vmath::Vvtvp(nq,
-                                 &Dyy[i][j][0], 1,
-                                 &derivatives[1][j][0], 1,
-                                 &tmpy2[i][0], 1,
-                                 &tmpy2[i][0], 1);
-                }
-            }
-            
-            Array<OneD, Array<OneD, NekDouble> > tmpnewx(nvar);
-            Array<OneD, Array<OneD, NekDouble> > tmpnewy(nvar);
-            
-            for (k = 0; k < nvar; ++k)
-            {
-                tmpnewx[k] = Array<OneD, NekDouble>(nq, 0.0);
-                tmpnewy[k] = Array<OneD, NekDouble>(nq, 0.0);
-                Vmath::Vadd(nq,
-                            &tmpx1[k][0], 1,
-                            &tmpx2[k][0], 1,
-                            &tmpnewx[k][0], 1);
-                
-                Vmath::Vadd(nq,
-                            &tmpy1[k][0], 1,
-                            &tmpy2[k][0], 1,
-                            &tmpnewy[k][0], 1);
-            }
-            
-            
-            
-            for (i = 0; i < nvar; ++i)
-            {
-                
-                
-                for (j = 0; j < nvar; ++j)
-                {
-                    Vmath::Vvtvp(nq,
-                                 &dVdU[i][j][0], 1,
-                                 &tmpnewx[j][0], 1,
-                                 &outarray[0][i][0], 1,
-                                 &outarray[0][i][0], 1);
-                    
-                    Vmath::Vvtvp(nq,
-                                 &dVdU[i][j][0], 1,
-                                 &tmpnewy[j][0], 1,
-                                 &outarray[1][i][0], 1,
-                                 &outarray[1][i][0], 1);
-                }
-            }
-        }
-        if (m_spacedim == 3)
-        {
-            ASSERTL0(false, "3D adjoint solver is not yet implemented");
-        }
-    }
-    
-    
-    void CompressibleFlowSystem::GetJacobianViscousFluxFromDiffPrimitiveVar(
-                        Array<OneD, Array<OneD, NekDouble> > inarray,
-                        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &Dxx,
-                        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &Dxy,
-                        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &Dyx,
-                        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &Dyy)
+    void CompressibleFlowSystem::GetAdjointViscousFluxVector(
+      const Array<OneD, Array<OneD, NekDouble> >               &inarray,
+            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &z_derivatives,
+            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray)
     {
         // Jac[m_spacedim][m_spacedim][nvar][nvar][nq];
-        int i, j, k;
+        int i,j,k;
         int nq = inarray[0].num_elements();
         int nvar = m_fields.num_elements();
+        
+        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > JacViscFluxPrim(nvar);
+        
+        for (i = 0; i < nvar; ++i)
+        {
+            JacViscFluxPrim[i] = Array<OneD, Array<OneD, NekDouble> >(m_spacedim);
+            
+            for (j = 0; j < m_spacedim; ++j)
+            {
+                JacViscFluxPrim[i][j] = Array<OneD, NekDouble>(nq, 0.0);
+            }
+        }
+        
+        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > dVdU(nvar);
+        
+        for (i = 0; i < nvar; ++i)
+        {
+            dVdU[i] = Array<OneD, Array<OneD, NekDouble > >(nvar);
+            
+            for (j = 0; j < nvar; ++j)
+            {
+                dVdU[i][j] = Array<OneD, NekDouble>(nq, 0.0);
+            }
+        }
         
         Array<OneD, NekDouble> tmp(nq, 0.0);
         Array<OneD, NekDouble> zeros(nq, 0.0);
@@ -5111,29 +4835,52 @@ namespace Nektar
         
         Array<OneD, Array<OneD, NekDouble> > vel(m_spacedim);
         Array<OneD, Array<OneD, NekDouble> > MuVel(m_spacedim);
+        Array<OneD, Array<OneD, NekDouble> > TwoOThreeMuVel(m_spacedim);
+        Array<OneD, Array<OneD, NekDouble> > FourOThreeMuVel(m_spacedim);
         Array<OneD, Array<OneD, NekDouble> > tmpx(nvar);
         Array<OneD, Array<OneD, NekDouble> > tmpy(nvar);
         
         for (i = 0; i < m_spacedim; ++i)
         {
-            vel[i]          = Array<OneD, NekDouble>(nq, 0.0);
-            MuVel[i]          = Array<OneD, NekDouble>(nq, 0.0);
+            vel[i]                      = Array<OneD, NekDouble>(nq, 0.0);
+            MuVel[i]                    = Array<OneD, NekDouble>(nq, 0.0);
+            TwoOThreeMuVel[i]           = Array<OneD, NekDouble>(nq, 0.0);
+            FourOThreeMuVel[i]          = Array<OneD, NekDouble>(nq, 0.0);
         }
         
-        GetVelocityVector(inarray, vel);
+        GetVelocityVector(m_dirFlds, vel);
+        GetPressure(m_dirFlds, vel, Pressure);
         
         for (i = 0; i < m_spacedim; ++i)
         {
             Vmath::Smul(nq, m_mu, &vel[i][0], 1, &MuVel[i][0], 1);
+            
+            NekDouble FourThreeMu = 4.0/3.0*m_mu;
+            NekDouble TwoThreeMu = -2.0/3.0*m_mu;
+            
+            Vmath::Smul(nq,
+                        TwoThreeMu,
+                        &vel[i][0], 1,
+                        &TwoOThreeMuVel[i][0], 1);
+            
+            Vmath::Smul(nq,
+                        FourThreeMu,
+                        &vel[i][0], 1,
+                        &FourOThreeMuVel[i][0], 1);
         }
         
-        GetPressure(inarray, vel, Pressure);
-        
         NekDouble FourOThreeMuSclr = 4.0/3.0*m_mu;
-        NekDouble TwoOThreeMuSclr  = 2.0/3.0*m_mu;
+        NekDouble TwoOThreeMuSclr  = -2.0/3.0*m_mu;
         NekDouble GamMu_O_GamMinOnePrSclr = m_gamma*m_mu/((m_gamma-1)*m_Prandtl);
-        
         Array<OneD, NekDouble> FourOThreeMuVector(nq, FourOThreeMuSclr);
+        
+        for (i = 0; i < m_spacedim; ++i)
+        {
+            Vmath::Vmul(nq,
+                        &FourOThreeMuVector[0], 1,
+                        &vel[i][0], 1,
+                        &FourOThreeMuVel[i][0], 1);
+        }
         Array<OneD, NekDouble> TwoOThreeMuVector(nq, TwoOThreeMuSclr);
         Array<OneD, NekDouble> GamMu_O_GamMinOnePrVector(nq, GamMu_O_GamMinOnePrSclr);
         
@@ -5142,200 +4889,172 @@ namespace Nektar
                     &Pressure[0], 1,
                     &kPrho2Vec[0], 1);
         
-        Vmath::Vmul(nq, &inarray[0][0], 1, &inarray[0][0], 1, &tmp[0], 1);
+        Vmath::Vmul(nq, &m_dirFlds[0][0], 1, &m_dirFlds[0][0], 1, &tmp[0], 1);
         Vmath::Vdiv(nq, &kPrho2Vec[0], 1, &tmp[0], 1, &kPrho2Vec[0], 1);
-        
+        Vmath::Neg(nq, &kPrho2Vec[0], 1);
         Vmath::Zero(nq, &tmp[0], 1);
         
         
         if (m_spacedim == 2)
         {
-            /* =============================================================
-             Dxx =
-             
-             [ 0,        0,  0,    -gamma*mu/(Pr*(gamma-1))*p/rho^2]
-             [ 0,   4/3*mu,  0,                            4/3*u*mu]
-             [ 0,        0, mu,                                v*mu]
-             [ 0,        0,  0,         gamma/(Pr*(gamma-1))*mu/rho]
-             
-             =============================================================*/
-            // row 1;
-            Vmath::Zero(nq, &Dxx[0][0][0], 1);
-            Vmath::Zero(nq, &Dxx[0][1][0], 1);
-            Vmath::Zero(nq, &Dxx[0][2][0], 1);
-            Vmath::Vcopy(nq, &kPrho2Vec[0], 1, &Dxx[0][3][0], 1);
-            Vmath::Neg(nq, &Dxx[0][3][0], 1);
-            
-            // row 2;
-            Vmath::Zero(nq, &Dxx[1][0][0], 1);
-            Vmath::Vcopy(nq, &FourOThreeMuVector[0], 1, &Dxx[1][1][0], 1);
-            Vmath::Zero(nq, &Dxx[1][2][0], 1);
-            Vmath::Smul(nq,
-                        FourOThreeMuSclr,
-                        &vel[0][0], 1,
-                        &Dxx[1][3][0], 1);
-            
-            // row 3;
-            Vmath::Zero(nq, &Dxx[2][0][0], 1);
-            Vmath::Zero(nq, &Dxx[2][1][0], 1);
-            Vmath::Vcopy(nq, &muVec[0], 1, &Dxx[2][2][0], 1);
-            Vmath::Vcopy(nq, &MuVel[1][0], 1, &Dxx[2][3][0], 1);
-            
-            // row 4;
-            Vmath::Zero(nq, &Dxx[3][0][0], 1);
-            Vmath::Zero(nq, &Dxx[3][1][0], 1);
-            Vmath::Zero(nq, &Dxx[3][2][0], 1);
-            Vmath::Vdiv(nq,
-                        &ones[0], 1,
-                        &inarray[0][0], 1,
-                        &Dxx[3][3][0], 1);
-            
-            Array<OneD, NekDouble> rhotest(nq, 0.0);
-            Vmath::Vcopy(nq, &inarray[0][0], 1, &rhotest[0], 1);
-            Vmath::Vabs(nq,  &rhotest[0], 1,  &rhotest[0], 1);
-            
+            // 1st column, 1st row
             Vmath::Vmul(nq,
-                        &GamMu_O_GamMinOnePrVector[0], 1,
-                        &Dxx[3][3][0], 1,
-                        &Dxx[3][3][0], 1);
+                        &kPrho2Vec[0], 1,
+                        &z_derivatives[m_spacedim][0][0], 1,
+                        &JacViscFluxPrim[0][0][0], 1);
             
-            /* =============================================================
-             Dyx =
-             
-             [ 0,        0,       0,            0]
-             [ 0,        0, -2/3*mu,    -2/3*v*mu]
-             [ 0,       mu,       0,         u*mu]
-             [ 0,        0,       0,            0]
-             
-             =============================================================*/
-            // row 1;
-            Vmath::Zero(nq, &Dyx[0][0][0], 1);
-            Vmath::Zero(nq, &Dyx[0][1][0], 1);
-            Vmath::Zero(nq, &Dyx[0][2][0], 1);
-            Vmath::Zero(nq, &Dyx[0][3][0], 1);
-            
-            // row 2;
-            Vmath::Zero(nq, &Dyx[1][0][0], 1);
-            Vmath::Zero(nq, &Dyx[1][1][0], 1);
-            Vmath::Vcopy(nq, &TwoOThreeMuVector[0], 1, &Dyx[1][2][0], 1);
-            Vmath::Neg(nq, &Dyx[1][2][0], 1);
-            
-            Vmath::Vmul(nq,
-                        &TwoOThreeMuVector[0], 1,
-                        &vel[1][0], 1,
-                        &Dyx[1][3][0], 1);
-            
-            Vmath::Neg(nq, &Dyx[1][3][0], 1);
-            
-            // row 3;
-            Vmath::Zero(nq, &Dyx[2][0][0], 1);
-            Vmath::Vcopy(nq, &muVec[0], 1, &Dyx[2][1][0], 1);
-            Vmath::Zero(nq, &Dyx[2][2][0], 1);
-            Vmath::Vcopy(nq, &MuVel[0][0], 1, &Dyx[2][3][0], 1);
-            
-            // row 4;
-            Vmath::Zero(nq, &Dyx[3][0][0], 1);
-            Vmath::Zero(nq, &Dyx[3][1][0], 1);
-            Vmath::Zero(nq, &Dyx[3][2][0], 1);
-            Vmath::Zero(nq, &Dyx[3][3][0], 1);
-            /* =============================================================
-             Dxy =
-             
-             [ 0,        0,       0,            0]
-             [ 0,        0,      mu,         v*mu]
-             [ 0,       -2/3*mu,  0,    -2/3*u*mu]
-             [ 0,        0,       0,            0]
-             
-             =============================================================*/
-            // row 1;
-            Vmath::Zero(nq, &Dxy[0][0][0], 1);
-            Vmath::Zero(nq, &Dxy[0][1][0], 1);
-            Vmath::Zero(nq, &Dxy[0][2][0], 1);
-            Vmath::Zero(nq, &Dxy[0][3][0], 1);
-            
-            // row 2;
-            Vmath::Zero(nq, &Dxy[1][0][0], 1);
-            Vmath::Zero(nq, &Dxy[1][1][0], 1);
-            Vmath::Vcopy(nq, &muVec[0], 1, &Dxy[1][2][0], 1);
-            Vmath::Vcopy(nq, &MuVel[1][0], 1, &Dxy[1][3][0], 1);
-            
-            // row 3;
-            Vmath::Zero(nq, &Dxy[2][0][0], 1);
-            Vmath::Vcopy(nq, &TwoOThreeMuVector[0], 1, &Dxy[2][1][0], 1);
-            Vmath::Neg(nq, &Dxy[2][1][0], 1);
-            Vmath::Zero(nq, &Dxy[2][2][0], 1);
-            Vmath::Vmul(nq,
-                        &TwoOThreeMuVector[0], 1,
-                        &vel[1][0], 1,
-                        &Dxy[2][3][0], 1);
-            
-            Vmath::Neg(nq, &Dxy[2][3][0], 1);
-            
-            // row 4;
-            Vmath::Zero(nq, &Dxy[3][0][0], 1);
-            Vmath::Zero(nq, &Dxy[3][1][0], 1);
-            Vmath::Zero(nq, &Dxy[3][2][0], 1);
-            Vmath::Zero(nq, &Dxy[3][3][0], 1);
-            
-            /* =============================================================
-             Dyy =
-             
-             [ 0,        0,      0,    -gamma*mu/(Pr*(gamma-1))*p/rho^2]
-             [ 0,       mu,      0,                                u*mu]
-             [ 0,        0, 4/3*mu,                            4/3*v*mu]
-             [ 0,        0,      0,         gamma/(Pr*(gamma-1))*mu/rho]
-             
-             ===============================================================*/
-            
-            // row 1;
-            Vmath::Zero(nq, &Dyy[0][0][0], 1);
-            Vmath::Zero(nq, &Dyy[0][1][0], 1);
-            Vmath::Zero(nq, &Dyy[0][2][0], 1);
-            Vmath::Vcopy(nq, &kPrho2Vec[0], 1, &Dyy[0][3][0], 1);
-            Vmath::Neg(nq, &Dyy[0][3][0], 1);
-            
-            // row 2;
-            Vmath::Zero(nq, &Dyy[1][0][0], 1);
-            Vmath::Vcopy(nq, &muVec[0], 1, &Dyy[1][1][0], 1);
-            Vmath::Zero(nq, &Dyy[1][2][0], 1);
-            Vmath::Vcopy(nq, &MuVel[0][0], 1, &Dyy[1][3][0], 1);
-            
-            // row 3;
-            Vmath::Zero(nq, &Dyy[2][0][0], 1);
-            Vmath::Zero(nq, &Dyy[2][1][0], 1);
-            Vmath::Vcopy(nq, &FourOThreeMuVector[0], 1, &Dyy[2][2][0], 1);
+            // 1st column, 2nd row
             Vmath::Vmul(nq,
                         &FourOThreeMuVector[0], 1,
-                        &vel[1][0], 1,
-                        &Dyy[2][3][0], 1);
+                        &z_derivatives[1][0][0], 1,
+                        &JacViscFluxPrim[1][0][0], 1);
             
-            // row 4;
-            Vmath::Zero(nq, &Dyy[3][0][0], 1);
-            Vmath::Zero(nq, &Dyy[3][1][0], 1);
-            Vmath::Zero(nq, &Dyy[3][2][0], 1);
-            Vmath::Vdiv(nq,
-                        &ones[0], 1,
-                        &inarray[0][0], 1,
-                        &Dyy[3][3][0], 1);
+            Vmath::Vvtvp(nq,
+                         &FourOThreeMuVel[0][0], 1,
+                         &z_derivatives[m_spacedim][0][0], 1,
+                         &JacViscFluxPrim[1][0][0], 1,
+                         &JacViscFluxPrim[1][0][0], 1);
             
+            Vmath::Vvtvp(nq,
+                        &TwoOThreeMuVector[0], 1,
+                        &z_derivatives[2][1][0], 1,
+                        &JacViscFluxPrim[1][0][0], 1,
+                        &JacViscFluxPrim[1][0][0], 1);
+            
+            Vmath::Vvtvp(nq,
+                         &TwoOThreeMuVel[1][0], 1,
+                         &z_derivatives[m_spacedim][1][0], 1,
+                         &JacViscFluxPrim[1][0][0], 1,
+                         &JacViscFluxPrim[1][0][0], 1);
+            
+            // 1st column, 3nd row
+            Vmath::Smul(nq,
+                        m_mu,
+                        &z_derivatives[2][0][0], 1,
+                        &JacViscFluxPrim[2][0][0], 1);
+            
+            Vmath::Vvtvp(nq,
+                         &MuVel[1][0], 1,
+                         &z_derivatives[m_spacedim][0][0], 1,
+                         &JacViscFluxPrim[2][0][0], 1,
+                         &JacViscFluxPrim[2][0][0], 1);
+            
+            Vmath::Vvtvp(nq,
+                         &MuVel[0][0], 1,
+                         &z_derivatives[m_spacedim][1][0], 1,
+                         &JacViscFluxPrim[2][0][0], 1,
+                         &JacViscFluxPrim[2][0][0], 1);
+            
+            Vmath::Smul(nq, m_mu, &z_derivatives[1][1][0], 1, &tmp[0], 1);
+            
+            Vmath::Vadd(nq,
+                        &tmp[0], 1,
+                        &JacViscFluxPrim[2][0][0], 1,
+                        &JacViscFluxPrim[2][0][0], 1);
+            
+            // 1st column, 4th row
             Vmath::Vmul(nq,
                         &GamMu_O_GamMinOnePrVector[0], 1,
-                        &Dyy[3][3][0], 1,
-                        &Dyy[3][3][0], 1);
+                        &z_derivatives[m_spacedim][0][0], 1,
+                        &JacViscFluxPrim[3][0][0], 1);
+            //==================================================================
+            //2nd column, 1st row
+            Vmath::Vmul(nq,
+                        &kPrho2Vec[0], 1,
+                        &z_derivatives[m_spacedim][1][0], 1,
+                        &JacViscFluxPrim[0][1][0], 1);
+            
+            // 2st column, 2nd row
+            Vmath::Smul(nq,
+                        m_mu,
+                        &z_derivatives[2][0][0], 1,
+                        &JacViscFluxPrim[1][1][0], 1);
+            
+            Vmath::Vvtvp(nq,
+                         &MuVel[1][0], 1,
+                         &z_derivatives[m_spacedim][0][0], 1,
+                         &JacViscFluxPrim[1][1][0], 1,
+                         &JacViscFluxPrim[1][1][0], 1);
+            
+            Vmath::Vvtvp(nq,
+                         &MuVel[01][0], 1,
+                         &z_derivatives[m_spacedim][1][0], 1,
+                         &JacViscFluxPrim[1][1][0], 1,
+                         &JacViscFluxPrim[1][1][0], 1);
+            
+            
+            Vmath::Zero(nq, &tmp[0], 1);
+            Vmath::Smul(nq,
+                         m_mu,
+                         &z_derivatives[1][1][0], 1,
+                         &tmp[0], 1);
+            
+            Vmath::Vadd(nq,
+                        &tmp[0], 1,
+                        &JacViscFluxPrim[1][1][0], 1,
+                        &JacViscFluxPrim[1][1][0], 1);
+            
+            // 2st column, 3nd row
+            Vmath::Vmul(nq,
+                        &TwoOThreeMuVector[0], 1,
+                        &z_derivatives[1][0][0], 1,
+                        &JacViscFluxPrim[2][1][0], 1);
+            
+            Vmath::Vvtvp(nq,
+                         &TwoOThreeMuVel[0][0], 1,
+                         &z_derivatives[m_spacedim][0][0], 1,
+                         &JacViscFluxPrim[2][1][0], 1,
+                         &JacViscFluxPrim[2][1][0], 1);
+            
+            Vmath::Vvtvp(nq,
+                         &FourOThreeMuVector[0], 1,
+                         &z_derivatives[2][1][0], 1,
+                         &JacViscFluxPrim[2][1][0], 1,
+                         &JacViscFluxPrim[2][1][0], 1);
+            
+            Vmath::Vvtvp(nq,
+                         &FourOThreeMuVel[1][0], 1,
+                         &z_derivatives[m_spacedim][1][0], 1,
+                         &JacViscFluxPrim[2][1][0], 1,
+                         &JacViscFluxPrim[2][1][0], 1);
+            
+            // 2st column, 4nd row
+            Vmath::Vmul(nq,
+                        &GamMu_O_GamMinOnePrVector[0], 1,
+                        &z_derivatives[m_spacedim][1][0], 1,
+                        &JacViscFluxPrim[3][1][0], 1);
+            
+            GetConservToPrimVariableInvMat(dVdU);
+            
+            for (i = 0; i < nvar; ++i)
+            {
+                for (j = 0; j < nvar; ++j)
+                {
+                    Vmath::Vvtvp(nq,
+                                 &dVdU[i][j][0], 1,
+                                 &JacViscFluxPrim[j][0][0], 1,
+                                 &outarray[0][i][0], 1,
+                                 &outarray[0][i][0], 1);
+                    
+                    Vmath::Vvtvp(nq,
+                                 &dVdU[i][j][0], 1,
+                                 &JacViscFluxPrim[j][1][0], 1,
+                                 &outarray[1][i][0], 1,
+                                 &outarray[1][i][0], 1);
+                }
+            }
         }
-        
         if (m_spacedim == 3)
         {
             ASSERTL0(false, "3D adjoint solver is not yet implemented");
         }
     }
     
-    
     void CompressibleFlowSystem::
-    GetJacobianAddConvFluxFromPrimitiveVar(
-                                           Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &Jac)
+            GetJacobianAddConvFlux(
+        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &Jac)
     {
-        int i, j;
+        int i;
         int nq = Jac[0][0][0].num_elements();
         int nvar = m_fields.num_elements();
         
@@ -5353,16 +5072,6 @@ namespace Nektar
         Array<OneD, NekDouble> FourOThreeMuVector(nq, FourOThreeMuSclr);
         Array<OneD, NekDouble> TwoOThreeMuVector(nq, TwoOThreeMuSclr);
         Array<OneD, NekDouble> GamMu_O_GamMinOnePrVector(nq,GamMu_O_GamMinOnePrSclr);
-        
-        Array<OneD, Array<OneD, NekDouble> > dirFlds(nvar);
-        
-        for (i = 0; i < nvar; ++i)
-        {
-            dirFlds[i] = Array<OneD, NekDouble>(nq, 0.0);
-        }
-        
-        GetDirectSolution(dirFlds);
-        
         
         if (m_ViscosityType == "Constant")
         {
@@ -5394,8 +5103,8 @@ namespace Nektar
                     dOneORho_dxi2[i]   = Array<OneD, NekDouble>(nq, 0.0);
                 }
                 
-                GetVelocityVector(dirFlds, vel);
-                GetPressure      (dirFlds, vel, Pressure);
+                GetVelocityVector(m_dirFlds, vel);
+                GetPressure      (m_dirFlds, vel, Pressure);
                 
                 for (i = 0; i < m_spacedim; ++i)
                 {
@@ -5403,88 +5112,16 @@ namespace Nektar
                     
                 }
                 
-                m_fields[0]->PhysDeriv(dirFlds[0], drho_dxi[0], drho_dxi[1]);
+                m_fields[0]->PhysDeriv(m_dirFlds[0], drho_dxi[0], drho_dxi[1]);
                 m_fields[0]->PhysDeriv(Pressure, dP_dxi[0], dP_dxi[1]);
                 
                 // Calculate d(P/rho^2)/dx = (ƒDer∂rho*dP/dx-2*P*drho/dx)/rho^3
-                /*Array<OneD, NekDouble> tmp(nq, 0.0);
-                 Vmath::Vmul(nq, &dP_dxi[0][0], 1, &dirFlds[0][0], 1, &tmp[0], 1);
-                 Vmath::Vmul(nq, &drho_dxi[0][0], 1, &Pressure[0], 1, &dPoRho2_dxi[0][0], 1);
-                 Vmath::Smul(nq, 2.0,  &dPoRho2_dxi[0][0], 1,  &dPoRho2_dxi[0][0], 1);
-                 Vmath::Vsub(nq, &tmp[0], 1,  &dPoRho2_dxi[0][0], 1,  &dPoRho2_dxi[0][0], 1);
-                 Vmath::Zero(nq, &tmp[0], 1);
-                 Vmath::Vmul(nq, &dirFlds[0][0], 1, &dirFlds[0][0], 1, &tmp[0], 1);
-                 Vmath::Vmul(nq, &tmp[0], 1, &dirFlds[0][0], 1, &tmp[0], 1);
-                 Vmath::Vdiv(nq, &dPoRho2_dxi[0][0], 1, &tmp[0], 1, &dPoRho2_dxi[0][0], 1);
-                 
-                 // Calculate d(P/rho^2)/dy = (rho*dP/dy-2*P*drho/dy)/rho^3
-                 Vmath::Zero(nq, &tmp[0], 1);
-                 Vmath::Vmul(nq, &dP_dxi[1][0], 1, &dirFlds[0][0], 1, &tmp[0], 1);
-                 Vmath::Vmul(nq, &drho_dxi[1][0], 1, &Pressure[0], 1, &dPoRho2_dxi[1][0], 1);
-                 Vmath::Smul(nq, 2.0,  &dPoRho2_dxi[1][0], 1,  &dPoRho2_dxi[1][0], 1);
-                 Vmath::Vsub(nq, &tmp[0], 1,  &dPoRho2_dxi[1][0], 1,  &dPoRho2_dxi[1][0], 1);
-                 Vmath::Zero(nq, &tmp[0], 1);
-                 Vmath::Vmul(nq, &dirFlds[0][0], 1, &dirFlds[0][0], 1, &tmp[0], 1);
-                 Vmath::Vmul(nq, &tmp[0], 1, &dirFlds[0][0], 1, &tmp[0], 1);
-                 Vmath::Vdiv(nq, &dPoRho2_dxi[1][0], 1, &tmp[0], 1, &dPoRho2_dxi[1][0], 1);
-                 Vmath::Zero(nq, &tmp[0], 1);
-                 
-                 // Calculate d(1/rho)/dx
-                 Vmath::Vmul(nq, &dirFlds[0][0], 1, &dirFlds[0][0], 1, &tmp[0], 1);
-                 Vmath::Vdiv(nq, &drho_dxi[0][0], 1, &tmp[0], 1, &dOneORho_dxi[0][0], 1);
-                 Vmath::Neg(nq, &dOneORho_dxi[0][0], 1);
-                 Vmath::Zero(nq, &tmp[0], 1);
-                 // Calculate d(1/rho)/dy
-                 Vmath::Vmul(nq, &dirFlds[0][0], 1, &dirFlds[0][0], 1, &tmp[0], 1);
-                 Vmath::Vdiv(nq, &drho_dxi[1][0], 1, &tmp[0], 1, &dOneORho_dxi[1][0], 1);
-                 Vmath::Neg(nq, &dOneORho_dxi[1][0], 1);*/
-                
-                Vmath::Vdiv(nq, &ones[0], 1, &dirFlds[0][0], 1, &OneORho[0], 1);
+                Vmath::Vdiv(nq, &ones[0], 1, &m_dirFlds[0][0], 1, &OneORho[0], 1);
                 m_primal[0]->PhysDeriv(OneORho, dOneORho_dxi[0], dOneORho_dxi[1]);
                 
-                Vmath::Vmul(nq, &dirFlds[0][0], 1, &dirFlds[0][0], 1, &PoRho2[0], 1);
+                Vmath::Vmul(nq, &m_dirFlds[0][0], 1, &m_dirFlds[0][0], 1, &PoRho2[0], 1);
                 Vmath::Vdiv(nq, &Pressure[0], 1, &PoRho2[0], 1, &PoRho2[0], 1);
                 m_primal[0]->PhysDeriv(PoRho2, dPoRho2_dxi[0], dPoRho2_dxi[1]);
-                /*
-                 Array<OneD, NekDouble> diffx(nq, 0.0);
-                 Array<OneD, NekDouble> diffy(nq, 0.0);
-                 
-                 Vmath::Vsub(nq, dOneORho_dxi2[0], 1, dOneORho_dxi[0], 1, diffx, 1);
-                 Vmath::Vsub(nq, dOneORho_dxi2[1], 1, dOneORho_dxi[1], 1, diffy, 1);*/
-                
-                //cout << Vmath::Vmax(nq, diffx, 1) << "  " << Vmath::Vmax(nq, diffy, 1) << endl;
-                
-                /*
-                 for (i = 0; i < nq; ++i)
-                 {
-                 if (diffx[i] > 1.0)
-                 {
-                 cout << i << " " << diffx[i] << " " << diffy[i] << " " << dirFlds[0][i] << endl;
-                 }
-                 if (diffy[i] > 1.0)
-                 {
-                 cout << i << " " << diffx[i] << " " << diffy[i] << " " << dirFlds[0][i] << endl;
-                 }
-                 }
-                 */
-                
-                //cout << Vmath::Vmin(nq, &rhoabs[0], 1) << endl;
-                
-                /*cout << "MAX = " << Vmath::Vmax(nq, diffx, 1)
-                 << " " << Vmath::Vmax(nq, diffy, 1) << endl;
-                 cout << "MIN = " << Vmath::Vmin(nq, diffx, 1)
-                 << " " << Vmath::Vmin(nq, diffy, 1) << endl;
-                 cout << "AVG = " << avgx << " " << avgy << endl;*/
-                
-                /*cout << "Pressure/rho^2 = "
-                 << Vmath::Vmax(nq, dPoRho2_dxi[0], 1) << " "
-                 << Vmath::Vmax(nq, dPoRho2_dxi[1], 1) << endl;
-                 
-                 
-                 cout << "1/rho = "
-                 << Vmath::Vmax(nq, dOneORho_dxi[0], 1) << " "
-                 << Vmath::Vmax(nq, dOneORho_dxi[1], 1) <<  endl;*/
-                
                 /* =============================================================
                  Acvx =
                  
@@ -5503,27 +5140,8 @@ namespace Nektar
                 Array<OneD, NekDouble> tmp1(nq, 0.0);
                 
                 //(k*(dpdx - drhodx*p))/rho^2
-                /*Vmath::Vmul(nq,
-                 &inarray[0][0], 1,
-                 &inarray[0][0], 1,
-                 &tmp[0], 1);
-                 Vmath::Vmul(nq,
-                 &Pressure[0], 1,
-                 &drho_dxi[0][0], 1,
-                 &tmp1[0], 1);
-                 
-                 Vmath::Vsub(nq,
-                 &dP_dxi[0][0], 1,
-                 &tmp1[0], 1,
-                 &tmp1[0], 1);
-                 
-                 Vmath::Vdiv(nq, &tmp1[0], 1, &tmp[0], 1, &Avx[0][3][0], 1);
-                 Vmath::Smul(nq,
-                 m_thermalConductivity,
-                 &Avx[0][3][0], 1,
-                 &Avx[0][3][0], 1);*/
-                
                 //-gamma/((gamma-1)*Pr)*mu*d(P/rho^2)/dx)
+                
                 Vmath::Vmul(nq,
                             &GamMu_O_GamMinOnePrVector[0], 1,
                             &dPoRho2_dxi[0][0], 1,
@@ -5567,17 +5185,6 @@ namespace Nektar
                 Vmath::Zero(nq, &Jac[0][3][2][0], 1);
                 
                 // drho/dx*k/rho
-                /*Vmath::Zero(nq, &tmp[0], 1);
-                 Vmath::Zero(nq, &tmp1[0], 1);
-                 Vmath::Vcopy(nq, &drho_dxi[0][0], 1, &Avx[3][3][0], 1);
-                 Vmath::Vdiv(nq,
-                 &Avx[3][3][0], 1,
-                 &inarray[0][0], 1,
-                 &Avx[3][3][0], 1);
-                 Vmath::Smul(nq,
-                 m_thermalConductivity,
-                 &Avx[3][3][0], 1,
-                 &Avx[3][3][0], 1);*/
                 
                 // gamma/((gamma-1)*Pr)*mu*d(1/rho)/dx)
                 
@@ -5604,28 +5211,6 @@ namespace Nektar
                 
                 Vmath::Zero(nq, &tmp[0], 1);
                 Vmath::Zero(nq, &tmp1[0], 1);
-                
-                /*Vmath::Vmul(nq,
-                 &inarray[0][0], 1,
-                 &inarray[0][0], 1,
-                 &tmp[0], 1);
-                 
-                 Vmath::Vmul(nq,
-                 &Pressure[0], 1,
-                 &drho_dxi[0][0], 1,
-                 &tmp1[0], 1);
-                 
-                 Vmath::Vsub(nq,
-                 &dP_dxi[0][0], 1,
-                 &tmp1[0], 1,
-                 &tmp1[0], 1);
-                 
-                 Vmath::Vdiv(nq, &tmp1[0], 1, &tmp[0], 1, &Avy[0][3][0], 1);
-                 
-                 Vmath::Smul(nq,
-                 m_thermalConductivity,
-                 &Avy[0][3][0], 1,
-                 &Avy[0][3][0], 1);*/
                 
                 Vmath::Vmul(nq,
                             &GamMu_O_GamMinOnePrVector[0], 1,
@@ -5671,17 +5256,6 @@ namespace Nektar
                 Vmath::Zero(nq, &Jac[1][3][2][0], 1);
                 
                 // drho/dy*k/rho
-                /*Vmath::Zero(nq, &tmp[0], 1);
-                 Vmath::Zero(nq, &tmp1[0], 1);
-                 Vmath::Vcopy(nq, &drho_dxi[1][0], 1, &Avy[3][3][0], 1);
-                 Vmath::Vdiv(nq,
-                 &Avy[3][3][0], 1,
-                 &inarray[0][0], 1,
-                 &Avy[3][3][0], 1);
-                 Vmath::Smul(nq,
-                 m_thermalConductivity,
-                 &Avy[3][3][0], 1,
-                 &Avy[3][3][0], 1);*/
                 
                 // gamma/((gamma-1)*Pr)*mu*d(1/rho)/dy)
                 
@@ -5695,9 +5269,9 @@ namespace Nektar
         }
     }
     
-    void CompressibleFlowSystem::GetAdjointAddConvFluxVectorFromPrimitiveVar(
-                                                                             const Array<OneD, Array<OneD, NekDouble> > &inarray,
-                                                                             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray)
+    void CompressibleFlowSystem::GetAdjointAddConvFluxVector(
+           const Array<OneD, Array<OneD, NekDouble> > &inarray,
+                 Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray)
     {
         int i,j,k;
         
@@ -5748,9 +5322,9 @@ namespace Nektar
             }
         }
         
-        GetJacobianAddConvFluxFromPrimitiveVar(Jac);
+        /*GetJacobianAddConvFlux(Jac);*/
         
-        GetConservToPrimVariableInvMat(dVdU);
+        //GetConservToPrimVariableInvMat(dVdU);
         
         // Perform tensor product dVdU*dFdV
         for (i = 0; i < nvar; ++i)
@@ -5763,8 +5337,8 @@ namespace Nektar
                 for (k = 0; k < nvar; ++k)
                 {
                     Vmath::Vvtvp(nq,
-                                 &dVdU[i][k][0], 1,
-                                 &Jac[0][k][j][0], 1,
+                                 &m_dVdU[i][k][0], 1,
+                                 &m_JacAddPrim[0][k][j][0], 1,
                                  &tmp[0], 1,
                                  &tmp[0], 1);
                     
@@ -5773,8 +5347,8 @@ namespace Nektar
                                  &JacCons[0][i][j][0], 1);
                     
                     Vmath::Vvtvp(nq,
-                                 &dVdU[i][k][0], 1,
-                                 &Jac[1][k][j][0], 1,
+                                 &m_dVdU[i][k][0], 1,
+                                 &m_JacAddPrim[1][k][j][0], 1,
                                  &tmp1[0], 1,
                                  &tmp1[0], 1);
                     
@@ -5822,8 +5396,8 @@ namespace Nektar
     
     
     void CompressibleFlowSystem::GetDerivJacobian(
-                                                  Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &Jac,
-                                                  Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &JacDiv)
+        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &Jac,
+        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &JacDiv)
     {
         int i,j,k;
         
@@ -5878,163 +5452,32 @@ namespace Nektar
         }
     }
     
-    void CompressibleFlowSystem::GetDerivAddJacVectorFromPrimitiveVar(
-                                                                      const Array<OneD, Array<OneD, NekDouble> > &inarray,
-                                                                      Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray)
+    void CompressibleFlowSystem::GetAdjointDerivAddJacVector(
+              const Array<OneD, Array<OneD, NekDouble> > &inarray,
+                    Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray)
     {
         int i,j,k;
         
         int nq = inarray[0].num_elements();
         int nvar = m_fields.num_elements();
-        
-        Array<OneD, NekDouble> tmp(nq, 0.0);
-        Array<OneD, NekDouble> tmp1(nq, 0.0);
-        Array<OneD, NekDouble> tmp2(nq, 0.0);
-        Array<OneD, NekDouble> tmp3(nq, 0.0);
-        Array<OneD, NekDouble> tmp4(nq, 0.0);
-        Array<OneD, NekDouble> tmp5(nq, 0.0);
-        
-        Array<OneD, Array<OneD, NekDouble> > tmpx(nvar);
-        Array<OneD, Array<OneD, NekDouble> > tmpy(nvar);
-        
-        Array<OneD, Array<OneD, Array<OneD,
-        Array<OneD, NekDouble > > > > Jac(m_spacedim);
-        Array<OneD, Array<OneD, Array<OneD,
-        Array<OneD, NekDouble > > > > JacCons(m_spacedim);
-        Array<OneD, Array<OneD, Array<OneD,
-        Array<OneD, NekDouble > > > > JacDiv(m_spacedim);
-        Array<OneD, Array<OneD, Array<OneD,
-        Array<OneD, NekDouble > > > >JacConsD(m_spacedim);
-        Array<OneD, Array<OneD, Array<OneD,
-        Array<OneD, NekDouble > > > >JacConsDiv(m_spacedim);
-        
-        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > dVdU(nvar);
-        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > dVdUdX(nvar);
-        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > dVdUdY(nvar);
-        
-        // span the required arrays
-        for (i = 0; i < m_spacedim; ++i)
-        {
-            Jac[i]     = Array<OneD, Array<OneD,
-            Array<OneD, NekDouble > > >(nvar);
-            JacDiv[i]     = Array<OneD, Array<OneD,
-            Array<OneD, NekDouble > > >(nvar);
-            JacConsDiv[i] = Array<OneD, Array<OneD,
-            Array<OneD, NekDouble > > >(nvar);
-            
-            for (j = 0; j < nvar; ++j)
-            {
-                Jac[i][j] = Array<OneD, Array<OneD, NekDouble> >(nvar);
-                JacDiv[i][j] = Array<OneD, Array<OneD, NekDouble> >(nvar);
-                JacConsDiv[i][j] = Array<OneD, Array<OneD, NekDouble> >(nvar);
-                
-                for (k = 0; k < nvar; ++k)
-                {
-                    Jac[i][j][k] = Array<OneD, NekDouble>(nq, 0.0);
-                    JacDiv[i][j][k] = Array<OneD, NekDouble>(nq, 0.0);
-                    JacConsDiv[i][j][k] = Array<OneD, NekDouble>(nq, 0.0);
-                }
-            }
-        }
-        
+    
         for (i = 0; i < nvar; ++i)
         {
-            dVdU[i] = Array<OneD, Array<OneD, NekDouble > >(nvar);
-            dVdUdX[i] = Array<OneD, Array<OneD, NekDouble > >(nvar);
-            dVdUdY[i] = Array<OneD, Array<OneD, NekDouble > >(nvar);
-            
-            for (j = 0; j < nvar; ++j)
-            {
-                dVdU[i][j] = Array<OneD, NekDouble>(nq, 0.0);
-                dVdUdX[i][j] = Array<OneD, NekDouble>(nq, 0.0);
-                dVdUdY[i][j] = Array<OneD, NekDouble>(nq, 0.0);
-            }
-        }
-        
-        GetJacobianAddConvFluxFromPrimitiveVar(Jac);
-        
-        GetDerivJacobian(Jac, JacDiv);
-        
-        GetConservToPrimVariableInvMat(dVdU);
-        
-        GetConservToPrimVariableInvMatDiv(dVdU, dVdUdX, dVdUdY);
-        
-        for (i = 0; i < nvar; ++i)
-        {
-            for (j = 0; j < nvar; ++j)
-            {
-                Vmath::Zero(nq, &tmp[0], 1);
-                Vmath::Zero(nq, &tmp1[0], 1);
-                Vmath::Zero(nq, &tmp2[0], 1);
-                Vmath::Zero(nq, &tmp3[0], 1);
-                Vmath::Zero(nq, &tmp4[0], 1);
-                Vmath::Zero(nq, &tmp5[0], 1);
-                
-                for (k = 0; k < nvar; ++k)
-                {
-                    //
-                    Vmath::Vvtvp(nq,
-                                 &dVdUdX[i][k][0], 1,
-                                 &Jac[0][k][j][0], 1,
-                                 &tmp[0], 1,
-                                 &tmp[0], 1);
-                    
-                    Vmath::Vvtvp(nq,
-                                 &dVdUdY[i][k][0], 1,
-                                 &Jac[1][k][j][0], 1,
-                                 &tmp1[0], 1,
-                                 &tmp1[0], 1);
-                    
-                    //=============
-                    
-                    Vmath::Vvtvp(nq,
-                                 &dVdU[i][k][0], 1,
-                                 &JacDiv[0][k][j][0], 1,
-                                 &tmp2[0], 1,
-                                 &tmp2[0], 1);
-                    
-                    Vmath::Vvtvp(nq,
-                                 &dVdU[i][k][0], 1,
-                                 &JacDiv[1][k][j][0], 1,
-                                 &tmp3[0], 1,
-                                 &tmp3[0], 1);
-                    
-                    Vmath::Vadd(nq,
-                                &tmp[0], 1,
-                                &tmp2[0], 1,
-                                &JacConsDiv[0][i][j][0], 1);
-                    
-                    Vmath::Vadd(nq,
-                                &tmp1[0], 1,
-                                &tmp3[0], 1,
-                                &JacConsDiv[1][i][j][0], 1);
-                }
-            }
-        }
-        
-        for (i = 0; i < nvar; ++i)
-        {
-            tmpx[i] = Array<OneD, NekDouble>(nq, 0.0);
-            tmpy[i] = Array<OneD, NekDouble>(nq, 0.0);
-            
             for (j = 0; j < nvar; ++j)
             {
                 Vmath::Vvtvp(nq,
-                             &JacConsDiv[0][i][j][0], 1,
+                             &m_JacAddDivCons[0][i][j][0], 1,
                              &inarray[j][0], 1,
-                             &tmpx[i][0], 1,
-                             &tmpx[i][0], 1);
+                             &outarray[i][0][0], 1,
+                             &outarray[i][0][0], 1);
                 
                 Vmath::Vvtvp(nq,
-                             &JacConsDiv[1][i][j][0], 1,
+                             &m_JacAddDivCons[1][i][j][0], 1,
                              &inarray[j][0], 1,
-                             &tmpy[i][0], 1,
-                             &tmpy[i][0], 1);
+                             &outarray[i][1][0], 1,
+                             &outarray[i][1][0], 1);
                 
             }
-            
-            Vmath::Vcopy(nq, &tmpx[i][0], 1, &outarray[i][0][0], 1);
-            Vmath::Vcopy(nq, &tmpy[i][0], 1, &outarray[i][1][0], 1);
         }
     }
 
@@ -6245,9 +5688,12 @@ namespace Nektar
                 NekDouble y1 = 0.0;
                 NekDouble z1 = 0.0;
                 
-                if (boost::dynamic_pointer_cast<SpatialDomains::QuadGeom>(m_fields[0]->GetExp(e)->GetGeom()))
+                if (boost::dynamic_pointer_cast<SpatialDomains::QuadGeom>
+                                            (m_fields[0]->GetExp(e)->GetGeom()))
                 {
-                    SpatialDomains::QuadGeomSharedPtr ElQuadGeom = boost::dynamic_pointer_cast<SpatialDomains::QuadGeom>(m_fields[0]->GetExp(e)->GetGeom());
+                    SpatialDomains::QuadGeomSharedPtr ElQuadGeom =
+                    boost::dynamic_pointer_cast<SpatialDomains::QuadGeom>
+                                            (m_fields[0]->GetExp(e)->GetGeom());
                     
                     ElQuadGeom->GetEdge(j)->GetVertex(0)->GetCoords(x0,y0,z0);
                     ElQuadGeom->GetEdge(j)->GetVertex(1)->GetCoords(x1,y1,z1);
@@ -6261,7 +5707,8 @@ namespace Nektar
             }
             // determine the minimum length in x and y direction
             // still have to find a better estimate when dealing with unstructured meshes
-            if(boost::dynamic_pointer_cast<SpatialDomains::QuadGeom>(m_fields[0]->GetExp(e)->GetGeom()))
+            if(boost::dynamic_pointer_cast<SpatialDomains::QuadGeom>
+                                            (m_fields[0]->GetExp(e)->GetGeom()))
             {
                 hx = min(L1[0], L1[2]);
                 hy = min(L1[1], L1[3]);
@@ -6420,7 +5867,7 @@ namespace Nektar
                         && Sensor[n+PointCount] <= (m_Skappa+m_Kappa))
                 {
                     mu_var[n+PointCount] = mu_0*(0.5*(1+sin(
-                                           M_PI*(Sensor[n+PointCount]-m_Skappa-m_Kappa)/(2*m_Kappa))));
+                    M_PI*(Sensor[n+PointCount]-m_Skappa-m_Kappa)/(2*m_Kappa))));
                 }
                 else if(Sensor[n+PointCount] > (m_Skappa+m_Kappa))
                 {
@@ -6646,7 +6093,9 @@ namespace Nektar
                 tmp[i] = m_fields[i]->GetPhys();
             }
             
-            Array<OneD, NekDouble> pressure(nPhys), soundspeed(nPhys), mach(nPhys), sensor(nPhys), SensorKappa(nPhys), smooth(nPhys);
+            Array<OneD, NekDouble> pressure(nPhys), soundspeed(nPhys);
+            Array<OneD, NekDouble> mach(nPhys), sensor(nPhys);
+            Array<OneD, NekDouble> SensorKappa(nPhys), smooth(nPhys);
             
             GetPressure  (tmp, pressure);
             GetSoundSpeed(tmp, pressure, soundspeed);
@@ -6654,7 +6103,8 @@ namespace Nektar
             GetSensor    (tmp, sensor, SensorKappa);
             GetSmoothArtificialViscosity    (tmp, smooth);
             
-            Array<OneD, NekDouble> pFwd(nCoeffs), sFwd(nCoeffs), mFwd(nCoeffs), sensFwd(nCoeffs), smoothFwd(nCoeffs);
+            Array<OneD, NekDouble> pFwd(nCoeffs), sFwd(nCoeffs), mFwd(nCoeffs);
+            Array<OneD, NekDouble> sensFwd(nCoeffs), smoothFwd(nCoeffs);
             
             m_fields[0]->FwdTrans(pressure,   pFwd);
             m_fields[0]->FwdTrans(soundspeed, sFwd);

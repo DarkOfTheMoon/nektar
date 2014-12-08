@@ -246,13 +246,6 @@ namespace Nektar
                 m_fluxVector(inarray, fluxvector);
                 m_AddfluxVector(inarray, addfluxvector);
                 
-                /*for (int i = 0; i < nConvectiveFields; ++i)
-                {
-                    Vmath::Vabs(nPointsTot, fluxvector[i][0], 1, fluxvector[i][0], 1);
-                    cout << Vmath::Vmin(nPointsTot, fluxvector[i][0], 1) << endl;
-                }
-                cout << endl;*/
-                
                 m_JacTransposeDivVector(inarray, JacTransVec);
                 m_AddJacTransposeDivVector(inarray, addJacTransVec);
                 

@@ -133,6 +133,29 @@ namespace Nektar
 
         Array<OneD, Array<OneD, NekDouble> > m_un;
         
+        Array<OneD, Array<OneD, NekDouble> > m_dirFlds;
+        
+        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
+                                                                      m_dVdUdXi;
+        
+        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
+                                                                      m_JacPrim;
+        
+        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
+                                                                   m_JacDivPrim;
+        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
+                                                                   m_JacAddPrim;
+        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
+                                                                m_JacAddDivPrim;
+        
+        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
+                                                                   m_JacDivCons;
+        
+        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
+                                                                m_JacAddDivCons;
+        
+        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_dVdU;
+        
         CompressibleFlowSystem(
             const LibUtilities::SessionReaderSharedPtr& pSession);
 
@@ -152,51 +175,36 @@ namespace Nektar
         
         void GetConservToPrimVariableInvMatDiv(
            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &dUdVInv,
-           Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &dUdVInvdX,
-           Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &dUdVInvdY);
+           Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
+                                                                   &dUdVInvdXi);
        
         //======================================================================
-        void GetJacobianConvFluxPrimitiveVar(
+        void GetJacobianConvFluxPrim(
           Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &Jac);
         
-        void GetAdjointConvFluxVectorFromPrimitiveVar(
+        void GetAdjointDerivJacVector(
           const Array<OneD, Array<OneD, NekDouble> > &inarray,
                 Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
         
-        void GetDerivJacVectorFromPrimitiveVar(
-          const Array<OneD, Array<OneD, NekDouble> > &inarray,
-                Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
-        
-        void GetAdjointViscousFluxVectorFromPrimitiveVar(
+        void GetAdjointViscousFluxVector(
           const Array<OneD, Array<OneD, NekDouble> > &inarray,
                 Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &derivatives,
                 Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
         
-        void GetJacobianViscousFluxFromDiffPrimitiveVar(
-                    Array<OneD, Array<OneD, NekDouble> > inarray,
-                    Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &Dxx,
-                    Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &Dxy,
-                    Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &Dyx,
-                    Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &Dyy);
-        
-        void GetJacobianAddConvFluxFromPrimitiveVar(
+        void GetJacobianAddConvFlux(
            Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &Jac);
         
-        void GetAdjointAddConvFluxVectorFromPrimitiveVar(
+        void GetAdjointAddConvFluxVector(
               const Array<OneD, Array<OneD, NekDouble> > &inarray,
                     Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
         
-        void GetDerivAdjointAddConvFluxVectorFromPrimitiveVar(
-             const Array<OneD, Array<OneD, NekDouble> > &inarray,
-                   Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
-        
-        void GetDerivAddJacVectorFromPrimitiveVar(
+        void GetAdjointDerivAddJacVector(
              const Array<OneD, Array<OneD, NekDouble> > &inarray,
                    Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
         
         void GetDerivJacobian(
-            Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &Jac,
-            Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &JacDiv);
+        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &Jac,
+        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &JacDiv);
         //======================================================================
         
         void GetFluxVector(
@@ -241,9 +249,9 @@ namespace Nektar
             int                                                 cnt,
             Array<OneD, Array<OneD, NekDouble> >               &physarray);
         void AdjointWallForceBC(
-                           int                                                 bcRegion,
-                           int                                                 cnt,
-                           Array<OneD, Array<OneD, NekDouble> >               &physarray);
+            int                                                 bcRegion,
+            int                                                 cnt,
+            Array<OneD, Array<OneD, NekDouble> >               &physarray);
         void WallViscousBC(
             int                                                 bcRegion,
             int                                                 cnt,
