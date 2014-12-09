@@ -133,8 +133,10 @@ namespace Nektar
 
         Array<OneD, Array<OneD, NekDouble> > m_un;
         
+        // Storage for the forward solution
         Array<OneD, Array<OneD, NekDouble> > m_dirFlds;
         
+        // Storage for the jacobians
         Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
                                                                       m_dVdUdXi;
         
@@ -147,12 +149,17 @@ namespace Nektar
                                                                    m_JacAddPrim;
         Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
                                                                 m_JacAddDivPrim;
-        
+        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
+                                                                   m_JacAddCons;
         Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
                                                                    m_JacDivCons;
         
         Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
                                                                 m_JacAddDivCons;
+        
+        Array<OneD, Array<OneD, Array<OneD, Array<OneD,
+                                            Array<OneD, NekDouble> > > > >
+                                                                      m_JacVisc;
         
         Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_dVdU;
         
@@ -187,12 +194,16 @@ namespace Nektar
                 Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
         
         void GetAdjointViscousFluxVector(
-          const Array<OneD, Array<OneD, NekDouble> > &inarray,
-                Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &derivatives,
-                Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
+         const Array<OneD, Array<OneD, NekDouble> > &inarray,
+               Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &z_derivatives,
+               Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
         
         void GetJacobianAddConvFlux(
            Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &Jac);
+        
+        void GetJacobianViscousFluxPrim(
+        Array<OneD, Array<OneD, Array<OneD, Array<OneD,
+                                   Array<OneD, NekDouble> > > > >        JacVisc);
         
         void GetAdjointAddConvFluxVector(
               const Array<OneD, Array<OneD, NekDouble> > &inarray,

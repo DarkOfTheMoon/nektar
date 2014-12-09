@@ -230,9 +230,8 @@ namespace Nektar
             cout << endl;*/
             
             // Diffusion term in physical rhs form
-            //m_diffusion->Diffuse(nvariables, m_fields, inarray, outarrayDiff);
-            
-            
+            //
+            m_diffusion->Diffuse(nvariables, m_fields, inarray, outarrayDiff);
             
             for (i = 0; i < nvariables; ++i)
             {
