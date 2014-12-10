@@ -53,23 +53,23 @@ namespace Nektar
                                                  Array<OneD, MultiRegions::ExpListSharedPtr> pFields)
         {
             m_session = pSession;
-            m_session->LoadParameter ("Gamma",                    m_gamma, 1.4);
-            m_session->LoadParameter ("GasConstant",    m_gasConstant, 287.058);
-            m_session->LoadParameter ("Twall",                 m_Twall, 300.15);
+            m_session->LoadParameter ("Gamma",         m_gamma, 1.4);
+            m_session->LoadParameter ("GasConstant",   m_gasConstant, 287.058);
+            m_session->LoadParameter ("Twall",         m_Twall, 300.15);
             m_session->LoadSolverInfo("ViscosityType", m_ViscosityType,
-                                                                    "Constant");
-            m_session->LoadParameter ("mu",                     m_mu, 1.78e-05);
+                                      "Constant");
+            m_session->LoadParameter ("mu",            m_mu, 1.78e-05);
             m_session->LoadParameter ("thermalConductivity",
-                                                 m_thermalConductivity, 0.0257);
-            m_session->LoadParameter ("rhoInf",                m_rhoInf, 1.225);
-            m_session->LoadParameter ("pInf",                   m_pInf, 101325);
-            m_session->LoadParameter ("rhoInfPrimal",      m_rhoInfPrimal, 0.0);
-            m_session->LoadParameter ("uInfPrimal",          m_uInfPrimal, 1.0);
-            m_session->LoadParameter ("vInfPrimal",          m_vInfPrimal, 1.0);
-            m_session->LoadParameter ("pInfPrimal",          m_pInfPrimal, 1.0);
-            m_session->LoadParameter ("alphaInfPrimal",     m_alphaInfDir, 0.0);
-            m_session->LoadParameter ("Lref",                      m_Lref, 1.0);
-            m_session->LoadSolverInfo("Target",               m_Target,  "NoN");
+                                      m_thermalConductivity, 0.0257);
+            m_session->LoadParameter ("rhoInf",        m_rhoInf, 1.225);
+            m_session->LoadParameter ("pInf",          m_pInf, 101325);
+            m_session->LoadParameter ("rhoInfPrimal",   m_rhoInfPrimal, 0.0);
+            m_session->LoadParameter ("uInfPrimal",     m_uInfPrimal, 1.0);
+            m_session->LoadParameter ("vInfPrimal",     m_vInfPrimal, 1.0);
+            m_session->LoadParameter ("pInfPrimal",     m_pInfPrimal, 1.0);
+            m_session->LoadParameter ("alphaInfPrimal", m_alphaInfDir, 0.0);
+            m_session->LoadParameter ("Lref",           m_Lref, 1.0);
+            m_session->LoadSolverInfo("Target",         m_Target,  "NoN");
             
             // Setting up the normals
             int i;
@@ -133,14 +133,14 @@ namespace Nektar
             for (j = 0; j < m_spaceDim; ++j)
             {
                 numericalFluxO1[j] = Array<OneD, Array<OneD, NekDouble> >(
-                                                                          nScalars);
+                                                                    nScalars);
                 derivativesO1[j]   = Array<OneD, Array<OneD, NekDouble> >(
-                                                                          nScalars);
+                                                                    nScalars);
                 
                 for (i = 0; i < nScalars; ++i)
                 {
                     numericalFluxO1[j][i] = Array<OneD, NekDouble>(
-                                                                   nTracePts, 0.0);
+                                                              nTracePts, 0.0);
                     derivativesO1[j][i]   = Array<OneD, NekDouble>(nPts, 0.0);
                 }
             }
@@ -179,7 +179,7 @@ namespace Nektar
             for (j = 0; j < m_spaceDim; ++j)
             {
                 m_viscTensor[j] = Array<OneD, Array<OneD, NekDouble> >(
-                                                                      nScalars);
+                                                                       nScalars);
                 for (i = 0; i < nScalars; ++i)
                 {
                     m_viscTensor[j][i] = Array<OneD, NekDouble>(nPts, 0.0);
@@ -221,10 +221,10 @@ namespace Nektar
          *
          */
         void DiffusionLDGNSAdjoint::v_NumericalFluxO1(
-            const Array<OneD, MultiRegions::ExpListSharedPtr>        &fields,
-            const Array<OneD, Array<OneD, NekDouble> >               &inarray,
-                  Array<OneD, Array<OneD, Array<OneD, NekDouble> > >
-                                                              &numericalFluxO1)
+                                                      const Array<OneD, MultiRegions::ExpListSharedPtr>        &fields,
+                                                      const Array<OneD, Array<OneD, NekDouble> >               &inarray,
+                                                      Array<OneD, Array<OneD, Array<OneD, NekDouble> > >
+                                                      &numericalFluxO1)
         {
             int i, j;
             int nTracePts  = fields[0]->GetTrace()->GetTotPoints();
@@ -283,9 +283,9 @@ namespace Nektar
          *
          */
         void DiffusionLDGNSAdjoint::v_WeakPenaltyO1(
-            const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
-            const Array<OneD, Array<OneD, NekDouble> >        &inarray,
-                  Array<OneD, Array<OneD, NekDouble> >        &penaltyfluxO1)
+                                                    const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
+                                                    const Array<OneD, Array<OneD, NekDouble> >        &inarray,
+                                                    Array<OneD, Array<OneD, NekDouble> >        &penaltyfluxO1)
         {
             int cnt = 0;
             int i, j, e;
@@ -330,54 +330,82 @@ namespace Nektar
                     GetUserDefined() ==
                     SpatialDomains::eAdjointWall)
                 {
-                    nBCEdgePts = fields[0]->GetBndCondExpansions()[n]->
-                    GetExp(e)->GetTotPoints();
-                    id1 = fields[0]->GetBndCondExpansions()[n]->
-                    GetPhys_Offset(e);
-                    id2 = fields[0]->GetTrace()->GetPhys_Offset(traceBndMap[cnt+e]);
-                    
-                    if (m_Target == "Drag")
+                    for (e = 0; e < eMax; ++e)
                     {
+                        nBCEdgePts = fields[0]->GetBndCondExpansions()[n]->
+                        GetExp(e)->GetTotPoints();
+                        id1 = fields[0]->GetBndCondExpansions()[n]->
+                        GetPhys_Offset(e);
+                        id2 = fields[0]->GetTrace()->GetPhys_Offset(traceBndMap[cnt+e]);
+                        
+                        Array<OneD, NekDouble> tmp(nBCEdgePts, 0.0);
+                        Array<OneD, NekDouble> tmp1(nBCEdgePts, 0.0);
+                        Array<OneD, NekDouble> tmp2(nBCEdgePts, 0.0);
+                        Array<OneD, NekDouble> tmp3(nBCEdgePts, 0.0);
+                        
+                        /*
+                         NekDouble Cinf = 0.5 * m_rhoInfPrimal
+                         * (m_uInfPrimal*m_uInfPrimal+m_vInfPrimal*m_vInfPrimal) * m_Lref;
+                         */
                         NekDouble norm_fac = 1.0;
+                        
+                        Array<OneD, Array<OneD, NekDouble> > DragDir(m_spaceDim);
+                        Array<OneD, Array<OneD, NekDouble> > LiftDir(m_spaceDim);
                         
                         NekDouble Dx = norm_fac * cos (m_alphaInfDir);
                         NekDouble Dy = norm_fac * sin (m_alphaInfDir);
                         
-                        Array<OneD, Array<OneD, NekDouble> > DragDir(m_spaceDim);
-                        DragDir[0] = Array<OneD, NekDouble> (nBCEdgePts, Dx);
-                        DragDir[1] = Array<OneD, NekDouble> (nBCEdgePts, Dy);
-                        
-                        Vmath::Vadd(nBCEdgePts,
-                                    &Fwdnew[1][id2], 1,
-                                    &DragDir[0][0], 1,
-                                    &Fwdnew[1][id2], 1);
-                        
-                        Vmath::Vadd(nBCEdgePts,
-                                    &Fwdnew[2][id2], 1,
-                                    &DragDir[1][0], 1,
-                                    &Fwdnew[2][id2], 1);
-                    }
-                    
-                    if (m_Target == "Lift")
-                    {
-                        NekDouble norm_fac = 1.0;
-                        
                         NekDouble Lx = -norm_fac * sin (m_alphaInfDir);
                         NekDouble Ly =  norm_fac * cos (m_alphaInfDir);
                         
-                        Array<OneD, Array<OneD, NekDouble> > LiftDir(m_spaceDim);
+                        DragDir[0] = Array<OneD, NekDouble> (nBCEdgePts, Dx);
+                        DragDir[1] = Array<OneD, NekDouble> (nBCEdgePts, Dy);
+                        
                         LiftDir[0] = Array<OneD, NekDouble> (nBCEdgePts, Lx);
                         LiftDir[1] = Array<OneD, NekDouble> (nBCEdgePts, Ly);
                         
-                        Vmath::Vadd(nBCEdgePts,
-                                    &Fwdnew[1][id2], 1,
-                                    &LiftDir[0][0], 1,
-                                    &Fwdnew[1][id2], 1);
                         
-                        Vmath::Vadd(nBCEdgePts,
-                                    &Fwdnew[2][id2], 1,
-                                    &LiftDir[1][0], 1,
-                                    &Fwdnew[2][id2], 1);
+                        Array<OneD, NekDouble> zeros(nBCEdgePts, 0.0);
+                        
+                        Vmath::Vcopy(nBCEdgePts,
+                                     &zeros[0], 1,
+                                     &penaltyfluxO1[0][id2], 1);
+                        
+                        Vmath::Vcopy(nBCEdgePts,
+                                     &zeros[0], 1,
+                                     &penaltyfluxO1[1][id2], 1);
+                        
+                        Vmath::Vcopy(nBCEdgePts,
+                                     &zeros[0], 1,
+                                     &penaltyfluxO1[2][id2], 1);
+                        
+                        Vmath::Vcopy(nBCEdgePts,
+                                     &zeros[0], 1,
+                                     &penaltyfluxO1[m_spaceDim+1][id2], 1);
+                        
+                        if (m_Target == "Lift")
+                        {
+                            
+                            Vmath::Vcopy(nBCEdgePts,
+                                         &LiftDir[0][0], 1,
+                                         &penaltyfluxO1[1][id2], 1);
+                            
+                            Vmath::Vcopy(nBCEdgePts,
+                                         &LiftDir[1][0], 1,
+                                         &penaltyfluxO1[2][id2], 1);
+                            
+                        }
+                        if (m_Target == "Drag")
+                        {
+                            
+                            Vmath::Vcopy(nBCEdgePts,
+                                         &DragDir[0][0], 1,
+                                         &penaltyfluxO1[1][id2], 1);
+                            
+                            Vmath::Vcopy(nBCEdgePts,
+                                         &DragDir[1][0], 1,
+                                         &penaltyfluxO1[2][id2], 1);
+                        }
                     }
                     
                     cnt += fields[0]->GetBndCondExpansions()[n]->GetExpSize();
@@ -405,9 +433,9 @@ namespace Nektar
                         for (i = 0;i < nScalars; ++i)
                         {
                             Vmath::Vcopy(nBCEdgePts,
-                                    &(fields[i]->GetBndCondExpansions()[n]->
-                                    UpdatePhys())[id1], 1,
-                                    &penaltyfluxO1[i][id2], 1);
+                                         &(fields[i]->GetBndCondExpansions()[n]->
+                                           UpdatePhys())[id1], 1,
+                                         &penaltyfluxO1[i][id2], 1);
                         }
                         
                     }
@@ -421,10 +449,10 @@ namespace Nektar
          *
          */
         void DiffusionLDGNSAdjoint::v_NumericalFluxO2(
-            const Array<OneD, MultiRegions::ExpListSharedPtr>        &fields,
-            const Array<OneD, Array<OneD, NekDouble> >               &ufield,
-                  Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &qfield,
-                  Array<OneD, Array<OneD, NekDouble> >               &qflux)
+                                                      const Array<OneD, MultiRegions::ExpListSharedPtr>        &fields,
+                                                      const Array<OneD, Array<OneD, NekDouble> >               &ufield,
+                                                      Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &qfield,
+                                                      Array<OneD, Array<OneD, NekDouble> >               &qflux)
         {
             int i, j;
             int nTracePts = fields[0]->GetTrace()->GetTotPoints();
@@ -487,11 +515,11 @@ namespace Nektar
          *
          */
         void DiffusionLDGNSAdjoint::v_WeakPenaltyO2(
-                const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
-                const int                                          var,
-                const int                                          dir,
-                const Array<OneD, const NekDouble>                &qfield,
-                      Array<OneD,       NekDouble>                &penaltyflux)
+                                                    const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
+                                                    const int                                          var,
+                                                    const int                                          dir,
+                                                    const Array<OneD, const NekDouble>                &qfield,
+                                                    Array<OneD,       NekDouble>                &penaltyflux)
         {
             int cnt = 0;
             int nBndEdges, nBndEdgePts;
