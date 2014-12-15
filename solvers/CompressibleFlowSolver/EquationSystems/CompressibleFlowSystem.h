@@ -221,9 +221,6 @@ namespace Nektar
         void GetFluxVector(
             const Array<OneD, Array<OneD, NekDouble> >               &physfield,
                   Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &flux);
-        void GetJacTransposeDivVector(
-            const Array<OneD, Array<OneD, NekDouble> > &inarray,
-                  Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
         void GetAdjointFluxVector(
             const Array<OneD, Array<OneD, NekDouble> > &inarray,
                   Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
