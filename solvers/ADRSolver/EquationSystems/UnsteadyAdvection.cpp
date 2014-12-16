@@ -39,14 +39,15 @@
 
 namespace Nektar
 {
-    string UnsteadyAdvection::className = GetEquationSystemFactory().
+    string UnsteadyAdvection::className = SolverUtils::GetEquationSystemFactory().
         RegisterCreatorFunction("UnsteadyAdvection",
                                 UnsteadyAdvection::create,
                                 "Unsteady Advection equation.");
 
     UnsteadyAdvection::UnsteadyAdvection(
             const LibUtilities::SessionReaderSharedPtr& pSession)
-        : UnsteadySystem(pSession)
+        : UnsteadySystem(pSession),
+          AdvectionSystem(pSession)
     {
         m_planeNumber = 0;
     }
@@ -57,7 +58,7 @@ namespace Nektar
     void UnsteadyAdvection::v_InitObject()
     {
         // Call to the initialisation object of UnsteadySystem
-        UnsteadySystem::v_InitObject();
+        AdvectionSystem::v_InitObject();
 
         // Forcing terms
         m_forcing = SolverUtils::Forcing::Load(m_session, m_fields,
@@ -89,16 +90,16 @@ namespace Nektar
                 string advName;
                 m_session->LoadSolverInfo(
                     "AdvectionType", advName, "NonConservative");
-                m_advection = SolverUtils::
+                m_advObject = SolverUtils::
                     GetAdvectionFactory().CreateInstance(advName, advName);
                 if (m_specHP_dealiasing)
                 {
-                    m_advection->SetFluxVector(
+                    m_advObject->SetFluxVector(
                         &UnsteadyAdvection::GetFluxVectorDeAlias, this);
                 }
                 else
                 {
-                    m_advection->SetFluxVector(
+                    m_advObject->SetFluxVector(
                         &UnsteadyAdvection::GetFluxVector, this);
                 }
                 break;
@@ -119,16 +120,16 @@ namespace Nektar
                 string riemName;
                 m_session->LoadSolverInfo(
                     "AdvectionType", advName, "WeakDG");
-                m_advection = SolverUtils::
+                m_advObject = SolverUtils::
                     GetAdvectionFactory().CreateInstance(advName, advName);
                 if (m_specHP_dealiasing)
                 {
-                    m_advection->SetFluxVector(
+                    m_advObject->SetFluxVector(
                         &UnsteadyAdvection::GetFluxVectorDeAlias, this);
                 }
                 else
                 {
-                    m_advection->SetFluxVector(
+                    m_advObject->SetFluxVector(
                         &UnsteadyAdvection::GetFluxVector, this);
                 }
                 m_session->LoadSolverInfo(
@@ -138,8 +139,8 @@ namespace Nektar
                 m_riemannSolver->SetScalar(
                     "Vn", &UnsteadyAdvection::GetNormalVelocity, this);
 
-                m_advection->SetRiemannSolver(m_riemannSolver);
-                m_advection->InitObject(m_session, m_fields);
+                m_advObject->SetRiemannSolver(m_riemannSolver);
+                m_advObject->InitObject(m_session, m_fields);
                 break;
             }
             default:
@@ -244,8 +245,8 @@ namespace Nektar
         }
         
         // RHS computation using the new advection base class
-        m_advection->Advect(nVariables, m_fields, m_velocity, inarray,
-                            outarray);
+        m_advObject->Advect(nVariables, m_fields, m_velocity, inarray,
+                            outarray, time);
 
         // Negate the RHS
         for (i = 0; i < nVariables; ++i)
@@ -460,10 +461,10 @@ namespace Nektar
     }
     
     /**
-     * Generate a summary of the main parameters used.
+     * Generate summary with main parameters of the simulation.
      */
-    void UnsteadyAdvection::v_GenerateSummary(SummaryList& s)
+    void UnsteadyAdvection::v_GenerateSummary(SolverUtils::SummaryList& s)
     {
-        UnsteadySystem::v_GenerateSummary(s);
+        AdvectionSystem::v_GenerateSummary(s);
     }
 }

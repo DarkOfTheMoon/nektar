@@ -193,7 +193,8 @@ namespace Nektar
             const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
             const Array<OneD, Array<OneD, NekDouble> >        &advVel,
             const Array<OneD, Array<OneD, NekDouble> >        &inarray,
-                  Array<OneD, Array<OneD, NekDouble> >        &outarray)
+                  Array<OneD, Array<OneD, NekDouble> >        &outarray,
+            const NekDouble                                   &time)
         {
             std::cout << std::setprecision(16);
             
@@ -259,7 +260,7 @@ namespace Nektar
                 // Compute advection term for this plane.
                 m_planeAdv->Advect(nConvectiveFields, m_fieldsPlane,
                                    m_advVelPlane, m_inarrayPlane,
-                                   m_outarrayPlane);
+                                   m_outarrayPlane, time);
             }
 
             // Calculate Fourier derivative and add to final result.
