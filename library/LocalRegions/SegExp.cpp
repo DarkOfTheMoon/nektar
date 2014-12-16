@@ -162,57 +162,90 @@ namespace Nektar
             \f$ depending on value of \a dim
         */
         void SegExp::v_PhysDeriv(
-                const Array<OneD, const NekDouble>& inarray,
-                      Array<OneD,NekDouble> &out_d0,
-                      Array<OneD,NekDouble> &out_d1,
-                      Array<OneD,NekDouble> &out_d2)
+            const Array<OneD, const NekDouble> &inarray,
+                  Array<OneD,       NekDouble> &out_d0,
+                  Array<OneD,       NekDouble> &out_d1,
+                  Array<OneD,       NekDouble> &out_d2)
         {
-            int    nquad0 = m_base[0]->GetNumPoints();
+            int nquad0 = m_base[0]->GetNumPoints();
             Array<TwoD, const NekDouble> gmat =
-                                m_metricinfo->GetDerivFactors(GetPointsKeys());
-            Array<OneD,NekDouble> diff(nquad0);
+                m_metricinfo->GetDerivFactors(GetPointsKeys());
+            Array<OneD, NekDouble> diff(nquad0);
 
             //StdExpansion1D::PhysTensorDeriv(inarray,diff);
             PhysTensorDeriv(inarray,diff);
-            if(m_metricinfo->GetGtype() == SpatialDomains::eDeformed)
+            if (m_metricinfo->GetGtype() == SpatialDomains::eDeformed)
             {
-                if(out_d0.num_elements())
+                if (out_d0.num_elements())
                 {
-                    Vmath::Vmul(nquad0,&gmat[0][0],1,&diff[0],1,
-                                &out_d0[0],1);
+                    Vmath::Vmul(nquad0, &gmat[0][0], 1, &diff[0], 1,
+                                &out_d0[0], 1);
                 }
 
-                if(out_d1.num_elements())
+                if (out_d1.num_elements())
                 {
-                    Vmath::Vmul(nquad0,&gmat[1][0],1,&diff[0],1,
-                                &out_d1[0],1);
+                    Vmath::Vmul(nquad0, &gmat[1][0], 1, &diff[0], 1,
+                                &out_d1[0], 1);
                 }
 
-                if(out_d2.num_elements())
+                if (out_d2.num_elements())
                 {
-                    Vmath::Vmul(nquad0,&gmat[2][0],1,&diff[0],1,
-                                &out_d2[0],1);
+                    Vmath::Vmul(nquad0, &gmat[2][0], 1, &diff[0], 1,
+                                &out_d2[0], 1);
                 }
             }
             else 
             {
-                if(out_d0.num_elements())
+                if (out_d0.num_elements())
                 {
                     Vmath::Smul(nquad0, gmat[0][0], diff, 1,
                                 out_d0, 1);
                 }
 
-                if(out_d1.num_elements())
+                if (out_d1.num_elements())
                 {
                     Vmath::Smul(nquad0, gmat[1][0], diff, 1,
                                 out_d1, 1);
                 }
 
-                if(out_d2.num_elements())
+                if (out_d2.num_elements())
                 {
                     Vmath::Smul(nquad0, gmat[2][0], diff, 1,
                                 out_d2, 1);
                 }
+            }
+        }
+        
+        void SegExp::v_PhysDeriv(
+            const int dir,
+            const Array<OneD, const NekDouble> &inarray,
+                  Array<OneD,       NekDouble> &outarray)
+        {
+            switch (dir)
+            {
+                case 0:
+                {
+                    PhysDeriv(inarray, outarray, NullNekDouble1DArray,
+                              NullNekDouble1DArray);
+                }
+                    break;
+                case 1:
+                {
+                    PhysDeriv(inarray, NullNekDouble1DArray, outarray,
+                              NullNekDouble1DArray);
+                }
+                    break;
+                case 2:
+                {
+                    PhysDeriv(inarray, NullNekDouble1DArray,
+                              NullNekDouble1DArray, outarray);
+                }
+                    break;
+                default:
+                {
+                    ASSERTL1(false, "input dir is out of range");
+                }
+                    break;
             }
         }
 
@@ -309,43 +342,8 @@ cout<<"nx= "<<normals[0][i]<<"  ny="<<normals[1][i]<<endl;
                     {
 cout<<"deps/dx ="<<inarray_d0[i]<<"  deps/dy="<<inarray_d1[i]<<endl;
                     }
-
-
-            }
-
-        }
-        void SegExp::v_PhysDeriv(const int dir, 
-                               const Array<OneD, const NekDouble>& inarray,
-                               Array<OneD, NekDouble> &outarray)
-        {
-            switch(dir)
-            {
-                case 0:
-                    {
-                        PhysDeriv(inarray, outarray, NullNekDouble1DArray,
-                                  NullNekDouble1DArray);
-                    }
-                    break;
-                case 1:
-                    {
-                        PhysDeriv(inarray, NullNekDouble1DArray, outarray,
-                                  NullNekDouble1DArray);
-                    }
-                    break;
-                case 2:
-                    {
-                        PhysDeriv(inarray, NullNekDouble1DArray,
-                                  NullNekDouble1DArray, outarray);
-                    }
-                    break;
-                default:
-                    {
-                        ASSERTL1(false,"input dir is out of range");
-                    }
-                    break;
             }
         }
-
 
         //-----------------------------
         // Transforms

@@ -34,6 +34,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include <iostream>
+#include <iomanip>
 #include <ADRSolver/EquationSystems/UnsteadyAdvection.h>
 
 namespace Nektar
@@ -58,6 +59,12 @@ namespace Nektar
         // Call to the initialisation object of UnsteadySystem
         UnsteadySystem::v_InitObject();
 
+        // Forcing terms
+        m_forcing = SolverUtils::Forcing::Load(m_session, m_fields,
+                                               m_fields.num_elements());
+        
+        m_outputStream.open("solution.mdl");
+        
         m_session->LoadParameter("wavefreq",   m_waveFreq, 0.0);
         // Read the advection velocities from session file
 
@@ -211,7 +218,31 @@ namespace Nektar
 
         // Number of solution points
         int nSolutionPts = GetNpoints();
-
+        
+        int num1 = 1;
+        if (num1 == 0)
+        {
+        // ---------------------------------------------------------------------
+        int nZPts  = (m_session->GetParameter("HomModesZ"));
+        Array<OneD, NekDouble> tmp3(nSolutionPts, 0.0);
+        for (i = 0; i < nVariables; ++i)
+        {
+            m_fields[i]->HomogeneousFwdTrans(inarray[i], tmp3);
+            for (int j = 0; j < tmp3.num_elements(); ++j)
+            {
+                m_outputStream << setw(10) << time    <<
+                                  setw(5)  << j       <<
+                                  setw(18) << tmp3[j] << endl;
+            }
+        }
+        // ---------------------------------------------------------------------
+        }
+        
+        if (time == m_fintime)
+        {
+            m_outputStream.close();
+        }
+        
         // RHS computation using the new advection base class
         m_advection->Advect(nVariables, m_fields, m_velocity, inarray,
                             outarray);
@@ -220,6 +251,41 @@ namespace Nektar
         for (i = 0; i < nVariables; ++i)
         {
             Vmath::Neg(nSolutionPts, outarray[i], 1);
+        }
+        
+        if (num1 == 0)
+        {
+        // ---------------------------------------------------------------------
+        for (i = 0; i < nVariables; ++i)
+        {
+            for (int j = 0; j < nSolutionPts; ++j)
+            {
+                cout << "i = " << i << ",  j = " << j
+                << ",\toutarray A = " << outarray[i][j] << endl;
+            }
+        }
+        // ---------------------------------------------------------------------
+        }
+        
+        // Add forcing terms
+        std::vector<SolverUtils::ForcingSharedPtr>::const_iterator x;
+        for (x = m_forcing.begin(); x != m_forcing.end(); ++x)
+        {
+            (*x)->Apply(m_fields, inarray, outarray, time);
+        }
+        
+        if (num1 == 0)
+        {
+        // ---------------------------------------------------------------------
+        for (i = 0; i < nVariables; ++i)
+        {
+            for (int j = 0; j < nSolutionPts; ++j)
+            {
+                cout << "i = " << i << ",  j = " << j
+                << ",\toutarray B = " << outarray[i][j] << endl;
+            }
+        }
+        // ---------------------------------------------------------------------
         }
     }
 
@@ -383,7 +449,19 @@ namespace Nektar
             }
         }
     }
-
+    
+    /**
+     * Add an additional forcing term programmatically.
+     */
+    void UnsteadyAdvection::AddForcing(
+        const SolverUtils::ForcingSharedPtr& pForce)
+    {
+        m_forcing.push_back(pForce);
+    }
+    
+    /**
+     * Generate a summary of the main parameters used.
+     */
     void UnsteadyAdvection::v_GenerateSummary(SummaryList& s)
     {
         UnsteadySystem::v_GenerateSummary(s);

@@ -879,6 +879,9 @@ namespace Nektar
         int nq = physfield[0].num_elements();
         int nVariables = m_fields.num_elements();
         
+        int num1 = 1;
+        Array<OneD, NekDouble> tmp3(nq, 0.0);
+        Array<OneD, NekDouble> tmp4(nq, 0.0);
         Array<OneD, NekDouble> pressure(nq);
         Array<OneD, Array<OneD, NekDouble> > velocity(m_spacedim);
 
@@ -891,7 +894,52 @@ namespace Nektar
 
         GetVelocityVector(physfield, velocity);
         GetPressure      (physfield, velocity, pressure);
-
+        
+        if (num1 == 0)
+        {
+        // ---------------------------------------------------------------------
+        for (i = 0; i < m_spacedim; ++i)
+        {
+            m_fields[i]->HomogeneousFwdTrans(velocity[i], tmp3);
+            for (j = 0; j < nq; ++j)
+            {
+                cout << "i = " << i <<",  j = "<< j << ",\t velocity FWD = "
+                << tmp3[j] << endl;
+            }
+            int nui;
+            cin >> nui;
+            m_fields[i]->HomogeneousBwdTrans(tmp3, tmp4);
+            for (j = 0; j < nq; ++j)
+            {
+                cout << "i = " << i <<",  j = "<< j << ",\t velocity BWD = "
+                << tmp4[j] << endl;
+            }
+            cin >> nui;
+        }
+        // ---------------------------------------------------------------------
+        }
+        
+        if (num1 == 0)
+        {
+        // ---------------------------------------------------------------------
+        m_fields[i]->HomogeneousFwdTrans(pressure, tmp3);
+        for (j = 0; j < nq; ++j)
+        {
+            cout << "i = " << i <<",  j = "<< j << ",\t pressure FWD = "
+            << tmp3[j] << endl;
+        }
+        int nui;
+        cin >> nui;
+        m_fields[i]->HomogeneousBwdTrans(tmp3, tmp4);
+        for (j = 0; j < nq; ++j)
+        {
+            cout << "i = " << i <<",  j = "<< j << ",\t pressure BWD = "
+            << tmp4[j] << endl;
+        }
+        cin >> nui;
+        // ---------------------------------------------------------------------
+        }
+        
         // Flux vector for the velocity fields
         for (i = 0; i < m_spacedim; ++i)
         {
@@ -915,6 +963,34 @@ namespace Nektar
                         flux[m_spacedim+1][j], 1);
         }
 
+        if (num1 == 0)
+        {
+        // ---------------------------------------------------------------------
+        for (i = 0; i < nVariables; ++i)
+        {
+            for (int m = 0; m < m_spacedim; ++m)
+            {
+                m_fields[i]->HomogeneousFwdTrans(flux[i][m], tmp3);
+                for (j = 0; j < nq; ++j)
+                {
+                    cout << "i = " << i << ",  m = " << m <<
+                    ",  j = " << j << ",\t flux FWD = " << tmp3[j] << endl;
+                }
+                int nui;
+                cin >> nui;
+                m_fields[i]->HomogeneousBwdTrans(tmp3, tmp4);
+                for (j = 0; j < nq; ++j)
+                {
+                    cout << "i = " << i << ",  m = " << m <<
+                    ",  j = "<< j << ",\t flux BWD = "
+                    << tmp4[j] << endl;
+                }
+                cin >> nui;
+            }
+        }
+        // ---------------------------------------------------------------------
+        }
+        
         // For the smooth viscosity model
         if (nVariables == m_spacedim+3)
         {

@@ -227,6 +227,7 @@ namespace Nektar
                         m_EqTypeStr=="EulerADCFE" ||
                         m_EqTypeStr=="NavierStokesCFE")
                     {
+                        //cout << "HI Compressible" << endl;
                         // Extracting kinetic energy
                         for (int i = 1; i < pFields.num_elements()-1; ++i)
                         {
@@ -235,9 +236,27 @@ namespace Nektar
                                         energy, 1, energy, 1);
                         }
                     }
+                    /*
+                    else if (m_EqTypeStr=="UnsteadyAdvection")
+                    {
+                        cout << "HI Unsteady Advection" << endl;
+                        Array<OneD, NekDouble> tmp1(pFields[0]->GetNcoeffs(), 0.0);
+                        Array<OneD, NekDouble> tmp2(pFields[0]->GetNcoeffs(), 0.0);
+                        for (int i = 0; i < pFields.num_elements()-1; ++i)
+                        {
+                            Vmath::Vadd(pFields[i]->GetNcoeffs(),
+                                        pFields[i]->GetCoeffs(), 1,
+                                        tmp2, 1,
+                                        tmp1, 1);
+                        
+                            pFields[i]->HomogeneousFwdTrans(tmp1, energy);
+                        }
+                    }
+                     */
                     // Incompressible Navier-Stokes Solver
                     else
                     {
+                        //cout << "HI Incompressible NS" << endl;
                         // Extracting kinetic energy
                         for (int i = 0; i < pFields.num_elements()-1; ++i)
                         {

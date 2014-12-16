@@ -302,7 +302,7 @@ namespace Nektar
                                     &tmp[0] + i*m_numPointsPlane, 1);
                     }
 
-                    fields[0]->HomogeneousBwdTrans(tmp, tmp);
+                    fields[j]->HomogeneousBwdTrans(tmp, tmp);
 
                     Vmath::Vsub(nPointsTot, outarray[j], 1, tmp, 1,
                                 outarray[j], 1);

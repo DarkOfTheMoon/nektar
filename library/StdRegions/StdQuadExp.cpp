@@ -91,55 +91,63 @@ namespace Nektar
          *  For quadrilateral region can use the Tensor_Deriv function
          *  defined under StdExpansion.
          */
-
-        void StdQuadExp::v_PhysDeriv(const Array<OneD, const NekDouble>& inarray,
-                            Array<OneD, NekDouble> &out_d0,
-                            Array<OneD, NekDouble> &out_d1,
-                            Array<OneD, NekDouble> &out_d2)
+        void StdQuadExp::v_PhysDeriv(
+            const Array<OneD, const NekDouble> &inarray,
+                  Array<OneD,       NekDouble> &out_d0,
+                  Array<OneD,       NekDouble> &out_d1,
+                  Array<OneD,       NekDouble> &out_d2)
         {
             PhysTensorDeriv(inarray, out_d0, out_d1);
         }
         
-        void StdQuadExp::v_PhysDeriv(const int dir, 
-                             const Array<OneD, const NekDouble>& inarray,
-                             Array<OneD, NekDouble> &outarray)
+        void StdQuadExp::v_StdPhysDeriv(
+            const Array<OneD, const NekDouble> &inarray,
+                  Array<OneD,       NekDouble> &out_d0,
+                  Array<OneD,       NekDouble> &out_d1,
+                  Array<OneD,       NekDouble> &out_d2)
         {
-            switch(dir)
+            //PhysTensorDeriv(inarray, out_d0, out_d1);
+            StdQuadExp::v_PhysDeriv(inarray, out_d0, out_d1);            
+        }
+        
+        /** \brief Calculate the derivative of the physical points 
+         *  in a specific direction dir
+         *
+         *  For quadrilateral region can use the Tensor_Deriv function
+         *  defined under StdExpansion.
+         */
+        void StdQuadExp::v_PhysDeriv(
+            const int dir,
+            const Array<OneD, const NekDouble> &inarray,
+                  Array<OneD,       NekDouble> &outarray)
+        {
+            switch (dir)
             {
-            case 0:
+                case 0:
                 {
                     PhysTensorDeriv(inarray, outarray, NullNekDouble1DArray);   
                 }
-                break;
-            case 1:
+                    break;
+                case 1:
                 {
                     PhysTensorDeriv(inarray, NullNekDouble1DArray, outarray);   
                 }
-                break;
-            default:
+                    break;
+                default:
                 {
-                    ASSERTL1(false,"input dir is out of range");
+                    ASSERTL1(false, "input dir is out of range");
                 }
-                break;
+                    break;
             }             
         }
 
-        void StdQuadExp::v_StdPhysDeriv(const Array<OneD, const NekDouble>& inarray, 
-                            Array<OneD, NekDouble> &out_d0,
-                            Array<OneD, NekDouble> &out_d1,
-                            Array<OneD, NekDouble> &out_d2)
+        void StdQuadExp::v_StdPhysDeriv(
+            const int dir,
+            const Array<OneD, const NekDouble> &inarray,
+                  Array<OneD,       NekDouble> &outarray)
         {
-            //PhysTensorDeriv(inarray, out_d0, out_d1);            
-            StdQuadExp::v_PhysDeriv(inarray, out_d0, out_d1);            
-        }
-
-        void StdQuadExp::v_StdPhysDeriv(const int dir, 
-                            const Array<OneD, const NekDouble>& inarray, 
-                            Array<OneD, NekDouble> &outarray)
-        {
-            //PhysTensorDeriv(inarray, outarray);            
-            StdQuadExp::v_PhysDeriv(dir,inarray,outarray);
-
+            //PhysTensorDeriv(inarray, outarray);
+            StdQuadExp::v_PhysDeriv(dir, inarray, outarray);
         }
 
 

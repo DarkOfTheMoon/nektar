@@ -39,6 +39,7 @@
 #include <SolverUtils/UnsteadySystem.h>
 #include <SolverUtils/RiemannSolvers/RiemannSolver.h>
 #include <SolverUtils/Advection/Advection.h>
+#include <SolverUtils/Forcing/Forcing.h>
 
 using namespace Nektar::SolverUtils;
 
@@ -52,7 +53,8 @@ namespace Nektar
         /// Creates an instance of this class
         static EquationSystemSharedPtr create(
                 const LibUtilities::SessionReaderSharedPtr& pSession) {
-            EquationSystemSharedPtr p = MemoryManager<UnsteadyAdvection>::AllocateSharedPtr(pSession);
+            EquationSystemSharedPtr p = MemoryManager<UnsteadyAdvection>
+                ::AllocateSharedPtr(pSession);
             p->InitObject();
             return p;
         }
@@ -61,8 +63,17 @@ namespace Nektar
         
         /// Destructor
         virtual ~UnsteadyAdvection();
+        
+        /// Add forcing term (body force, adsorbing region, etc.)
+        void AddForcing(const SolverUtils::ForcingSharedPtr& pForce);
 
     protected:
+        
+        /// Forcing term
+        std::vector<SolverUtils::ForcingSharedPtr> m_forcing;
+        
+        std::ofstream m_outputStream;
+        
         SolverUtils::RiemannSolverSharedPtr     m_riemannSolver;
         SolverUtils::AdvectionSharedPtr         m_advection;
 

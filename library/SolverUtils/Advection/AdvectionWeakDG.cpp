@@ -136,7 +136,7 @@ namespace Nektar
                     cin >> num;
                 }
                 */
-                
+
                 tmp[i] = Array<OneD, NekDouble>(nCoeffs, 0.0);
 
                 for (j = 0; j < nDim; ++j)

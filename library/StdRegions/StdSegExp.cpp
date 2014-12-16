@@ -143,47 +143,50 @@ namespace Nektar
          *  quadrature points given by \a inarray and return in \a outarray.
          *
          *  This is a wrapper around StdExpansion1D::Tensor_Deriv
-         *  \param inarray array of a function evaluated at the quadrature points
+         *  \param inarray array of a function evaluated at the quadrature 
+         *  points
          *  \param  outarray the resulting array of the derivative \f$
-         *  du/d_{\xi_1}|_{\xi_{1i}} \f$ will be stored in the array \a outarra 
+         *  du/d_{\xi_1}|_{\xi_{1i}} \f$ will be stored in the array \a 
+         *  outarray
          */
 
-        void StdSegExp::v_PhysDeriv(const Array<OneD, const NekDouble>& inarray,
-                Array<OneD, NekDouble> &out_d0,
-                Array<OneD, NekDouble> &out_d1,
-                Array<OneD, NekDouble> &out_d2)
+        void StdSegExp::v_PhysDeriv(
+            const Array<OneD, const NekDouble> &inarray,
+                  Array<OneD,       NekDouble> &out_d0,
+                  Array<OneD,       NekDouble> &out_d1,
+                  Array<OneD,       NekDouble> &out_d2)
         {
-            PhysTensorDeriv(inarray,out_d0);
-        }
-
-
-        void StdSegExp::v_PhysDeriv(const int dir,
-                const Array<OneD, const NekDouble>& inarray,
-                Array<OneD, NekDouble> &outarray)
-        {
-            ASSERTL1(dir==0,"input dir is out of range");
-            PhysTensorDeriv(inarray,outarray);
-            // PhysDeriv(inarray, outarray);
+            PhysTensorDeriv(inarray, out_d0);
         }
 
         void StdSegExp::v_StdPhysDeriv(
-                const Array<OneD, const NekDouble>& inarray,
-                Array<OneD, NekDouble> &out_d0,
-                Array<OneD, NekDouble> &out_d1,
-                Array<OneD, NekDouble> &out_d2)
+            const Array<OneD, const NekDouble> &inarray,
+                  Array<OneD,       NekDouble> &out_d0,
+                  Array<OneD,       NekDouble> &out_d1,
+                  Array<OneD,       NekDouble> &out_d2)
         {
-            PhysTensorDeriv(inarray,out_d0);
-            // PhysDeriv(inarray, out_d0);
+            PhysTensorDeriv(inarray, out_d0);
+            //PhysDeriv(inarray, out_d0);
+        }
+        
+        void StdSegExp::v_PhysDeriv(
+            const int dir,
+            const Array<OneD, const NekDouble> &inarray,
+                  Array<OneD,       NekDouble> &outarray)
+        {
+            ASSERTL1(dir == 0, "input dir is out of range");
+            PhysTensorDeriv(inarray, outarray);
+            //PhysDeriv(inarray, outarray);
         }
 
         void StdSegExp::v_StdPhysDeriv(
-                const int dir,
-                const Array<OneD, const NekDouble>& inarray,
-                Array<OneD, NekDouble> &outarray)
+            const int dir,
+            const Array<OneD, const NekDouble> &inarray,
+                  Array<OneD,       NekDouble> &outarray)
         {
-            ASSERTL1(dir==0,"input dir is out of range");
-            PhysTensorDeriv(inarray,outarray);
-            // PhysDeriv(inarray, outarray);
+            ASSERTL1(dir == 0, "input dir is out of range");
+            PhysTensorDeriv(inarray, outarray);
+            //PhysDeriv(inarray, outarray);
         }
 
 

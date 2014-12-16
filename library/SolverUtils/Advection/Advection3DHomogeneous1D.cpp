@@ -100,9 +100,11 @@ namespace Nektar
             m_planeAdv->InitObject(pSession, pFields_plane0);
 
             m_numPoints      = pFields[0]->GetTotPoints();
+            m_numCoeffs      = pFields[0]->GetNcoeffs();
             m_planes         = pFields[0]->GetZIDs();
             m_numPlanes      = m_planes.num_elements();
             m_numPointsPlane = m_numPoints/m_numPlanes;
+            m_numCoeffsPlane = m_numCoeffsPlane/m_numPlanes;
 
             // Set Riemann solver and flux vector callback for this plane.
             m_planeAdv->SetRiemannSolver(m_riemann);
@@ -194,9 +196,39 @@ namespace Nektar
                   Array<OneD, Array<OneD, NekDouble> >        &outarray)
         {
             std::cout << std::setprecision(16);
-            Array<OneD, NekDouble> tmp(m_numPoints), tmp2;
+            
+            Array<OneD, NekDouble> tmp2;
+            Array<OneD, NekDouble> tmp (m_numPoints, 0.0);
+            Array<OneD, NekDouble> tmp3(m_numPoints, 0.0);
+            Array<OneD, NekDouble> tmp4(m_numPoints, 0.0);
             int nVel = advVel.num_elements();
-
+            int num1 = 1;
+            
+            if (num1 == 0)
+            {
+            // -------------------------------------------------------------
+            for (int i = 0; i < nConvectiveFields; ++i)
+            {
+                cout << "i = " << i<<",\t ========================" << endl;
+                fields[i]->HomogeneousFwdTrans(inarray[i], tmp3);
+                for (int j = 0; j < m_numPoints; ++j)
+                {
+                    cout << "i = " << i <<",  j = "<< j << ",\t inarray FWD = "
+                    << tmp3[j] << endl;
+                }
+                
+                fields[i]->HomogeneousBwdTrans(tmp3, tmp4);
+                for (int j = 0; j < m_numPoints; ++j)
+                {
+                    cout << "i = " << i <<",  j = "<< j << ",\t inarray BWD = "
+                    << tmp4[j] << endl;
+                }
+                int nui;
+                cin >> nui;
+            }
+            // -------------------------------------------------------------
+            }
+            
             // Call solver's flux vector function to compute the flux vector on
             // the entire domain.
             m_fluxVector(inarray, m_fluxVecStore);
@@ -204,8 +236,8 @@ namespace Nektar
             // Loop over each plane.
             for (int i = 0; i < m_numPlanes; ++i)
             {
-                // Set up memory references for fields, inarray and outarray for
-                // this plane.
+                // Set up memory references for fields,
+                // inarray and outarray for this plane.
                 for (int j = 0; j < nConvectiveFields; ++j)
                 {
                     m_fieldsPlane  [j] = fields[j]->GetPlane(i);
@@ -233,45 +265,72 @@ namespace Nektar
             // Calculate Fourier derivative and add to final result.
             for (int i = 0; i < nConvectiveFields; ++i)
             {
-                /*
+                if (num1 == 0)
+                {
+                // -------------------------------------------------------------
                 cout << "i = " << i<<",\t ========================" << endl;
+                fields[i]->HomogeneousFwdTrans(m_fluxVecStore[i][2], tmp3);
                 for (int j = 0; j < m_numPoints; ++j)
                 {
-                    cout <<"j = "<< j << ",\t m_fluxVecStore_X = "
-                    << m_fluxVecStore[i][0][j] << endl;
+                    cout << "i = " << i <<",  j = "<< j << ",\t FluxZ FWD = "
+                    << tmp3[j] << endl;
                 }
-                cout << "----------" << endl;
-                for (int j = 0; j < m_numPoints; ++j)
-                {
-                    cout <<"j = "<< j << ",\t m_fluxVecStore_Y = "
-                    << m_fluxVecStore[i][1][j] << endl;
-                }
-                cout << "----------" << endl;
-                for (int j = 0; j < m_numPoints; ++j)
-                {
-                    cout <<"j = "<< j << ",\t m_fluxVecStore_Z = "
-                         << m_fluxVecStore[i][2][j] << endl;
-                }
-                cout << "----------" << endl;
-                int num;
-                cin >> num;
-                 */
                 
-                fields[0]->PhysDeriv(2, m_fluxVecStore[i][2], tmp);
-
+                fields[i]->HomogeneousBwdTrans(tmp3, tmp4);
+                for (int j = 0; j < m_numPoints; ++j)
+                {
+                    cout << "i = " << i <<",  j = "<< j << ",\t FluxZ BWD = "
+                    << tmp4[j] << endl;
+                }
+                // -------------------------------------------------------------
+                }
+                
+                // Fourier derivative
+                fields[i]->PhysDeriv(2, m_fluxVecStore[i][2], tmp);
+                
+                if (num1 == 0)
+                {
+                // -------------------------------------------------------------
+                fields[i]->HomogeneousFwdTrans(tmp, tmp3);
+                for (int j = 0; j < m_numPoints; ++j)
+                {
+                    cout << "i = " << i <<",  j = "<< j << ",\t DFluxZ/DZ FWD = "
+                    << tmp3[j] << endl;
+                }
+                
+                fields[i]->HomogeneousBwdTrans(tmp3, tmp4);
+                for (int j = 0; j < m_numPoints; ++j)
+                {
+                    cout << "i = " << i <<",  j = "<< j << ",\t DFluxZ/DZ BWD = "
+                    << tmp4[j] << endl;
+                }
+                // -------------------------------------------------------------
+                }
+                
+                // Add Fourier derivative to outarray
                 Vmath::Vadd(m_numPoints, outarray[i], 1, tmp, 1,
                                          outarray[i], 1);
-                /*
+                
+                if (num1 == 0)
+                {
+                // -------------------------------------------------------------
+                fields[i]->HomogeneousFwdTrans(outarray[i], tmp3);
                 for (int j = 0; j < m_numPoints; ++j)
                 {
-                    cout <<"j = "<< j << ",\t outarray1 = "
-                    << outarray[i][j] << endl;
+                    cout << "i = " << i <<",  j = "<< j << ",\t outarray FWD = "
+                    << tmp3[j] << endl;
                 }
-                cin >> num;
-                 */
                 
-                //Vmath::Vsub(m_numPoints, outarray[i], 1, tmp, 1,
-                //                         outarray[i], 1);
+                fields[i]->HomogeneousBwdTrans(tmp3, tmp4);
+                for (int j = 0; j < m_numPoints; ++j)
+                {
+                    cout << "i = " << i <<",  j = "<< j << ",\t outarray BWD = "
+                    << tmp4[j] << endl;
+                }
+                int nui;
+                cin >> nui;
+                // -------------------------------------------------------------
+                }
             }
         }
 

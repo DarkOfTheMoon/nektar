@@ -61,7 +61,9 @@ namespace Nektar
             std::string                                        m_advType;
             SolverUtils::AdvectionSharedPtr                    m_planeAdv;
             int                                                m_numPoints;
+            int                                                m_numCoeffs;
             int                                                m_numPointsPlane;
+            int                                                m_numCoeffsPlane;
             int                                                m_numPlanes;
             int                                                m_planeCounter;
             Array<OneD, unsigned int>                          m_planes;

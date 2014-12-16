@@ -147,8 +147,8 @@ namespace Nektar
         // Differentiation Methods
         //-----------------------------
         /**
-	 * \brief Calculate the derivative of the physical points
-	 *
+         * \brief Calculate the derivative of the physical points
+         *
          * For Hexahedral region can use the Tensor_Deriv function defined
          * under StdExpansion.
          * @param   inarray     Input array
@@ -175,52 +175,52 @@ namespace Nektar
 
             StdHexExp::v_PhysDeriv(inarray, Diff0, Diff1, Diff2);
 
-            if(m_metricinfo->GetGtype() == SpatialDomains::eDeformed)
+            if (m_metricinfo->GetGtype() == SpatialDomains::eDeformed)
             {
-                if(out_d0.num_elements())
+                if (out_d0.num_elements())
                 {
                     Vmath::Vmul (ntot,&df[0][0],1,&Diff0[0],1, &out_d0[0], 1);
                     Vmath::Vvtvp(ntot,&df[1][0],1,&Diff1[0],1, &out_d0[0], 1,
-                                                                 &out_d0[0],1);
+                                                               &out_d0[0], 1);
                     Vmath::Vvtvp(ntot,&df[2][0],1,&Diff2[0],1, &out_d0[0], 1,
-                                                                 &out_d0[0],1);
+                                                               &out_d0[0], 1);
                 }
 
-                if(out_d1.num_elements())
+                if (out_d1.num_elements())
                 {
                     Vmath::Vmul (ntot,&df[3][0],1,&Diff0[0],1, &out_d1[0], 1);
                     Vmath::Vvtvp(ntot,&df[4][0],1,&Diff1[0],1, &out_d1[0], 1,
-                                                                 &out_d1[0],1);
+                                                               &out_d1[0], 1);
                     Vmath::Vvtvp(ntot,&df[5][0],1,&Diff2[0],1, &out_d1[0], 1,
-                                                                 &out_d1[0],1);
+                                                               &out_d1[0], 1);
                 }
 
-                if(out_d2.num_elements())
+                if (out_d2.num_elements())
                 {
                     Vmath::Vmul (ntot,&df[6][0],1,&Diff0[0],1, &out_d2[0], 1);
                     Vmath::Vvtvp(ntot,&df[7][0],1,&Diff1[0],1, &out_d2[0], 1,
-                                                                 &out_d2[0],1);
+                                                               &out_d2[0], 1);
                     Vmath::Vvtvp(ntot,&df[8][0],1,&Diff2[0],1, &out_d2[0], 1,
-                                                                 &out_d2[0],1);
+                                                               &out_d2[0], 1);
                 }
             }
             else // regular geometry
             {
-                if(out_d0.num_elements())
+                if (out_d0.num_elements())
                 {
                     Vmath::Smul (ntot,df[0][0],&Diff0[0],1, &out_d0[0], 1);
                     Blas::Daxpy (ntot,df[1][0],&Diff1[0],1, &out_d0[0], 1);
                     Blas::Daxpy (ntot,df[2][0],&Diff2[0],1, &out_d0[0], 1);
                 }
 
-                if(out_d1.num_elements())
+                if (out_d1.num_elements())
                 {
                     Vmath::Smul (ntot,df[3][0],&Diff0[0],1, &out_d1[0], 1);
                     Blas::Daxpy (ntot,df[4][0],&Diff1[0],1, &out_d1[0], 1);
                     Blas::Daxpy (ntot,df[5][0],&Diff2[0],1, &out_d1[0], 1);
                 }
 
-                if(out_d2.num_elements())
+                if (out_d2.num_elements())
                 {
                     Vmath::Smul (ntot,df[6][0],&Diff0[0],1, &out_d2[0], 1);
                     Blas::Daxpy (ntot,df[7][0],&Diff1[0],1, &out_d2[0], 1);
@@ -231,20 +231,20 @@ namespace Nektar
 
 
         /**
-	 * \brief Calculate the derivative of the physical points in a single
+         * \brief Calculate the derivative of the physical points in a single
          * direction.
-	 *
+         *
          * @param   dir         Direction in which to compute derivative.
          *                      Valid values are 0, 1, 2.
          * @param   inarray     Input array.
          * @param   outarray    Output array.
          */
         void HexExp::v_PhysDeriv(
-                const int dir,
-                const Array<OneD, const NekDouble>& inarray,
-                      Array<OneD, NekDouble>& outarray)
+            const int dir,
+            const Array<OneD, const NekDouble>& inarray,
+                  Array<OneD,       NekDouble>& outarray)
         {
-            switch(dir)
+            switch (dir)
             {
             case 0:
                 {
@@ -266,7 +266,7 @@ namespace Nektar
                 break;
             default:
                 {
-                    ASSERTL1(false,"input dir is out of range");
+                    ASSERTL1(false, "input dir is out of range");
                 }
                 break;
             }

@@ -166,21 +166,39 @@ namespace Nektar
      
         Array<OneD, Array<OneD, NekDouble> > advVel(m_spacedim);
 
+        int num1 = 1;
+        if (num1 == 0)
+        {
+        for (i = 0; i < nvariables; i++)
+        {
+            cout << "i = " << i << endl;
+            for (int j = 0; j < npoints; j++)
+            {
+                cout << "i = " << i << ",  j = " << j <<
+                ",\inarray EulerCFE = " << inarray[i][j] << endl;
+            }
+            int num;
+            cin >> num;
+        }
+        }
+        
         m_advection->Advect(nvariables, m_fields, advVel, inarray, outarray);
         
         for (i = 0; i < nvariables; ++i)
         {
             Vmath::Neg(npoints, outarray[i], 1);
             
-            /*
+            if (num1 == 0)
+            {
             cout << "i = " << i << endl;
             for (int j = 0; j < npoints; j++)
             {
-                cout << "j = " << j << ",\t outarray_1 = "<< outarray[i][j] << endl;
+                cout << "i = "<< i <<  ",  j = " << j <<
+                ",\t outarray_1 EulerCFE = " << outarray[i][j] << endl;
             }
             int num;
             cin >> num;
-             */
+            }
         }
                 
         // Add forcing terms
@@ -190,18 +208,20 @@ namespace Nektar
             (*x)->Apply(m_fields, inarray, outarray, time);
         }
         
-        /*
+        if (num1 == 0)
+        {
         for (i = 0; i < nvariables; i++)
         {
             cout << "i = " << i << endl;
             for (int j = 0; j < npoints; j++)
             {
-                cout << "j = " << j << ",\toutarray_2 = "<< outarray[i][j] << endl;
+                cout << "i = " << i << ",  j = " << j <<
+                ",\toutarray_2 EulerCFE = " << outarray[i][j] << endl;
             }
             int num;
             cin >> num;
         }
-         */
+        }
     }
     
     /**

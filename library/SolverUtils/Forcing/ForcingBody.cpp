@@ -113,34 +113,44 @@ namespace SolverUtils
             Array<OneD, Array<OneD, NekDouble> > &outarray,
             const NekDouble &time)
     {
+        int num1 = 1;
         for (int i = 0; i < m_NumVariable; i++)
         {
-            /*
+            if (num1 == 0)
+            {
+            // -----------------------------------------------------------------
             cout << "i = " << i << endl;
             for (int j = 0; j < m_Forcing[i].num_elements(); ++j)
             {
-                cout << "j = " << j << ",\t m_Forcing = " << m_Forcing[i][j] << endl;
+                cout << "j = " << j << ",\t m_Forcing = "
+                << m_Forcing[i][j] << endl;
             }
             int num;
             cin >> num;
-             */
 
-            /*
             for (int j = 0; j < outarray[i].num_elements(); ++j)
             {
                 cout << "outarray1 = " << outarray[i][j] << endl;
             }
-            cin >> num;*/
+            cin >> num;
+            // ---------------------------------------------------------------------
+            }
             
+            // Add forcing term
             Vmath::Vadd(outarray[i].num_elements(), outarray[i], 1,
                         m_Forcing[i], 1, outarray[i], 1);
             
-            /*
+            if (num1 == 0)
+            {
+            // ---------------------------------------------------------------------
             for (int j = 0; j < outarray[i].num_elements(); ++j)
             {
                 cout << "outarray2 = " << outarray[i][j] << endl;
             }
-            cin >> num;*/
+            int num;
+            cin >> num;
+            // ---------------------------------------------------------------------
+            }
         }
     }
 
