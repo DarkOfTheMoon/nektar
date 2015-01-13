@@ -98,7 +98,6 @@ namespace Nektar
         SolverUtils::RiemannSolverSharedPtr        m_riemannSolverLDG;
         SolverUtils::AdvectionSharedPtr            m_advection;
         SolverUtils::DiffusionSharedPtr            m_diffusion;
-        std::vector<SolverUtils::ForcingSharedPtr> m_forcing;
         
         Array<OneD, Array<OneD, NekDouble> >m_vecLocs;
         NekDouble                           m_gamma;
@@ -134,9 +133,6 @@ namespace Nektar
         
         // Forcing term
         std::vector<SolverUtils::ForcingSharedPtr> m_forcing;
-        StdRegions::StdQuadExpSharedPtr            m_OrthoQuadExp;
-        StdRegions::StdHexExpSharedPtr             m_OrthoHexExp;
-        bool                                       m_smoothDiffusion;
 
         // Pressure storage for PressureOutflowFileBC
         Array<OneD, NekDouble> m_pressureStorage;

@@ -226,13 +226,6 @@ namespace Nektar
             cin >> num;
         }
         }
-        
-        // Add sponge layer if defined in the session file
-        std::vector<SolverUtils::ForcingSharedPtr>::const_iterator x;
-        for (x = m_forcing.begin(); x != m_forcing.end(); ++x)
-        {
-            (*x)->Apply(m_fields, inarray, outarray, time);
-        }
     }
     
     /**
