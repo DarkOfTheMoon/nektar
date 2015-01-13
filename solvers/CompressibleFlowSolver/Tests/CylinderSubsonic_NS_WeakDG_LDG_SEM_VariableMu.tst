@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <test>
-    <description>NS, Subsonic Cylinder, mixed bcs, WeakDG advection and LDG diffusion, variable viscosity, parallel</description>
+    <description>NS, Subsonic Cylinder, mixed bcs, WeakDG advection and LDG diffusion, variable viscosity</description>
     <executable>CompressibleFlowSolver</executable>
-    <parameters>--use-metis CylinderSubsonic_NS_WeakDG_LDG_SEM_VariableMu_par.xml</parameters>
-    <processes>3</processes>
+    <parameters>CylinderSubsonic_NS_WeakDG_LDG_SEM_VariableMu.xml</parameters>
     <files>
-        <file description="Session File">CylinderSubsonic_NS_WeakDG_LDG_SEM_VariableMu_par.xml</file>
+        <file description="Session File">CylinderSubsonic_NS_WeakDG_LDG_SEM_VariableMu.xml</file>
     </files>
     <metrics>
         <metric type="L2" id="1">
@@ -17,11 +16,7 @@
         <metric type="Linf" id="2">
             <value variable="rho" tolerance="1e-6">0.530796</value>
             <value variable="rhou" tolerance="1e-6">92.5827</value>
-<<<<<<< HEAD
             <value variable="rhov" tolerance="1e-6">58.1854</value>
-=======
-            <value variable="rhov" tolerance="2e-4">58.1854</value>
->>>>>>> master
             <value variable="E" tolerance="1e-6">346912</value>
         </metric>
     </metrics>

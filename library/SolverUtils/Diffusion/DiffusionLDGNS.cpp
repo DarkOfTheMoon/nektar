@@ -108,6 +108,7 @@ namespace Nektar
             const Array<OneD, Array<OneD, NekDouble> >        &inarray,
                   Array<OneD, Array<OneD, NekDouble> >        &outarray)
         {
+            int z;
             int i, j;
             int nDim      = fields[0]->GetCoordim(0);
             int nScalars  = inarray.num_elements();

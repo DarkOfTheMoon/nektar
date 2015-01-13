@@ -56,8 +56,7 @@ namespace Nektar
         {
 
             std::string ProblemTypeStr = m_session->GetSolverInfo("PROBLEMTYPE");
-            int i;
-            for(i = 0; i < (int) SIZE_ProblemType; ++i)
+            for(int i = 0; i < (int) SIZE_ProblemType; ++i)
             {
                 if(NoCaseStringCompare(ProblemTypeMap[i],ProblemTypeStr) == 0)
                 {
@@ -90,7 +89,8 @@ namespace Nektar
     void NavierStokesCFE::v_GenerateSummary(SolverUtils::SummaryList& s)
     {
         CompressibleFlowSystem::v_GenerateSummary(s);
-        SolverUtils::AddSummaryItem(s, "Problem Type", ProblemTypeMap[m_problemType]);
+        SolverUtils::AddSummaryItem(s, "Problem Type", 
+                                    ProblemTypeMap[m_problemType]);
     }
 
     void NavierStokesCFE::v_SetInitialConditions(
@@ -108,13 +108,16 @@ namespace Nektar
         m_session->LoadParameter("Noise", Noise,0.0);
         int m_nConvectiveFields =  m_fields.num_elements(); 
         
-        if(Noise > 0.0)
+        if (Noise > 0.0)
         {
-            for(int i = 0; i < m_nConvectiveFields; i++)
+            for (int i = 0; i < m_nConvectiveFields; i++)
             {
-                Vmath::FillWhiteNoise(phystot,Noise,noise,1,m_comm->GetColumnComm()->GetRank()+1);
-                Vmath::Vadd(phystot,m_fields[i]->GetPhys(),1,noise,1,m_fields[i]->UpdatePhys(),1);
-                m_fields[i]->FwdTrans_IterPerExp(m_fields[i]->GetPhys(),m_fields[i]->UpdateCoeffs());
+                Vmath::FillWhiteNoise(phystot, Noise, noise, 1, 
+                                      m_comm->GetColumnComm()->GetRank()+1);
+                Vmath::Vadd(phystot, m_fields[i]->GetPhys(), 1, 
+                            noise, 1, m_fields[i]->UpdatePhys(), 1);
+                m_fields[i]->FwdTrans_IterPerExp(m_fields[i]->GetPhys(), 
+                                                 m_fields[i]->UpdateCoeffs());
             }
         }
 
@@ -159,11 +162,6 @@ namespace Nektar
         m_advection->Advect(nvariables, m_fields, advVel, inarray,
                             outarrayAdv, time);
         
-        for (i = 0; i < nvariables; ++i)
-        {
-            Vmath::Neg(npoints, outarrayAdv[i], 1);
-        }
-        
         // Extract pressure and temperature
         Array<OneD, NekDouble > pressure   (npoints, 0.0);
         Array<OneD, NekDouble > temperature(npoints, 0.0);
@@ -195,9 +193,9 @@ namespace Nektar
         
         for (i = 0; i < nvariables; ++i)
         {
-            Vmath::Vadd(npoints,
+            Vmath::Vsub(npoints, 
+                        outarrayDiff[i], 1, 
                         outarrayAdv[i], 1,
-                        outarrayDiff[i], 1,
                         outarray[i], 1);
         }
         
@@ -342,6 +340,34 @@ namespace Nektar
                 SpatialDomains::eRiemannInvariant)
             {
                 RiemannInvariantBC(n, cnt, inarray);
+            }
+            
+            // Pressure outflow non-reflective Boundary Condition
+            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() == 
+                SpatialDomains::ePressureOutflowNonReflective)
+            {
+                PressureOutflowNonReflectiveBC(n, cnt, inarray);
+            }
+            
+            // Pressure outflow Boundary Condition
+            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() == 
+                SpatialDomains::ePressureOutflow)
+            {
+                PressureOutflowBC(n, cnt, inarray);
+            }
+            
+            // Pressure outflow Boundary Condition from file
+            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() == 
+                SpatialDomains::ePressureOutflowFile)
+            {
+                PressureOutflowFileBC(n, cnt, inarray);
+            }
+            
+            // Pressure inflow Boundary Condition from file
+            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() == 
+                SpatialDomains::ePressureInflowFile)
+            {
+                PressureInflowFileBC(n, cnt, inarray);
             }
             
             // Extrapolation of the data at the boundaries

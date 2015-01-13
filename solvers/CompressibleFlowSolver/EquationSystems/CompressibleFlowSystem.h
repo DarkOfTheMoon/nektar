@@ -40,10 +40,10 @@
 #include <SolverUtils/RiemannSolvers/RiemannSolver.h>
 #include <SolverUtils/AdvectionSystem.h>
 #include <SolverUtils/Diffusion/Diffusion.h>
+#include <IncNavierStokesSolver/EquationSystems/Extrapolate.h>
 #include <SolverUtils/Forcing/Forcing.h>
 #include <StdRegions/StdQuadExp.h>
 #include <StdRegions/StdHexExp.h>
-
 
 #define EPSILON 0.000001
 
@@ -74,7 +74,8 @@ namespace Nektar
         static SolverUtils::EquationSystemSharedPtr create(
             const LibUtilities::SessionReaderSharedPtr& pSession)
         {
-            return MemoryManager<CompressibleFlowSystem>::AllocateSharedPtr(pSession);
+            return MemoryManager<CompressibleFlowSystem>::
+                AllocateSharedPtr(pSession);
         }
         /// Name of class
         static std::string className;
@@ -128,6 +129,23 @@ namespace Nektar
         StdRegions::StdHexExpSharedPtr      m_OrthoHexExp;
         bool                                m_smoothDiffusion;
         MultiRegions::CoeffState            m_CoeffState;
+        NekDouble                           m_amplitude;
+        NekDouble                           m_omega;
+        
+        // Forcing term
+        std::vector<SolverUtils::ForcingSharedPtr> m_forcing;
+        StdRegions::StdQuadExpSharedPtr            m_OrthoQuadExp;
+        StdRegions::StdHexExpSharedPtr             m_OrthoHexExp;
+        bool                                       m_smoothDiffusion;
+
+        // Pressure storage for PressureOutflowFileBC
+        Array<OneD, NekDouble> m_pressureStorage;
+        
+        // Field storage for PressureInflowFileBC
+        Array<OneD, Array<OneD, NekDouble> > m_fieldStorage;
+        
+        // Storage for L2 norm error
+        Array<OneD, Array<OneD, NekDouble> > m_un;
         
         CompressibleFlowSystem(
             const LibUtilities::SessionReaderSharedPtr& pSession);
@@ -170,6 +188,22 @@ namespace Nektar
             int                                                 cnt,
             Array<OneD, Array<OneD, NekDouble> >               &physarray);
         void RiemannInvariantBC(
+            int                                                 bcRegion, 
+            int                                                 cnt, 
+            Array<OneD, Array<OneD, NekDouble> >               &physarray);
+        void PressureOutflowNonReflectiveBC(
+            int                                                 bcRegion, 
+            int                                                 cnt, 
+            Array<OneD, Array<OneD, NekDouble> >               &physarray);
+        void PressureOutflowBC(
+            int                                                 bcRegion, 
+            int                                                 cnt, 
+            Array<OneD, Array<OneD, NekDouble> >               &physarray);
+        void PressureOutflowFileBC(
+            int                                                 bcRegion, 
+            int                                                 cnt, 
+            Array<OneD, Array<OneD, NekDouble> >               &physarray);
+        void PressureInflowFileBC(
             int                                                 bcRegion, 
             int                                                 cnt, 
             Array<OneD, Array<OneD, NekDouble> >               &physarray);
@@ -217,6 +251,10 @@ namespace Nektar
         void GetStdVelocity(
             const Array<OneD, const Array<OneD,       NekDouble> >&inarray,
                   Array<OneD,                         NekDouble>  &stdV);
+        
+        virtual bool v_PostIntegrate(int step);
+        NekDouble CalcSteadyState();
+
         void GetSensor(
             const Array<OneD, const Array<OneD,       NekDouble> >&physarray,
                   Array<OneD,                         NekDouble>  &Sensor,
@@ -244,7 +282,7 @@ namespace Nektar
             const int domain = 0)
         {
         }
-
+        
         NekDouble GetGasConstant()
         {
             return m_gasConstant;

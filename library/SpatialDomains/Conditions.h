@@ -83,6 +83,10 @@ namespace Nektar
             eInflowCFS,
             eOutflowCFS,
             eRiemannInvariant,
+            ePressureOutflowNonReflective,
+            ePressureOutflow,
+            ePressureOutflowFile,
+            ePressureInflowFile,
             eExtrapOrder0,
             eNoUserDefined
         };
@@ -142,6 +146,10 @@ namespace Nektar
                 known_type["Radiation"] = eRadiation;
                 known_type["IsentropicVortex"] = eIsentropicVortex;
                 known_type["RiemannInvariant"] = eRiemannInvariant;
+                known_type["PressureOutflowNonReflective"] = ePressureOutflowNonReflective;
+                known_type["PressureOutflow"]     = ePressureOutflow;
+                known_type["PressureOutflowFile"] = ePressureOutflowFile;
+                known_type["PressureInflowFile"]  = ePressureInflowFile;
                 known_type["ExtrapOrder0"]     = eExtrapOrder0;
                 known_type["NoUserDefined"]    = eNoUserDefined;
 

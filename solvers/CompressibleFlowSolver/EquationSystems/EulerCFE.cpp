@@ -226,6 +226,13 @@ namespace Nektar
             cin >> num;
         }
         }
+        
+        // Add sponge layer if defined in the session file
+        std::vector<SolverUtils::ForcingSharedPtr>::const_iterator x;
+        for (x = m_forcing.begin(); x != m_forcing.end(); ++x)
+        {
+            (*x)->Apply(m_fields, inarray, outarray, time);
+        }
     }
     
     /**
@@ -317,6 +324,34 @@ namespace Nektar
                 RiemannInvariantBC(n, cnt, inarray);
             }
             
+            // Pressure outflow non-reflective Boundary Condition
+            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() == 
+                SpatialDomains::ePressureOutflowNonReflective)
+            {
+                PressureOutflowNonReflectiveBC(n, cnt, inarray);
+            }
+            
+            // Pressure outflow Boundary Condition
+            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() == 
+                SpatialDomains::ePressureOutflow)
+            {
+                PressureOutflowBC(n, cnt, inarray);
+            }
+            
+            // Pressure outflow Boundary Condition from file
+            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() == 
+                SpatialDomains::ePressureOutflowFile)
+            {
+                PressureOutflowFileBC(n, cnt, inarray);
+            }
+            
+            // Pressure inflow Boundary Condition from file
+            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() == 
+                SpatialDomains::ePressureInflowFile)
+            {
+                PressureInflowFileBC(n, cnt, inarray);
+            }
+
             // Extrapolation of the data at the boundaries
             if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() == 
                 SpatialDomains::eExtrapOrder0)
