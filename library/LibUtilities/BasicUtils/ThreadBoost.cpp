@@ -3,7 +3,7 @@
  *
  */
 
-#include "ThreadBoost.h"
+#include "LibUtilities/BasicUtils/ThreadBoost.h"
 #include <iostream>
 
 namespace Nektar

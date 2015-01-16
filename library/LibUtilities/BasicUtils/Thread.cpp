@@ -4,7 +4,7 @@
  */
 #include <iostream>
 
-#include "Thread.h"
+#include "LibUtilities/BasicUtils/Thread.h"
 #include <loki/Singleton.h>
 
 namespace Nektar
