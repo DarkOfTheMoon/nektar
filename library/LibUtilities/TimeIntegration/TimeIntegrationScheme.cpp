@@ -44,20 +44,21 @@ namespace Nektar
     {  
         TimeIntegrationSchemeManagerT &TimeIntegrationSchemeManager(void)
         {
-        	static std::map<unsigned int,  TimeIntegrationSchemeManagerT *> s_threadTSScheme;
-        	static boost::shared_mutex s_TSSmutex;
-        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
-        	boost::shared_lock<boost::shared_mutex> ReadLock(s_TSSmutex);
-        	if (s_threadTSScheme.count(vThr) == 0)
-        	{
-    			ReadLock.unlock();
-    			boost::unique_lock<boost::shared_mutex> WriteLock(s_TSSmutex);
-        		s_threadTSScheme[vThr] = new (TimeIntegrationSchemeManagerT);
-        		s_threadTSScheme[vThr]->RegisterGlobalCreator(TimeIntegrationScheme::Create);
-            	return *(s_threadTSScheme[vThr]);
-        	}
-        	return *(s_threadTSScheme[vThr]);
+            static std::map<unsigned int,  TimeIntegrationSchemeManagerT *> s_threadTSScheme;
+            static boost::shared_mutex s_TSSmutex;
+//            Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+            Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm");
+            unsigned int vThr = vThrMan->GetWorkerNum();
+            boost::shared_lock<boost::shared_mutex> ReadLock(s_TSSmutex);
+            if (s_threadTSScheme.count(vThr) == 0)
+            {
+                ReadLock.unlock();
+                boost::unique_lock<boost::shared_mutex> WriteLock(s_TSSmutex);
+                s_threadTSScheme[vThr] = new (TimeIntegrationSchemeManagerT);
+                s_threadTSScheme[vThr]->RegisterGlobalCreator(TimeIntegrationScheme::Create);
+                return *(s_threadTSScheme[vThr]);
+            }
+            return *(s_threadTSScheme[vThr]);
         }
         
 
@@ -247,7 +248,7 @@ namespace Nektar
                     m_timeLevelOffset = Array<OneD,unsigned int>(m_numsteps);
                     m_timeLevelOffset[0] = 0;
                     m_timeLevelOffset[1] = 1;
-		    		m_timeLevelOffset[2] = 2;
+                    m_timeLevelOffset[2] = 2;
                     m_timeLevelOffset[3] = 3;
                 }
                 break;
@@ -424,22 +425,22 @@ namespace Nektar
                     
                     m_A = Array<OneD, Array<TwoD,NekDouble> >(1);
                     m_B = Array<OneD, Array<TwoD,NekDouble> >(1);
-					
+                    
                     m_A[0] = Array<TwoD,NekDouble>(m_numstages,m_numstages,2*third);
                     m_B[0] = Array<TwoD,NekDouble>(m_numsteps, m_numstages,0.0);
                     m_U    = Array<TwoD,NekDouble>(m_numstages,m_numsteps, 0.0);
                     m_V    = Array<TwoD,NekDouble>(m_numsteps, m_numsteps, 0.0);
-					
+                    
                     m_B[0][0][0] = 2*third;
                     m_B[0][1][0] = 0.0;
-					
+                    
                     m_U[0][0] = 4*third;
                     m_U[0][1] = -third;
-					
+                    
                     m_V[0][0] = 4*third;
                     m_V[0][1] = -third;
                     m_V[1][0] = 1.0;
-					
+                    
                     m_schemeType = eDiagonallyImplicit;
                     m_numMultiStepValues = 2;
                     m_numMultiStepDerivs = 0;
@@ -500,53 +501,53 @@ namespace Nektar
                     m_timeLevelOffset[0] = 0;
                 }
                 break;
-			case eRungeKutta2_ModifiedEuler:
+            case eRungeKutta2_ModifiedEuler:
                 {
                     m_numsteps = 1;
                     m_numstages = 2;
-					
+                    
                     m_A = Array<OneD, Array<TwoD,NekDouble> >(1);
                     m_B = Array<OneD, Array<TwoD,NekDouble> >(1);
-					
+                    
                     m_A[0] = Array<TwoD,NekDouble>(m_numstages,m_numstages,0.0);
                     m_B[0] = Array<TwoD,NekDouble>(m_numsteps, m_numstages,0.0);
                     m_U    = Array<TwoD,NekDouble>(m_numstages,m_numsteps, 0.5);
                     m_V    = Array<TwoD,NekDouble>(m_numsteps, m_numsteps, 0.5);
-					
+                    
                     m_A[0][1][0] = 0.5;
                     
                     m_B[0][0][1] = 1.0;
                     
-					
+                    
                     m_schemeType = eExplicit;
                     m_numMultiStepValues = 1;
                     m_numMultiStepDerivs = 0;
                     m_timeLevelOffset = Array<OneD,unsigned int>(m_numsteps);
                     m_timeLevelOffset[0] = 0;
                 }
-				break;
-			case eRungeKutta2_ImprovedEuler:
+                break;
+            case eRungeKutta2_ImprovedEuler:
                 {
                     m_numsteps = 1;
                     m_numstages = 2;
-					
+                    
                     m_A = Array<OneD, Array<TwoD,NekDouble> >(1);
                     m_B = Array<OneD, Array<TwoD,NekDouble> >(1);
-					
+                    
                     m_A[0] = Array<TwoD,NekDouble>(m_numstages,m_numstages,0.0);
                     m_B[0] = Array<TwoD,NekDouble>(m_numsteps, m_numstages,0.5);
                     m_U    = Array<TwoD,NekDouble>(m_numstages,m_numsteps, 1.0);
                     m_V    = Array<TwoD,NekDouble>(m_numsteps, m_numsteps, 1.0);
-					
+                    
                     m_A[0][1][0] = 1.0;
-			
+            
                     m_schemeType = eExplicit;
                     m_numMultiStepValues = 1;
                     m_numMultiStepDerivs = 0;
                     m_timeLevelOffset = Array<OneD,unsigned int>(m_numsteps);
                     m_timeLevelOffset[0] = 0;
                 }
-				break;
+                break;
             case eDIRKOrder2:
                 {
                     m_numsteps = 1;
@@ -711,7 +712,7 @@ namespace Nektar
                     m_V    = Array<TwoD,NekDouble>(m_numsteps ,m_numsteps, 0.0);
                     
                     m_B[0][0][0] = secondth;
-                    m_B[0][1][0] = 1.0;		
+                    m_B[0][1][0] = 1.0;        
                     m_B[1][2][0] = 1.0;
                     m_U[0][0] = 2*secondth;
                     m_U[0][2] = 3*secondth;
@@ -736,7 +737,7 @@ namespace Nektar
             case eIMEXGear:
                 {
                     NekDouble twothirdth = 2.0/3.0;
-		    		m_numsteps  = 2;
+                    m_numsteps  = 2;
                     m_numstages = 1;
 
                     m_A = Array<OneD, Array<TwoD,NekDouble> >(2);
@@ -749,7 +750,7 @@ namespace Nektar
                     m_U    = Array<TwoD,NekDouble>(m_numstages,m_numsteps,twothirdth);
                     m_V    = Array<TwoD,NekDouble>(m_numsteps ,m_numsteps, 0.0);
                     
-                    m_B[0][0][0] = twothirdth;	
+                    m_B[0][0][0] = twothirdth;    
                     m_B[1][0][0] = twothirdth;
                     m_U[0][0] = 2*twothirdth;
                     m_U[0][1] = -0.5*twothirdth;
@@ -769,7 +770,7 @@ namespace Nektar
             case eMCNAB:
                 {
                     NekDouble sixthx = 9.0/16.0;
-		    		m_numsteps  = 5;
+                    m_numsteps  = 5;
                     m_numstages = 1;
 
                     m_A = Array<OneD, Array<TwoD,NekDouble> >(2);
@@ -783,7 +784,7 @@ namespace Nektar
                     m_V    = Array<TwoD,NekDouble>(m_numsteps ,m_numsteps, 0.0);
                     
                     m_B[0][0][0] = sixthx;
-                    m_B[0][1][0] = 1.0;		
+                    m_B[0][1][0] = 1.0;        
                     m_B[1][3][0] = 1.0;
                     m_U[0][0] = 1.0;
                     m_U[0][1] = 6.0/16.0;
@@ -810,7 +811,7 @@ namespace Nektar
                     m_timeLevelOffset[4] = 1;
                 }
                 break;
-            case eIMEXdirk_2_2_2:		
+            case eIMEXdirk_2_2_2:        
                 {
                     m_numsteps  = 1;
                     m_numstages = 3;
@@ -826,7 +827,7 @@ namespace Nektar
                     m_V    = Array<TwoD,NekDouble>(m_numsteps, m_numsteps, 1.0);
 
                     NekDouble glambda =  0.788675134594813;
-		    		NekDouble gdelta =  0.366025403784439;
+                    NekDouble gdelta =  0.366025403784439;
 
                     m_A[0][1][1] = glambda;
                     m_A[0][2][1] = 1.0 - glambda;
@@ -849,7 +850,7 @@ namespace Nektar
                     m_timeLevelOffset[0] = 0;
                 }
                 break;
-            case eIMEXdirk_2_3_3:		
+            case eIMEXdirk_2_3_3:        
                 {
                     m_numsteps  = 1;
                     m_numstages = 3;
@@ -887,7 +888,7 @@ namespace Nektar
                     m_timeLevelOffset[0] = 0;
                 }
                 break;
-            case eIMEXdirk_1_1_1:		
+            case eIMEXdirk_1_1_1:        
                 {
                     m_numsteps  = 1;
                     m_numstages = 2;
@@ -917,7 +918,7 @@ namespace Nektar
                     m_timeLevelOffset[0] = 0;
                 }
                 break;
-            case eIMEXdirk_1_2_1:		
+            case eIMEXdirk_1_2_1:        
                 {
                     m_numsteps  = 1;
                     m_numstages = 2;
@@ -948,7 +949,7 @@ namespace Nektar
                     m_timeLevelOffset[0] = 0;
                 }
                 break;
-            case eIMEXdirk_1_2_2:		
+            case eIMEXdirk_1_2_2:        
                 {
                     m_numsteps  = 1;
                     m_numstages = 2;
@@ -977,8 +978,8 @@ namespace Nektar
                     m_timeLevelOffset = Array<OneD,unsigned int>(m_numsteps);
                     m_timeLevelOffset[0] = 0;
                 }
-                break;	
-            case eIMEXdirk_4_4_3:		
+                break;    
+            case eIMEXdirk_4_4_3:        
                 {
                     m_numsteps  = 1;
                     m_numstages = 5;
@@ -1002,13 +1003,13 @@ namespace Nektar
                     m_A[0][4][1] = 3.0/2.0;
                     m_A[0][4][2] = -3.0/2.0;
                     m_A[0][4][3] = 1.0/2.0;
-                    m_A[0][4][4] = 1.0/2.0;		    
-		    
-		    
+                    m_A[0][4][4] = 1.0/2.0;            
+            
+            
                     m_B[0][0][1] = 3.0/2.0;
                     m_B[0][0][2] = -3.0/2.0;
                     m_B[0][0][3] = 1.0/2.0;
-                    m_B[0][0][4] = 1.0/2.0;		    
+                    m_B[0][0][4] = 1.0/2.0;            
 
                     m_A[1][1][0] = 1.0/2.0;
                     m_A[1][2][0] = 11.0/18.0;
@@ -1209,8 +1210,8 @@ namespace Nektar
                     // Get the required value out of the master solution vector
                     //DoubleArray& y_n = solvector->GetValue    ( curTimeLevels[n] );
                     //NekDouble    t_n = solvector->GetValueTime( curTimeLevels[n] );
-					
-					y_n = solvector->GetValue    ( curTimeLevels[n] );
+                    
+                    y_n = solvector->GetValue    ( curTimeLevels[n] );
                     t_n = solvector->GetValueTime( curTimeLevels[n] );
 
                     // Set the required value in the input solution
@@ -1222,7 +1223,7 @@ namespace Nektar
                     // Get the required derivative out of the master
                     // solution vector
                     //DoubleArray& dtFy_n = solvector->GetDerivative    ( curTimeLevels[n] );
-					dtFy_n = solvector->GetDerivative    ( curTimeLevels[n] );
+                    dtFy_n = solvector->GetDerivative    ( curTimeLevels[n] );
 
                     // Set the required derivative in the input
                     // solution vector of the current scheme
@@ -1458,7 +1459,7 @@ namespace Nektar
                 // Finally, flag that we have initialised the memory.
                 m_initialised = true;
             }
-			
+            
             // The loop below calculates the stage values and derivatives
             for(i = 0; i < m_numstages; i++)
             {
@@ -1474,7 +1475,7 @@ namespace Nektar
                 {
                     // The stage values m_Y are a linear combination of:
                     // 1: the stage derivatives
-					
+                    
                     if( i != 0 )
                     {
                         for(k = 0; k < m_nvar; k++)
@@ -1559,7 +1560,7 @@ namespace Nektar
                         {
                             m_T += A(i,j)*timestep;
                         }
-                    }	
+                    }    
                     
                     if(fabs(A(i,i)) > NekConstants::kNekZeroTol)
                     {
@@ -1593,7 +1594,7 @@ namespace Nektar
             //
             // If last stage equals the new solution, the new solution
             // needs not be calculated explicitly but can simply be
-            // copied. This saves a solve. 	   	
+            // copied. This saves a solve.            
             int i_start = 0;
             if( (m_lastStageEqualsNewSolution) ) 
             {
@@ -1601,7 +1602,7 @@ namespace Nektar
                 {
                     Vmath::Vcopy(m_npoints,m_Y[k],1,y_new[0][k],1);
                 }
-		
+        
                 if (m_numstages==1 && type == eIMEX)
                 {
                     t_new[0] = t_old[0]+timestep;
@@ -1622,7 +1623,7 @@ namespace Nektar
             }
             
             for(i = i_start; i < m_numsteps; i++)
-            {			
+            {            
                 // The solution at the new time level is a linear
                 // combination of: 
                 // 1: the stage derivatives
@@ -1643,11 +1644,11 @@ namespace Nektar
                     t_new[i] = B(i,0)*timestep;
                 }
                 
-		
+        
                 for(j = 1; j < m_numstages; j++)
                 {
                     for(k = 0; k < m_nvar; k++)
-                    {					
+                    {                    
                         Vmath::Svtvp(m_npoints,timestep*B(i,j),m_F[j][k],1,
                                      y_new[i][k],1,y_new[i][k],1);
                         
@@ -1662,7 +1663,7 @@ namespace Nektar
                     {
                         t_new[i] += B(i,j)*timestep; 
                     }
-                }			
+                }            
                 
                 // 2: the imported multi-step solution of the previous
                 // time level
@@ -1864,6 +1865,6 @@ namespace Nektar
             }
             return os;
         }
-	}
+    }
 }
 

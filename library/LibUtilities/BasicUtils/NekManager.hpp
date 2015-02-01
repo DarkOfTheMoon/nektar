@@ -63,9 +63,6 @@ namespace Nektar
             }
         };
 
-    	typedef boost::unique_lock<boost::shared_mutex> WriteLock;
-    	typedef boost::shared_lock<boost::shared_mutex> ReadLock;
-
         template <typename KeyType, typename ValueT, typename opLessCreator = defOpLessCreator<KeyType> >
         class NekManager
         {
@@ -87,8 +84,8 @@ namespace Nektar
                     m_keySpecificCreateFuncs()
 
                 {
-//                	std::cerr << "Called regular constructor" << std::endl;
-                	Init(whichPool);
+//                    std::cerr << "Called regular constructor" << std::endl;
+                    Init(whichPool);
                 }
 
 
@@ -97,49 +94,48 @@ namespace Nektar
                     m_globalCreateFunc(f),
                     m_keySpecificCreateFuncs()
                 {
-//                	std::cerr << "Called regular createfunctype constructor" << std::endl;
-                	Init(whichPool);
+//                    std::cerr << "Called regular createfunctype constructor" << std::endl;
+                    Init(whichPool);
                 }
 
                 void Init(std::string whichPool = "")
                 {
-                	if (!whichPool.empty())
-                	{
-                		Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-                		ASSERTL1(vThrMan, "Cannot construct a NekManager with a pool before threading is inititialised");
-                		unsigned int vThr = vThrMan->GetWorkerNum();
-                		whichPool.append(boost::lexical_cast<std::string>(vThr));
+                    if (!whichPool.empty())
+                    {
+                        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm");
+                        unsigned int vThr = vThrMan->GetWorkerNum();
+                        whichPool.append(boost::lexical_cast<std::string>(vThr));
 
-            			ReadLock v_rlock(m_mutex); // reading static members
-                		typename ValueContainerPool::iterator iter = m_ValueContainerPool.find(whichPool);
-                		if (iter != m_ValueContainerPool.end())
-                		{
-                			m_values = iter->second;
-                			m_managementEnabled = m_managementEnabledContainerPool[whichPool];
-                		}
-                		else
-                		{
-                			v_rlock.unlock();
-                			// now writing static members.  Apparently upgrade_lock has less desirable properties
-                			// than just dropping read lock, grabbing write lock.
-                			// write will block until all reads are done, but reads cannot be acquired if write
-                			// lock is blocking.  In this context writes are supposed to be rare.
-                			WriteLock v_wlock(m_mutex);
-                			m_values = ValueContainerShPtr(new ValueContainer);
-                			m_ValueContainerPool[whichPool] = m_values;
-                			if (m_managementEnabledContainerPool.find(whichPool) == m_managementEnabledContainerPool.end())
-                			{
-                				m_managementEnabledContainerPool[whichPool] = BoolSharedPtr(new bool(true));
-                			}
-                			m_managementEnabled = m_managementEnabledContainerPool[whichPool];
-                		}
+                        ReadLock v_rlock(m_mutex); // reading static members
+                        typename ValueContainerPool::iterator iter = m_ValueContainerPool.find(whichPool);
+                        if (iter != m_ValueContainerPool.end())
+                        {
+                            m_values = iter->second;
+                            m_managementEnabled = m_managementEnabledContainerPool[whichPool];
+                        }
+                        else
+                        {
+                            v_rlock.unlock();
+                            // now writing static members.  Apparently upgrade_lock has less desirable properties
+                            // than just dropping read lock, grabbing write lock.
+                            // write will block until all reads are done, but reads cannot be acquired if write
+                            // lock is blocking.  In this context writes are supposed to be rare.
+                            WriteLock v_wlock(m_mutex);
+                            m_values = ValueContainerShPtr(new ValueContainer);
+                            m_ValueContainerPool[whichPool] = m_values;
+                            if (m_managementEnabledContainerPool.find(whichPool) == m_managementEnabledContainerPool.end())
+                            {
+                                m_managementEnabledContainerPool[whichPool] = BoolSharedPtr(new bool(true));
+                            }
+                            m_managementEnabled = m_managementEnabledContainerPool[whichPool];
+                        }
 
-                	}
-                	else
-                	{
-                		m_values = ValueContainerShPtr(new ValueContainer);
-                		m_managementEnabled = BoolSharedPtr(new bool(true));
-                	}
+                    }
+                    else
+                    {
+                        m_values = ValueContainerShPtr(new ValueContainer);
+                        m_managementEnabled = BoolSharedPtr(new bool(true));
+                    }
                 }
 
                 ~NekManager()
@@ -179,15 +175,15 @@ namespace Nektar
 
                 ValueType operator[](typename boost::call_traits<KeyType>::const_reference key)
                 {
-//            		Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-//            		ASSERTL1(vThrMan, "Cannot construct a NekManager with a pool before threading is inititialised");
-//            		unsigned int vThr = vThrMan->GetWorkerNum();
+//                    Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+//                    ASSERTL1(vThrMan, "Cannot construct a NekManager with a pool before threading is inititialised");
+//                    unsigned int vThr = vThrMan->GetWorkerNum();
 
                     typename ValueContainer::iterator found = m_values->find(key);
 
                     if( found != m_values->end() )
                     {
-//                    	std::cerr << "Thr: " << vThr << " found: " << ((*found).second).get() << std::endl;
+//                        std::cerr << "Thr: " << vThr << " found: " << ((*found).second).get() << std::endl;
                         return (*found).second;
                     }
                     else
@@ -207,7 +203,7 @@ namespace Nektar
                             {
                                 (*m_values)[key] = v;
                             }
-//                        	std::cerr << "Thr: " << vThr << " made: " << v.get() << std::endl;
+//                            std::cerr << "Thr: " << vThr << " made: " << v.get() << std::endl;
                             return v;
                         }
                         else
@@ -223,10 +219,10 @@ namespace Nektar
 
                 void Clone(const NekManager<KeyType, ValueT, opLessCreator> &c)
                 {
-                	m_globalCreateFunc = c.m_globalCreateFunc;
+                    m_globalCreateFunc = c.m_globalCreateFunc;
 
-                	m_keySpecificCreateFuncs.insert(c.m_keySpecificCreateFuncs.begin(),
-                			c.m_keySpecificCreateFuncs.end());
+                    m_keySpecificCreateFuncs.insert(c.m_keySpecificCreateFuncs.begin(),
+                            c.m_keySpecificCreateFuncs.end());
                 }
 
                 void DeleteObject(typename boost::call_traits<KeyType>::const_reference key)
@@ -241,15 +237,14 @@ namespace Nektar
 
                 static void ClearManager(std::string whichPool = "")
                 {
-                	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+                    Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm");
+                    unsigned int vThr = vThrMan->GetWorkerNum();
                     typename ValueContainerPool::iterator x;
                     if (!whichPool.empty())
                     {
-                    	WriteLock v_wlock(m_mutex);
+                        WriteLock v_wlock(m_mutex);
 
-                    	ASSERTL1(vThrMan, "Cannot clear a NekManager with a pool before threading is inititialised");
-                    	unsigned int vThr = vThrMan->GetWorkerNum();
-                    	whichPool.append(boost::lexical_cast<std::string>(vThr));
+                        whichPool.append(boost::lexical_cast<std::string>(vThr));
 
                         x = m_ValueContainerPool.find(whichPool);
                         ASSERTL1(x != m_ValueContainerPool.end(),
@@ -258,19 +253,15 @@ namespace Nektar
                     }
                     else
                     {
-                    	WriteLock v_wlock(m_mutex);
+                        WriteLock v_wlock(m_mutex);
 
-                    	std::string vAppend;
-                    	if (vThrMan)
-                    	{
-                        	unsigned int vThr = vThrMan->GetWorkerNum();
-                        	vAppend.append(boost::lexical_cast<std::string>(vThr));
-                    	}
+                        std::string vAppend;
+                        vAppend.append(boost::lexical_cast<std::string>(vThr));
                         for (x = m_ValueContainerPool.begin(); x != m_ValueContainerPool.end(); ++x)
                         {
                             if (x->first.rfind(vAppend) == x->first.length() - vAppend.length())
                             {
-                            	x->second->clear();
+                                x->second->clear();
                             }
                         }
                     }
@@ -281,12 +272,11 @@ namespace Nektar
                     typename FlagContainerPool::iterator x;
                     if (!whichPool.empty())
                     {
-                    	WriteLock v_wlock(m_mutex);
+                        WriteLock v_wlock(m_mutex);
 
-                    	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-                    	ASSERTL1(vThrMan, "Cannot enable a NekManager with a pool before threading is inititialised");
-                    	unsigned int vThr = vThrMan->GetWorkerNum();
-                    	whichPool.append(boost::lexical_cast<std::string>(vThr));
+                        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm");
+                        unsigned int vThr = vThrMan->GetWorkerNum();
+                        whichPool.append(boost::lexical_cast<std::string>(vThr));
 
                         x = m_managementEnabledContainerPool.find(whichPool);
                         if (x != m_managementEnabledContainerPool.end())
@@ -305,12 +295,11 @@ namespace Nektar
                     typename FlagContainerPool::iterator x;
                     if (!whichPool.empty())
                     {
-                    	WriteLock v_wlock(m_mutex);
+                        WriteLock v_wlock(m_mutex);
 
-                    	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-                    	ASSERTL1(vThrMan, "Cannot disable a NekManager with a pool before threading is inititialised");
-                    	unsigned int vThr = vThrMan->GetWorkerNum();
-                    	whichPool.append(boost::lexical_cast<std::string>(vThr));
+                        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm");
+                        unsigned int vThr = vThrMan->GetWorkerNum();
+                        whichPool.append(boost::lexical_cast<std::string>(vThr));
 
                         x = m_managementEnabledContainerPool.find(whichPool);
                         if (x != m_managementEnabledContainerPool.end())

@@ -37,23 +37,23 @@
 
 namespace Nektar
 {
-	// sThrMan attempts to keep the ThreadManager from destructing before the ThreadPools do
-	static Nektar::Thread::ThreadManagerSharedPtr sThrMan;
-	typedef boost::shared_ptr<std::vector<MemPool *> > MemoryPoolPool;
-	static bool s_threadPoolsEnabled = false;
+    // sThrMan attempts to keep the ThreadManager from destructing before the ThreadPools do
+    static Nektar::Thread::ThreadManagerSharedPtr sThrMan;
+    typedef boost::shared_ptr<std::vector<MemPool *> > MemoryPoolPool;
+    static bool s_threadPoolsEnabled = false;
 
-	boost::shared_ptr<std::vector<MemPool *> >& GetMemoryPoolPool()
-	{
-		typedef Loki::SingletonHolder<MemoryPoolPool ,
-				Loki::CreateUsingNew,
-				Loki::NoDestroy > Type;
-		MemoryPoolPool &p = Type::Instance();
-		if (!p)
-		{
-			p = boost::shared_ptr<std::vector<MemPool *> >(new std::vector<MemPool *>(1,static_cast<MemPool*>(0)));
-		}
-		return p;
-	}
+    boost::shared_ptr<std::vector<MemPool *> >& GetMemoryPoolPool()
+    {
+        typedef Loki::SingletonHolder<MemoryPoolPool ,
+                Loki::CreateUsingNew,
+                Loki::NoDestroy > Type;
+        MemoryPoolPool &p = Type::Instance();
+        if (!p)
+        {
+            p = boost::shared_ptr<std::vector<MemPool *> >(new std::vector<MemPool *>(1,static_cast<MemPool*>(0)));
+        }
+        return p;
+    }
     MemPool& GetMemoryPool()
     {
 //        typedef Loki::SingletonHolder<MemPool ,
@@ -61,28 +61,30 @@ namespace Nektar
 //                Loki::NoDestroy > Type;
 //        return Type::Instance();
 
-    	/*
-    	 * Now have a single MemPool per thread (because MemPool is *not* thread safe).
-    	 * We want to avoid locking in here because this function is used heavily.
-    	 * Even shared locking causes a large slowdown.
-    	 */
-    	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-    	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
-		if (!sThrMan && vThrMan)
-		{
-			sThrMan = vThrMan;
-		}
-    	static MemoryPoolPool &p = GetMemoryPoolPool();
-    	if (!s_threadPoolsEnabled)
-    	{
-    		ASSERTL1(vThr == 0, "Using threaded memory pool before it's inited");
-        	ASSERTL1(p, "Done goofed");
-    		if ((*p)[0] == 0)
-    		{
-    			(*p)[0] = new MemPool();
-    		}
-    	}
-    	return *((*p)[vThr]);
+        /*
+         * Now have a single MemPool per thread (because MemPool is *not* thread safe).
+         * We want to avoid locking in here because this function is used heavily.
+         * Even shared locking causes a large slowdown.
+         */
+//        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm");
+
+        unsigned int vThr = vThrMan->GetWorkerNum();
+        if (!sThrMan)
+        {
+            sThrMan = vThrMan;
+        }
+        static MemoryPoolPool &p = GetMemoryPoolPool();
+        if (!s_threadPoolsEnabled)
+        {
+            ASSERTL1(vThr == 0, "Using threaded memory pool before it's inited");
+            ASSERTL1(p, "Done goofed");
+            if ((*p)[0] == 0)
+            {
+                (*p)[0] = new MemPool();
+            }
+        }
+        return *((*p)[vThr]);
     }
 
     /**
@@ -92,17 +94,18 @@ namespace Nektar
      */
     void InitMemoryPools(unsigned int pNumThr, bool pEnabled)
     {
-    	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-    	MemoryPoolPool &p = GetMemoryPoolPool();
+//        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm");
+        MemoryPoolPool &p = GetMemoryPoolPool();
 
-    	p->resize(pNumThr);
-    	for (unsigned int i=0; i < pNumThr; ++i)
-    	{
-    		if ((*p)[i] == 0) // for thread 0
-    		{
-    			(*p)[i] = new MemPool();
-    		}
-    	}
-    	s_threadPoolsEnabled = pEnabled;
+        p->resize(pNumThr);
+        for (unsigned int i=0; i < pNumThr; ++i)
+        {
+            if ((*p)[i] == 0) // for thread 0
+            {
+                (*p)[i] = new MemPool();
+            }
+        }
+        s_threadPoolsEnabled = pEnabled;
     }
 }

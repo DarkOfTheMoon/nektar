@@ -623,8 +623,9 @@ namespace Nektar
         bool SessionReader::DefinesParameter(const std::string& pName) const
         {
             std::string vName = boost::to_upper_copy(pName);
-        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+//        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+//        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm")->GetWorkerNum();
             ParameterMap::const_iterator paramIter = m_parameters[vThr].find(vName);
             return (paramIter != m_parameters[vThr].end());
         }
@@ -642,8 +643,9 @@ namespace Nektar
             const std::string& pName) const
         {
             std::string vName = boost::to_upper_copy(pName);
-        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+//        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+//        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm")->GetWorkerNum();
         	ParameterMap::const_iterator paramIter = m_parameters[vThr].find(vName);
 
             ASSERTL0(paramIter != m_parameters[vThr].end(),
@@ -660,8 +662,9 @@ namespace Nektar
             const std::string &pName, int &pVar) const
         {
             std::string vName = boost::to_upper_copy(pName);
-        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+//        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+//        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm")->GetWorkerNum();
             ParameterMap::const_iterator paramIter = m_parameters[vThr].find(vName);
             ASSERTL0(paramIter != m_parameters[vThr].end(), "Required parameter '" +
                      pName + "' not specified in session.");
@@ -676,8 +679,9 @@ namespace Nektar
             const std::string &pName, int &pVar, const int &pDefault) const
         {
             std::string vName = boost::to_upper_copy(pName);
-        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+//        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+//        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm")->GetWorkerNum();
             ParameterMap::const_iterator paramIter = m_parameters[vThr].find(vName);
             if(paramIter != m_parameters[vThr].end())
             {
@@ -697,8 +701,9 @@ namespace Nektar
             const std::string &pName, NekDouble& pVar) const
         {
             std::string vName = boost::to_upper_copy(pName);
-        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+//        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+//        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm")->GetWorkerNum();
             ParameterMap::const_iterator paramIter = m_parameters[vThr].find(vName);
             ASSERTL0(paramIter != m_parameters[vThr].end(), "Required parameter '" +
                      pName + "' not specified in session.");
@@ -715,8 +720,9 @@ namespace Nektar
             const NekDouble   &pDefault) const
         {
             std::string vName = boost::to_upper_copy(pName);
-        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+//        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+//        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm")->GetWorkerNum();
             ParameterMap::const_iterator paramIter = m_parameters[vThr].find(vName);
             if(paramIter != m_parameters[vThr].end())
             {
@@ -736,8 +742,9 @@ namespace Nektar
         void SessionReader::SetParameter(const std::string &pName, int &pVar) 
         {
             std::string vName = boost::to_upper_copy(pName);
-        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+//        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+//        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm")->GetWorkerNum();
             m_parameters[vThr][vName] = pVar;
         }
 
@@ -749,8 +756,9 @@ namespace Nektar
             const std::string &pName, NekDouble& pVar) 
         {
             std::string vName = boost::to_upper_copy(pName);
-        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+//        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+//        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm")->GetWorkerNum();
             m_parameters[vThr][vName] = pVar;
         }
 
@@ -762,8 +770,9 @@ namespace Nektar
         bool SessionReader::DefinesSolverInfo(const std::string &pName) const
         {
             std::string vName = boost::to_upper_copy(pName);
-        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+//        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+//        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm")->GetWorkerNum();
             SolverInfoMap::const_iterator infoIter = m_solverInfo[vThr].find(vName);
             return (infoIter != m_solverInfo[vThr].end());
         }
@@ -776,8 +785,9 @@ namespace Nektar
             const std::string &pProperty) const
         {
             std::string vProperty = boost::to_upper_copy(pProperty);
-        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+//        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+//        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm")->GetWorkerNum();
             SolverInfoMap::const_iterator iter = m_solverInfo[vThr].find(vProperty);
 
             ASSERTL1(iter != m_solverInfo[vThr].end(),
@@ -796,8 +806,9 @@ namespace Nektar
             const std::string &pDefault) const
         {
             std::string vName = boost::to_upper_copy(pName);
-        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+//        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+//        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm")->GetWorkerNum();
             SolverInfoMap::const_iterator infoIter = m_solverInfo[vThr].find(vName);
             if(infoIter != m_solverInfo[vThr].end())
             {
@@ -820,8 +831,9 @@ namespace Nektar
             const bool        &pDefault) const
         {
             std::string vName = boost::to_upper_copy(pName);
-        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+//        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+//        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm")->GetWorkerNum();
             SolverInfoMap::const_iterator infoIter = m_solverInfo[vThr].find(vName);
             if(infoIter != m_solverInfo[vThr].end())
             {
@@ -844,8 +856,9 @@ namespace Nektar
             if (DefinesSolverInfo(pName))
             {
                 std::string vName = boost::to_upper_copy(pName);
-            	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-            	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+//            	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+//            	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+                unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm")->GetWorkerNum();
                 SolverInfoMap::const_iterator iter = m_solverInfo[vThr].find(vName);
                 if(iter != m_solverInfo[vThr].end())
                 {
@@ -1246,8 +1259,9 @@ namespace Nektar
          */
         AnalyticExpressionEvaluator& SessionReader::GetExpressionEvaluator()
         {
-        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+//        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+//        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm")->GetWorkerNum();
             return *m_exprEvaluator[vThr];
         }
 
@@ -1696,8 +1710,9 @@ namespace Nektar
          */
         void SessionReader::ReadParameters(TiXmlElement *conditions)
         {
-        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+//        	Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
+//        	unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm")->GetWorkerNum();
 
 
             if (!conditions)
@@ -2524,7 +2539,11 @@ namespace Nektar
             LoadParameter("NThreads", nthreads, 1);
             cerr << "Number of threads will be: " << nthreads << endl;
             // Decide what implementation of ThreadManager you want here.
-            m_threadManager = Thread::GetThreadManager().CreateInstance("ThreadManagerBoost", nthreads);
+//            m_threadManager = Thread::GetThreadManagerFactory().CreateInstance("ThreadManagerBoost", nthreads);
+            ThreadMaster &vTM = Thread::GetThreadMaster();
+            vTM.SetThreadingType("ThreadManagerBoost");
+            m_threadManager = vTM.CreateInstance("threadedcomm", nthreads);
+
             Nektar::InitMemoryPools(nthreads, true);
         }
 

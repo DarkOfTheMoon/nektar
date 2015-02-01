@@ -5,14 +5,13 @@
 #include <iostream>
 
 #include "LibUtilities/BasicUtils/Thread.h"
-#include <loki/Singleton.h>
 
 namespace Nektar
 {
     namespace Thread
     {
-        ThreadManagerSharedPtr ThreadManager::m_instance;
-        ThreadManagerFactory& GetThreadManager()
+//        ThreadManagerSharedPtr ThreadManager::m_instance;
+        ThreadManagerFactory& GetThreadManagerFactory()
         {
             typedef Loki::SingletonHolder<ThreadManagerFactory,
                 Loki::CreateUsingNew,
@@ -39,42 +38,130 @@ namespace Nektar
         
         unsigned int ThreadJob::GetWorkerNum()
         {
-        	return m_workerNum;
+            return m_workerNum;
         }
 
         // ThreadManager implementation.
+        bool ThreadManager::IsInitialised()
+        {
+            return true;
+        }
+
         ThreadManager::~ThreadManager()
         {
-        	m_instance.reset();
+            // empty
         }
         
-        // ThreadHandle implementation.
-        ThreadHandle::ThreadHandle(SchedType sched)
+        // ThreadMaster implementation
+        ThreadMaster::ThreadMaster() : m_threadManagers(), m_mutex(), m_threadingType()
         {
-        	Setup(sched, 1);
+            // empty
         }
 
-        ThreadHandle::ThreadHandle(SchedType sched, unsigned int chnk)
+        ThreadMaster::~ThreadMaster()
         {
-        	Setup(sched, chnk);
+            // Locking is a bit pointless, since the map is empty after this call.
+            m_threadManagers.clear();
         }
 
-        void ThreadHandle::Setup(SchedType sched, unsigned int chnk)
+        ThreadMaster& GetThreadMaster()
         {
-        	m_tm = ThreadManager::GetInstance();
-        	if (!m_tm)
-        	{
-        		std::cerr << "Attempted to construct a ThreadHandle before a ThreadManager has been created." << std::endl;
-        		std::abort();
-        	}
-        	m_tm->SetSchedType(sched);
-        	m_tm->SetChunkSize(chnk);
-        	m_tm->SetNumWorkers();
+            typedef Loki::SingletonHolder<ThreadMaster,
+                    Loki::CreateUsingNew,
+                    Loki::NoDestroy,
+                    Loki::SingleThreaded> Type;
+            return Type::Instance();
         }
 
-        ThreadHandle::~ThreadHandle()
+        void ThreadMaster::SetThreadingType(const std::string &p_type)
         {
-        	m_tm->Wait();
+            ASSERTL0(m_threadingType.empty(), "Tried to SetThreadingType when it was already set");
+            m_threadingType = p_type;
+        }
+
+        ThreadManagerSharedPtr ThreadMaster::GetInstance(const std::string &s)
+        {
+            ReadLock v_rlock(m_mutex);
+            if (!m_threadManagers.count(s))
+            {
+                v_rlock.unlock();
+                WriteLock v_wlock(m_mutex);
+                m_threadManagers[s] = ThreadManagerSharedPtr(new ThreadStartupManager());
+            }
+            return m_threadManagers[s];
+        }
+
+        ThreadManagerSharedPtr ThreadMaster::CreateInstance(const std::string &s, unsigned int nThr)
+        {
+            WriteLock v_wlock(m_mutex);
+            ASSERTL0(!m_threadingType.empty(), "Trying to create a ThreadManager before SetThreadingType called");
+            return m_threadManagers[s] = Thread::GetThreadManagerFactory().CreateInstance(m_threadingType, nThr);
+        }
+
+        // ThreadDefaultManager
+        ThreadStartupManager::ThreadStartupManager() : m_type("Threading starting up")
+        {
+            // empty
+        }
+        ThreadStartupManager::~ThreadStartupManager()
+        {
+            // empty
+        }
+        void ThreadStartupManager::QueueJobs(std::vector<ThreadJob*>& joblist)
+        {
+            NEKERROR(ErrorUtil::efatal, "Attempted to QueueJobs in ThreadDefaultManager");
+        }
+        void ThreadStartupManager::QueueJob(ThreadJob* job)
+        {
+            NEKERROR(ErrorUtil::efatal, "Attempted to QueueJob in ThreadDefaultManager");
+        }
+        unsigned int ThreadStartupManager::GetNumWorkers()
+        {
+            return 1;
+        }
+        unsigned int ThreadStartupManager::GetWorkerNum()
+        {
+            return 0;
+        }
+        void ThreadStartupManager::SetNumWorkers(const unsigned int num)
+        {
+            ASSERTL0(num==1, "Attempted to SetNumWorkers to != 1 in ThreadDefaultManager");
+        }
+        void ThreadStartupManager::SetNumWorkers()
+        {
+            return;
+        }
+        unsigned int ThreadStartupManager::GetMaxNumWorkers()
+        {
+            return 1;
+        }
+        void ThreadStartupManager::Wait()
+        {
+            return;
+        }
+        void ThreadStartupManager::SetChunkSize(unsigned int chnk)
+        {
+            NEKERROR(ErrorUtil::efatal, "Attempted to SetChunkSize in ThreadDefaultManager");
+        }
+        void ThreadStartupManager::SetSchedType(SchedType s)
+        {
+            NEKERROR(ErrorUtil::efatal, "Attempted to SetSchedType in ThreadDefaultManager");
+        }
+        bool ThreadStartupManager::InThread()
+        {
+            return false;
+        }
+        void ThreadStartupManager::Hold()
+        {
+            return;
+        }
+        bool ThreadStartupManager::IsInitialised()
+        {
+            return false;
+        }
+        const std::string& ThreadStartupManager::GetType() const
+        {
+            return m_type;
         }
 
     } // Thread
