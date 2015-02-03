@@ -49,23 +49,30 @@ namespace Nektar
 {
     namespace SolverUtils
     {
+        
         /// Defines a callback function which evaluates the flux vector \f$ F(u)
         /// \f$ in a conservative advection of the form \f$ \nabla\cdot F(u)
         /// \f$.
         typedef boost::function<void (
-            const Array<OneD, Array<OneD, NekDouble> >&,
-                  Array<OneD, Array<OneD, Array<OneD, NekDouble> > >&)>
-                  AdvectionFluxVecCB;
+        const Array<OneD, Array<OneD, NekDouble> >&,
+        Array<OneD, Array<OneD, Array<OneD, NekDouble> > >&)>
+        AdvectionFluxVecCB;
         
         typedef boost::function<void (
-            const Array<OneD, Array<OneD, NekDouble> >&,
-                  Array<OneD, Array<OneD, Array<OneD, NekDouble> > >&)>
-                  AdvectionJacTransDivVecCB;
+        const Array<OneD, Array<OneD, NekDouble> >&,
+        Array<OneD, Array<OneD, Array<OneD, NekDouble> > >&)>
+        AdvectionFluxVecCB;
         
         typedef boost::function<void (
-                  Array<OneD, Array<OneD, NekDouble> >&)>
-                  DirectSolVecCB;
-
+        const Array<OneD, Array<OneD, NekDouble> >&,
+        Array<OneD, Array<OneD, Array<OneD, NekDouble> > >&)>
+        AdvectionJacTransDivVecCB;
+        
+        typedef boost::function<void (
+        Array<OneD, Array<OneD, NekDouble> >&)>
+        DirectSolVecCB;
+        
+        
         /**
          * @brief An abstract base class encapsulating the concept of advection
          * of a vector field.
@@ -77,17 +84,20 @@ namespace Nektar
         class Advection
         {
         public:
+            /// Interface function to initialise the advection object.
             SOLVER_UTILS_EXPORT void InitObject(
-                LibUtilities::SessionReaderSharedPtr               pSession,
-                Array<OneD, MultiRegions::ExpListSharedPtr>        pFields);
-
+                    LibUtilities::SessionReaderSharedPtr               pSession,
+                    Array<OneD, MultiRegions::ExpListSharedPtr>        pFields);
+            
+            /// Interface function to advect the vector field.
             SOLVER_UTILS_EXPORT void Advect(
-                const int nConvectiveFields,
-                const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
-                const Array<OneD, Array<OneD, NekDouble> >        &advVel,
-                const Array<OneD, Array<OneD, NekDouble> >        &inarray,
-                      Array<OneD, Array<OneD, NekDouble> >        &outarray);
-
+                    const int nConvectiveFields,
+                    const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
+                    const Array<OneD, Array<OneD, NekDouble> >        &advVel,
+                    const Array<OneD, Array<OneD, NekDouble> >        &inarray,
+                    Array<OneD, Array<OneD, NekDouble> >              &outarray,
+                    const NekDouble                                   &time);
+            
             /**
              * @brief Set the flux vector callback function.
              *
@@ -134,7 +144,7 @@ namespace Nektar
             {
                 m_riemann = riemann;
             }
-
+            
             /**
              * @brief Set the flux vector callback function.
              *
@@ -164,19 +174,17 @@ namespace Nektar
             {
                 m_directSolution = directSol;
             }
+            /**
+             * @brief Set the base flow used for linearised advection objects.
+             *
+             * @param inarray   Vector to use as baseflow
+             */
+            inline void SetBaseFlow(const Array<OneD, Array<OneD, NekDouble> >& inarray)
+            {
+                v_SetBaseFlow(inarray);
+            }
             
         protected:
-            virtual void v_InitObject(
-                LibUtilities::SessionReaderSharedPtr              pSession,
-                Array<OneD, MultiRegions::ExpListSharedPtr>       pFields);
-
-            virtual void v_Advect(
-                const int nConvectiveFields,
-                const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
-                const Array<OneD, Array<OneD, NekDouble> >        &advVel,
-                const Array<OneD, Array<OneD, NekDouble> >        &inarray,
-                      Array<OneD, Array<OneD, NekDouble> >        &outarray)=0;
-
             /// Callback function to the flux vector (set when advection is in
             /// conservative form).
             AdvectionJacTransDivVecCB   m_JacTransposeDivVector;
@@ -189,16 +197,37 @@ namespace Nektar
             RiemannSolverSharedPtr m_riemann;
             /// Storage for space dimension. Used for homogeneous extension.
             int                    m_spaceDim;
+            
+            /// Initialises the advection object.
+            SOLVER_UTILS_EXPORT virtual void v_InitObject(
+                    LibUtilities::SessionReaderSharedPtr              pSession,
+                    Array<OneD, MultiRegions::ExpListSharedPtr>       pFields);
+            
+            /// Advects a vector field.
+            SOLVER_UTILS_EXPORT virtual void v_Advect(
+                    const int nConvectiveFields,
+                    const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
+                    const Array<OneD, Array<OneD, NekDouble> >        &advVel,
+                    const Array<OneD, Array<OneD, NekDouble> >        &inarray,
+                    Array<OneD, Array<OneD, NekDouble> >        &outarray,
+                    const NekDouble                                   &time)=0;
+            
+            /// Overrides the base flow used during linearised advection
+            SOLVER_UTILS_EXPORT virtual void v_SetBaseFlow(
+                    const Array<OneD, Array<OneD, NekDouble> >        &inarray);
         };
-
+        
         /// A shared pointer to an Advection object.
         typedef boost::shared_ptr<Advection> AdvectionSharedPtr;
-
+        
         /// Datatype of the NekFactory used to instantiate classes derived
         /// from the Advection class.
         typedef LibUtilities::NekFactory<std::string, Advection,
-            std::string> AdvectionFactory;
+        std::string> AdvectionFactory;
+        
+        /// Gets the factory for initialising advection objects.
         SOLVER_UTILS_EXPORT AdvectionFactory& GetAdvectionFactory();
+        
     }
 }
 

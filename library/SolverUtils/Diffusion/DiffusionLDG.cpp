@@ -78,7 +78,7 @@ namespace Nektar
             const Array<OneD, Array<OneD, NekDouble> >        &inarray,
                   Array<OneD, Array<OneD, NekDouble> >        &outarray)
         {
-            int nBndEdgePts, i, j, k;
+            int nBndEdgePts, i, j, k, e;
             int nDim      = fields[0]->GetCoordim(0);
             int nPts      = fields[0]->GetTotPoints();
             int nCoeffs   = fields[0]->GetNcoeffs();
@@ -167,7 +167,7 @@ namespace Nektar
                     num_elements();
                 int cnt = 0;
 
-                for (int i = 0; i < nBndRegions; ++i)
+                for (i = 0; i < nBndRegions; ++i)
                 {
                     // Number of boundary expansion related to that region
                     int nBndEdges = fields[0]->
@@ -175,7 +175,7 @@ namespace Nektar
 
                     // Weakly impose boundary conditions by modifying flux
                     // values
-                    for (int e = 0; e < nBndEdges ; ++e)
+                    for (e = 0; e < nBndEdges ; ++e)
                     {
                         nBndEdgePts = fields[0]->GetBndCondExpansions()[i]
                             ->GetExp(e)->GetTotPoints();
@@ -184,7 +184,7 @@ namespace Nektar
                             fields[0]->GetTraceMap()
                                 ->GetBndCondTraceToGlobalTraceMap(cnt++));
 
-                        for (int k = 0; k < nBndEdgePts; ++k)
+                        for (k = 0; k < nBndEdgePts; ++k)
                         {
                             BwdMuVar[id2+k] = 0.0;
                         }
@@ -193,7 +193,7 @@ namespace Nektar
 
                 for(i = 0; i < numConvFields; ++i)
                 {
-                    for(int k = 0; k < nTracePts; ++k)
+                    for(k = 0; k < nTracePts; ++k)
                     {
                         flux[0][i][k] =
                             0.5 * (FwdMuVar[k] + BwdMuVar[k]) * flux[0][i][k];

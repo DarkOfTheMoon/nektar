@@ -158,7 +158,7 @@ namespace Nektar
             }
             
             // Advection term in physical rhs form
-            m_advection->Advect(nvariables, m_fields, advVel, inarray, outarrayAdv);
+            m_advection->Advect(nvariables, m_fields, advVel, inarray, outarrayAdv, time);
             
             for (i = 0; i < nvariables; ++i)
             {
@@ -206,7 +206,7 @@ namespace Nektar
         if (m_adjointSwitch == 1.0)
         {
             // Advection term in physical rhs form
-            m_advection->Advect(nvariables, m_fields, advVel, inarray, outarray);
+            m_advection->Advect(nvariables, m_fields, advVel, inarray, outarray, time);
         
         }
         
@@ -220,7 +220,7 @@ namespace Nektar
             }
             
             // Advection term in physical rhs form
-            m_advection->Advect(nvariables, m_fields, advVel, inarray, outarrayAdv);
+            m_advection->Advect(nvariables, m_fields, advVel, inarray, outarrayAdv, time);
             
             /*for (int i = 0; i < nvariables; ++i)
             {

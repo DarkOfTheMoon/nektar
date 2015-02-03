@@ -38,7 +38,7 @@
 
 #include <SolverUtils/UnsteadySystem.h>
 #include <SolverUtils/RiemannSolvers/RiemannSolver.h>
-#include <SolverUtils/Advection/Advection.h>
+#include <SolverUtils/AdvectionSystem.h>
 #include <SolverUtils/Diffusion/Diffusion.h>
 #include <StdRegions/StdQuadExp.h>
 #include <StdRegions/StdHexExp.h>
@@ -105,7 +105,7 @@ namespace Nektar
         std::string                         m_ViscosityType;
         std::string                         m_Target;
         std::string                         m_shockCaptureType;
-	    std::string                         m_EqTypeStr;
+        std::string                         m_EqTypeStr;
         NekDouble                           m_mu;
         NekDouble                           m_FacL;
         NekDouble                           m_FacH;

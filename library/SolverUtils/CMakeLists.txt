@@ -1,5 +1,6 @@
 SET(SOLVER_UTILS_SOURCES
   Core/Misc.cpp
+  AdvectionSystem.cpp
   Advection/Advection.cpp
   Advection/Advection3DHomogeneous1D.cpp
   Advection/AdvectionFR.cpp
@@ -26,6 +27,7 @@ SET(SOLVER_UTILS_SOURCES
   Filters/FilterHistoryPoints.cpp
   Filters/FilterModalEnergy.cpp
   Filters/FilterThresholdMax.cpp
+  Filters/FilterThresholdMin.cpp
   RiemannSolvers/RiemannSolver.cpp
   RiemannSolvers/UpwindSolver.cpp
   RiemannSolvers/UpwindLDGSolver.cpp
@@ -35,10 +37,12 @@ SET(SOLVER_UTILS_SOURCES
   Forcing/ForcingBody.cpp
   Forcing/ForcingNoise.cpp
   Forcing/ForcingProgrammatic.cpp
+  Forcing/ForcingWavyness.cpp
 )
 
 SET(SOLVER_UTILS_HEADERS
   Core/Misc.h
+  AdvectionSystem.h
   Advection/Advection.h
   Advection/AdvectionFR.h
   Advection/Advection3DHomogeneous1D.h
@@ -65,6 +69,7 @@ SET(SOLVER_UTILS_HEADERS
   Filters/FilterHistoryPoints.h
   Filters/FilterModalEnergy.h
   Filters/FilterThresholdMax.h
+  Filters/FilterThresholdMin.h
   RiemannSolvers/RiemannSolver.h
   RiemannSolvers/UpwindSolver.h
   RiemannSolvers/UpwindLDGSolver.h
@@ -76,6 +81,7 @@ SET(SOLVER_UTILS_HEADERS
   Forcing/ForcingBody.h
   Forcing/ForcingNoise.h
   Forcing/ForcingProgrammatic.h
+  Forcing/ForcingWavyness.h
 )
 
 IF (NEKTAR_USE_ARPACK)

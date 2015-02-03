@@ -5451,7 +5451,6 @@ namespace Nektar
         }
     }
 
-
     void CompressibleFlowSystem::GetAdjointViscousFluxVector(
         const Array<OneD, Array<OneD, NekDouble> > &inarray,
               Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &z_derivatives,
