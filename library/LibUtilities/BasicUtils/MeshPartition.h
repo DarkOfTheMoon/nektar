@@ -59,9 +59,12 @@ namespace Nektar
             LIB_UTILITIES_EXPORT MeshPartition(const SessionReaderSharedPtr& pSession);
             LIB_UTILITIES_EXPORT ~MeshPartition();
 
-            LIB_UTILITIES_EXPORT void PartitionMesh(int pNumPartitions);
+            LIB_UTILITIES_EXPORT void PartitionMesh(int pNumPartitions, bool shared = false);
             LIB_UTILITIES_EXPORT void WriteLocalPartition(
                     SessionReaderSharedPtr& pSession);
+            LIB_UTILITIES_EXPORT void WriteAllPartitions(
+                    SessionReaderSharedPtr& pSession);
+
             LIB_UTILITIES_EXPORT void GetCompositeOrdering(
                     CompositeOrdering &composites);
             LIB_UTILITIES_EXPORT void GetBndRegionOrdering(
@@ -196,15 +199,14 @@ namespace Nektar
             std::vector<MultiWeight>            m_vertWeights;
 
             Thread::ThreadManagerSharedPtr m_threadManager;
-
-            BoostSubGraph              m_mesh;
-            //BoostSubGraph              m_localPartition;
-            std::vector<BoostSubGraph> m_localPartition;
-            std::vector<BndRegionOrdering>      m_bndRegOrder;
-
             CommSharedPtr                       m_comm;
 
+            BoostSubGraph                       m_mesh;
+            std::vector<BoostSubGraph>          m_localPartition;
+            std::vector<BndRegionOrdering>      m_bndRegOrder;
+
             bool                                m_weightingRequired;
+            bool                                m_shared;
 
             void ReadExpansions(const SessionReaderSharedPtr& pSession);
             void ReadGeometry(const SessionReaderSharedPtr& pSession);

@@ -38,37 +38,6 @@
 
 namespace Nektar
 {
-	namespace LibUtilities
-	{
-	std::string TimeIntegrationIMEXOrder1::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("IMEXOrder1", TimeIntegrationIMEXOrder1::create);
-	std::string TimeIntegrationIMEXOrder2::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("IMEXOrder2", TimeIntegrationIMEXOrder2::create);
-	std::string TimeIntegrationIMEXOrder3::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("IMEXOrder3", TimeIntegrationIMEXOrder3::create);
-	std::string TimeIntegrationForwardEuler::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("ForwardEuler", TimeIntegrationForwardEuler::create);
-	std::string TimeIntegrationBackwardEuler::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("BackwardEuler", TimeIntegrationBackwardEuler::create);
-	std::string TimeIntegrationBDFImplicitOrder1::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("BDFImplicitOrder1", TimeIntegrationBDFImplicitOrder1::create);
-	std::string TimeIntegrationBDFImplicitOrder2::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("BDFImplicitOrder2", TimeIntegrationBDFImplicitOrder2::create);
-	std::string TimeIntegrationRungeKutta2_ImprovedEuler::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("RungeKutta2_ImprovedEuler", TimeIntegrationRungeKutta2_ImprovedEuler::create);
-	std::string TimeIntegrationIMEXdirk_1_1_1::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("IMEXdirk_1_1_1", TimeIntegrationIMEXdirk_1_1_1::create);
-	std::string TimeIntegrationIMEXdirk_1_2_1::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("IMEXdirk_1_2_1", TimeIntegrationIMEXdirk_1_2_1::create);
-	std::string TimeIntegrationIMEXdirk_1_2_2::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("IMEXdirk_1_2_2", TimeIntegrationIMEXdirk_1_2_2::create);
-	std::string TimeIntegrationIMEXdirk_4_4_3::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("IMEXdirk_4_4_3", TimeIntegrationIMEXdirk_4_4_3::create);
-	std::string TimeIntegrationIMEXdirk_2_2_2::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("IMEXdirk_2_2_2", TimeIntegrationIMEXdirk_2_2_2::create);
-	std::string TimeIntegrationIMEXdirk_2_3_3::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("IMEXdirk_2_3_3", TimeIntegrationIMEXdirk_2_3_3::create);
-	std::string TimeIntegrationIMEXdirk_2_3_2::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("IMEXdirk_2_3_2", TimeIntegrationIMEXdirk_2_3_2::create);
-	std::string TimeIntegrationIMEXdirk_3_4_3::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("IMEXdirk_3_4_3", TimeIntegrationIMEXdirk_3_4_3::create);
-	std::string TimeIntegrationDIRKOrder2::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("DIRKOrder2", TimeIntegrationDIRKOrder2::create);
-	std::string TimeIntegrationDIRKOrder3::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("DIRKOrder3", TimeIntegrationDIRKOrder3::create);
-	std::string TimeIntegrationClassicalRungeKutta4::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("ClassicalRungeKutta4", TimeIntegrationClassicalRungeKutta4::create);
-	std::string TimeIntegrationMidpoint::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("Midpoint", TimeIntegrationMidpoint::create);
-	std::string TimeIntegrationRungeKutta2_ModifiedEuler::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("RungeKutta2_ModifiedEuler", TimeIntegrationRungeKutta2_ModifiedEuler::create);
-	std::string TimeIntegrationAdamsBashforthOrder2::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("AdamsBashforthOrder2", TimeIntegrationAdamsBashforthOrder2::create);
-	std::string TimeIntegrationAdamsBashforthOrder3::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("AdamsBashforthOrder3", TimeIntegrationAdamsBashforthOrder3::create);
-	std::string TimeIntegrationAdamsMoultonOrder2::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("AdamsMoultonOrder2", TimeIntegrationAdamsMoultonOrder2::create);
-	std::string TimeIntegrationIMEXGear::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("IMEXGear", TimeIntegrationIMEXGear::create);
-	std::string TimeIntegrationCNAB::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("CNAB", TimeIntegrationCNAB::create);
-	std::string TimeIntegrationMCNAB::className  = GetTimeIntegrationWrapperFactory().RegisterCreatorFunction("MCNAB", TimeIntegrationMCNAB::create);
-
-	}
     namespace SolverUtils
     {
         std::string Driver::evolutionOperatorLookupIds[5] = {

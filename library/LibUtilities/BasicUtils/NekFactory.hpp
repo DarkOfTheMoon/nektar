@@ -74,18 +74,18 @@ namespace Nektar
          * @class NekFactory
          * \brief Provides a generic Factory class.
          *
-             * Implements a generic object factory. Class-types which use a
-             * potentially arbitrary number of parameters may be used with
-             * specialised forms of the NekFactory. An upper
-             * limit on the number of parameters is imposed by the MAX_PARAM
-             * preprocessor definition in the NekFactory.hpp file. The
-             * specialisations are generated at compile type using Boost
-             * preprocessor by through repeated inclusion of the NekFactory.hpp
-             * file.
-             *
-             * To allow a class to be instantiated by the factory, the
-             * following are required in each class definition (in the case of
-             * a single parameter):
+         * Implements a generic object factory. Class-types which use a
+         * potentially arbitrary number of parameters may be used with
+         * specialised forms of the NekFactory. An upper
+         * limit on the number of parameters is imposed by the MAX_PARAM
+         * preprocessor definition in the NekFactory.hpp file. The
+         * specialisations are generated at compile type using Boost
+         * preprocessor by through repeated inclusion of the NekFactory.hpp
+         * file.
+         *
+         * To allow a class to be instantiated by the factory, the
+         * following are required in each class definition (in the case of
+         * a single parameter):
          * \code
          *   static [baseclass]* create([paramtype1] &P) {
          *      return new [derivedclass](P);
@@ -223,52 +223,91 @@ namespace Nektar
                 }
 
 
-            /**
-             * @brief Checks if a particular module is available.
-             */
-            bool ModuleExists(tKey idKey)
-            {
-            	ReadLock vReadLock(m_mutex);
-
-                // Now try and find the key in the map.
-                TMapFactoryIterator it = getMapFactory()->find(idKey);
-
-                if (it != getMapFactory()->end())
+                /**
+                 * @brief Checks if a particular module is available.
+                 */
+                bool ModuleExists(tKey idKey)
                 {
-                    return true;
+                    ReadLock vReadLock(m_mutex);
+
+                    // Now try and find the key in the map.
+                    TMapFactoryIterator it = getMapFactory()->find(idKey);
+
+                    if (it != getMapFactory()->end())
+                    {
+                        return true;
+                    }
+                    return false;
                 }
-                return false;
-            }
 
 
-            /**
-             * @brief Prints the available classes to stdout.
-             */
-            void PrintAvailableClasses(std::ostream& pOut = std::cout)
-            {
-            	ReadLock vReadLock(m_mutex);
-
-                pOut << std::endl << "Available classes: " << std::endl;
-                TMapFactoryIterator it;
-                for (it = getMapFactory()->begin(); it != getMapFactory()->end(); ++it)
+                /**
+                 * @brief Prints the available classes to stdout.
+                 */
+                void PrintAvailableClasses(std::ostream& pOut = std::cout)
                 {
+                    ReadLock vReadLock(m_mutex);
+
                     pOut << std::endl << "Available classes: " << std::endl;
                     TMapFactoryIterator it;
                     for (it = getMapFactory()->begin(); it != getMapFactory()->end(); ++it)
                     {
-                        pOut << "  " << it->first;
-                        if (it->second.m_desc != "")
+                        pOut << std::endl << "Available classes: " << std::endl;
+                        TMapFactoryIterator it;
+                        for (it = getMapFactory()->begin(); it != getMapFactory()->end(); ++it)
                         {
-                            pOut << ":" << std::endl << "    "
-                                      << it->second.m_desc << std::endl;
-                        }
-                        else
-                        {
-                            pOut << std::endl;
+                            pOut << "  " << it->first;
+                            if (it->second.m_desc != "")
+                            {
+                                pOut << ":" << std::endl << "    "
+                                          << it->second.m_desc << std::endl;
+                            }
+                            else
+                            {
+                                pOut << std::endl;
+                            }
                         }
                     }
                 }
-            }
+
+
+                /**
+                 * @brief Retrieves a key, given a description
+                 */
+                tKey GetKey(tDescription pDesc)
+                {
+                    ReadLock vReadLock(m_mutex);
+
+                    TMapFactoryIterator it;
+                    for (it = getMapFactory()->begin(); it != getMapFactory()->end(); ++it)
+                    {
+                        if (it->second.m_desc == pDesc)
+                        {
+                            return it->first;
+                        }
+                    }
+                    std::string errstr = "Module '"
+                            + boost::lexical_cast<std::string>(pDesc)
+                            + "' is not known.";
+                    ASSERTL0(false, errstr);
+                }
+
+
+                /**
+                 * @brief Returns the description of a class
+                 */
+                std::string GetClassDescription(tKey idKey)
+                {
+                    ReadLock vReadLock(m_mutex);
+
+                    // Now try and find the key in the map.
+                    TMapFactoryIterator it = getMapFactory()->find(idKey);
+
+                    std::stringstream errstr;
+                    errstr << "No such module: " << idKey << std::endl;
+                    ASSERTL0 (it != getMapFactory()->end(), errstr.str());
+                    return it->second.m_desc;
+                }
 
             protected:
                 /**
@@ -436,6 +475,19 @@ typedef boost::shared_lock<boost::shared_mutex> ReadLock;
                     + boost::lexical_cast<std::string>(pDesc)
                     + "' is not known.";
             ASSERTL0(false, errstr);
+        }
+
+        std::string GetClassDescription(tKey idKey)
+        {
+            ReadLock vReadLock(m_mutex);
+
+            // Now try and find the key in the map.
+            TMapFactoryIterator it = getMapFactory()->find(idKey);
+
+            std::stringstream errstr;
+            errstr << "No such module: " << idKey << std::endl;
+            ASSERTL0 (it != getMapFactory()->end(), errstr.str());
+            return it->second.m_desc;
         }
 
     protected:

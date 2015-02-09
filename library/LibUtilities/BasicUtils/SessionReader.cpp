@@ -399,6 +399,7 @@ namespace Nektar
                                  "override a SOLVERINFO property")
                 ("parameter,P",  po::value<vector<std::string> >(),
                                  "override a parameter")
+                ("shared-filesystem,s", "Using shared filesystem.")
             ;
             
             CmdLineArgMap::const_iterator cmdIt;
@@ -1579,46 +1580,74 @@ namespace Nektar
             // Partition mesh into length of row comms
             if (numPartitions > 1)
             {
-            	if (vThr == 0)
-            	{
-            		/*
-            		 * Partitioner operates on rank0, thread0.
-            		 * Partition information is disseminated to other ranks.
-            		 * Info is written to thread specific files by each rank.
-            		 * Yes, this is a bit of a dog's dinner; blame Chris for
-            		 * changing stuff while I was working on it. SJC.
-            		 */
-					SessionReaderSharedPtr vSession     = GetSharedThisPtr();
-					MeshPartitionSharedPtr vPartitioner = MemoryManager<
-						MeshPartition>::AllocateSharedPtr(vSession);
-					vPartitioner->PartitionMesh(numPartitions);
-					vPartitioner->WriteLocalPartition(vSession);
-                    vPartitioner->GetCompositeOrdering(m_compOrder);
-					for (unsigned int i = 0; i < vNumThr; ++i) {
-						vPartitioner->GetBndRegionOrdering(m_bndRegOrder[i], i);
-					}
+                if (DefinesCmdLineArgument("shared-filesystem"))
+                {
+                    //ThreadedComm now, so this will be rank==0, vThr==0
+                    if ((vCommMesh->GetRank() == 0))
+                    {
+                        if (m_verbose)
+                        {
+                            cout << "Partitioning on root process." << endl;
+                        }
+                        SessionReaderSharedPtr vSession     = GetSharedThisPtr();
+                        MeshPartitionSharedPtr vPartitioner = MemoryManager<
+                            MeshPartition>::AllocateSharedPtr(vSession);
+                        vPartitioner->PartitionMesh(numPartitions, true);
+                        vPartitioner->WriteAllPartitions(vSession);
+                        vPartitioner->GetCompositeOrdering(m_compOrder);
+                        for (unsigned int i = 0; i < vNumThr; ++i) {
+                            vPartitioner->GetBndRegionOrdering(m_bndRegOrder[i], i);
+                        }
+                    }
+                }
+                else
+                {
+                    if (vThr == 0)
+                    {
+                        if (m_verbose)
+                        {
+                            cout << "Rank " << GetComm()->GetRank()
+                                 << " participating in partitioning." << endl;
+                        }
+                        /*
+                         * Partitioner operates on rank0, thread0.
+                         * Partition information is disseminated to other ranks.
+                         * Info is written to thread specific files by each rank.
+                         * Yes, this is a bit of a dog's dinner; blame Chris for
+                         * changing stuff while I was working on it. SJC.
+                         */
+                        SessionReaderSharedPtr vSession     = GetSharedThisPtr();
+                        MeshPartitionSharedPtr vPartitioner = MemoryManager<
+                            MeshPartition>::AllocateSharedPtr(vSession);
+                        vPartitioner->PartitionMesh(numPartitions, false);
+                        vPartitioner->WriteLocalPartition(vSession);
+                        vPartitioner->GetCompositeOrdering(m_compOrder);
+                        for (unsigned int i = 0; i < vNumThr; ++i) {
+                            vPartitioner->GetBndRegionOrdering(m_bndRegOrder[i], i);
+                        }
 
 
-//					m_filename = GetSessionNameRank() + ".xml";
+    //					m_filename = GetSessionNameRank() + ".xml";
 
-//					m_xmlDoc = new TiXmlDocument(m_filename);
-//					ASSERTL0(m_xmlDoc, "Failed to create XML document object.");
-//
-//					bool loadOkay = m_xmlDoc->LoadFile();
-//					ASSERTL0(loadOkay, "Unable to load file: " + m_filename      +
-//							 ". Check XML standards compliance. Error on line: " +
-//							 boost::lexical_cast<std::string>(m_xmlDoc->Row()));
+    //					m_xmlDoc = new TiXmlDocument(m_filename);
+    //					ASSERTL0(m_xmlDoc, "Failed to create XML document object.");
+    //
+    //					bool loadOkay = m_xmlDoc->LoadFile();
+    //					ASSERTL0(loadOkay, "Unable to load file: " + m_filename      +
+    //							 ". Check XML standards compliance. Error on line: " +
+    //							 boost::lexical_cast<std::string>(m_xmlDoc->Row()));
 
-            	}
-            	else
-            	{
-            		// NB, matching the Block in MeshPartition::PartitionGraph, since vThr != 0 this will
-            		// actually not Block in the underlying comm of the ThreadedComm.
-            		if (m_threadManager->GetRankFromPartition(m_comm->GetRowComm()->GetRank()) == 0)
-            		{
-            			m_comm->GetColumnComm()->Block();
-            		}
-            	}
+                    }
+                    else
+                    {
+                        // NB, matching the Block in MeshPartition::PartitionGraph, since vThr != 0 this will
+                        // actually not Block in the underlying comm of the ThreadedComm.
+                        if (m_threadManager->GetRankFromPartition(m_comm->GetRowComm()->GetRank()) == 0)
+                        {
+                            m_comm->GetColumnComm()->Block();
+                        }
+                    }
+                }
 
 				vCommMesh->Block();
 				if (vThr == 0) delete m_xmlDoc[0];
@@ -1651,6 +1680,9 @@ namespace Nektar
         {
         	bool threadedCommDone = false;
             unsigned int vNumThr = m_threadManager->GetMaxNumWorkers();
+            if (DefinesCmdLineArgument("Px")) {
+
+            }
             if (e && m_comm->GetSize() > 1)
             {
                 int nProcZ = 1;

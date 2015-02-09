@@ -33,6 +33,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+#define LOKI_CLASS_LEVEL_THREADING
 #include <LibUtilities/BasicUtils/VmathArray.hpp>
 #include <SolverUtils/RiemannSolvers/RiemannSolver.h>
 
