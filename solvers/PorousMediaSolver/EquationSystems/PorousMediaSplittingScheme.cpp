@@ -240,11 +240,13 @@ namespace Nektar
         // Set up forcing term and coefficients for Helmholtz problems
         SetUpViscousForcing(inarray, F, aii_Dt);
 
-        factors[StdRegions::eFactorLambda] = 1.0/aii_Dt/m_kinvis;
+        Array< OneD, NekDouble> darcy_fac(m_nConvectiveFields);
+        m_darcyEvaluation->GetImplicitDarcyFactor(darcy_fac);
 
         // Solve Helmholtz system and put in Physical space
         for(i = 0; i < m_nConvectiveFields; ++i)
         {
+            factors[StdRegions::eFactorLambda] =darcy_fac[i]+1.0/aii_Dt/m_kinvis;
             m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateCoeffs(),
                                    NullFlagList, factors);
             m_fields[i]->BwdTrans(m_fields[i]->GetCoeffs(),outarray[i]);

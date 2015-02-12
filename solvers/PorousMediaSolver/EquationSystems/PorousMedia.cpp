@@ -160,8 +160,6 @@ namespace Nektar
         m_session->LoadParameter("Kinvis", m_kinvis);
 
         m_darcyEvaluation=GetDarcyTermFactory().CreateInstance(DarcyTermMethodStr[m_darcyType],m_session,m_fields);
-        cout<<"Permeability advacement: "<<DarcyTermMethodStr[m_darcyType]<<endl;
-        //m_darcyEvaluation=GetDarcyTermFactory().CreateInstance("Explicit",m_session,m_fields);
 
         //Setup permeability matrix
         m_darcyEvaluation->SetupPermeability();
@@ -190,9 +188,6 @@ namespace Nektar
             m_pressure,
             m_velocity);
         m_extrapolation->TimeIntegrationSteps(m_intScheme->GetIntegrationMethod(), m_intScheme);
-        cout<<"after extrapolate"<<endl;
-
-
     }
 
     PorousMedia::~PorousMedia(void)
@@ -257,33 +252,5 @@ namespace Nektar
         m_forcing.push_back(pForce);
     }
 
-
-    // Decide if at a steady state if the discrerte L2 sum of the
-    // coefficients is the same as the previous step to within the
-    // tolerance m_steadyStateTol;
-    bool PorousMedia::CalcSteadyState(void)
-    {
-        static NekDouble previousL2 = 0.0;
-        bool returnval = false;
-
-        NekDouble L2 = 0.0;
-        
-        // calculate L2 discrete summation 
-        int ncoeffs = m_fields[0]->GetNcoeffs(); 
-        
-        for(int i = 0; i < m_fields.num_elements(); ++i)
-        {
-            L2 += Vmath::Dot(ncoeffs,m_fields[i]->GetCoeffs(),1,m_fields[i]->GetCoeffs(),1);
-        }
-        
-        if(fabs(L2-previousL2) < ncoeffs*m_steadyStateTol)
-        {
-            returnval = true;
-        }
-
-        previousL2 = L2;
-
-        return returnval;
-    }
 } //end of namespace
 

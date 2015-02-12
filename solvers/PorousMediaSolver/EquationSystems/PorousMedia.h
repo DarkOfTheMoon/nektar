@@ -180,9 +180,6 @@ namespace Nektar
         //time dependent boundary conditions updating
         void SetBoundaryConditions(NekDouble time);
 
-        // evaluate steady state
-        bool CalcSteadyState(void);
-
         virtual void v_PrintSummary(std::ostream &out)
         {
             ASSERTL0(false,"This method is not defined in this class");

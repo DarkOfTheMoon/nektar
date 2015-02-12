@@ -63,7 +63,6 @@ namespace Nektar
     void DarcyTermExplicit::v_SetupPermeability()
     {
         int nDim = m_fields.num_elements()-1;
-        cout<<"Dimensions:"<<nDim<<endl; 
         switch(nDim)
         {
             case 2:
@@ -183,11 +182,6 @@ namespace Nektar
                 break;
         }
     }
-
-    /*Array<OneD, NekDouble> DarcyTermExplicit::v_GetInversePermeability()
-    {
-        return m_perm_inv;
-        }*/
 
     void DarcyTermExplicit::v_GetImplicitDarcyFactor(
         Array<OneD, NekDouble> &permCoeff)

@@ -122,6 +122,65 @@ namespace Nektar
         }
     }
 
+    /**
+     * Additional contribution to high order pressure boundary condition
+     * due to darcy term
+     */
+    void DarcyTermImplicitIsotropic::v_AddDarcyPressureTerm(
+        int nq,
+        NekDouble kinvis,
+        Array<OneD, Array<OneD, const NekDouble> > &Vel,
+        Array<OneD, Array<OneD, NekDouble> > &Q)
+
+    {
+        int nVelfields = m_fields.num_elements()-1;
+
+        switch(nVelfields)
+        {
+            case 2:
+            {
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[0],Vel[0],1,Q[0],1,Q[0],1);
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[2],Vel[0],1,Q[1],1,Q[1],1);
+
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[2],Vel[1],1,Q[0],1,Q[0],1);
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[1],Vel[1],1,Q[1],1,Q[1],1);
+
+                //m_forces[0]->BwdTrans(m_forces[0]->GetCoeffs(),m_forces[0]->UpdatePhys());
+                //m_forces[1]->BwdTrans(m_forces[1]->GetCoeffs(),m_forces[1]->UpdatePhys());
+
+                //Vmath::Vadd(nq,Q[0],1,(m_forces[0]->GetPhys()),1,Q[0],1);
+                //Vmath::Vadd(nq,Q[1],1,(m_forces[1]->GetPhys()),1,Q[1],1);
+            }
+            break;
+            case 3:
+            {
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[0],Vel[0],1,Q[0],1,Q[0],1);
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[3],Vel[0],1,Q[1],1,Q[1],1);
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[4],Vel[0],1,Q[2],1,Q[2],1);
+                
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[3],Vel[1],1,Q[0],1,Q[0],1);
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[1],Vel[1],1,Q[1],1,Q[1],1);
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[5],Vel[1],1,Q[2],1,Q[2],1);
+
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[4],Vel[2],1,Q[0],1,Q[0],1);
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[5],Vel[2],1,Q[1],1,Q[1],1);
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[2],Vel[2],1,Q[2],1,Q[2],1);
+
+                //m_forces[0]->BwdTrans(m_forces[0]->GetCoeffs(),m_forces[0]->UpdatePhys());
+                //m_forces[1]->BwdTrans(m_forces[1]->GetCoeffs(),m_forces[1]->UpdatePhys());
+                //m_forces[2]->BwdTrans(m_forces[2]->GetCoeffs(),m_forces[2]->UpdatePhys());
+
+                //Vmath::Vadd(nq,Q[0],1,(m_forces[0]->GetPhys()),1,Q[0],1);
+                //Vmath::Vadd(nq,Q[1],1,(m_forces[1]->GetPhys()),1,Q[1],1);
+                //Vmath::Vadd(nq,Q[2],1,(m_forces[2]->GetPhys()),1,Q[2],1);
+            }
+            break;
+            default:
+                ASSERTL0(0,"Dimension not supported");
+                break;
+        }
+    }
+
 
     /**
      * Registers the class with the Factory.
@@ -237,6 +296,65 @@ namespace Nektar
         Array<OneD, Array<OneD, NekDouble> > &outarray,
         NekDouble kinvis)
     {
+    }
+
+    /**
+     * Additional contribution to high order pressure boundary condition
+     * due to darcy term
+     */
+    void DarcyTermImplicitAnisotropic::v_AddDarcyPressureTerm(
+        int nq,
+        NekDouble kinvis,
+        Array<OneD, Array<OneD, const NekDouble> > &Vel,
+        Array<OneD, Array<OneD, NekDouble> > &Q)
+
+    {
+        int nVelfields = m_fields.num_elements()-1;
+
+        switch(nVelfields)
+        {
+            case 2:
+            {
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[0],Vel[0],1,Q[0],1,Q[0],1);
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[2],Vel[0],1,Q[1],1,Q[1],1);
+
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[2],Vel[1],1,Q[0],1,Q[0],1);
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[1],Vel[1],1,Q[1],1,Q[1],1);
+
+                //m_forces[0]->BwdTrans(m_forces[0]->GetCoeffs(),m_forces[0]->UpdatePhys());
+                //m_forces[1]->BwdTrans(m_forces[1]->GetCoeffs(),m_forces[1]->UpdatePhys());
+
+                //Vmath::Vadd(nq,Q[0],1,(m_forces[0]->GetPhys()),1,Q[0],1);
+                //Vmath::Vadd(nq,Q[1],1,(m_forces[1]->GetPhys()),1,Q[1],1);
+            }
+            break;
+            case 3:
+            {
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[0],Vel[0],1,Q[0],1,Q[0],1);
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[3],Vel[0],1,Q[1],1,Q[1],1);
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[4],Vel[0],1,Q[2],1,Q[2],1);
+                
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[3],Vel[1],1,Q[0],1,Q[0],1);
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[1],Vel[1],1,Q[1],1,Q[1],1);
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[5],Vel[1],1,Q[2],1,Q[2],1);
+
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[4],Vel[2],1,Q[0],1,Q[0],1);
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[5],Vel[2],1,Q[1],1,Q[1],1);
+                Vmath::Svtvp(nq,-kinvis*m_perm_inv[2],Vel[2],1,Q[2],1,Q[2],1);
+
+                //m_forces[0]->BwdTrans(m_forces[0]->GetCoeffs(),m_forces[0]->UpdatePhys());
+                //m_forces[1]->BwdTrans(m_forces[1]->GetCoeffs(),m_forces[1]->UpdatePhys());
+                //m_forces[2]->BwdTrans(m_forces[2]->GetCoeffs(),m_forces[2]->UpdatePhys());
+
+                //Vmath::Vadd(nq,Q[0],1,(m_forces[0]->GetPhys()),1,Q[0],1);
+                //Vmath::Vadd(nq,Q[1],1,(m_forces[1]->GetPhys()),1,Q[1],1);
+                //Vmath::Vadd(nq,Q[2],1,(m_forces[2]->GetPhys()),1,Q[2],1);
+            }
+            break;
+            default:
+                ASSERTL0(0,"Dimension not supported");
+                break;
+        }
     }
 
     void DarcyTermImplicitAnisotropic::v_GetImplicitDarcyFactor(
