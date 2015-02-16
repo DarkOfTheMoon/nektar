@@ -266,7 +266,7 @@ namespace Nektar
         {
             int cnt = 0, cnt1 = 0;
             Array<OneD, NekDouble> tmparray;
-            
+
             for(int n = 0; n < m_planes.num_elements(); ++n)
             {
                 m_planes[n]->BwdTrans(inarray+cnt, tmparray = outarray + cnt1,

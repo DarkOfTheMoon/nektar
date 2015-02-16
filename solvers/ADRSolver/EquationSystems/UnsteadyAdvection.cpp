@@ -49,7 +49,6 @@ namespace Nektar
         : UnsteadySystem(pSession),
           AdvectionSystem(pSession)
     {
-        m_planeNumber = 0;
     }
 
     /**

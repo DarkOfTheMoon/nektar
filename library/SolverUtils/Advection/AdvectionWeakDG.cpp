@@ -81,13 +81,12 @@ namespace Nektar
                   Array<OneD, Array<OneD, NekDouble> >        &outarray,
             const NekDouble                                   &time)
         {
-            std::cout << std::setprecision(16);
-            int nDim            = fields[0]->GetCoordim(0);
+            int nExpDim         = fields[0]->GetExp(0)->GetNumBases();
             int nPointsTot      = fields[0]->GetTotPoints();
             int nCoeffs         = fields[0]->GetNcoeffs();
             int nTracePointsTot = fields[0]->GetTrace()->GetTotPoints();
             int i, j;
-            
+
             Array<OneD, Array<OneD, NekDouble> > tmp(nConvectiveFields);
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > fluxvector(
                 nConvectiveFields);
@@ -108,39 +107,13 @@ namespace Nektar
 
             m_fluxVector(inarray, fluxvector);
 
-            // Get the advection part (without numerical flux)
+            // Get the advection part (without numerical flux). Use outarray as
+            // temporary storage.
             for(i = 0; i < nConvectiveFields; ++i)
             {
-                /*
-                if (nDim == 3)
-                {
-                    cout << "i = " << i<<",\t ========================" << endl;
-                    for (int j = 0; j < nPointsTot; ++j)
-                    {
-                        cout <<"j = "<< j << ",\t fluxvector_X = "
-                        << fluxvector[i][0][j] << endl;
-                    }
-                    cout << "----------" << endl;
-                    for (int j = 0; j < nPointsTot; ++j)
-                    {
-                        cout <<"j = "<< j << ",\t fluxvector_Y = "
-                        << fluxvector[i][1][j] << endl;
-                    }
-                    cout << "----------" << endl;
-                    for (int j = 0; j < nPointsTot; ++j)
-                    {
-                        cout <<"j = "<< j << ",\t fluxvector_Z = "
-                        << fluxvector[i][2][j] << endl;
-                    }
-                    cout << "----------" << endl;
-                    int num;
-                    cin >> num;
-                }
-                */
-
                 tmp[i] = Array<OneD, NekDouble>(nCoeffs, 0.0);
 
-                for (j = 0; j < nDim; ++j)
+                for (j = 0; j < nExpDim; ++j)
                 {
                     fields[i]->IProductWRTDerivBase(j, fluxvector[i][j],
                                                        outarray[i]);
@@ -166,32 +139,23 @@ namespace Nektar
             // Evaulate <\phi, \hat{F}\cdot n> - OutField[i]
             for(i = 0; i < nConvectiveFields; ++i)
             {
-                /*
-                cout << "i = " << i<<",\t ========================" << endl;
-                for (int j = 0; j < nPointsTot; ++j)
-                {
-                    cout <<"j = "<< j << ",\t inarrayAdv = "
-                    << inarray[i][j] << endl;
-                }
-                int num;
-                cin >> num;
-                */
                 Vmath::Neg                      (nCoeffs, tmp[i], 1);
                 fields[i]->AddTraceIntegral     (numflux[i], tmp[i]);
                 fields[i]->MultiplyByElmtInvMass(tmp[i], tmp[i]);
-                fields[i]->BwdTrans             (tmp[i], outarray[i]);
-                /*
-                if (nDim == 3)
+
+                if (nExpDim + 1 == m_spaceDim)
                 {
-                    for (int j = 0; j < nPointsTot; ++j)
-                    {
-                        cout <<"j = "<< j << ",\t outarrayAdv = "
-                        << outarray[i][j] << endl;
-                    }
-                    int num;
-                    cin >> num;
+                    fields[i]->SetWaveSpace(true);
+                    fields[i]->BwdTrans(tmp[i], outarray[i]);
+                    fields[i]->SetWaveSpace(false);
+                    fields[i]->PhysDeriv(2, fluxvector[i][2], fluxvector[i][0]);
+                    Vmath::Vadd(nPointsTot, outarray[i], 1, fluxvector[i][0], 1,
+                                            outarray[i], 1);
                 }
-                 */
+                else
+                {
+                    fields[i]->BwdTrans(tmp[i], outarray[i]);
+                }
             }
         }
     }//end of namespace SolverUtils

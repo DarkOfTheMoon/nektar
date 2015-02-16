@@ -475,6 +475,49 @@ namespace Nektar
             }
         }
 
+        void DisContField3DHomogeneous1D::v_GetFwdBwdTracePhys(
+            const Array<OneD, const NekDouble> &field,
+                  Array<OneD,       NekDouble> &Fwd,
+                  Array<OneD,       NekDouble> &Bwd)
+        {
+            const int nTracePlanePts = m_planes[0]->GetTrace()->GetNpoints();
+            const int nPlanePts = m_planes[0]->GetNpoints();
+
+            int i;
+            Array<OneD, NekDouble> tmp1, tmp2;
+
+            ASSERTL1(Fwd.num_elements() >= m_trace->GetNpoints(),
+                     "Insufficient storage in Fwd array");
+            ASSERTL1(Bwd.num_elements() >= m_trace->GetNpoints(),
+                     "Insufficient storage in Bwd array");
+
+            for (i = 0; i < m_planes.num_elements(); ++i)
+            {
+                tmp1 = Fwd + i*nTracePlanePts;
+                tmp2 = Bwd + i*nTracePlanePts;
+                m_planes[i]->GetFwdBwdTracePhys(
+                    field + i * nPlanePts, tmp1, tmp2);
+            }
+        }
+
+        void DisContField3DHomogeneous1D::v_AddTraceIntegral(
+            const Array<OneD, const NekDouble> &Fn,
+                  Array<OneD,       NekDouble> &outarray)
+        {
+            const int nTracePlanePts = m_planes[0]->GetTrace()->GetTotPoints();
+            const int nPlaneCoeffs = m_planes[0]->GetNcoeffs();
+
+            int i;
+            Array<OneD, NekDouble> tmp;
+
+            for (i = 0; i < m_planes.num_elements(); ++i)
+            {
+                tmp = outarray + i * nPlaneCoeffs;
+                m_planes[i]->AddTraceIntegral(
+                    Fn + i*nTracePlanePts, tmp);
+            }
+        }
+
         void DisContField3DHomogeneous1D::v_ExtractTracePhys(
                         Array<OneD, NekDouble> &outarray)
         {
@@ -501,21 +544,13 @@ namespace Nektar
         {
             int nPoints_plane = m_planes[0]->GetTotPoints();
             int nTracePts = m_planes[0]->GetTrace()->GetTotPoints();
+            Array<OneD, NekDouble> tmp;
 
             for (int i = 0; i < m_planes.num_elements(); ++i)
             {
-                Array<OneD, NekDouble> inarray_plane(nPoints_plane, 0.0);
-                Array<OneD, NekDouble> outarray_plane(nPoints_plane, 0.0);
-
-                Vmath::Vcopy(nPoints_plane,
-                             &inarray[i*nPoints_plane], 1,
-                             &inarray_plane[0], 1);
-
-                m_planes[i]->ExtractTracePhys(inarray_plane, outarray_plane);
-
-                Vmath::Vcopy(nTracePts,
-                             &outarray_plane[0], 1,
-                             &outarray[i*nTracePts], 1);
+                tmp = outarray + i*nTracePts;
+                m_planes[i]->ExtractTracePhys(
+                    inarray + i*nPoints_plane, tmp);
             }
         }
 

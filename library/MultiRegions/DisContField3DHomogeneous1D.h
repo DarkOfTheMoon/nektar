@@ -243,21 +243,27 @@ namespace Nektar
             virtual const
                 Array<OneD,const SpatialDomains::BoundaryConditionShPtr>
                 &v_GetBndConditions()
-           {
-               return GetBndConditions();
-           }
+            {
+                return GetBndConditions();
+            }
 
-           /// @todo Fix Robin BCs for homogeneous case
-           virtual map<int, RobinBCInfoSharedPtr> v_GetRobinBCInfo()
-           {
-               return map<int, RobinBCInfoSharedPtr>();
-           }
+            /// @todo Fix Robin BCs for homogeneous case
+            virtual map<int, RobinBCInfoSharedPtr> v_GetRobinBCInfo()
+            {
+                return map<int, RobinBCInfoSharedPtr>();
+            }
 
-           virtual void v_ExtractTracePhys(
+            virtual void v_GetFwdBwdTracePhys(
+                const Array<OneD, const NekDouble> &field,
+                      Array<OneD,       NekDouble> &Fwd,
+                      Array<OneD,       NekDouble> &Bwd);
+            virtual void v_AddTraceIntegral(
+                const Array<OneD, const NekDouble> &Fn,
+                      Array<OneD,       NekDouble> &outarray);
+            virtual void v_ExtractTracePhys(
                 const Array<OneD, const NekDouble> &inarray,
                       Array<OneD,       NekDouble> &outarray);
-
-           virtual void v_ExtractTracePhys(
+            virtual void v_ExtractTracePhys(
                       Array<OneD,       NekDouble> &outarray);
 
         private:

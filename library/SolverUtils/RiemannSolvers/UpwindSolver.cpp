@@ -89,7 +89,7 @@ namespace Nektar
         {
             ASSERTL1(CheckScalars("Vn"), "Vn not defined.");
             const Array<OneD, NekDouble> &traceVel = m_scalars["Vn"]();
-            
+
             for (int j = 0; j < traceVel.num_elements(); ++j)
             {
                 const Array<OneD, const Array<OneD, NekDouble> > &tmp = 
