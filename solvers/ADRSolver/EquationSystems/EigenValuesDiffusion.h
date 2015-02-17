@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// File EigenValuesAdvection.h
+// File EigenValuesDiffusion.h
 //
 // For more information, please see: http://www.nektar.info
 //
@@ -37,21 +37,21 @@
 #define NEKTAR_SOLVERS_ADRSOLVER_EQUATIONSYSTEMS_EIGENVALUESADVECTION_H
 
 #include <SolverUtils/EquationSystem.h>
-#include <ADRSolver/EquationSystems/UnsteadyAdvection.h>
+#include <ADRSolver/EquationSystems/UnsteadyDiffusion.h>
 
 using namespace Nektar::SolverUtils;
 
 namespace Nektar
 {
-    class EigenValuesAdvection : public UnsteadyAdvection
+    class EigenValuesDiffusion : public UnsteadyDiffusion
     {
     public:
-        friend class MemoryManager<EigenValuesAdvection>;
+        friend class MemoryManager<EigenValuesDiffusion>;
 
         /// Creates an instance of this class
         static EquationSystemSharedPtr create(
             const LibUtilities::SessionReaderSharedPtr& pSession) {
-            EquationSystemSharedPtr p = MemoryManager<EigenValuesAdvection>
+            EquationSystemSharedPtr p = MemoryManager<EigenValuesDiffusion>
                 ::AllocateSharedPtr(pSession);
             p->InitObject();
             return p;
@@ -59,12 +59,12 @@ namespace Nektar
         /// Name of class
         static std::string className;
 
-        virtual ~EigenValuesAdvection();
+        virtual ~EigenValuesDiffusion();
 
     protected:
         Array<OneD, Array<OneD, NekDouble> > m_velocity;
 
-        EigenValuesAdvection(
+        EigenValuesDiffusion(
             const LibUtilities::SessionReaderSharedPtr& pSession);
 		
         virtual void v_InitObject();

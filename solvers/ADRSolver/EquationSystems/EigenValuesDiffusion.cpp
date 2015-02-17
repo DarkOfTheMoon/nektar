@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// File EigenValuesAdvection.cpp
+// File EigenValuesDiffusion.cpp
 //
 // For more information, please see: http://www.nektar.info
 //
@@ -35,37 +35,35 @@
 
 #include <iostream>
 
-#include <ADRSolver/EquationSystems/EigenValuesAdvection.h>
+#include <ADRSolver/EquationSystems/EigenValuesDiffusion.h>
 
 namespace Nektar
 {
-    string EigenValuesAdvection::className = GetEquationSystemFactory().
+    string EigenValuesDiffusion::className = GetEquationSystemFactory().
         RegisterCreatorFunction(
-            "EigenValuesAdvection", EigenValuesAdvection::create,
+            "EigenValuesDiffusion", EigenValuesDiffusion::create,
             "Eigenvalues of the weak advection operator.");
 
-    EigenValuesAdvection::EigenValuesAdvection(
+    EigenValuesDiffusion::EigenValuesDiffusion(
         const LibUtilities::SessionReaderSharedPtr& pSession)
-        : UnsteadyAdvection(pSession),
-          UnsteadySystem(pSession)
+        : UnsteadyDiffusion(pSession)
     {
     }
 
-    void EigenValuesAdvection::v_InitObject()
+    void EigenValuesDiffusion::v_InitObject()
     {
-        UnsteadyAdvection::v_InitObject();
+        UnsteadyDiffusion::v_InitObject();
     }
 
-    EigenValuesAdvection::~EigenValuesAdvection()
+    EigenValuesDiffusion::~EigenValuesDiffusion()
     {
 
     }
 
-    void EigenValuesAdvection::v_DoSolve()
+    void EigenValuesDiffusion::v_DoSolve()
     {
         const int nVariables = 1;
         const int npoints = GetNpoints();
-        const int ncoeffs = GetNcoeffs();
 
         Array<OneD, Array<OneD, NekDouble> > inarray (nVariables);
         Array<OneD, Array<OneD, NekDouble> > tmp     (nVariables);
@@ -80,27 +78,22 @@ namespace Nektar
         {
             inarray[0][j] = 1.0;
 
-            /// Feeding the weak Advection oprator with a vector (inarray)
+            /// Feeding the weak Diffusion oprator with a vector (inarray)
             /// Looping on inarray and changing the position of the only
             /// non-zero entry we simulate the multiplication by the identity
             /// matrix.  The results stored in outarray is one of the columns of
             /// the weak advection oprators which are then stored in MATRIX for
             /// the futher eigenvalues calculation.
+            m_diffusion->Diffuse(nVariables, m_fields, inarray, outarray);
 
-            m_advObject->Advect(nVariables, m_fields, m_velocity, inarray,
-                                outarray, 0.0);
-
-            /// The result is stored in outarray (is the j-th columns of the
-            /// weak advection operator).  We now store it in MATRIX(j)
-            Vmath::Smul(npoints, -1.0, &outarray[0][0], 1, &weakMatrix[j*npoints], 1);
+            Vmath::Vcopy(npoints, &outarray[0][0], 1, &weakMatrix[j*npoints], 1);
 
             /// Set the j-th entry of inarray back to zero
             inarray[0][j] = 0.0;
         }
 
-        ////////////////////////////////////////////////////////////////////////////////
-        /// Calulating the eigenvalues of the weak advection operator stored in (MATRIX)
-        /// using Lapack routines
+        // Calulating the eigenvalues of the weak advection operator stored in
+        // (MATRIX) using Lapack routines
 
         char jobvl = 'N';
         char jobvr = 'N';
@@ -114,9 +107,9 @@ namespace Nektar
 
         Lapack::Dgeev(jobvl,jobvr,npoints,weakMatrix.get(),npoints,eigReal.get(),eigImag.get(),&dum,1,&dum,1,&work[0],lwork,info);
 
-        ofstream eigFile("eig-advection.txt");
+        ofstream eigFile("eig-diffusion.txt");
 
-        for(int j = 0; j<npoints; j++)
+        for(int j = 0; j < npoints; j++)
         {
             eigFile << scientific << eigReal[j] << " " << eigImag[j] << endl;
         }
