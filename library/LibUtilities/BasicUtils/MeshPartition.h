@@ -47,17 +47,24 @@ namespace Nektar
 {
     namespace LibUtilities
     {
+        class MeshPartition;
         class SessionReader;
+        typedef boost::shared_ptr<SessionReader> SessionReaderSharedPtr;
         typedef std::map<int, std::vector<unsigned int> > CompositeOrdering;
         typedef std::map<int, std::vector<unsigned int> > BndRegionOrdering;
 
+        /// Datatype of the NekFactory used to instantiate classes derived from
+        /// the EquationSystem class.
+        typedef LibUtilities::NekFactory< std::string, MeshPartition, const SessionReaderSharedPtr& > MeshPartitionFactory;
+
+        LIB_UTILITIES_EXPORT MeshPartitionFactory& GetMeshPartitionFactory();
+
         class MeshPartition
         {
-        typedef boost::shared_ptr<SessionReader> SessionReaderSharedPtr;
 
         public:
             LIB_UTILITIES_EXPORT MeshPartition(const SessionReaderSharedPtr& pSession);
-            LIB_UTILITIES_EXPORT ~MeshPartition();
+            LIB_UTILITIES_EXPORT virtual ~MeshPartition();
 
             LIB_UTILITIES_EXPORT void PartitionMesh(int pNumPartitions, bool shared = false);
             LIB_UTILITIES_EXPORT void WriteLocalPartition(
@@ -65,11 +72,15 @@ namespace Nektar
             LIB_UTILITIES_EXPORT void WriteAllPartitions(
                     SessionReaderSharedPtr& pSession);
 
+            LIB_UTILITIES_EXPORT void PrintPartInfo(std::ostream &out);
             LIB_UTILITIES_EXPORT void GetCompositeOrdering(
                     CompositeOrdering &composites);
             LIB_UTILITIES_EXPORT void GetBndRegionOrdering(
                     BndRegionOrdering &composites,
                     unsigned int pThr);
+
+            LIB_UTILITIES_EXPORT void GetElementIDs(const int procid,
+                                                    std::vector<unsigned int> &tmp);
 
         private:
             struct MeshEntity
@@ -198,7 +209,7 @@ namespace Nektar
             std::map<std::string, int>          m_fieldNameToId;
             std::vector<MultiWeight>            m_vertWeights;
 
-            Thread::ThreadManagerSharedPtr m_threadManager;
+            Thread::ThreadManagerSharedPtr      m_threadManager;
             CommSharedPtr                       m_comm;
 
             BoostSubGraph                       m_mesh;
@@ -217,7 +228,19 @@ namespace Nektar
                                 int pNumPartitions);
             void OutputPartition(SessionReaderSharedPtr& pSession, const BoostSubGraph& pGraph, TiXmlElement* pGeometry,
             		unsigned int pThr);
-            void CheckPartitions(Array<OneD, int> &pPart);
+            void CheckPartitions(int nParts, Array<OneD, int> &pPart);
+            virtual void PartitionGraphImpl(
+                    int&                              nVerts,
+                    int&                              nVertConds,
+                    Nektar::Array<Nektar::OneD, int>& xadj,
+                    Nektar::Array<Nektar::OneD, int>& adjcy,
+                    Nektar::Array<Nektar::OneD, int>& vertWgt,
+                    Nektar::Array<Nektar::OneD, int>& vertSize,
+                    int&                              nparts,
+                    int&                              volume,
+                    Nektar::Array<Nektar::OneD, int>& part) = 0;
+
+            int CalculateElementWeight(char elmtType, bool bndWeight, int na, int nb, int nc);
         };
 
         typedef boost::shared_ptr<MeshPartition> MeshPartitionSharedPtr;

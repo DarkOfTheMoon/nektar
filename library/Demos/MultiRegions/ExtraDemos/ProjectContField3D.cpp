@@ -22,7 +22,6 @@ int main(int argc, char *argv[])
     int nq, coordim;
     Array<OneD,NekDouble>  fce; 
     Array<OneD,NekDouble>  xc0,xc1,xc2; 
-    std::string meshfile(vSession->GetFilename());
     
     if(argc != 3)
     {
@@ -96,13 +95,6 @@ int main(int argc, char *argv[])
     // Backward Transform Solution to get projected values
     Exp->BwdTrans(Exp->GetCoeffs(), Exp->UpdatePhys());
     //-------------------------------------------  
-
-    //----------------------------------------------
-    // Write solution 
-    ofstream outfile2("ProjectContFieldFile3D.dat");
-    Exp->WriteToFile(outfile2,eTecplot);
-    outfile2.close();
-    //----------------------------------------------
     
     //--------------------------------------------
     // Calculate L_inf error 

@@ -60,6 +60,12 @@ namespace Nektar
         	return shared_from_this();
         }
 
+        // Method to enforce that all existing files are removed
+        bool Comm::v_RemoveExistingFiles(void)
+        {
+            return true;
+        }
+
         CommFactory& GetCommFactory()
         {
             typedef Loki::SingletonHolder<CommFactory,
@@ -67,6 +73,63 @@ namespace Nektar
                 Loki::NoDestroy,
                 Loki::ClassLevelLockable> Type;
             return Type::Instance();
+        }
+
+        void Comm::v_SendToRankZero(std::vector<unsigned int>&  pSendData)
+        {
+            ASSERTL0(GetRank() != 0,
+                "Tried to SendToRankZero from rank zero.");
+            v_Send(0, pSendData);
+        }
+
+        void Comm::v_SendToRankZero(Array<OneD, int>&  pSendData)
+        {
+            ASSERTL0(GetRank() != 0,
+                "Tried to SendToRankZero from rank zero.");
+            v_Send(0, pSendData);
+        }
+
+        void Comm::v_SendToRankZero(Array<OneD, NekDouble>&  pSendData)
+        {
+            ASSERTL0(GetRank() != 0,
+                "Tried to SendToRankZero from rank zero.");
+            v_Send(0, pSendData);
+        }
+
+        void Comm::v_RecvFromAll(std::vector<std::vector<unsigned int> >&  pRecvData)
+        {
+            ASSERTL0(GetRank() == 0,
+                "Tried to RecvFromAll from not rank zero.");
+            ASSERTL0(pRecvData.size() >= GetSize(),
+                "Recv vector too small in RecvFromAll.");
+            for (unsigned int i=1; i<GetSize(); ++i)
+            {
+                v_Recv(i, pRecvData[i]);
+            }
+        }
+
+        void Comm::v_RecvFromAll(std::vector<Array<OneD, int> >&  pRecvData)
+        {
+            ASSERTL0(GetRank() == 0,
+                "Tried to RecvFromAll from not rank zero.");
+            ASSERTL0(pRecvData.size() >= GetSize(),
+                "Recv vector too small in RecvFromAll.");
+            for (unsigned int i=1; i<GetSize(); ++i)
+            {
+                v_Recv(i, pRecvData[i]);
+            }
+        }
+
+        void Comm::v_RecvFromAll(std::vector<Array<OneD, NekDouble> >&  pRecvData)
+        {
+            ASSERTL0(GetRank() == 0,
+                "Tried to RecvFromAll from not rank zero.");
+            ASSERTL0(pRecvData.size() >= GetSize(),
+                "Recv vector too small in RecvFromAll.");
+            for (unsigned int i=1; i<GetSize(); ++i)
+            {
+                v_Recv(i, pRecvData[i]);
+            }
         }
     }
 }

@@ -33,6 +33,7 @@ namespace Nektar
 			std::vector<Array<OneD, NekDouble>*>	m_ListOfThrSendDataDbl;
 			std::vector<Array<OneD, NekDouble> const*>	m_ListOfConstThrSendDataDbl;
 			std::vector<Array<OneD, int>*>			m_ListOfThrSendDataInt;
+			std::vector<std::vector<unsigned int>*> m_ListOfThrSendDataUIntVector;
 			std::vector<Array<OneD, long> const *>	m_ListOfConstThrSendDataLon;
 			Array<OneD, NekDouble>					m_tmpSendArrDbl;
 			Array<OneD, NekDouble>					m_tmpRecvArrDbl;
@@ -89,15 +90,24 @@ namespace Nektar
 			 *
 			 */
 			std::vector<int>						m_tmpRecvOffsetArr;
+            /**
+             * Holds pointers to send buffers for SendToRankZero
+             */
+            std::vector<std::vector<unsigned int>*> m_sendToRankZeroVecInt;
+            std::vector<Array<OneD, int>*>          m_sendToRankZeroArrInt;
+            std::vector<Array<OneD, NekDouble>*>    m_sendToRankZeroArrDbl;
 
         protected:
             virtual void v_Finalise();
             virtual int  v_GetRank();
             virtual void v_Block();
+            virtual bool v_TreatAsRankZero(void);
             virtual void v_Send(int pProc, Array<OneD, NekDouble>& pData);
             virtual void v_Send(int pProc, Array<OneD, int>& pData);
+            virtual void v_Send(int pProc, std::vector<unsigned int>& pData);
             virtual void v_Recv(int pProc, Array<OneD, NekDouble>& pData);
             virtual void v_Recv(int pProc, Array<OneD, int>& pData);
+            virtual void v_Recv(int pProc, std::vector<unsigned int>& pData);
             virtual void v_SendRecv(int pSendProc,
                                     Array<OneD, NekDouble>& pSendData,
                                     int pRecvProc,
@@ -119,6 +129,8 @@ namespace Nektar
             virtual void v_AllReduce(Array<OneD, NekDouble>& pData,
                                      enum ReduceOperator pOp);
             virtual void v_AllReduce(Array<OneD, int      >& pData,
+                                     enum ReduceOperator pOp);
+            virtual void v_AllReduce(std::vector<unsigned int>& pData,
                                      enum ReduceOperator pOp);
 			virtual void v_AlltoAll(Array<OneD, NekDouble>& pSendData,
 									Array<OneD, NekDouble>& pRecvData);
@@ -143,6 +155,12 @@ namespace Nektar
             virtual void v_GsUnique(Array<OneD, long> pId);
             virtual void v_GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
                     Gs::gs_data *pGsh);
+            virtual void v_SendToRankZero(std::vector<unsigned int>&  pSendData);
+            virtual void v_SendToRankZero(Array<OneD, int>&  pSendData);
+            virtual void v_SendToRankZero(Array<OneD, NekDouble>&  pSendData);
+            virtual void v_RecvFromAll(std::vector<std::vector<unsigned int> >&  pRecvData);
+            virtual void v_RecvFromAll(std::vector<Array<OneD, int> >&  pRecvData);
+            virtual void v_RecvFromAll(std::vector<Array<OneD, NekDouble> >&  pRecvData);
 
         private:
             template <typename DataType>
@@ -152,8 +170,17 @@ namespace Nektar
             void GenericAllReduce(Array<OneD,DataType>& pData, enum ReduceOperator pOp,
             		std::vector<Array<OneD, DataType>*>& pRes);
             template <typename DataType>
-            void DoReduction(enum ReduceOperator pOp, std::vector<Array<OneD, DataType>*>& pRes, int pOffset,
-            		int pNpp);
+            void DoReduction(enum ReduceOperator pOp,
+                    std::vector<Array<OneD,DataType>*>& pRes, int pOffset,
+                    int pNpp);
+            template <typename DataType>
+            void GenericAllReduceVector(std::vector<DataType>& pData,
+                    enum ReduceOperator pOp,
+                    std::vector<std::vector<DataType>*>& pRes);
+            template <typename DataType>
+            void DoReductionVector(enum ReduceOperator pOp,
+                    std::vector<std::vector<DataType>*>& pRes, int pOffset,
+                    int pNpp);
     		template <typename DataType>
     		void GenericAlltoAll(Array<OneD, DataType>& pSendData,
     				Array<OneD, DataType>& pRecvData,

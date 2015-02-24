@@ -47,7 +47,7 @@ namespace Nektar
             static std::map<unsigned int,  TimeIntegrationSchemeManagerT *> s_threadTSScheme;
             static boost::shared_mutex s_TSSmutex;
 //            Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-            Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm");
+            Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob");
             unsigned int vThr = vThrMan->GetWorkerNum();
             boost::shared_lock<boost::shared_mutex> ReadLock(s_TSSmutex);
             if (s_threadTSScheme.count(vThr) == 0)
@@ -1186,7 +1186,7 @@ namespace Nektar
                 // current scheme
                 int n;
                 DoubleArray  y_n;
-                NekDouble    t_n;
+                NekDouble    t_n = 0;
                 DoubleArray  dtFy_n;
                 unsigned int nCurSchemeVals  = m_numMultiStepValues; // number of required values of the current scheme
                 unsigned int nCurSchemeDers  = m_numMultiStepDerivs; // number of required derivs of the current scheme

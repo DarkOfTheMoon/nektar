@@ -47,8 +47,8 @@ using namespace Nektar;
 #include <LibUtilities/Communication/GsLib.hpp>
 namespace Gs
 {
-    enum gs_dom { gs_double, gs_float, gs_int, gs_long, gs_dom_n };
-    enum gs_mode { mode_plain, mode_vec, mode_many, mode_dry_run };
+    typedef enum { gs_double, gs_float, gs_int, gs_long, gs_dom_n } gs_dom;
+    typedef enum { mode_plain, mode_vec, mode_many, mode_dry_run } gs_mode;
 
     typedef struct { void *ptr; size_t n,max; } array;
     typedef array buffer;
@@ -81,10 +81,10 @@ namespace Gs
       unsigned int size_sk, size_s, size_total;
       unsigned int p1, p2;
       unsigned int nrecvn;
-    } cr_stage_data;
+    } cr_stage;
 
     typedef struct {
-      cr_stage_data *stage[2];
+      cr_stage *stage[2];
       unsigned int nstages;
       unsigned int buffer_size, stage_buffer_size;
     } cr_data;
@@ -97,122 +97,37 @@ namespace Gs
     typedef void exec_fun(
       void *data, gs_mode mode, unsigned vn, gs_dom dom, gs_op op,
       unsigned transpose, const void *execdata, const struct comm *comm, char *buf);
+    typedef void fin_fun(void *data);
+
+    typedef struct {
+        unsigned int buffer_size, mem_size;
+        void *data;
+        exec_fun *exec;
+        fin_fun *fin;
+    } gs_remote;
 
     struct gs_data {
       struct comm comm;
       const unsigned int *map_local[2]; /* 0=unflagged, 1=all */
       const unsigned int *flagged_primaries;
-      pw_data *pwd;
-      cr_data *crd;
-      allreduce_data *ard;
-      unsigned int buffer_size;
-      void *execdata;
-      exec_fun *exec;
-    } ;
+      gs_remote r;
+      unsigned int handle_size;
+    };
+
+    typedef enum {gs_auto, gs_pairwise, gs_crystal_router, gs_all_reduce} gs_method;
 
     extern "C"
     {
         void nektar_gs(void *u, gs_dom dom, gs_op op, unsigned transpose,
                 gs_data *gsh, buffer *buf);
-        gs_data *nektar_gs_setup(const long *id, unsigned int n, const struct comm *comm);
+        gs_data *nektar_gs_setup(const long *id, unsigned int n, const struct comm *comm,
+                                int unique, gs_method method, int verbose);
         void nektar_gs_free(gs_data *gsh);
         void nektar_gs_unique(long *id, unsigned int n, const struct comm *comm);
     }
 
-
-    /**
-     * @brief Initialise Gather-Scatter map.
-     *
-     * On each process an array of IDs for each global degree of freedom is
-     * supplied which corresponds to a unique numbering of universal degrees of
-     * freedom. This is used to initialise the GSLib mapping between process-
-     * boundary degrees of freedom on different processes.
-     * @param   pId         Array of integers providing universal IDs for each
-     *                      global DOF on the process.
-     * @param   pComm       Communication object used for inter-process
-     *                      communication.
-     * @returns GSLib data structure containing mapping information.
-     */
-//    static gs_data* Init (  const Nektar::Array<OneD, long> pId,
-//                            const LibUtilities::CommMpi& pComm)
-//    {
-//        if (pComm->GetSize() == 1)
-//        {
-//            return 0;
-//        }
-//        LibUtilities::CommMpiSharedPtr vCommMpi = boost::dynamic_pointer_cast<LibUtilities::CommMpi> (pComm);
-//        ASSERTL1(vCommMpi, "Failed to cast MPI Comm object.");
-//        comm vComm;
-//        MPI_Comm_dup(pComm.GetComm(), &vComm.c);
-//        vComm.id = pComm.GetRank();
-//        vComm.np = pComm.GetSize();
-//        return nektar_gs_setup(&pId[0], pId.num_elements(), &vComm);
-//    }
-
-
-    /**
-     * @brief Updates pId to negate all-but-one references to each universal ID.
-     *
-     * The array of universal IDs corresponding to the process-local DOF are
-     * updated such that the ID of only one instance of each universal ID
-     * remains positive. This allows the consistent formulation of universally
-     * -distributed dot products, for which the contributions of each DOF must
-     * be included only once.
-     */
-//    static void Unique (    const Nektar::Array<OneD, long> pId,
-//                            const LibUtilities::CommMpi& pComm)
-//    {
-//        if (pComm->GetSize() == 1)
-//        {
-//            return;
-//        }
-//        LibUtilities::CommMpiSharedPtr vCommMpi = boost::dynamic_pointer_cast<LibUtilities::CommMpi> (pComm);
-//        ASSERTL1(vCommMpi, "Failed to cast MPI Comm object.");
-//        comm vComm;
-//        vComm.c  = pComm.GetComm();
-//        vComm.id = pComm.GetRank();
-//        vComm.np = pComm.GetSize();
-//        nektar_gs_unique(&pId[0], pId.num_elements(), &vComm);
-//    }
-
-
-    /**
-     * @brief Deallocates the GSLib mapping data.
-     */
-//    static void Finalise (gs_data *pGsh)
-//    {
-//        if (pGsh)
-//        {
-//            nektar_gs_free(pGsh);
-//        }
-//    }
-
-
-    /**
-     * @brief Performs a gather-scatter operation of the provided values.
-     *
-     * The
-     */
-//    static void Gather(Nektar::Array<OneD, NekDouble> pU, gs_op pOp,
-//                       gs_data *pGsh, Nektar::Array<OneD, NekDouble> pBuffer
-//                                                        = NullNekDouble1DArray)
-//    {
-//        if (!pGsh)
-//        {
-//            return;
-//        }
-//        if (pBuffer.num_elements() == 0)
-//        {
-//            nektar_gs(&pU[0], gs_double, pOp, false, pGsh, 0);
-//        }
-//        else
-//        {
-//            array buf;
-//            buf.ptr = &pBuffer[0];
-//            buf.n = pBuffer.num_elements();
-//            nektar_gs(&pU[0], gs_double, pOp, false, pGsh, &buf);
-//        }
-//    }
+    // The functions Init, Unique, Finalise and Gather are now part of
+    // the Comm objects (in this case, in the CommMpi class).
 
 }
 

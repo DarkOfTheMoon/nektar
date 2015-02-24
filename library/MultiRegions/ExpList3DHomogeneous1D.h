@@ -121,14 +121,18 @@ namespace Nektar
                                      Array<OneD, NekDouble> &coord_1,
                                      Array<OneD, NekDouble> &coord_2);
 
-            virtual void v_WriteTecplotZone(std::ofstream &outfile,
-                                            int expansion);
+            virtual void v_WriteTecplotConnectivity(std::ostream &outfile,
+                                                    int expansion);
 
+            virtual void v_WriteVtkPieceHeader(std::ostream &outfile,
+                                               int expansion);
 
-            virtual void v_WriteVtkPieceHeader(std::ofstream &outfile, int expansion);
+            virtual void v_WriteVtkPieceHeader(std::ostream &outfile,
+                                               int expansion, int istrip);
 
-            virtual NekDouble v_L2(void);
-            virtual NekDouble v_L2(const Array<OneD, const NekDouble> &soln);
+            virtual NekDouble v_L2(
+                const Array<OneD, const NekDouble> &inarray,
+                const Array<OneD, const NekDouble> &soln = NullNekDouble1DArray);
 			
             virtual Array<OneD, const NekDouble> v_HomogeneousEnergy(void);
 

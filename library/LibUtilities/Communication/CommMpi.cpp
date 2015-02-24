@@ -52,11 +52,16 @@ namespace Nektar
         CommMpi::CommMpi(int narg, char* arg[])
                 : Comm(narg,arg)
         {
+            int init = 0;
+            MPI_Initialized(&init);
+            ASSERTL0(!init, "MPI has already been initialised.");
+
             int retval = MPI_Init(&narg, &arg);
             if (retval != MPI_SUCCESS)
             {
                 ASSERTL0(false, "Failed to initialise MPI");
             }
+
             m_comm = MPI_COMM_WORLD;
             MPI_Comm_size( m_comm, &m_size );
             MPI_Comm_rank( m_comm, &m_rank );
@@ -114,6 +119,21 @@ namespace Nektar
             return m_rank;
         }
 
+        /**
+         * 
+         */
+        bool CommMpi::v_TreatAsRankZero(void)
+        {
+            if(m_rank == 0)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+            return true; 
+        }
 
         /**
          *
@@ -204,6 +224,51 @@ namespace Nektar
             MPI_Recv( pData.get(),
                       (int) pData.num_elements(),
                       MPI_INT,
+                      pProc,
+                      0,
+                      m_comm,
+                      &status);
+
+            //ASSERTL0(status.MPI_ERROR == MPI_SUCCESS,
+            //         "MPI error receiving data.");
+        }
+
+
+        /**
+         *
+         */
+        void CommMpi::v_Send(int pProc, std::vector<unsigned int>& pData)
+        {
+            if (MPISYNC)
+            {
+                MPI_Ssend( &pData[0],
+                          (int) pData.size(),
+                          MPI_UNSIGNED,
+                          pProc,
+                          0,
+                          m_comm);
+            }
+            else
+            {
+                MPI_Send( &pData[0],
+                          (int) pData.size(),
+                          MPI_UNSIGNED,
+                          pProc,
+                          0,
+                          m_comm);
+            }
+        }
+
+
+        /**
+         *
+         */
+        void CommMpi::v_Recv(int pProc, std::vector<unsigned int>& pData)
+        {
+            MPI_Status status;
+            MPI_Recv( &pData[0],
+                      (int) pData.size(),
+                      MPI_UNSIGNED,
                       pProc,
                       0,
                       m_comm,
@@ -434,7 +499,37 @@ namespace Nektar
         }
 		
 		
-		/**
+        /**
+         *
+         */
+        void CommMpi::v_AllReduce(std::vector<unsigned int>& pData, enum ReduceOperator pOp)
+        {
+            if (GetSize() == 1)
+            {
+                return;
+            }
+
+            MPI_Op vOp;
+            switch (pOp)
+            {
+            case ReduceMax: vOp = MPI_MAX; break;
+            case ReduceMin: vOp = MPI_MIN; break;
+            case ReduceSum:
+            default:        vOp = MPI_SUM; break;
+            }
+            int retval = MPI_Allreduce( MPI_IN_PLACE,
+                                        &pData[0],
+                                        (int) pData.size(),
+                                        MPI_INT,
+                                        vOp,
+                                        m_comm);
+
+            ASSERTL0(retval == MPI_SUCCESS,
+                     "MPI error performing All-reduce.");
+        }
+
+
+        /**
          *
          */
 		void CommMpi::v_AlltoAll(Array<OneD, NekDouble>& pSendData,Array<OneD, NekDouble>& pRecvData)
@@ -549,18 +644,15 @@ namespace Nektar
             m_commColumn = boost::shared_ptr<Comm>(new CommMpi(newComm));
         }
 
+        // GsLib functions now belong here.
         using namespace Gs;
         Gs::gs_data* CommMpi::v_GsInit(const Array<OneD, long> pId)
         {
-//        	if (m_size == 1)
-//        	{
-//        		return 0;
-//        	}
             comm vComm;
             MPI_Comm_dup(m_comm, &vComm.c);
             vComm.id = GetRank();
             vComm.np = GetSize();
-            return nektar_gs_setup(&pId[0], pId.num_elements(), &vComm);
+            return nektar_gs_setup(pId.get(),pId.num_elements(), &vComm, 0, gs_auto, 1);
         }
 
         void CommMpi::v_GsFinalise(Gs::gs_data *pGsh)
@@ -573,15 +665,11 @@ namespace Nektar
 
         void CommMpi::v_GsUnique(Array<OneD, long> pId)
         {
-//            if (m_size == 1)
-//            {
-//                return;
-//            }
             comm vComm;
             vComm.c  = m_comm;
             vComm.id = GetRank();
             vComm.np = GetSize();
-            nektar_gs_unique(&pId[0], pId.num_elements(), &vComm);
+            nektar_gs_unique(pId.get(), pId.num_elements(), &vComm);
         }
 
         void CommMpi::v_GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
@@ -591,17 +679,7 @@ namespace Nektar
             {
                 return;
             }
-//            if (pBuffer.num_elements() == 0)
-//            {
-                nektar_gs(&pU[0], gs_double, pOp, false, pGsh, 0);
-//            }
-//            else
-//            {
-//                array buf;
-//                buf.ptr = &pBuffer[0];
-//                buf.n = pBuffer.num_elements();
-//                nektar_gs(&pU[0], gs_double, pOp, false, pGsh, &buf);
-//            }
+            nektar_gs(pU.get(), gs_double, pOp, false, pGsh, 0);
         }
 
 

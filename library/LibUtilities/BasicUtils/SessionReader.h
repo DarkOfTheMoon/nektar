@@ -83,11 +83,15 @@ namespace Nektar
         typedef std::map<std::string, std::string>   GloSysInfoMap;
         typedef std::map<std::string, GloSysInfoMap> GloSysSolnInfoList;
 
+        typedef std::map<std::string, std::string>   GloSysInfoMap;
+        typedef std::map<std::string, GloSysInfoMap> GloSysSolnInfoList;
+
         enum FunctionType
         {
             eFunctionTypeExpression,
             eFunctionTypeFile,
-            eSIZE_FunctionType
+            eFunctionTypeTransientFile,
+            eSIZE_FunctionType,
         };
         const char* const FunctionTypeMap[] =
         {
@@ -107,8 +111,10 @@ namespace Nektar
             enum FunctionType m_type;
             std::string       m_filename;
             EquationSharedPtr m_expression;
+            std::string       m_fileVariable;
         };
-        typedef std::map<std::string, FunctionVariableDefinition>  
+        
+        typedef std::map<std::pair<std::string,int>, FunctionVariableDefinition>  
             FunctionVariableMap;
         typedef std::map<std::string, FunctionVariableMap > 
             FunctionMap;
@@ -121,7 +127,7 @@ namespace Nektar
             public boost::enable_shared_from_this<SessionReader>
         {
         public:
-            /// Support creation through MemoryManager only.
+            /// Support creation through MemoryManager.
             friend class MemoryManager<SessionReader>;
             /// Allow access from thread class
             friend class SessionJob;
@@ -168,15 +174,17 @@ namespace Nektar
                 return p;
             }
 
+            LIB_UTILITIES_EXPORT SessionReader(
+                int                             argc, 
+                char                           *argv[], 
+                const std::vector<std::string> &pFilenames, 
+                const CommSharedPtr            &pComm);
+
             /**
              * @brief Creates an instance of the SessionReader class.
              *
-             * This function should be used by an application to instantiate the
-             * session reader. It should be called at the very beginning of the
-             * application before any other processing of command-line
-             * arguments. After instantiating the class and setting up any
-             * parallel communication, it also calls the main initialisation
-             * of the object.
+             * As for SessionReaderSharedPtr CreateInstance(int argc, char *argv[])
+             * but also sets up ThreadedComm style parallelism.
              */
             LIB_UTILITIES_EXPORT static SessionReaderSharedPtr CreateInstance(
                 int argc, char *argv[], void (*pMainFunc)(SessionReaderSharedPtr))
@@ -191,27 +199,27 @@ namespace Nektar
              * @brief Creates an instance of the SessionReader class initialised
              *        using a separate list of XML documents.
              *
-             * This function should be used by an application to instantiate the
-             * session reader. It may be called after processing of command-line
-             * arguments. After instantiating the class and setting up any
-             * parallel communication, it also calls the main initialisation
-             * of the object.
+             * As for SessionReaderSharedPtr CreateInstance(
+             *  int                       argc,
+             *  char                     *argv[],
+             *  std::vector<std::string> &pFilenames,
+             *  const CommSharedPtr      &pComm = CommSharedPtr())
+             * but also sets up ThreadedComm style parallelism.
              */
             LIB_UTILITIES_EXPORT static SessionReaderSharedPtr CreateInstance(
-            		int                       argc,
-            		char                     *argv[],
-            		std::vector<std::string> &pFilenames,
-            		void (*pMainFunc)(SessionReaderSharedPtr),
-            		const CommSharedPtr      &pComm = CommSharedPtr()
-            		)
+                    int                       argc,
+                    char                     *argv[],
+                    std::vector<std::string> &pFilenames,
+                    void (*pMainFunc)(SessionReaderSharedPtr),
+                    const CommSharedPtr      &pComm = CommSharedPtr()
+                    )
             {
-            	SessionReaderSharedPtr p = MemoryManager<
-            			LibUtilities::SessionReader>
-            	::AllocateSharedPtr(argc, argv, pFilenames, pComm, pMainFunc);
-            	p->InitSession();
-            	return p;
+                SessionReaderSharedPtr p = MemoryManager<
+                    LibUtilities::SessionReader>
+                        ::AllocateSharedPtr(argc, argv, pFilenames, pComm, pMainFunc);
+                p->InitSession();
+                return p;
             }
-
 
             /// Destructor
             LIB_UTILITIES_EXPORT ~SessionReader();
@@ -225,7 +233,8 @@ namespace Nektar
             LIB_UTILITIES_EXPORT bool DefinesElement(
                 const std::string& pPath) const;
             /// Returns the filename of the loaded XML document.
-            LIB_UTILITIES_EXPORT const std::string &GetFilename() const;
+            LIB_UTILITIES_EXPORT const std::vector<std::string>
+                                                    &GetFilenames() const;
             /// Returns the session name of the loaded XML document.
             LIB_UTILITIES_EXPORT const std::string &GetSessionName() const;
             /// Returns the session name with process rank
@@ -277,6 +286,9 @@ namespace Nektar
             /// Returns the value of the specified solver info property.
             LIB_UTILITIES_EXPORT const std::string& GetSolverInfo(
                 const std::string &pProperty) const;
+            /// Sets the value of the specified solver info property.
+            LIB_UTILITIES_EXPORT void SetSolverInfo(
+                const std::string &pProperty, const std::string &pValue);
             /// Returns the value of the specified solver info property as enum
             template<typename T>
             inline const T GetSolverInfoAsEnum(const std::string &pName) const;
@@ -316,6 +328,7 @@ namespace Nektar
                 const std::string &pValue);
         
             /* ----GlobalSysSolnInfo ----- */
+
             LIB_UTILITIES_EXPORT bool DefinesGlobalSysSolnInfo(
                 const std::string &variable,
                 const std::string &property) const;
@@ -369,31 +382,44 @@ namespace Nektar
             /// Checks if a specified function has a given variable defined.
             LIB_UTILITIES_EXPORT bool DefinesFunction(
                 const std::string &name, 
-                const std::string &variable) const;
+                const std::string &variable,
+                const int pDomain = 0) const;
             /// Returns an EquationSharedPtr to a given function variable.
             LIB_UTILITIES_EXPORT EquationSharedPtr GetFunction(
                 const std::string &name, 
-                const std::string &variable) const;
+                const std::string &variable,
+                const int pDomain = 0) const;
             /// Returns an EquationSharedPtr to a given function variable index.
             LIB_UTILITIES_EXPORT EquationSharedPtr GetFunction(
                 const std::string  &name, 
-                const unsigned int &var) const;
+                const unsigned int &var,
+                const int pDomain = 0) const;
             /// Returns the type of a given function variable.
             LIB_UTILITIES_EXPORT enum FunctionType GetFunctionType(
                 const std::string &name, 
-                const std::string &variable) const;
+                const std::string &variable,
+                const int pDomain = 0) const;
             /// Returns the type of a given function variable index.
             LIB_UTILITIES_EXPORT enum FunctionType GetFunctionType(
                 const std::string  &pName, 
-                const unsigned int &pVar) const;
+                const unsigned int &pVar,
+                const int pDomain = 0) const;
             /// Returns the filename to be loaded for a given variable.
             LIB_UTILITIES_EXPORT std::string GetFunctionFilename(
                 const std::string &name, 
-                const std::string &variable) const;
+                const std::string &variable,
+                const int pDomain = 0) const;
             /// Returns the filename to be loaded for a given variable index.
             LIB_UTILITIES_EXPORT std::string GetFunctionFilename(
                 const std::string  &name, 
-                const unsigned int &var) const;
+                const unsigned int &var,
+                const int pDomain = 0) const;
+            /// Returns the filename variable to be loaded for a given variable
+            /// index.
+            LIB_UTILITIES_EXPORT std::string GetFunctionFilenameVariable(
+                const std::string  &name,
+                const std::string &variable,
+                const int pDomain = 0) const;
 
             /// Returns the instance of AnalyticExpressionEvaluator specific to
             /// this session.
@@ -420,8 +446,12 @@ namespace Nektar
             LIB_UTILITIES_EXPORT bool DefinesCmdLineArgument(
                 const std::string& pName) const;
             /// Retrieves a command-line argument value.
-            LIB_UTILITIES_EXPORT std::string GetCmdLineArgument(
-                const std::string& pName) const;
+            template <typename T>
+            T GetCmdLineArgument(
+                const std::string& pName) const
+            {
+                return m_cmdLineOptions.find(pName)->second.as<T>();
+            }
             /// Registers a command-line argument with the session reader.
             LIB_UTILITIES_EXPORT inline static std::string 
               RegisterCmdLineArgument(
@@ -442,14 +472,15 @@ namespace Nektar
 
             LIB_UTILITIES_EXPORT Nektar::Thread::ThreadManagerSharedPtr GetThreadManager();
 
+            LIB_UTILITIES_EXPORT void SetUpXmlDoc();
+
         private:
             boost::program_options::variables_map m_cmdLineOptions;
 
             /// Communication object.
             CommSharedPtr                             m_comm;
-            /// Filename of the loaded XML document.
-            //std::string                               m_filename;
-            std::vector<std::string>				  m_filename;
+            /// Filenames
+            std::vector<std::string>                  m_filenames;
             /// Session name of the loaded XML document (filename minus ext).
             std::string                               m_sessionName;
             /// Pointer to the loaded XML document.
@@ -489,23 +520,18 @@ namespace Nektar
             /// bcs.
             std::vector<BndRegionOrdering>            m_bndRegOrder;
             /// String to enumeration map for Solver Info parameters.
-            LIB_UTILITIES_EXPORT static EnumMapList        m_enums;
+            LIB_UTILITIES_EXPORT static EnumMapList&  GetSolverInfoEnums();
             /// Default solver info options.
-            LIB_UTILITIES_EXPORT static SolverInfoMap      m_solverInfoDefaults;
-            /// CmdLine argument map.
-            LIB_UTILITIES_EXPORT static CmdLineArgMap      m_cmdLineArguments;
+            LIB_UTILITIES_EXPORT static SolverInfoMap& GetSolverInfoDefaults();
             /// GlobalSysSoln Info map.
-            LIB_UTILITIES_EXPORT static GloSysSolnInfoList m_gloSysSolnList;
-            
+            LIB_UTILITIES_EXPORT static GloSysSolnInfoList& GetGloSysSolnList();
+            /// CmdLine argument map.
+            LIB_UTILITIES_EXPORT static CmdLineArgMap& GetCmdLineArgMap();
+
             /// Main constructor
             LIB_UTILITIES_EXPORT SessionReader(
                 int                             argc,
                 char                           *argv[]);
-            LIB_UTILITIES_EXPORT SessionReader(
-                int                             argc,
-                char                           *argv[],
-                const std::vector<std::string> &pFilenames,
-                const CommSharedPtr            &pComm);
 
             /// Main constructor
             LIB_UTILITIES_EXPORT SessionReader(
@@ -527,6 +553,9 @@ namespace Nektar
             std::vector<std::string> ParseCommandLineArguments(
                 int argc, char *argv[]);
 
+            /// Parse the session name.
+            std::string ParseSessionName(std::vector<std::string> &filenames);
+
             /// Loads an xml file into a tinyxml doc and decompresses if needed
             LIB_UTILITIES_EXPORT void LoadDoc(
                 const std::string &pFilename,
@@ -540,8 +569,8 @@ namespace Nektar
             /// communication object.
             LIB_UTILITIES_EXPORT void CreateComm(
                 int               &argc, 
-                char*              argv[], 
-                const std::string &pFilename);
+                char*              argv[]);
+
             /// Partitions the mesh when running in parallel.
             LIB_UTILITIES_EXPORT void PartitionMesh();
             /// Partitions the comm object based on session parameters.
@@ -554,8 +583,6 @@ namespace Nektar
             /// Reads the GLOBALSYSSOLNINFO section of the XML document.
             LIB_UTILITIES_EXPORT void ReadGlobalSysSolnInfo(
                     TiXmlElement *conditions);
-            /// Reads the GEOMETRICINFO section of the XML document.
-            LIB_UTILITIES_EXPORT void ReadGeometricInfo(TiXmlElement *geometry);
             /// Reads the EXPRESSIONS section of the XML document.
             LIB_UTILITIES_EXPORT void ReadExpressions(TiXmlElement *conditions);
             /// Reads the VARIABLES section of the XML document.
@@ -609,7 +636,8 @@ namespace Nektar
 
             std::string vValue = GetSolverInfo(vName);
             EnumMapList::iterator x;
-            ASSERTL0((x = m_enums.find(vName)) != m_enums.end(),
+            ASSERTL0((x = GetSolverInfoEnums().find(vName)) !=
+                          GetSolverInfoEnums().end(),
                      "Enum for SolverInfo property '" + pName + "' not found.");
 
             EnumMap::iterator y;
@@ -621,17 +649,20 @@ namespace Nektar
         }
 
 
+
         /**
          *
          */
         template<typename T>
-            inline const T SessionReader::GetValueAsEnum(const std::string &pName,
-                                                         const std::string &pValue) const
+        inline const T SessionReader::GetValueAsEnum(
+            const std::string &pName,
+            const std::string &pValue) const
         {
             std::string vName  = boost::to_upper_copy(pName);
 
             EnumMapList::iterator x;
-            ASSERTL0((x = m_enums.find(vName)) != m_enums.end(),
+            ASSERTL0((x = GetSolverInfoEnums().find(vName)) !=
+                          GetSolverInfoEnums().end(),
                      "Enum for property '" + pName + "' not found.");
 
             EnumMap::iterator y;
@@ -672,10 +703,11 @@ namespace Nektar
         {
             std::string vEnum = boost::to_upper_copy(pEnum);
             EnumMapList::iterator x;
-            if ((x = m_enums.find(vEnum)) == m_enums.end())
+            if ((x = GetSolverInfoEnums().find(vEnum)) ==
+                     GetSolverInfoEnums().end())
             {
-                m_enums[vEnum] = EnumMap();
-                x = m_enums.find(vEnum);
+                GetSolverInfoEnums()[vEnum] = EnumMap();
+                x = GetSolverInfoEnums().find(vEnum);
             }
             x->second[pString] = pEnumValue;
             return pString;
@@ -704,7 +736,7 @@ namespace Nektar
             const std::string &pValue)
         {
             std::string vName = boost::to_upper_copy(pName);
-            m_solverInfoDefaults[vName] = pValue;
+            GetSolverInfoDefaults()[vName] = pValue;
             return pValue;
         }
 
@@ -722,7 +754,7 @@ namespace Nektar
             x.shortName = pShortName;
             x.description = pDescription;
             x.isFlag = false;
-            m_cmdLineArguments[pName] = x;
+            GetCmdLineArgMap()[pName] = x;
             return pName;
         }
 
@@ -740,7 +772,7 @@ namespace Nektar
             x.shortName = pShortName;
             x.description = pDescription;
             x.isFlag = true;
-            m_cmdLineArguments[pName] = x;
+            GetCmdLineArgMap()[pName] = x;
             return pName;
         }
 

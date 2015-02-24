@@ -67,7 +67,7 @@ namespace Nektar
          * Even shared locking causes a large slowdown.
          */
 //        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm");
+        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob");
 
         unsigned int vThr = vThrMan->GetWorkerNum();
         if (!sThrMan)
@@ -95,7 +95,7 @@ namespace Nektar
     void InitMemoryPools(unsigned int pNumThr, bool pEnabled)
     {
 //        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance("threadedcomm");
+        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob");
         MemoryPoolPool &p = GetMemoryPoolPool();
 
         p->resize(pNumThr);

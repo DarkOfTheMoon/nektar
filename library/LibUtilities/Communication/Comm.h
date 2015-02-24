@@ -35,6 +35,8 @@
 #ifndef NEKTAR_LIB_UTILITIES_COMM_H
 #define NEKTAR_LIB_UTILITIES_COMM_H
 
+#include <vector>
+
 #include <boost/enable_shared_from_this.hpp>
 #include <LibUtilities/BasicUtils/NekFactory.hpp>
 #include <LibUtilities/LibUtilitiesDeclspec.h>
@@ -84,8 +86,10 @@ namespace Nektar
                 LIB_UTILITIES_EXPORT inline void Block();
                 LIB_UTILITIES_EXPORT inline void Send(int pProc, Array<OneD, NekDouble>& pData);
                 LIB_UTILITIES_EXPORT inline void Send(int pProc, Array<OneD, int>& pData);
+                LIB_UTILITIES_EXPORT inline void Send(int pProc, std::vector<unsigned int>& pData);
                 LIB_UTILITIES_EXPORT inline void Recv(int pProc, Array<OneD, NekDouble>& pData);
                 LIB_UTILITIES_EXPORT inline void Recv(int pProc, Array<OneD, int>& pData);
+                LIB_UTILITIES_EXPORT inline void Recv(int pProc, std::vector<unsigned int>& pData);
                 LIB_UTILITIES_EXPORT inline void SendRecv(int pSendProc,
                                      Array<OneD, NekDouble>& pSendData,
                                      int pRecvProc,
@@ -94,35 +98,37 @@ namespace Nektar
                                      Array<OneD, int>& pSendData,
                                      int pRecvProc,
                                      Array<OneD, int>& pRecvData);
-			    LIB_UTILITIES_EXPORT inline void SendRecvReplace(int pSendProc,
-																int pRecvProc,
-																Array<OneD, NekDouble>& pSendData);
-			     LIB_UTILITIES_EXPORT inline void SendRecvReplace(int pSendProc,
-													             int pRecvProc,
-													             Array<OneD, int>& pSendData);
+                LIB_UTILITIES_EXPORT inline void SendRecvReplace(int pSendProc,
+                                                                 int pRecvProc,
+                                                                 Array<OneD, NekDouble>& pSendData);
+                LIB_UTILITIES_EXPORT inline void SendRecvReplace(int pSendProc,
+                                                                 int pRecvProc,
+                                                                 Array<OneD, int>& pSendData);
                 LIB_UTILITIES_EXPORT inline void AllReduce(NekDouble& pData, enum ReduceOperator pOp);
                 LIB_UTILITIES_EXPORT inline void AllReduce(int& pData, enum ReduceOperator pOp);
                 LIB_UTILITIES_EXPORT inline void AllReduce(Array<OneD, NekDouble>& pData,
                                          enum ReduceOperator pOp);
                 LIB_UTILITIES_EXPORT inline void AllReduce(Array<OneD, int      >& pData,
                                          enum ReduceOperator pOp);
-			    LIB_UTILITIES_EXPORT inline void AlltoAll(Array<OneD, NekDouble>& pSendData,
-														 Array<OneD, NekDouble>& pRecvData);
+                LIB_UTILITIES_EXPORT inline void AllReduce(std::vector<unsigned int>& pData,
+                                                           enum ReduceOperator pOp);
+                LIB_UTILITIES_EXPORT inline void AlltoAll(Array<OneD, NekDouble>& pSendData,
+                                                          Array<OneD, NekDouble>& pRecvData);
                 LIB_UTILITIES_EXPORT inline void AlltoAll(Array<OneD, int>& pSendData,
-														 Array<OneD, int>& pRecvData);
-			    LIB_UTILITIES_EXPORT inline void AlltoAllv(Array<OneD, NekDouble>& pSendData,
-														  Array<OneD, int>& pSendDataSizeMap,
-														  Array<OneD, int>& pSendDataOffsetMap,
-													      Array<OneD, NekDouble>& pRecvData,
-														  Array<OneD, int>& pRecvDataSizeMap,
-														  Array<OneD, int>& pRecvDataOffsetMap);
-			    LIB_UTILITIES_EXPORT inline void AlltoAllv(Array<OneD, int>& pSendData,
-													      Array<OneD, int>& pSendDataSizeMap,
-													      Array<OneD, int>& pSendDataOffsetMap,
-													      Array<OneD, int>& pRecvData,
-													      Array<OneD, int>& pRecvDataSizeMap,
-													      Array<OneD, int>& pRecvDataOffsetMap);
-
+                                                          Array<OneD, int>& pRecvData);
+                LIB_UTILITIES_EXPORT inline void AlltoAllv(Array<OneD, NekDouble>& pSendData,
+                                                           Array<OneD, int>& pSendDataSizeMap,
+                                                           Array<OneD, int>& pSendDataOffsetMap,
+                                                           Array<OneD, NekDouble>& pRecvData,
+                                                           Array<OneD, int>& pRecvDataSizeMap,
+                                                           Array<OneD, int>& pRecvDataOffsetMap);
+                LIB_UTILITIES_EXPORT inline void AlltoAllv(Array<OneD, int>& pSendData,
+                                                           Array<OneD, int>& pSendDataSizeMap,
+                                                           Array<OneD, int>& pSendDataOffsetMap,
+                                                           Array<OneD, int>& pRecvData,
+                                                           Array<OneD, int>& pRecvDataSizeMap,
+                                                           Array<OneD, int>& pRecvDataOffsetMap);
+                
                 LIB_UTILITIES_EXPORT inline void SplitComm(int pRows, int pColumns);
                 LIB_UTILITIES_EXPORT inline CommSharedPtr GetRowComm();
                 LIB_UTILITIES_EXPORT inline CommSharedPtr GetColumnComm();
@@ -132,6 +138,16 @@ namespace Nektar
                 LIB_UTILITIES_EXPORT inline void GsUnique(Array<OneD, long> pId);
                 LIB_UTILITIES_EXPORT inline void GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
                         Gs::gs_data *pGsh);
+
+
+                LIB_UTILITIES_EXPORT inline bool TreatAsRankZero(void);
+                LIB_UTILITIES_EXPORT inline bool RemoveExistingFiles(void);
+                LIB_UTILITIES_EXPORT inline void SendToRankZero(std::vector<unsigned int>&  pSendData);
+                LIB_UTILITIES_EXPORT inline void SendToRankZero(Array<OneD, int>&  pSendData);
+                LIB_UTILITIES_EXPORT inline void SendToRankZero(Array<OneD, NekDouble>&  pSendData);
+                LIB_UTILITIES_EXPORT inline void RecvFromAll(std::vector<std::vector<unsigned int> >&  pRecvData);
+                LIB_UTILITIES_EXPORT inline void RecvFromAll(std::vector<Array<OneD, int> >&  pRecvData);
+                LIB_UTILITIES_EXPORT inline void RecvFromAll(std::vector<Array<OneD, NekDouble> >&  pRecvData);
 
             protected:
                 int m_size;                 ///< Number of processes
@@ -146,8 +162,10 @@ namespace Nektar
                 virtual void v_Block() = 0;
                 virtual void v_Send(int pProc, Array<OneD, NekDouble>& pData) = 0;
                 virtual void v_Send(int pProc, Array<OneD, int>& pData) = 0;
+                virtual void v_Send(int pProc, std::vector<unsigned int>& pData) = 0;
                 virtual void v_Recv(int pProc, Array<OneD, NekDouble>& pData) = 0;
                 virtual void v_Recv(int pProc, Array<OneD, int>& pData) = 0;
+                virtual void v_Recv(int pProc, std::vector<unsigned int>& pData) = 0;
                 virtual void v_SendRecv(int pSendProc,
                                         Array<OneD, NekDouble>& pSendData,
                                         int pRecvProc,
@@ -169,6 +187,8 @@ namespace Nektar
                 virtual void v_AllReduce(Array<OneD, NekDouble>& pData,
                                          enum ReduceOperator pOp) = 0;
                 virtual void v_AllReduce(Array<OneD, int      >& pData,
+                                         enum ReduceOperator pOp) = 0;
+                virtual void v_AllReduce(std::vector<unsigned int>& pData,
                                          enum ReduceOperator pOp) = 0;
 			    virtual void v_AlltoAll(Array<OneD, NekDouble>& pSendData,
 										Array<OneD, NekDouble>& pRecvData) = 0;
@@ -193,7 +213,14 @@ namespace Nektar
                 virtual void v_GsUnique(Array<OneD, long> pId) = 0;
                 virtual void v_GsGather(Array<OneD, NekDouble> pU, Gs::gs_op pOp,
                         Gs::gs_data *pGsh) = 0;
-
+                virtual bool v_TreatAsRankZero(void) = 0;
+                LIB_UTILITIES_EXPORT virtual bool v_RemoveExistingFiles(void);
+                virtual void v_SendToRankZero(std::vector<unsigned int>&  pSendData);
+                virtual void v_SendToRankZero(Array<OneD, int>&  pSendData);
+                virtual void v_SendToRankZero(Array<OneD, NekDouble>&  pSendData);
+                virtual void v_RecvFromAll(std::vector<std::vector<unsigned int> >&  pRecvData);
+                virtual void v_RecvFromAll(std::vector<Array<OneD, int> >&  pRecvData);
+                virtual void v_RecvFromAll(std::vector<Array<OneD, NekDouble> >&  pRecvData);
         };
 
 
@@ -266,6 +293,22 @@ namespace Nektar
          *
          */
         inline void Comm::Recv(int pProc, Array<OneD, int>& pData)
+        {
+            v_Recv(pProc, pData);
+        }
+
+        /**
+         *
+         */
+        inline void Comm::Send(int pProc, std::vector<unsigned int>& pData)
+        {
+            v_Send(pProc, pData);
+        }
+
+        /**
+         *
+         */
+        inline void Comm::Recv(int pProc, std::vector<unsigned int>& pData)
         {
             v_Recv(pProc, pData);
         }
@@ -351,7 +394,16 @@ namespace Nektar
         }
 		
 		
-		/**
+        /**
+         *
+         */
+        inline void Comm::AllReduce(std::vector<unsigned int>& pData, enum ReduceOperator pOp)
+        {
+            v_AllReduce(pData, pOp);
+        }
+
+
+        /**
          *
          */
 		inline void Comm::AlltoAll(Array<OneD, NekDouble>& pSendData,Array<OneD, NekDouble>& pRecvData)
@@ -431,7 +483,7 @@ namespace Nektar
         {
             if (!m_commColumn.get())
             {
-				return shared_from_this();
+                return shared_from_this();
             }
             else
             {
@@ -475,9 +527,47 @@ namespace Nektar
                 Gs::gs_data *pGsh)
         {
         	v_GsGather(pU, pOp, pGsh);
+
+        }
+        inline bool Comm::TreatAsRankZero(void)
+        {
+            return v_TreatAsRankZero();
         }
 
+        inline bool Comm::RemoveExistingFiles(void)
+        {
+            return v_RemoveExistingFiles();
+        }
 
+        inline void Comm::SendToRankZero(std::vector<unsigned int>&  pSendData)
+        {
+            v_SendToRankZero(pSendData);
+        }
+
+        inline void Comm::SendToRankZero(Array<OneD, int>&  pSendData)
+        {
+            v_SendToRankZero(pSendData);
+        }
+
+        inline void Comm::SendToRankZero(Array<OneD, NekDouble>&  pSendData)
+        {
+            v_SendToRankZero(pSendData);
+        }
+
+        inline void Comm::RecvFromAll(std::vector<std::vector<unsigned int> >&  pRecvData)
+        {
+            v_RecvFromAll(pRecvData);
+        }
+
+        inline void Comm::RecvFromAll(std::vector<Array<OneD, int> >&  pRecvData)
+        {
+            v_RecvFromAll(pRecvData);
+        }
+
+        inline void Comm::RecvFromAll(std::vector<Array<OneD, NekDouble> >&  pRecvData)
+        {
+            v_RecvFromAll(pRecvData);
+        }
     }
 }
 

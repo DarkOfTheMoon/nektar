@@ -138,31 +138,22 @@ namespace Nektar
                 const Array<OneD, const NekDouble> &physvals);
 
             LOCAL_REGIONS_EXPORT virtual NekDouble v_PhysEvaluate(
-                const Array<OneD, const NekDouble> &coords);
-
-            LOCAL_REGIONS_EXPORT virtual NekDouble v_PhysEvaluate(
                 const Array<OneD, const NekDouble> &coords, 
                 const Array<OneD, const NekDouble> & physvals);
 
-            LOCAL_REGIONS_EXPORT virtual void v_GetCoords( 
-                Array<OneD,NekDouble> &coords_1,
-                Array<OneD,NekDouble> &coords_2, 
-                Array<OneD,NekDouble> &coords_3);
-            
             LOCAL_REGIONS_EXPORT virtual void v_GetCoord(
                 const Array<OneD, const NekDouble> &Lcoords, 
                       Array<OneD,NekDouble> &coords);
+
+            LOCAL_REGIONS_EXPORT virtual void v_GetCoords(
+                      Array<OneD,       NekDouble> &coords_1,
+                      Array<OneD,       NekDouble> &coords_2,
+                      Array<OneD,       NekDouble> &coords_3);
 
       
             //---------------------------------------
             // Helper functions
             //---------------------------------------
-            LOCAL_REGIONS_EXPORT virtual void v_WriteToFile( 
-                std::ofstream &outfile, 
-                OutputFormat format, 
-                const bool dumpVar = true, 
-                std::string var = "v");
-
             LOCAL_REGIONS_EXPORT virtual 
                 LibUtilities::ShapeType v_DetShapeType() const;
     
@@ -170,9 +161,6 @@ namespace Nektar
                                            const std::vector<unsigned int > &nummodes,  
                                            const int mode_offset,   
                                                                     NekDouble * coeffs);
-
-            LOCAL_REGIONS_EXPORT virtual 
-                StdRegions::Orientation v_GetFaceOrient(int face);
 
             LOCAL_REGIONS_EXPORT virtual 
                 bool v_GetFaceDGForwards(const int i) const;
@@ -192,15 +180,6 @@ namespace Nektar
                 StdRegions::Orientation                  orient);
 
             LOCAL_REGIONS_EXPORT void v_ComputeFaceNormal(const int face);      
-
-
-            LOCAL_REGIONS_EXPORT virtual NekDouble v_Linf();
-    
-            LOCAL_REGIONS_EXPORT virtual NekDouble v_L2(
-                const Array<OneD, const NekDouble> &sol);
-    
-            LOCAL_REGIONS_EXPORT virtual NekDouble v_L2();
-
 
             //---------------------------------------
             // Operator creation functions
@@ -247,6 +226,10 @@ namespace Nektar
                       Array<OneD,NekDouble> &outarray,
                 const StdRegions::StdMatrixKey &mkey); 
             
+            LOCAL_REGIONS_EXPORT virtual void v_ReduceOrderCoeffs(
+                int                                 numMin,
+                const Array<OneD, const NekDouble> &inarray,
+                      Array<OneD,       NekDouble> &outarray);
 
             //---------------------------------------
             // Matrix creation functions

@@ -400,7 +400,7 @@ namespace Nektar
                         Vmath::Smul(npoints,m_rollForceScale,m_vwiForcingObj->UpdateForces()[i],1,m_vwiForcingObj->UpdateForces()[i],1);
                     }
 
-                    IncNavierStokesSharedPtr ins = boost::dynamic_pointer_cast<IncNavierStokes>(m_solverRoll);
+                    IncNavierStokesSharedPtr ins = m_solverRoll->as<IncNavierStokes>();
                     ins->AddForcing(m_vwiForcingObj);
 
                     init = 0;
@@ -443,9 +443,9 @@ namespace Nektar
         // Write out data into base flow with variable Vx,Vy
         cout << "Writing data to session-Base.fld" << endl;
         
-        Array<OneD, std::string> variables(2);
+        std::vector<std::string> variables(2);
         variables[0] = "Vx";   variables[1] = "Vy";
-        Array<OneD, Array<OneD, NekDouble> > outfield(2);
+        std::vector<Array<OneD, NekDouble> > outfield(2);
         outfield[0]  = m_solverRoll->UpdateFields()[0]->UpdateCoeffs(); 
         outfield[1]  = m_solverRoll->UpdateFields()[1]->UpdateCoeffs(); 
         std::string outname = m_sessionName  + "-Base.fld";
@@ -689,9 +689,9 @@ namespace Nektar
             {
                 // Determine normalisation of pressure so that |P|/A = 1
                 NekDouble l2;
-                l2    = m_wavePressure->GetPlane(0)->L2();
+                l2    = m_wavePressure->GetPlane(0)->L2(m_wavePressure->GetPlane(0)->GetPhys());
                 invnorm  = l2*l2;
-                l2    = m_wavePressure->GetPlane(1)->L2();
+                l2    = m_wavePressure->GetPlane(1)->L2(m_wavePressure->GetPlane(1)->GetPhys());
                 invnorm += l2*l2;
                 Vmath::Fill(2*npts,1.0,der1,1);
                 NekDouble area = m_waveVelocities[0]->GetPlane(0)->PhysIntegral(der1);
@@ -720,8 +720,8 @@ namespace Nektar
 
             // dump field
             {
-                Array<OneD, std::string> variables(3);
-                Array<OneD, Array<OneD, NekDouble> > outfield(3);
+                std::vector<std::string> variables(3);
+                std::vector<Array<OneD, NekDouble> > outfield(3);
                 variables[0] = "u_w"; 
                 variables[1] = "v_w"; 
                 variables[2] = "w_w"; 
@@ -930,8 +930,8 @@ namespace Nektar
             
             
             // dump output
-            Array<OneD, std::string> variables(4);
-            Array<OneD, Array<OneD, NekDouble> > outfield(4);
+            std::vector<std::string> variables(4);
+            std::vector<Array<OneD, NekDouble> > outfield(4);
             variables[0] = "u";  variables[1] = "v"; 
             variables[2] = "pr"; variables[3] = "pi";
             outfield[0]  = m_vwiForcing[0];
@@ -984,9 +984,9 @@ namespace Nektar
         cout << "Linf: " << Linf << endl;
 
         NekDouble l2,norm;
-        l2    = m_wavePressure->GetPlane(0)->L2();
+        l2    = m_wavePressure->GetPlane(0)->L2(m_wavePressure->GetPlane(0)->GetPhys());
         norm  = l2*l2;
-        l2    = m_wavePressure->GetPlane(1)->L2();
+        l2    = m_wavePressure->GetPlane(1)->L2(m_wavePressure->GetPlane(1)->GetPhys());
         norm += l2*l2;
 
 
@@ -1690,7 +1690,7 @@ cout<<"cr="<<cr_str<<endl;
 
     void VortexWaveInteraction::UpdateWaveForceMag(int outeriter)
     {
-        NekDouble wavef_new;
+        NekDouble wavef_new = 0.0;
 
 
         if(outeriter == 1)
@@ -1809,7 +1809,7 @@ cout<<"cr="<<cr_str<<endl;
 
     void VortexWaveInteraction::UpdateAlpha(int outeriter)
     {
-        NekDouble alp_new;
+        NekDouble alp_new = 0.0;
 
 
         if(outeriter == 1)
@@ -2036,8 +2036,10 @@ cout<<"cr="<<cr_str<<endl;
           string file = m_sessionName;
 
 
-          file += "_u_5.bc"; 
-          LibUtilities::Import(file,FieldDef_u, FieldData_u);
+          file += "_u_5.bc";
+          LibUtilities::FieldIOSharedPtr fld =
+              MemoryManager<LibUtilities::FieldIO>::AllocateSharedPtr(m_sessionVWI->GetComm());
+          fld->Import(file,FieldDef_u, FieldData_u);
           Ilayer->ExtractDataToCoeffs(FieldDef_u[0], FieldData_u[0], FieldDef_u[0]->m_fields[0],Ilayer->UpdateCoeffs());
           Ilayer->BwdTrans_IterPerExp(Ilayer->GetCoeffs(), Ilayer->UpdatePhys());
           
@@ -2069,7 +2071,7 @@ cout<<"cr="<<cr_str<<endl;
               std::vector<std::vector<NekDouble> > FieldData_1(FieldDef1.size());;
               FieldDef1[0]->m_fields.push_back("u");            	    
               Ilayer->AppendFieldData(FieldDef1[0], FieldData_1[0]);            	    
-              LibUtilities::Write(file,FieldDef1,FieldData_1); 
+              fld->Write(file,FieldDef1,FieldData_1);
               //save the bcs for the next iteration
               if(m_vwiRelaxation!=1.0)
               {
@@ -2089,7 +2091,7 @@ cout<<"cr="<<cr_str<<endl;
 
           std::vector<LibUtilities::FieldDefinitionsSharedPtr> FieldDef_v;
           std::vector<std::vector<NekDouble> > FieldData_v;
-          LibUtilities::Import(file,FieldDef_v, FieldData_v);
+          fld->Import(file,FieldDef_v, FieldData_v);
           Ilayer->ExtractDataToCoeffs(FieldDef_v[0], FieldData_v[0], FieldDef_v[0]->m_fields[0],Ilayer->UpdateCoeffs());
           Ilayer->BwdTrans_IterPerExp(Ilayer->GetCoeffs(), Ilayer->UpdatePhys());
           if(cnt==0)
@@ -2115,7 +2117,7 @@ cout<<"cr="<<cr_str<<endl;
               std::vector<std::vector<NekDouble> > FieldData_2(FieldDef2.size());;      
               FieldDef2[0]->m_fields.push_back("v");            	    
               Ilayer->AppendFieldData(FieldDef2[0], FieldData_2[0]);            	             	
-              LibUtilities::Write(file,FieldDef2,FieldData_2); 
+              fld->Write(file,FieldDef2,FieldData_2);
               //save the bcs for the next iteration
               if(m_vwiRelaxation!=1.0)
               {

@@ -45,23 +45,30 @@
 #include <vector>
 #include <map>
 
-#include <tinyxml/tinyxml.h>
+#include <tinyxml.h>
 
-#include <LibUtilities/BasicUtils/Metis.hpp>
 #include <LibUtilities/BasicUtils/ParseUtils.hpp>
 #include <LibUtilities/BasicUtils/SessionReader.h>
 #include <LibUtilities/BasicUtils/ShapeType.hpp>
+#include <LibUtilities/BasicUtils/FileSystem.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/adjacency_iterator.hpp>
 #include <boost/graph/detail/edge.hpp>
-
+#include <boost/format.hpp>
 
 namespace Nektar
 {
     namespace LibUtilities
     {
+        MeshPartitionFactory& GetMeshPartitionFactory()
+        {
+            typedef Loki::SingletonHolder<MeshPartitionFactory,
+                Loki::CreateUsingNew,
+                Loki::NoDestroy > Type;
+            return Type::Instance();
+        }
 		MeshPartition::MeshPartition(const LibUtilities::SessionReaderSharedPtr& pSession) :
 			m_numFields(0),
             m_fieldNameToId(),
@@ -83,13 +90,14 @@ namespace Nektar
 
         void MeshPartition::PartitionMesh(int pNumPartitions, bool shared)
         {
-            //ASSERTL0(m_comm->GetSize() > 1,
-            //         "Partitioning only necessary in parallel case.");
-            //ASSERTL0(m_meshElements.size() >= m_comm->GetSize(),
-            //         "Too few elements for this many processes.");
+            ASSERTL0(m_meshElements.size() >= pNumPartitions,
+                     "Too few elements for this many processes.");
             m_shared = shared;
 
-            if (m_weightingRequired)  WeightElements();
+            if (m_weightingRequired)
+            {
+                WeightElements();
+            }
             CreateGraph(m_mesh);
             PartitionGraph(m_mesh, pNumPartitions);
         }
@@ -111,15 +119,26 @@ namespace Nektar
 
 				vNew.LinkEndChild(vElmtNektar);
 
-				std::string vFilename = pSession->GetSessionName() + "_P" + boost::lexical_cast<std::string>(
-						rank + thr) + ".xml";
-				vNew.SaveFile(vFilename.c_str());
-        	}
+                std::string  dirname = pSession->GetSessionName() + "_xml"; 
+                fs::path    pdirname(dirname);
+                
+                boost::format pad("P%1$07d.xml");
+                pad % (rank + thr);
+                fs::path    pFilename(pad.str());
+                
+                if(!fs::is_directory(dirname))
+                {
+                    fs::create_directory(dirname);
+                }
+                
+                fs::path fullpath = pdirname / pFilename; 
+                vNew.SaveFile(PortablePath(fullpath));
+            }
         }
 
         void MeshPartition::WriteAllPartitions(LibUtilities::SessionReaderSharedPtr& pSession)
         {
-            for (int i = 0; i < m_comm->GetRowComm()->GetSize(); ++i)
+            for (int i = 0; i < m_localPartition.size(); ++i)
             {
                 TiXmlDocument vNew;
                 TiXmlDeclaration * decl = new TiXmlDeclaration("1.0", "utf-8", "");
@@ -132,8 +151,21 @@ namespace Nektar
 
                 vNew.LinkEndChild(vElmtNektar);
 
-                std::string vFilename = pSession->GetSessionName() + "_P" + boost::lexical_cast<std::string>(i) + ".xml";
-                vNew.SaveFile(vFilename.c_str());
+                std::string  dirname = pSession->GetSessionName() + "_xml"; 
+                fs::path    pdirname(dirname);
+                
+                boost::format pad("P%1$07d.xml");
+                pad % i;
+                fs::path    pFilename(pad.str());
+                
+                fs::path fullpath = pdirname / pFilename; 
+                
+                if(!fs::is_directory(dirname))
+                {
+                    fs::create_directory(dirname);
+                }
+
+                vNew.SaveFile(PortablePath(fullpath));
             }
             for (unsigned int thr=1; thr < m_threadManager->GetMaxNumWorkers(); ++thr)
             {
@@ -286,6 +318,10 @@ namespace Nektar
 
             x = vSubElement->FirstChildElement();
             i = 0;
+            if (x->FirstAttribute())
+            {
+                i = x->FirstAttribute()->IntValue();
+            }
             while(x)
             {
                 TiXmlAttribute* y = x->FirstAttribute();
@@ -454,6 +490,75 @@ namespace Nektar
             ParseUtils::GenerateSeqVector(vSeqStr.c_str(), m_domain);
         }
 
+        void MeshPartition::PrintPartInfo(std::ostream &out)
+        {
+            int nElmt = boost::num_vertices(m_mesh);
+            int nPart = m_localPartition.size();
+
+            out << "# Partition information:" << std::endl;
+            out << "# No. elements  : " << nElmt << std::endl;
+            out << "# No. partitions: " << nPart << std::endl;
+            out << "# ID  nElmt  nLocDof  nBndDof" << std::endl;
+
+            BoostVertexIterator vertit, vertit_end;
+            std::vector<int> partElmtCount(nPart, 0);
+            std::vector<int> partLocCount (nPart, 0);
+            std::vector<int> partBndCount (nPart, 0);
+
+            std::map<int, int> elmtSizes;
+            std::map<int, int> elmtBndSizes;
+            
+            for (unsigned int i = 0; i < m_domain.size(); ++i)
+            {
+                int cId = m_domain[i];
+                NummodesPerField npf = m_expansions[cId];
+
+                for (NummodesPerField::iterator it = npf.begin(); it != npf.end(); ++it)
+                {
+                    ASSERTL0(it->second.size() == m_dim,
+                        " Number of directional" \
+                        " modes in expansion spec for composite id = " + 
+                        boost::lexical_cast<std::string>(cId) +
+                        " and field " +
+                        boost::lexical_cast<std::string>(it->first) +
+                        " does not correspond to mesh dimension");
+
+                    int na = it->second[0];
+                    int nb = it->second[1];
+                    int nc = 0;
+                    if (m_dim == 3)
+                    {
+                        nc = it->second[2];
+                    }
+
+                    int weight    = CalculateElementWeight(
+                        m_meshComposites[cId].type, false, na, nb, nc);
+                    int bndWeight = CalculateElementWeight(
+                        m_meshComposites[cId].type, true,  na, nb, nc);
+
+                    for (unsigned int j = 0; j < m_meshComposites[cId].list.size(); ++j)
+                    {
+                        int elid = m_meshComposites[cId].list[j]; 
+                        elmtSizes[elid] = weight;
+                        elmtBndSizes[elid] = bndWeight;
+                    }
+                }
+            }
+
+            for (boost::tie(vertit, vertit_end) = boost::vertices(m_mesh);
+                 vertit != vertit_end; ++vertit)
+            {
+                int partId = m_mesh[*vertit].partition;
+                partElmtCount[partId]++;
+                partLocCount [partId] += elmtSizes[m_mesh[*vertit].id];
+                partBndCount [partId] += elmtBndSizes[m_mesh[*vertit].id];
+            }
+
+            for (int i = 0; i < nPart; ++i)
+            {
+                out << i << " " << partElmtCount[i] << " " << partLocCount[i] << " " << partBndCount[i] << std::endl;
+            }
+        }
 
         void MeshPartition::ReadConditions(const SessionReaderSharedPtr& pSession)
         {
@@ -526,7 +631,7 @@ namespace Nektar
          */
         void MeshPartition::WeightElements()
         {
-            std::vector<unsigned int> weight(2*m_numFields, 1);
+            std::vector<unsigned int> weight(m_numFields, 1);
             for (int i = 0; i < m_meshElements.size(); ++i)
             {
                 m_vertWeights.push_back( weight );
@@ -548,43 +653,24 @@ namespace Nektar
                         " does not correspond to mesh dimension");
 
                     int na = it->second[0];
-                    int nb = it->second[1];
+                    int nb = 0;
                     int nc = 0;
+                    if (m_dim >= 2)
+                    {
+                        nb = it->second[1];
+                    }
                     if (m_dim == 3)
                     {
                         nc = it->second[2];
                     }
 
-                    int weight = 0;
-                    switch (m_meshComposites[cId].type)
-                    {
-                        case 'A':
-                            weight = StdTetData::getNumberOfCoefficients(na, nb, nc);
-                            break;
-                        case 'R': 
-                            weight = StdPrismData::getNumberOfCoefficients(na, nb, nc);
-                            break;
-                        case 'H': 
-                            weight = StdHexData::getNumberOfCoefficients(na, nb, nc);
-                            break;
-                        case 'P': 
-                            weight = StdPyrData::getNumberOfCoefficients(na, nb, nc);
-                            break;
-                        case 'Q': 
-                            weight = StdQuadData::getNumberOfCoefficients(na, nb);
-                            break;
-                        case 'T': 
-                            weight = StdTriData::getNumberOfCoefficients(na, nb);
-                            break;
-                        default:
-                            break;
-                    }
+                    int bndWeight = CalculateElementWeight(
+                        m_meshComposites[cId].type, true, na, nb, nc);
 
                     for (unsigned int j = 0; j < m_meshComposites[cId].list.size(); ++j)
                     {
                         int elmtId = m_meshComposites[cId].list[j];
-                        m_vertWeights[elmtId][ m_fieldNameToId[ it->first ] * 2 + 0 ] = weight;
-                        m_vertWeights[elmtId][ m_fieldNameToId[ it->first ] * 2 + 1 ] = weight*weight;
+                        m_vertWeights[elmtId][m_fieldNameToId[it->first]] = bndWeight;
                     }
                 }
             } // for i
@@ -638,12 +724,11 @@ namespace Nektar
             BoostVertexIterator    vertit, vertit_end;
             Array<OneD, int> part(nGraphVerts,0);
 
-            if (m_comm->GetRowComm()->GetRank() == 0)
+            if (m_comm->GetRowComm()->TreatAsRankZero())
             {
                 int acnt = 0;
                 int vcnt = 0;
-                int nWeight = m_weightingRequired ? 2*nGraphVerts*m_numFields
-                                                  :   nGraphVerts;
+                int nWeight = nGraphVerts;
                 BoostAdjacencyIterator adjvertit, adjvertit_end;
                 Array<OneD, int> xadj(nGraphVerts+1,0);
                 Array<OneD, int> adjncy(2*nGraphEdges);
@@ -664,11 +749,7 @@ namespace Nektar
 
                     if (m_weightingRequired)
                     {
-                        // populate vertex multi-weights
-                        for (i = 0; i < 2*m_numFields; i++)
-                        {
-                            vwgt[pGraph[*vertit].id * m_numFields + i] = pGraph[*vertit].weight[i];
-                        }
+                        vwgt[pGraph[*vertit].id ] = pGraph[*vertit].weight[0];
                     }
                     else
                     {
@@ -677,7 +758,6 @@ namespace Nektar
                 }
 
                 // Call Metis and partition graph
-//                int npart = m_comm->GetRowComm()->GetSize();
                 int vol = 0;
 
                 try
@@ -688,10 +768,11 @@ namespace Nektar
 					if(m_comm->GetColumnComm()->GetRank() == 0)
 					{
 						// Attempt partitioning using METIS.
-                        int ncon = m_weightingRequired ? 2*m_numFields : 1;
-                        Metis::PartGraphVKway(nGraphVerts, ncon, xadj, adjncy, vwgt, vsize, pNumPartitions, vol, part);
+                        int ncon = 1;
+                        PartitionGraphImpl(nGraphVerts, ncon, xadj, adjncy, vwgt, vsize, pNumPartitions, vol, part);
+
 						// Check METIS produced a valid partition and fix if not.
-						CheckPartitions(part);
+						CheckPartitions(pNumPartitions, part);
                         if (!m_shared)
                         {
                             // distribute among columns
@@ -734,8 +815,8 @@ namespace Nektar
             }
 
             // Create boost subgraph for this process's partitions
-            int nCols = m_comm->GetRowComm()->GetSize();
-            for (i = 0; i < nCols; ++i)
+            m_localPartition.resize(pNumPartitions);
+            for (i = 0; i < pNumPartitions; ++i)
             {
                 m_localPartition[i] = pGraph.create_subgraph();
             }
@@ -753,15 +834,14 @@ namespace Nektar
         }
 
 
-        void MeshPartition::CheckPartitions(Array<OneD, int> &pPart)
+        void MeshPartition::CheckPartitions(int nParts, Array<OneD, int> &pPart)
         {
             unsigned int       i     = 0;
             unsigned int       cnt   = 0;
-            const unsigned int npart = m_comm->GetRowComm()->GetSize();
             bool               valid = true;
 
             // Check that every process has at least one element assigned
-            for (i = 0; i < npart; ++i)
+            for (i = 0; i < nParts; ++i)
             {
                 cnt = std::count(pPart.begin(), pPart.end(), i);
                 if (cnt == 0)
@@ -779,7 +859,7 @@ namespace Nektar
             {
                 for (i = 0; i < pPart.num_elements(); ++i)
                 {
-                    pPart[i] = i % npart;
+                    pPart[i] = i % nParts;
                 }
             }
         }
@@ -994,6 +1074,12 @@ namespace Nektar
                     // Based on entity type, check if in this partition
                     switch (vIt->second.type)
                     {
+                    case 'V':
+                        if (vVertices.find(vIt->second.list[j]) == vVertices.end())
+                        {
+                            continue;
+                        }
+                        break;
                     case 'E':
                         if (vEdges.find(vIt->second.list[j]) == vEdges.end())
                         {
@@ -1178,5 +1264,75 @@ namespace Nektar
             }
         }
 
+        void MeshPartition::GetElementIDs(const int procid, std::vector<unsigned int> &elmtid)
+        {
+            BoostVertexIterator    vertit, vertit_end;
+
+            ASSERTL0(procid < m_localPartition.size(),"procid is less than the number of partitions");
+            
+            // Populate lists of elements, edges and vertices required.
+            for ( boost::tie(vertit, vertit_end) = boost::vertices(m_localPartition[procid]);
+                  vertit != vertit_end;
+                  ++vertit)
+            {
+                elmtid.push_back(m_meshElements[m_localPartition[procid][*vertit].id].id);
+            }
+        }
+
+        int MeshPartition::CalculateElementWeight(
+            char elmtType,
+            bool bndWeight,
+            int  na,
+            int  nb,
+            int  nc)
+        {
+            int weight = 0;
+
+            switch (elmtType)
+            {
+                case 'A':
+                    weight = bndWeight ?
+                        StdTetData  ::getNumberOfBndCoefficients(na, nb, nc) :
+                        StdTetData  ::getNumberOfCoefficients   (na, nb, nc);
+                    break;
+                case 'R':
+                    weight = bndWeight ?
+                        StdPrismData::getNumberOfBndCoefficients(na, nb, nc) :
+                        StdPrismData::getNumberOfCoefficients   (na, nb, nc);
+                    break;
+                case 'H':
+                    weight = bndWeight ?
+                        StdHexData  ::getNumberOfBndCoefficients(na, nb, nc) :
+                        StdHexData  ::getNumberOfCoefficients   (na, nb, nc);
+                    break;
+                case 'P':
+                    weight = bndWeight ?
+                        StdPyrData  ::getNumberOfBndCoefficients(na, nb, nc) :
+                        StdPyrData  ::getNumberOfCoefficients   (na, nb, nc);
+                    break;
+                case 'Q':
+                    weight = bndWeight ?
+                        StdQuadData ::getNumberOfBndCoefficients(na, nb) :
+                        StdQuadData ::getNumberOfCoefficients   (na, nb);
+                    break;
+                case 'T':
+                    weight = bndWeight ?
+                        StdTriData  ::getNumberOfBndCoefficients(na, nb) :
+                        StdTriData  ::getNumberOfCoefficients   (na, nb);
+                    break;
+                case 'S':
+                    weight = bndWeight ?
+                        StdSegData  ::getNumberOfBndCoefficients(na) :
+                        StdSegData  ::getNumberOfCoefficients   (na);
+                    break;
+                case 'V':
+                    weight = 1;
+                    break;
+                default:
+                    break;
+            }
+
+            return weight;
+        }
     }
 }

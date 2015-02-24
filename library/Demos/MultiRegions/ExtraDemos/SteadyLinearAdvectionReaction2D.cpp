@@ -25,8 +25,6 @@ int main(int argc, char *argv[])
     LibUtilities::SessionReaderSharedPtr vSession
             = LibUtilities::SessionReader::CreateInstance(argc, argv);
 
-    string meshfile(vSession->GetFilename());
-
     MultiRegions::ContField2DSharedPtr Exp,Fce;
     int     nq,  coordim;
     Array<OneD,NekDouble>  fce; 
@@ -127,17 +125,6 @@ int main(int argc, char *argv[])
     //----------------------------------------------
     // Backward Transform Solution to get solved values 
     Exp->BwdTrans(Exp->GetCoeffs(), Exp->UpdatePhys(), MultiRegions::eGlobal);
-    //----------------------------------------------
-    
-    //----------------------------------------------
-    // Write solution 
-    ofstream outfile("LinearAdvectionFile2D.pos");
-    Exp->WriteToFile(outfile,eGmsh);
-    outfile.close();
-
-    ofstream outfile2("LinearAdvectionFile2D.dat");
-    Exp->WriteToFile(outfile2,eTecplot);
-    outfile2.close();
     //----------------------------------------------
     
     //----------------------------------------------
