@@ -77,8 +77,8 @@ namespace Nektar
         RiemannSolver::RiemannSolver() : m_requiresRotation(false),
                                          m_rotStorage              (3),
                                          m_rotStoragetmp           (3),
-                                         m_rotStorageDirDIFFXSol   (3),
-                                         m_rotStorageDirDIFFYSol   (3),
+                                         m_rotStorageBaseDIFFXSol   (3),
+                                         m_rotStorageBaseDIFFYSol   (3),
                                          m_rotStorageDirSol(3)
         {
             
@@ -107,7 +107,7 @@ namespace Nektar
                       Array<OneD,       Array<OneD, NekDouble> > &flux)
         {
             
-            if (m_FwdBwdDirectSolution)
+            if (m_FwdBwdBaseFlow)
             {
                 int nFields = Fwd   .num_elements();
                 int nPts    = Fwd[0].num_elements();
@@ -115,16 +115,16 @@ namespace Nektar
                 const Array<OneD, const Array<OneD, NekDouble> > vecLocs =
                 m_auxVec["vecLocs"]();
                 
-                Array<OneD, Array<OneD, NekDouble> > BwdDir(nFields);
-                Array<OneD, Array<OneD, NekDouble> > FwdDir(nFields);
+                Array<OneD, Array<OneD, NekDouble> > BwdBase(nFields);
+                Array<OneD, Array<OneD, NekDouble> > FwdBase(nFields);
                 
                 for (int i = 0; i < nFields; ++i)
                 {
-                    FwdDir[i]    =   Array<OneD, NekDouble>(nPts,0.0);
-                    BwdDir[i]    =   Array<OneD, NekDouble>(nPts,0.0);
+                    FwdBase[i]    =   Array<OneD, NekDouble>(nPts,0.0);
+                    BwdBase[i]    =   Array<OneD, NekDouble>(nPts,0.0);
                 }
                 
-                m_FwdBwdDirectSolution(FwdDir,BwdDir);
+                m_FwdBwdBaseFlow(FwdBase,BwdBase);
                 
                 if (m_requiresRotation)
                 {
@@ -141,9 +141,9 @@ namespace Nektar
                             m_rotStorageDirSol[i] =
                             Array<OneD, Array<OneD, NekDouble> >(nFields);
                             
-                            m_rotStorageDirDIFFXSol[i] =
+                            m_rotStorageBaseDIFFXSol[i] =
                             Array<OneD, Array<OneD, NekDouble> >(nFields);
-                            m_rotStorageDirDIFFYSol[i] =
+                            m_rotStorageBaseDIFFYSol[i] =
                             Array<OneD, Array<OneD, NekDouble> >(nFields);
                             
                             for (int j = 0; j < nFields; ++j)
@@ -153,8 +153,8 @@ namespace Nektar
                                 
                                 m_rotStorageDirSol[i][j] = Array<OneD, NekDouble>(nPts);
                                 
-                                m_rotStorageDirDIFFXSol[i][j] = Array<OneD, NekDouble>(nPts);
-                                m_rotStorageDirDIFFYSol[i][j] = Array<OneD, NekDouble>(nPts);
+                                m_rotStorageBaseDIFFXSol[i][j] = Array<OneD, NekDouble>(nPts);
+                                m_rotStorageBaseDIFFYSol[i][j] = Array<OneD, NekDouble>(nPts);
                             }
                         }
                     }
@@ -165,8 +165,8 @@ namespace Nektar
                     rotateToNormal(Fwd, normals, vecLocs, m_rotStorage[0]);
                     rotateToNormal(Bwd, normals, vecLocs, m_rotStorage[1]);
                     
-                    rotateToNormal(FwdDir, normals, vecLocs, m_rotStorageDirSol[0]);
-                    rotateToNormal(BwdDir, normals, vecLocs, m_rotStorageDirSol[1]);
+                    rotateToNormal(FwdBase, normals, vecLocs, m_rotStorageDirSol[0]);
+                    rotateToNormal(BwdBase, normals, vecLocs, m_rotStorageDirSol[1]);
                     
                     v_AdjointSolve  (m_rotStorage[0],
                                      m_rotStorage[1],
@@ -181,8 +181,8 @@ namespace Nektar
                 {
                     v_AdjointSolve(Fwd,
                                    Bwd,
-                                   FwdDir,
-                                   BwdDir,
+                                   FwdBase,
+                                   BwdBase,
                                    flux);
                 }
             }

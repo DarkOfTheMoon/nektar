@@ -6,11 +6,15 @@ IF( NEKTAR_SOLVER_COMPRESSIBLE_FLOW )
     SET(CompressibleFlowSolverSource 
        ./CompressibleFlowSolver.cpp 
        ./EquationSystems/CompressibleFlowSystem.cpp
-       ./EquationSystems/EulerADCFE.cpp
        ./EquationSystems/EulerCFE.cpp
        ./EquationSystems/EulerADCFE.cpp
        ./EquationSystems/NavierStokesCFE.cpp
+       ./EquationSystems/AdjointCompressibleFlowSystem.cpp
+       ./EquationSystems/AdjointEulerCFE.cpp
+       ./EquationSystems/AdjointNavierStokesCFE.cpp
        ./Filters/FilterEnergy.cpp
+       ./AdvectionTerms/AdjointAdvectionWeakDG.cpp
+       ./AdvectionTerms/AdjointAdvectionWeakDGNS.cpp
        ./RiemannSolvers/AverageSolver.cpp
        ./RiemannSolvers/AUSM0Solver.cpp
        ./RiemannSolvers/AUSM1Solver.cpp

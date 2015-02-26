@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// File EulerCFE.h
+// File AdjointEulerCFE.h
 //
 // For more information, please see: http://www.nektar.info
 //
@@ -33,10 +33,10 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef NEKTAR_SOLVERS_COMPRESSIBLEFLOWSOLVER_EQUATIONSYSTEMS_EULERCFE_H
-#define NEKTAR_SOLVERS_COMPRESSIBLEFLOWSOLVER_EQUATIONSYSTEMS_EULERCFE_H
+#ifndef NEKTAR_SOLVERS_COMPRESSIBLEFLOWSOLVER_EQUATIONSYSTEMS_AdjointEulerCFE_H
+#define NEKTAR_SOLVERS_COMPRESSIBLEFLOWSOLVER_EQUATIONSYSTEMS_AdjointEulerCFE_H
 
-#include <CompressibleFlowSolver/EquationSystems/CompressibleFlowSystem.h>
+#include <CompressibleFlowSolver/EquationSystems/AdjointCompressibleFlowSystem.h>
 
 namespace Nektar
 {  
@@ -55,30 +55,30 @@ namespace Nektar
         "RinglebFlow"
     };
   
-    class EulerCFE : public CompressibleFlowSystem
+    class AdjointEulerCFE : public AdjointCompressibleFlowSystem
     {
     public:
-        friend class MemoryManager<EulerCFE>;
+        friend class MemoryManager<AdjointEulerCFE>;
 
         /// Creates an instance of this class.
         static SolverUtils::EquationSystemSharedPtr create(
             const LibUtilities::SessionReaderSharedPtr& pSession)
         {
-            SolverUtils::EquationSystemSharedPtr p = MemoryManager<EulerCFE>::AllocateSharedPtr(pSession);
+            SolverUtils::EquationSystemSharedPtr p = MemoryManager<AdjointEulerCFE>::AllocateSharedPtr(pSession);
             p->InitObject();
             return p;
         }
         /// Name of class.
         static std::string className;
     
-        virtual ~EulerCFE();
+        virtual ~AdjointEulerCFE();
 
         ///< problem type selector
         ProblemType     m_problemType;   
     
     protected:
 
-        EulerCFE(const LibUtilities::SessionReaderSharedPtr& pSession);
+        AdjointEulerCFE(const LibUtilities::SessionReaderSharedPtr& pSession);
 
         virtual void v_InitObject();
 
@@ -102,12 +102,16 @@ namespace Nektar
             unsigned int            field,
             Array<OneD, NekDouble> &outfield,
             const NekDouble         time = 0.0);
-
+        
+        void CPPrimal(
+            const Array<OneD, const Array<OneD, NekDouble> > &inarray,
+                  Array<OneD, NekDouble> &outarray);
+        
     private:
         void SetBoundaryConditions(
             Array<OneD, Array<OneD, NekDouble> >            &physarray,
             NekDouble                                        time);
-
+        
         /// Isentropic Vortex Test Case.
         void EvaluateIsentropicVortex(
             const Array<OneD, NekDouble>                    &x,

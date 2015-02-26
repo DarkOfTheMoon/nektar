@@ -47,15 +47,13 @@ namespace Nektar
         public:
             static AdvectionSharedPtr create(std::string advType)
             {
-                return AdvectionSharedPtr(new AdvectionWeakDG(advType));
+                return AdvectionSharedPtr(new AdvectionWeakDG());
             }
 
-            static std::string type[];
-            
-            std::string m_advType;
+            static std::string type;
 
         protected:
-            AdvectionWeakDG(std::string advType);
+            AdvectionWeakDG();
 
             virtual void v_InitObject(
                 LibUtilities::SessionReaderSharedPtr               pSession,

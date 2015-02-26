@@ -204,7 +204,7 @@ void AdjointAdvection::v_InitObject(
              "Base flow must be defined for linearised forms.");
     string file = m_session->GetFunctionFilename("BaseFlow", 0);
 
-
+    cout << "BASEFLOW" << endl;
     //Periodic base flows
     if(m_session->DefinesParameter("N_slices"))
     {
@@ -222,7 +222,7 @@ void AdjointAdvection::v_InitObject(
     else
     {
         m_slices=1;
-
+        
         //BaseFlow from file
         if (m_session->GetFunctionType("BaseFlow", m_session->GetVariable(0))
             == LibUtilities::eFunctionTypeFile)

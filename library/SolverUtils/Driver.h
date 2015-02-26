@@ -110,8 +110,7 @@ protected:
 
     SOLVER_UTILS_EXPORT virtual Array<OneD, NekDouble> v_GetRealEvl(void);
     SOLVER_UTILS_EXPORT virtual Array<OneD, NekDouble> v_GetImagEvl(void);
-
-
+    
     static std::string evolutionOperatorLookupIds[];
     static std::string evolutionOperatorDef;
     static std::string driverDefault;

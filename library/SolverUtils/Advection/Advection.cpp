@@ -98,7 +98,7 @@ void Advection::v_InitObject(
     Array<OneD, MultiRegions::ExpListSharedPtr>       pFields)
 {
     m_spaceDim = pFields[0]->GetCoordim(0);
-
+        
     if (pSession->DefinesSolverInfo("HOMOGENEOUS"))
     {
         std::string HomoStr = pSession->GetSolverInfo("HOMOGENEOUS");
@@ -121,10 +121,26 @@ void Advection::v_InitObject(
  *
  */
 void Advection::v_SetBaseFlow(
-        const Array<OneD, Array<OneD, NekDouble> >    &inarray)
+            const Array<OneD, Array<OneD, NekDouble> >    &inarray)
+{
+    ASSERTL0(false,
+                 "A baseflow is not appropriate for this advection type.");
+}
+    
+void Advection::v_GetBaseFlow(
+              Array<OneD, Array<OneD, NekDouble> >     &baseflow)
 {
     ASSERTL0(false,
             "A baseflow is not appropriate for this advection type.");
+}
+
+
+void Advection::v_ImportFldBase(std::string pInfile,
+              Array<OneD, MultiRegions::ExpListSharedPtr>& pFields)
+{
+        
+    ASSERTL0(false,
+                 "A baseflow is not appropriate for this advection type.");
 }
 
 }

@@ -61,16 +61,12 @@ namespace Nektar
         typedef boost::function<void (
         const Array<OneD, Array<OneD, NekDouble> >&,
         Array<OneD, Array<OneD, Array<OneD, NekDouble> > >&)>
-        AdvectionFluxVecCB;
+        AdvectionAdjointFluxVecCB;
         
         typedef boost::function<void (
         const Array<OneD, Array<OneD, NekDouble> >&,
         Array<OneD, Array<OneD, Array<OneD, NekDouble> > >&)>
         AdvectionJacTransDivVecCB;
-        
-        typedef boost::function<void (
-        Array<OneD, Array<OneD, NekDouble> >&)>
-        DirectSolVecCB;
         
         
         /**
@@ -112,6 +108,12 @@ namespace Nektar
             }
             
             template<typename FuncPointerT, typename ObjectPointerT>
+            void SetAdjointFluxVector(FuncPointerT func, ObjectPointerT obj)
+            {
+                m_AdjointFluxVector = boost::bind(func, obj, _1, _2);
+            }
+            
+            template<typename FuncPointerT, typename ObjectPointerT>
             void SetAddFluxVector(FuncPointerT func, ObjectPointerT obj)
             {
                 m_AddfluxVector = boost::bind(func, obj, _1, _2);
@@ -127,12 +129,6 @@ namespace Nektar
             void SetAddJacTransposeDivVector(FuncPointerT func, ObjectPointerT obj)
             {
                 m_AddJacTransposeDivVector = boost::bind(func, obj, _1, _2);
-            }
-            
-            template<typename FuncPointerT, typename ObjectPointerT>
-            void SetDirectSolution(FuncPointerT func, ObjectPointerT obj)
-            {
-                m_directSolution = boost::bind(func, obj, _1);
             }
             
             /**
@@ -155,9 +151,14 @@ namespace Nektar
                 m_fluxVector = fluxVector;
             }
             
-            inline void SetAddFluxVector(AdvectionFluxVecCB fluxVector)
+            inline void SetAdjointFluxVector(AdvectionAdjointFluxVecCB AdjointFluxVector)
             {
-                m_AddfluxVector = fluxVector;
+                m_AdjointFluxVector = AdjointFluxVector;
+            }
+            
+            inline void SetAddFluxVector(AdvectionAdjointFluxVecCB AdjointFluxVector)
+            {
+                m_AddfluxVector = AdjointFluxVector;
             }
             
             inline void SetJacTransposeDivVector(AdvectionJacTransDivVecCB JacTransDivVector)
@@ -169,11 +170,6 @@ namespace Nektar
             {
                 m_AddJacTransposeDivVector = JacTransDivVector;
             }
-            
-            inline void SetDirectSolution(DirectSolVecCB directSol)
-            {
-                m_directSolution = directSol;
-            }
             /**
              * @brief Set the base flow used for linearised advection objects.
              *
@@ -184,15 +180,30 @@ namespace Nektar
                 v_SetBaseFlow(inarray);
             }
             
+            inline void GetBaseFlow(
+            Array<OneD, Array<OneD, NekDouble> > &baseflow)
+            {
+                v_GetBaseFlow(baseflow);
+            }
+            
+            inline void ImportFldBase(std::string pInfile,
+                     Array<OneD, MultiRegions::ExpListSharedPtr>& pFields)
+            {
+                v_ImportFldBase(pInfile, pFields);
+            }
+
+            
         protected:
+            
             /// Callback function to the flux vector (set when advection is in
             /// conservative form).
             AdvectionJacTransDivVecCB   m_JacTransposeDivVector;
             AdvectionJacTransDivVecCB   m_AddJacTransposeDivVector;
             AdvectionFluxVecCB          m_fluxVector;
-            AdvectionFluxVecCB          m_AddfluxVector;
+            AdvectionAdjointFluxVecCB   m_AdjointFluxVector;
+            AdvectionAdjointFluxVecCB   m_AddfluxVector;
             /// Callback function to the forward solution given in the xml
-            DirectSolVecCB         m_directSolution;
+    
             /// Riemann solver for DG-type schemes.
             RiemannSolverSharedPtr m_riemann;
             /// Storage for space dimension. Used for homogeneous extension.
@@ -215,6 +226,12 @@ namespace Nektar
             /// Overrides the base flow used during linearised advection
             SOLVER_UTILS_EXPORT virtual void v_SetBaseFlow(
                     const Array<OneD, Array<OneD, NekDouble> >        &inarray);
+            
+            SOLVER_UTILS_EXPORT virtual void v_GetBaseFlow(
+                        Array<OneD, Array<OneD, NekDouble> > &baseflow);
+            
+            SOLVER_UTILS_EXPORT virtual void v_ImportFldBase(std::string pInfile,
+                      Array<OneD, MultiRegions::ExpListSharedPtr>& pFields);
         };
         
         /// A shared pointer to an Advection object.

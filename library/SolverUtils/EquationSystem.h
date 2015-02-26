@@ -175,8 +175,8 @@ namespace Nektar
             SOLVER_UTILS_EXPORT void InitialiseBaseFlow(
                 Array<OneD, Array<OneD, NekDouble> > &base);
             
-            /// Perform initialisation of the base flow.
-            SOLVER_UTILS_EXPORT void InitialisePrimalSolution();
+            SOLVER_UTILS_EXPORT void InitialiseCompressibleBaseFlow(
+                Array<OneD, Array<OneD, NekDouble> > &base);
             
             /// Initialise the data in the dependent fields.
             SOLVER_UTILS_EXPORT inline void SetInitialConditions(
@@ -419,8 +419,8 @@ namespace Nektar
             Array<OneD, MultiRegions::ExpListSharedPtr> m_fields;
             /// Base fields.
             Array<OneD, MultiRegions::ExpListSharedPtr> m_base;
-            /// primal fields.
-            Array<OneD, MultiRegions::ExpListSharedPtr> m_primal;
+            /// Baseflow fields.
+            Array<OneD, MultiRegions::ExpListSharedPtr> m_baseflow;
             /// Array holding all dependent variables.
             Array<OneD, MultiRegions::ExpListSharedPtr> m_derivedfields;
             /// Pointer to boundary conditions object.
@@ -564,11 +564,6 @@ namespace Nektar
             // Fill m_base with the values stored in a fld file
             SOLVER_UTILS_EXPORT void ImportFldBase(
                 std::string pInfile, 
-                SpatialDomains::MeshGraphSharedPtr pGraph);
-            
-            // Fill m_base with the values stored in a fld file
-            SOLVER_UTILS_EXPORT void ImportFldPrimal(
-                std::string pInfile,
                 SpatialDomains::MeshGraphSharedPtr pGraph);
             
             // Ouptut field information

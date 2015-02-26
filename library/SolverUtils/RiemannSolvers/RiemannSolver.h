@@ -62,20 +62,20 @@ namespace Nektar
         typedef boost::function<void (
         Array<OneD, Array<OneD, NekDouble> >&,
         Array<OneD, Array<OneD, NekDouble> >&)>
-        FwdBwdDirectSolutionVecCB;
+        FwdBwdBaseFlowVecCB;
         
         typedef boost::function<void (
         Array<OneD, Array<OneD, NekDouble> >&,
         Array<OneD, Array<OneD, NekDouble> >&,
         Array<OneD, Array<OneD, Array<OneD, NekDouble > > >&,
         Array<OneD, Array<OneD, Array<OneD, NekDouble > > >&)>
-        FwdBwdDIFFDirectSolutionVecCB;
+        FwdBwdDIFFBaseFlowVecCB;
 
         class RiemannSolver
         {
         public:
             SOLVER_UTILS_EXPORT void Solve(
-                const int                                         nDim,
+                const int                                        nDim,
                 const Array<OneD, const Array<OneD, NekDouble> > &Fwd,
                 const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
                       Array<OneD,       Array<OneD, NekDouble> > &flux);
@@ -120,15 +120,15 @@ namespace Nektar
             }
             
             template<typename FuncPointerT, typename ObjectPointerT>
-            void SetFwdBwdDirectSolution(FuncPointerT func, ObjectPointerT obj)
+            void SetFwdBwdBaseFlow(FuncPointerT func, ObjectPointerT obj)
             {
-                m_FwdBwdDirectSolution = boost::bind(func, obj, _1, _2);
+                m_FwdBwdBaseFlow = boost::bind(func, obj, _1, _2);
             }
             
             template<typename FuncPointerT, typename ObjectPointerT>
-            void SetFwdBwdDIFFDirectSolution(FuncPointerT func, ObjectPointerT obj)
+            void SetFwdBwdDIFFBaseFlow(FuncPointerT func, ObjectPointerT obj)
             {
-                m_FwdBwdDIFFDirectSolution = boost::bind(func, obj, _1, _2, _3, _4);
+                m_FwdBwdDIFFBaseFlow = boost::bind(func, obj, _1, _2, _3, _4);
             }
             
             template<typename FuncPointerT, typename ObjectPointerT>
@@ -163,14 +163,14 @@ namespace Nektar
                 return m_params;
             }
             
-            inline void SetFwdBwdDirectSolution(FwdBwdDirectSolutionVecCB FwdBwdDirectSol)
+            inline void SetFwdBwdBaseFlow(FwdBwdBaseFlowVecCB FwdBwdBaseectSol)
             {
-                m_FwdBwdDirectSolution = FwdBwdDirectSol;
+                m_FwdBwdBaseFlow = FwdBwdBaseectSol;
             }
             
-            inline void SetFwdBwdDIFFDirectSolution(FwdBwdDIFFDirectSolutionVecCB FwdBwdDirectSol)
+            inline void SetFwdBwdDIFFBaseFlow(FwdBwdDIFFBaseFlowVecCB FwdBwdBaseectSol)
             {
-                m_FwdBwdDIFFDirectSolution = FwdBwdDirectSol;
+                m_FwdBwdDIFFBaseFlow = FwdBwdBaseectSol;
             }
 
             int m_spacedim;
@@ -195,9 +195,9 @@ namespace Nektar
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_rotStorage;
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_rotStoragetmp;
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_rotStorageDirSol;
-            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_rotStorageDirDIFFXSol;
-            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_rotStorageDirDIFFYSol;
-            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_rotStorageDirDIFFZSol;
+            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_rotStorageBaseDIFFXSol;
+            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_rotStorageBaseDIFFYSol;
+            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_rotStorageBaseDIFFZSol;
             
             SOLVER_UTILS_EXPORT RiemannSolver();
 
@@ -208,15 +208,15 @@ namespace Nektar
                       Array<OneD,       Array<OneD, NekDouble> > &flux) = 0;
             
             virtual void v_AdjointSolve(
-                const Array<OneD, const Array<OneD, NekDouble> > &FwdDir,
-                const Array<OneD, const Array<OneD, NekDouble> > &BwdDir,
+                const Array<OneD, const Array<OneD, NekDouble> > &FwdBase,
+                const Array<OneD, const Array<OneD, NekDouble> > &BwdBase,
                 const Array<OneD, const Array<OneD, NekDouble> > &Fwd,
                 const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
                       Array<OneD,       Array<OneD, NekDouble> > &flux) = 0;
             
             virtual void v_AdjointNSSolve(
-                const Array<OneD, const Array<OneD, NekDouble> > &FwdDir,
-                const Array<OneD, const Array<OneD, NekDouble> > &BwdDir,
+                const Array<OneD, const Array<OneD, NekDouble> > &FwdBase,
+                const Array<OneD, const Array<OneD, NekDouble> > &BwdBase,
                 const Array<OneD, const Array<OneD, NekDouble> > &Fwd,
                 const Array<OneD, const Array<OneD, NekDouble> > &Bwd,
                 Array<OneD, Array<OneD, Array<OneD, NekDouble > > > &FwdDIFF,
@@ -241,8 +241,8 @@ namespace Nektar
                       Array<OneD,       Array<OneD, NekDouble> > &outarray);
 
             
-            FwdBwdDirectSolutionVecCB         m_FwdBwdDirectSolution;
-            FwdBwdDIFFDirectSolutionVecCB     m_FwdBwdDIFFDirectSolution;
+            FwdBwdBaseFlowVecCB         m_FwdBwdBaseFlow;
+            FwdBwdDIFFBaseFlowVecCB     m_FwdBwdDIFFBaseFlow;
 
             SOLVER_UTILS_EXPORT bool CheckScalars (std::string name);
             SOLVER_UTILS_EXPORT bool CheckVectors (std::string name);

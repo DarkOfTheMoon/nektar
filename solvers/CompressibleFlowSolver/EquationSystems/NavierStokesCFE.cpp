@@ -139,107 +139,66 @@ namespace Nektar
         Array<OneD, Array<OneD, NekDouble> > advVel(m_spacedim);
         Array<OneD, Array<OneD, NekDouble> > outarrayAdv(nvariables);
         Array<OneD, Array<OneD, NekDouble> > outarrayDiff(nvariables);
-
-        if (m_adjointSwitch == 0.0)
+        
+        Array<OneD, Array<OneD, NekDouble> > inarrayTemp(nvariables-1);
+        Array<OneD, Array<OneD, NekDouble> > inarrayDiff(nvariables-1);
+        
+        for (i = 0; i < nvariables; ++i)
         {
-            Array<OneD, Array<OneD, NekDouble> > inarrayTemp(nvariables-1);
-            Array<OneD, Array<OneD, NekDouble> > inarrayDiff(nvariables-1);
-            
-            for (i = 0; i < nvariables; ++i)
-            {
-                outarrayAdv[i] = Array<OneD, NekDouble>(npoints, 0.0);
-                outarrayDiff[i] = Array<OneD, NekDouble>(npoints, 0.0);
-            }
-            
-            for (i = 0; i < nvariables-1; ++i)
-            {
-                inarrayTemp[i] = Array<OneD, NekDouble>(npoints, 0.0);
-                inarrayDiff[i] = Array<OneD, NekDouble>(npoints, 0.0);
-            }
-            
-            // Advection term in physical rhs form
-            m_advection->Advect(nvariables, m_fields, advVel, inarray, outarrayAdv, time);
-            
-            for (i = 0; i < nvariables; ++i)
-            {
-                Vmath::Neg(npoints, outarrayAdv[i], 1);
-            }
-            
-            // Extract pressure and temperature
-            Array<OneD, NekDouble > pressure   (npoints, 0.0);
-            Array<OneD, NekDouble > temperature(npoints, 0.0);
-            GetPressure(inarray, pressure);
-            GetTemperature(inarray, pressure, temperature);
-            
-            // Extract velocities
-            for (i = 1; i < nvariables-1; ++i)
-            {
-                Vmath::Vdiv(npoints,
-                            inarray[i], 1,
-                            inarray[0], 1,
-                            inarrayTemp[i-1], 1);
-            }
-            
-            // Copy velocities into new inarrayDiff
-            for (i = 0; i < nvariables-2; ++i)
-            {
-                Vmath::Vcopy(npoints, inarrayTemp[i], 1, inarrayDiff[i], 1);
-            }
-            
-            // Copy temperature into new inarrayDiffusion
-            Vmath::Vcopy(npoints,
-                         temperature, 1,
-                         inarrayDiff[nvariables-2], 1);
-            
-            // Diffusion term in physical rhs form
-            m_diffusion->Diffuse(nvariables, m_fields, inarrayDiff, outarrayDiff);
-            
-            for (i = 0; i < nvariables; ++i)
-            {
-                Vmath::Vadd(npoints, 
-                            outarrayAdv[i], 1, 
-                            outarrayDiff[i], 1, 
-                            outarray[i], 1);
-            }
+            outarrayAdv[i] = Array<OneD, NekDouble>(npoints, 0.0);
+            outarrayDiff[i] = Array<OneD, NekDouble>(npoints, 0.0);
         }
         
-        if (m_adjointSwitch == 1.0)
+        for (i = 0; i < nvariables-1; ++i)
         {
-            // Advection term in physical rhs form
-            m_advection->Advect(nvariables, m_fields, advVel, inarray, outarray, time);
-        
+            inarrayTemp[i] = Array<OneD, NekDouble>(npoints, 0.0);
+            inarrayDiff[i] = Array<OneD, NekDouble>(npoints, 0.0);
         }
         
-        if (m_adjointSwitch == 2.0)
+        // Advection term in physical rhs form
+        m_advection->Advect(nvariables, m_fields, advVel, inarray,
+                            outarrayAdv, time);
+        
+        for (i = 0; i < nvariables; ++i)
         {
-            // Advection term in physical rhs form
-            for (i = 0; i < nvariables; ++i)
-            {
-                outarrayAdv[i] = Array<OneD, NekDouble>(npoints, 0.0);
-                outarrayDiff[i] = Array<OneD, NekDouble>(npoints, 0.0);
-            }
-            
-            // Advection term in physical rhs form
-            m_advection->Advect(nvariables, m_fields, advVel, inarray, outarrayAdv, time);
-            
-            /*for (int i = 0; i < nvariables; ++i)
-            {
-                Vmath::Vabs(npoints, outarrayAdv[i], 1, outarrayAdv[i], 1);
-                cout << Vmath::Vmin(npoints, outarrayAdv[i], 1) << endl;
-            }
-            cout << endl;*/
-            
-            // Diffusion term in physical rhs form
-            //
-            m_diffusion->Diffuse(nvariables, m_fields, inarray, outarrayDiff);
-            
-            for (i = 0; i < nvariables; ++i)
-            {
-                Vmath::Vadd(npoints,
-                            outarrayAdv[i], 1,
-                            outarrayDiff[i], 1,
-                            outarray[i], 1);
-            }
+            Vmath::Neg(npoints, outarrayAdv[i], 1);
+        }
+        
+        // Extract pressure and temperature
+        Array<OneD, NekDouble > pressure   (npoints, 0.0);
+        Array<OneD, NekDouble > temperature(npoints, 0.0);
+        GetPressure(inarray, pressure);
+        GetTemperature(inarray, pressure, temperature);
+        
+        // Extract velocities
+        for (i = 1; i < nvariables-1; ++i)
+        {
+            Vmath::Vdiv(npoints,
+                        inarray[i], 1,
+                        inarray[0], 1,
+                        inarrayTemp[i-1], 1);
+        }
+        
+        // Copy velocities into new inarrayDiff
+        for (i = 0; i < nvariables-2; ++i)
+        {
+            Vmath::Vcopy(npoints, inarrayTemp[i], 1, inarrayDiff[i], 1);
+        }
+        
+        // Copy temperature into new inarrayDiffusion
+        Vmath::Vcopy(npoints,
+                     temperature, 1,
+                     inarrayDiff[nvariables-2], 1);
+        
+        // Diffusion term in physical rhs form
+        m_diffusion->Diffuse(nvariables, m_fields, inarrayDiff, outarrayDiff);
+        
+        for (i = 0; i < nvariables; ++i)
+        {
+            Vmath::Vadd(npoints,
+                        outarrayAdv[i], 1,
+                        outarrayDiff[i], 1,
+                        outarray[i], 1);
         }
     }
 
@@ -304,18 +263,17 @@ namespace Nektar
                 WallViscousBC(n, cnt, inarray);
             }
             
-            // Adjoint Wall Boundary Condition
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                SpatialDomains::eAdjointWall)
-            {
-                AdjointWallBC(n, cnt, inarray);
-            }
-            
             // Symmetric Boundary Condition
             if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() == 
                 SpatialDomains::eSymmetry)
             {
                 SymmetryBC(n, cnt, inarray);
+            }
+            
+            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
+                SpatialDomains::ePressureOutflow)
+            {
+                PressureOutflowBC(n, cnt, inarray);
             }
             
             // Riemann invariant characteristic Boundary Condition (CBC)

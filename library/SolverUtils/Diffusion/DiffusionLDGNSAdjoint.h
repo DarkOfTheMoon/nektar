@@ -59,12 +59,12 @@ namespace Nektar
             Array<OneD, Array<OneD, NekDouble> > m_traceNormals;
             LibUtilities::SessionReaderSharedPtr m_session;
             NekDouble                            m_gamma;
-            NekDouble                            m_rhoInfPrimal;
-            NekDouble                            m_pInfPrimal;
-            NekDouble                            m_uInfPrimal;
-            NekDouble                            m_vInfPrimal;
-            NekDouble                            m_wInfPrimal;
-            NekDouble                            m_alphaInfDir;
+            NekDouble                            m_rhoInfBase;
+            NekDouble                            m_pInfBase;
+            NekDouble                            m_uInfBase;
+            NekDouble                            m_vInfBase;
+            NekDouble                            m_wInfBase;
+            NekDouble                            m_alphaInfBase;
             NekDouble                            m_Lref;
             NekDouble                            m_gasConstant;
             NekDouble                            m_Twall;

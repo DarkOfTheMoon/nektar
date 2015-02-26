@@ -1173,78 +1173,15 @@ namespace Nektar
             EvaluateFunction(vel, base, "BaseFlow");
         }
         
-        void EquationSystem::InitialisePrimalSolution()
+        void EquationSystem::InitialiseCompressibleBaseFlow(
+            Array<OneD, Array<OneD, NekDouble> > &base)
         {
-            string file = m_session->GetFunctionFilename("PrimalSolution", 0);
-            
-            m_base = Array<OneD, MultiRegions::ExpListSharedPtr>(m_spacedim+2);
-            m_primal = Array<OneD, MultiRegions::ExpListSharedPtr>(m_spacedim+2);
-            
+            int nvariables = m_session->GetVariables().size();
+            base = Array<OneD, Array<OneD, NekDouble> >(nvariables);
             SetUpBaseFields(m_graph);
-            
-            m_primal = m_base;
-            
-            std::vector<std::string> adjoint_fields;
-            adjoint_fields.push_back("rho");
-            adjoint_fields.push_back("rhou");
-            adjoint_fields.push_back("rhov");
-            adjoint_fields.push_back("E");
-            
-            adjoint_fields.resize(m_spacedim+2);
-            
-            if (m_session->GetComm()->GetRank() == 0)
-            {
-                cout << "Primal Solution:" << endl;
-            }
-            
-            if (m_session->DefinesFunction("PrimalSolution"))
-            {
-                EvaluateFunction(adjoint_fields, m_primal,
-                                 "PrimalSolution");
-                
-                if (m_session->GetComm()->GetRank() == 0)
-                {
-                    
-                    for (int i = 0; i < m_fields.num_elements(); ++i)
-                    {
-                        /*std::string varName = m_session->GetVariable(i);
-                        cout << "  - Primal Field " << varName << ": "
-                        << DescribeFunction(varName, "PrimalSolution")
-                        << endl;*/
-                    }
-                }
-            }
-            else
-            {
-                int nq = m_fields[0]->GetNpoints();
-                for (int i = 0; i < m_fields.num_elements(); i++)
-                {
-                    Vmath::Zero(nq, m_primal[i]->UpdatePhys(), 1);
-                    m_primal[i]->SetPhysState(true);
-                    Vmath::Zero(m_primal[i]->GetNcoeffs(),
-                                m_primal[i]->UpdateCoeffs(), 1);
-                    if (m_session->GetComm()->GetRank() == 0)
-                    {
-                        cout << "  - Primal Field "    << m_session->GetVariable(i)
-                        << ": 0 (default)" << endl;
-                    }
-                }
-            }
+            std::vector<std::string> vFieldNames = m_session->GetVariables();
+            EvaluateFunction(vFieldNames, base, "BaseFlow");
         }
-        
-        /*void EquationSystem::InitialisePrimalSolution()
-        {
-            string file = m_session->GetFunctionFilename("PrimalSolution", 0);
-            
-            m_base = Array<OneD, MultiRegions::ExpListSharedPtr>(m_spacedim+2);
-            m_primal = Array<OneD, MultiRegions::ExpListSharedPtr>(m_spacedim+2);
-            
-            SetUpBaseFields(m_graph);
-            
-            m_primal = m_base;
-            
-            ImportFldPrimal(file, m_graph);
-        }*/
     
         void EquationSystem::SetUpBaseFields(
             SpatialDomains::MeshGraphSharedPtr &mesh)
@@ -1254,7 +1191,7 @@ namespace Nektar
             // The number of variables can be different from the dimension 
             // of the base flow
             int nvariables = m_session->GetVariables().size();
-            m_base = Array<OneD, MultiRegions::ExpListSharedPtr>(nvariables);
+            m_baseflow = Array<OneD, MultiRegions::ExpListSharedPtr>(nvariables);
             if (m_projectionType == MultiRegions::eGalerkin ||
                 m_projectionType == MultiRegions::eMixed_CG_Discontinuous)
             {
@@ -1262,9 +1199,9 @@ namespace Nektar
                 {
                     case 1:
                     {
-                        for(i = 0; i < m_base.num_elements(); i++)
+                        for(i = 0; i < m_baseflow.num_elements(); i++)
                         {
-                            m_base[i] = MemoryManager<MultiRegions::ContField1D>
+                            m_baseflow[i] = MemoryManager<MultiRegions::ContField1D>
                                 ::AllocateSharedPtr(m_session, mesh, 
                                                     m_session->GetVariable(0));
                         }
@@ -1282,16 +1219,16 @@ namespace Nektar
                                         LibUtilities::eFourier,
                                         m_npointsZ,PkeyZ);
 
-                                for (i = 0 ; i < m_base.num_elements(); i++)
+                                for (i = 0 ; i < m_baseflow.num_elements(); i++)
                                 {
-                                    m_base[i] = MemoryManager<MultiRegions
+                                    m_baseflow[i] = MemoryManager<MultiRegions
                                         ::ContField3DHomogeneous1D>
                                             ::AllocateSharedPtr(
                                                 m_session, BkeyZ, m_LhomZ, 
                                                 m_useFFT, m_homogen_dealiasing, 
                                                 m_graph, 
                                                 m_session->GetVariable(i));
-                                    m_base[i]->SetWaveSpace(true);
+                                    m_baseflow[i]->SetWaveSpace(true);
                                 }
                             }
                             else if (m_HalfMode)
@@ -1303,16 +1240,16 @@ namespace Nektar
                                         LibUtilities::eFourierHalfModeRe,
                                         m_npointsZ,PkeyZ);
 
-                                for (i = 0 ; i < m_base.num_elements(); i++)
+                                for (i = 0 ; i < m_baseflow.num_elements(); i++)
                                 {
-                                    m_base[i] = MemoryManager<MultiRegions
+                                    m_baseflow[i] = MemoryManager<MultiRegions
                                         ::ContField3DHomogeneous1D>
                                             ::AllocateSharedPtr(
                                                 m_session, BkeyZ, m_LhomZ, 
                                                 m_useFFT, m_homogen_dealiasing, 
                                                 m_graph, 
                                                 m_session->GetVariable(i));
-                                    m_base[i]->SetWaveSpace(true);
+                                    m_baseflow[i]->SetWaveSpace(true);
                                 }
                             }
                             else
@@ -1323,16 +1260,16 @@ namespace Nektar
                                         LibUtilities::eFourier,m_npointsZ,
                                         PkeyZ);
 
-                                for (i = 0 ; i < m_base.num_elements(); i++)
+                                for (i = 0 ; i < m_baseflow.num_elements(); i++)
                                 {
-                                    m_base[i] = MemoryManager<MultiRegions
+                                    m_baseflow[i] = MemoryManager<MultiRegions
                                         ::ContField3DHomogeneous1D>
                                             ::AllocateSharedPtr(
                                                 m_session, BkeyZ, m_LhomZ, 
                                                 m_useFFT, m_homogen_dealiasing, 
                                                 m_graph, 
                                                 m_session->GetVariable(i));
-                                    m_base[i]->SetWaveSpace(false);
+                                    m_baseflow[i]->SetWaveSpace(false);
                                 }
                             }
                         }
@@ -1343,11 +1280,11 @@ namespace Nektar
                                 MemoryManager<MultiRegions::ContField2D>
                                 ::AllocateSharedPtr(m_session,mesh,
                                                 m_session->GetVariable(i));
-                            m_base[0]=firstbase;
+                            m_baseflow[0]=firstbase;
 
-                            for (i = 1 ; i < m_base.num_elements(); i++)
+                            for (i = 1 ; i < m_baseflow.num_elements(); i++)
                             {
-                                m_base[i] = MemoryManager<MultiRegions::
+                                m_baseflow[i] = MemoryManager<MultiRegions::
                                     ContField2D>::AllocateSharedPtr(
                                         *firstbase,mesh,
                                         m_session->GetVariable(i));
@@ -1361,10 +1298,10 @@ namespace Nektar
                             MemoryManager<MultiRegions::ContField3D>
                             ::AllocateSharedPtr(m_session, m_graph,
                                                 m_session->GetVariable(0));
-                        m_base[0] = firstbase;
-                        for (i = 1 ; i < m_base.num_elements(); i++)
+                        m_baseflow[0] = firstbase;
+                        for (i = 1 ; i < m_baseflow.num_elements(); i++)
                         {
-                            m_base[i] = MemoryManager<MultiRegions::ContField3D>
+                            m_baseflow[i] = MemoryManager<MultiRegions::ContField3D>
                                 ::AllocateSharedPtr(*firstbase, m_graph,
                                                     m_session->GetVariable(0));
                         }
@@ -1383,9 +1320,9 @@ namespace Nektar
                     {
                         // need to use zero for variable as may be more base 
                         // flows than variables
-                        for(i = 0 ; i < m_base.num_elements(); i++)
+                        for(i = 0 ; i < m_baseflow.num_elements(); i++)
                         {
-                            m_base[i] = MemoryManager<MultiRegions
+                            m_baseflow[i] = MemoryManager<MultiRegions
                                 ::DisContField1D>
                                 ::AllocateSharedPtr(m_session, m_graph,
                                                     m_session->GetVariable(0));
@@ -1394,9 +1331,9 @@ namespace Nektar
                     }
                     case 2:
                     {
-                        for(i = 0 ; i < m_base.num_elements(); i++)
+                        for(i = 0 ; i < m_baseflow.num_elements(); i++)
                         {
-                            m_base[i] = MemoryManager<MultiRegions::
+                            m_baseflow[i] = MemoryManager<MultiRegions::
                                 DisContField2D>::AllocateSharedPtr(
                                     m_session,m_graph,
                                     m_session->GetVariable(0));
@@ -1412,7 +1349,7 @@ namespace Nektar
             }
         }
  	
-        // Import base flow from file and load in m_base    	
+        // Import base flow from file and load in m_baseflow
         void EquationSystem::ImportFldBase(
             std::string pInfile, 
             SpatialDomains::MeshGraphSharedPtr pGraph)
@@ -1439,52 +1376,12 @@ namespace Nektar
                                     + std::string(" data and that defined in "
                                     "the session differs")).c_str());
 
-                    m_base[j]->ExtractDataToCoeffs(FieldDef[i], FieldData[i],
+                    m_baseflow[j]->ExtractDataToCoeffs(FieldDef[i], FieldData[i],
                                                    FieldDef[i]->m_fields[j],
-                                                   m_base[j]->UpdateCoeffs());
+                                                   m_baseflow[j]->UpdateCoeffs());
                 }
             }
         }
-        
-        void EquationSystem::ImportFldPrimal(
-                        std::string pInfile,
-                        SpatialDomains::MeshGraphSharedPtr pGraph)
-        {
-            std::vector<LibUtilities::FieldDefinitionsSharedPtr> FieldDef;
-            std::vector<std::vector<NekDouble> > FieldData;
-            
-            //Get Homogeneous
-            LibUtilities::Import(pInfile,FieldDef,FieldData);
-            
-            int nvar = m_session->GetVariables().size();
-            if(m_session->DefinesSolverInfo("HOMOGENEOUS"))
-            {
-                std::string HomoStr = m_session->GetSolverInfo("HOMOGENEOUS");
-            }
-            
-            Array<OneD, Array<OneD, NekDouble> > primal(nvar);
-        
-            // copy FieldData into m_fields
-            for(int j = 0; j < nvar; ++j)
-            {
-                //primal[j] = Array<OneD, NekDouble>();
-                
-                for(int i = 0; i < FieldDef.size(); ++i)
-                {
-                    
-                    bool flag = FieldDef[i]->m_fields[j] ==
-                    m_session->GetVariable(j);
-                    ASSERTL1(flag, (std::string("Order of ") + pInfile
-                                    + std::string(" data and that defined in "
-                                                  "m_boundaryconditions differs")).c_str());
-                    
-                    m_primal[j]->ExtractDataToCoeffs(FieldDef[i], FieldData[i],
-                                                     FieldDef[i]->m_fields[j],
-                                                     m_primal[j]->UpdateCoeffs());
-                }
-            }
-        }
-
         /**
          * 
          */

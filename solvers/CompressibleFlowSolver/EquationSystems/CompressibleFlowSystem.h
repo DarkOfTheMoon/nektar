@@ -103,10 +103,12 @@ namespace Nektar
         NekDouble                           m_gasConstant;
         NekDouble                           m_Twall;
         std::string                         m_ViscosityType;
-        std::string                         m_Target;
         std::string                         m_shockCaptureType;
         std::string                         m_EqTypeStr;
         NekDouble                           m_mu;
+        NekDouble                           m_Skappa;
+        NekDouble                           m_Kappa;
+        NekDouble                           m_mu0;
         NekDouble                           m_FacL;
         NekDouble                           m_FacH;
         NekDouble                           m_eps_max;
@@ -116,53 +118,10 @@ namespace Nektar
         NekDouble                           m_C2;
         NekDouble                           m_hFactor;
         NekDouble                           m_Prandtl;
-        NekDouble                           m_adjointSwitch;
-        NekDouble                           m_rhoInfPrimal;
-        NekDouble                           m_uInfPrimal;
-        NekDouble                           m_vInfPrimal;
-        NekDouble                           m_pInfPrimal;
-        NekDouble                           m_alphaInfDir;
-        NekDouble                           m_Lref;
-        NekDouble                           m_alpha;
-        NekDouble                           m_Skappa;
-        NekDouble                           m_Kappa;
-        NekDouble                           m_mu0;
         StdRegions::StdQuadExpSharedPtr     m_OrthoQuadExp;
         StdRegions::StdHexExpSharedPtr      m_OrthoHexExp;
         bool                                m_smoothDiffusion;
 
-        Array<OneD, Array<OneD, NekDouble> > m_un;
-        
-        // Storage for the forward solution
-        Array<OneD, Array<OneD, NekDouble> > m_dirFlds;
-        
-        // Storage for the jacobians
-        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
-                                                                      m_dVdUdXi;
-        
-        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
-                                                                      m_JacPrim;
-        
-        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
-                                                                   m_JacDivPrim;
-        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
-                                                                   m_JacAddPrim;
-        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
-                                                                m_JacAddDivPrim;
-        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
-                                                                   m_JacAddCons;
-        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
-                                                                   m_JacDivCons;
-        
-        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
-                                                                m_JacAddDivCons;
-        
-        Array<OneD, Array<OneD, Array<OneD, Array<OneD,
-                                            Array<OneD, NekDouble> > > > >
-                                                                      m_JacVisc;
-        
-        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_dVdU;
-        
         CompressibleFlowSystem(
             const LibUtilities::SessionReaderSharedPtr& pSession);
 
@@ -170,70 +129,10 @@ namespace Nektar
       
         /// Print a summary of time stepping parameters.
         virtual void v_GenerateSummary(SolverUtils::SummaryList& s);
-    
-        
-        //======================================================================
-        void GetConservToPrimVariableMat(
-           const Array<OneD, Array<OneD, NekDouble> > &inarray,
-                 Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &dUdV);
-        
-        void GetConservToPrimVariableInvMat(
-           Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &dUdVInv);
-        
-        void GetConservToPrimVariableInvMatDiv(
-           Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &dUdVInv,
-           Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
-                                                                   &dUdVInvdXi);
-       
-        //======================================================================
-        void GetJacobianConvFluxPrim(
-          Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &Jac);
-        
-        void GetAdjointDerivJacVector(
-          const Array<OneD, Array<OneD, NekDouble> > &inarray,
-                Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
-        
-        void GetAdjointViscousFluxVector(
-         const Array<OneD, Array<OneD, NekDouble> > &inarray,
-               Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &z_derivatives,
-               Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
-        
-        void GetJacobianAddConvFlux(
-           Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &Jac);
-        
-        void GetJacobianViscousFluxPrim(
-        Array<OneD, Array<OneD, Array<OneD, Array<OneD,
-                                   Array<OneD, NekDouble> > > > >        JacVisc);
-        
-        void GetAdjointAddConvFluxVector(
-              const Array<OneD, Array<OneD, NekDouble> > &inarray,
-                    Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
-        
-        void GetAdjointDerivAddJacVector(
-             const Array<OneD, Array<OneD, NekDouble> > &inarray,
-                   Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
-        
-        void GetDerivJacobian(
-        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &Jac,
-        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &JacDiv);
-        //======================================================================
-        
+
         void GetFluxVector(
             const Array<OneD, Array<OneD, NekDouble> >               &physfield,
                   Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &flux);
-        void GetAdjointFluxVector(
-            const Array<OneD, Array<OneD, NekDouble> > &inarray,
-                  Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
-        void GetDirectSolution(
-                  Array<OneD, Array<OneD, NekDouble> > &directSol);
-        void GetFwdBwdDirectSolution(
-                  Array<OneD, Array<OneD, NekDouble> > &FwdDir,
-                  Array<OneD, Array<OneD, NekDouble> > &BwdDir);
-        void GetFwdBwdDIFFDirectSolution(
-                 Array<OneD, Array<OneD, NekDouble> > &FwdDir,
-                 Array<OneD, Array<OneD, NekDouble> > &BwdDir,
-                 Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &FwdDirDIFF,
-                 Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &BwdDirDIFF);
         void GetFluxVectorDeAlias(
             const Array<OneD, Array<OneD, NekDouble> >         &physfield,
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &flux);
@@ -252,23 +151,11 @@ namespace Nektar
             int                                                 bcRegion,
             int                                                 cnt,
             Array<OneD, Array<OneD, NekDouble> >               &physarray);
-        void AdjointWallBC(
-            int                                                 bcRegion,
-            int                                                 cnt,
-            Array<OneD, Array<OneD, NekDouble> >               &physarray);
-        void AdjointWallForceBC(
-            int                                                 bcRegion,
-            int                                                 cnt,
-            Array<OneD, Array<OneD, NekDouble> >               &physarray);
         void WallViscousBC(
             int                                                 bcRegion,
             int                                                 cnt,
             Array<OneD, Array<OneD, NekDouble> >               &physarray);
         void SymmetryBC(
-            int                                                 bcRegion,
-            int                                                 cnt,
-            Array<OneD, Array<OneD, NekDouble> >               &physarray);
-        void PressureOutflowBC(
             int                                                 bcRegion,
             int                                                 cnt,
             Array<OneD, Array<OneD, NekDouble> >               &physarray);
@@ -279,6 +166,10 @@ namespace Nektar
         void ExtrapOrder0BC(
             int                                                 bcRegion, 
             int                                                 cnt, 
+            Array<OneD, Array<OneD, NekDouble> >               &physarray);
+        void PressureOutflowBC(
+            int                                                 bcRegion,
+            int                                                 cnt,
             Array<OneD, Array<OneD, NekDouble> >               &physarray);
         void GetVelocityVector(
             const Array<OneD,       Array<OneD,       NekDouble> >&physfield,
@@ -324,9 +215,6 @@ namespace Nektar
             const Array<OneD, const Array<OneD,       NekDouble> > &physarray,
                   Array<OneD,                         NekDouble>   &Sensor,
                   Array<OneD,                         NekDouble>   &SensorKappa);
-        virtual bool v_PostIntegrate(int step);
-                  NekDouble CalcSteadyState();
-        
         void GetElementDimensions(
                   Array<OneD,       Array<OneD, NekDouble> > &outarray,
                   Array<OneD,       NekDouble > &hmin);
@@ -344,7 +232,6 @@ namespace Nektar
                   Array<OneD,       Array<OneD, NekDouble> > outarrayForcing);
         virtual NekDouble v_GetTimeStep(
             const Array<OneD, const Array<OneD, NekDouble> > &inarray);
-        
         virtual void v_SetInitialConditions(
             NekDouble initialtime = 0.0,
             bool dumpInitialConditions = true,
@@ -370,11 +257,6 @@ namespace Nektar
         const Array<OneD, const Array<OneD, NekDouble> > &GetNormals()
         {
             return m_traceNormals;
-        }
-        
-        NekDouble GetAdjointSwitch()
-        {
-            return m_adjointSwitch;
         }
 
         virtual void v_ExtraFldOutput(
