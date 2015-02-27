@@ -136,6 +136,8 @@ namespace Nektar
         
         Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
                                                                       m_JacPrim;
+        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
+                                                                      m_JacCons;
         
         Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > >
                                                                    m_JacDivPrim;
@@ -182,7 +184,8 @@ namespace Nektar
         //======================================================================
         void GetJacobianConvFluxPrim(
           Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &Jac);
-        
+        void GetJacobianConvFlux(
+        Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &Jac);
         void GetAdjointDerivJacVector(
           const Array<OneD, Array<OneD, NekDouble> > &inarray,
                 Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
@@ -257,6 +260,10 @@ namespace Nektar
             int                                                 cnt,
             Array<OneD, Array<OneD, NekDouble> >               &physarray);
         void SymmetryBC(
+            int                                                 bcRegion,
+            int                                                 cnt,
+            Array<OneD, Array<OneD, NekDouble> >               &physarray);
+        void AdjointWallBC(
             int                                                 bcRegion,
             int                                                 cnt,
             Array<OneD, Array<OneD, NekDouble> >               &physarray);

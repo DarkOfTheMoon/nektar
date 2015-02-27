@@ -302,6 +302,7 @@ void AdjointAdvectionWeakDG::v_Advect(
     }
 
     m_AdjointFluxVector(inarray, fluxvector);
+    
     m_JacTransposeDivVector(inarray, JacTransVec);
 
     // Get the advection part (without numerical flux)
@@ -390,8 +391,6 @@ void AdjointAdvectionWeakDG::v_GetBaseFlow(
 void AdjointAdvectionWeakDG::v_ImportFldBase(std::string pInfile,
                 Array<OneD, MultiRegions::ExpListSharedPtr>& pFields)
 {
-    cout << "HELLO" << endl;
-    cout << pInfile << endl;
     std::vector<LibUtilities::FieldDefinitionsSharedPtr> FieldDef;
     std::vector<std::vector<NekDouble> > FieldData;
         

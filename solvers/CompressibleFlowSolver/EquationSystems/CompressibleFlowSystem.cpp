@@ -2064,7 +2064,7 @@ namespace Nektar
         
         for (int i = 1; i < m_spacedim; ++i)
         {
-            Vmath::Vvtvp(nq, physfield[i], 1, physfield[i], 1,
+            Vmath::Vvtvp(nq, physfield[i+1], 1, physfield[i+1], 1,
                              mach,           1, mach,           1);
         }
         

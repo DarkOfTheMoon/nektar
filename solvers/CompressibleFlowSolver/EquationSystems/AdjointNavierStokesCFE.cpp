@@ -105,9 +105,9 @@ namespace Nektar
         if (m_session->GetComm()->GetRank() == 0)
         {
             cout << endl;
-            cout << "=================================================="<< endl;
-            cout << "============== Initial Conditions ================" << endl;
-            cout << "=================================================="<< endl;
+            cout << "======================================================================="<< endl;
+            cout << "======================= Initial Conditions ============================" << endl;
+            cout << "======================================================================="<< endl;
             cout << endl;
         }
         // The unsteady adjoint solution starts with a zero initial condition for
@@ -234,7 +234,7 @@ namespace Nektar
         if (m_session->GetComm()->GetRank() == 0)
         {
             cout << endl;
-            cout << "=================================================="<< endl;
+            cout << "======================================================================="<< endl;
             cout << endl;
         }
         
@@ -353,6 +353,13 @@ namespace Nektar
                 SpatialDomains::eSymmetry)
             {
                 SymmetryBC(n, cnt, inarray);
+            }
+            
+            // Adjoint wall Condition
+            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
+                SpatialDomains::eAdjointWall)
+            {
+                AdjointWallBC(n, cnt, inarray);
             }
             
             // Extrapolation of the data at the boundaries

@@ -221,10 +221,10 @@ namespace Nektar
          *
          */
         void DiffusionLDGNSAdjoint::v_NumericalFluxO1(
-                                                      const Array<OneD, MultiRegions::ExpListSharedPtr>        &fields,
-                                                      const Array<OneD, Array<OneD, NekDouble> >               &inarray,
-                                                      Array<OneD, Array<OneD, Array<OneD, NekDouble> > >
-                                                      &numericalFluxO1)
+            const Array<OneD, MultiRegions::ExpListSharedPtr>        &fields,
+            const Array<OneD, Array<OneD, NekDouble> >               &inarray,
+                  Array<OneD, Array<OneD, Array<OneD, NekDouble> > >
+                                    &numericalFluxO1)
         {
             int i, j;
             int nTracePts  = fields[0]->GetTrace()->GetTotPoints();

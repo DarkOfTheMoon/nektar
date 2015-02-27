@@ -345,6 +345,13 @@ namespace Nektar
                 SymmetryBC(n, cnt, inarray);
             }
             
+            // Adjoint wall Condition
+            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
+                SpatialDomains::eAdjointWall)
+            {
+                AdjointWallBC(n, cnt, inarray);
+            }
+            
             // Extrapolation of the data at the boundaries
             if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() == 
                 SpatialDomains::eExtrapOrder0)
