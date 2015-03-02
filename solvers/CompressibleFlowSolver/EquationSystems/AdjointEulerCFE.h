@@ -98,50 +98,11 @@ namespace Nektar
             bool                    dumpInitialConditions = true,
             const int domain = 0);
         
-        virtual void v_EvaluateExactSolution(
-            unsigned int            field,
-            Array<OneD, NekDouble> &outfield,
-            const NekDouble         time = 0.0);
-        
-        void CPPrimal(
-            const Array<OneD, const Array<OneD, NekDouble> > &inarray,
-                  Array<OneD, NekDouble> &outarray);
-        
     private:
         void SetBoundaryConditions(
             Array<OneD, Array<OneD, NekDouble> >            &physarray,
             NekDouble                                        time);
         
-        /// Isentropic Vortex Test Case.
-        void EvaluateIsentropicVortex(
-            const Array<OneD, NekDouble>                    &x,
-            const Array<OneD, NekDouble>                    &y,
-            const Array<OneD, NekDouble>                    &z,
-                  Array<OneD, Array<OneD, NekDouble> >      &u,
-                  NekDouble                                  time,
-            const int                                        o = 0);
-        void GetExactIsentropicVortex(
-            int                                              field, 
-            Array<OneD, NekDouble>                          &outarray, 
-            NekDouble                                        time);
-        void SetInitialIsentropicVortex(
-            NekDouble                                        initialtime);
-        void SetBoundaryIsentropicVortex(
-            int                                              bcRegion, 
-            NekDouble                                        time, 
-            int cnt, Array<OneD, Array<OneD, NekDouble> >   &physarray);
-
-        /// Ringleb Flow Test Case.
-        void GetExactRinglebFlow(
-            int                                             field, 
-            Array<OneD, NekDouble>                         &outarray);
-        void SetInitialRinglebFlow(
-            void);
-        void SetBoundaryRinglebFlow(
-            int                                              bcRegion, 
-            NekDouble                                        time, 
-            int                                              cnt, 
-            Array<OneD, Array<OneD, NekDouble> >            &physarray);
     };
 }
 #endif
