@@ -333,21 +333,6 @@ namespace Nektar
         // loop over Boundary Regions
         for (int n = 0; n < m_fields[0]->GetBndConditions().num_elements(); ++n)
         {
-            // Wall Boundary Condition
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                SpatialDomains::eWall)
-            {
-                ASSERTL0(false, "Wall is a wrong bc for the full "
-                                "compressible Navier-Stokes equations");
-            }
-            
-            // Wall Boundary Condition
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                SpatialDomains::eWallViscous)
-            {
-                WallViscousBC(n, cnt, inarray);
-            }
-            
             // Symmetric Boundary Condition
             if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() == 
                 SpatialDomains::eSymmetry)
@@ -360,13 +345,6 @@ namespace Nektar
                 SpatialDomains::eAdjointWall)
             {
                 AdjointWallBC(n, cnt, inarray);
-            }
-            
-            // Extrapolation of the data at the boundaries
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() == 
-                SpatialDomains::eExtrapOrder0)
-            {
-                ExtrapOrder0BC(n, cnt, inarray);
             }
             
             // Time Dependent Boundary Condition (specified in meshfile)

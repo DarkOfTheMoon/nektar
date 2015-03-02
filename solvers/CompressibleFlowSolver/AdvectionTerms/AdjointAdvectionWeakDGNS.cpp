@@ -319,11 +319,11 @@ void AdjointAdvectionWeakDGNS::v_Advect(
         }
     }
 
-    //m_AdjointFluxVector(inarray, fluxvector);
-    //m_JacTransposeDivVector(inarray, JacTransVec);
+    m_AdjointFluxVector(inarray, fluxvector);
+    m_JacTransposeDivVector(inarray, JacTransVec);
     
-    //m_AddfluxVector(inarray, addfluxvector);
-    //m_AddJacTransposeDivVector(inarray, addJacTransVec);
+    m_AddfluxVector(inarray, addfluxvector);
+    m_AddJacTransposeDivVector(inarray, addJacTransVec);
     
     // Get the advection part (without numerical flux)
     for(i = 0; i < nConvectiveFields; ++i)

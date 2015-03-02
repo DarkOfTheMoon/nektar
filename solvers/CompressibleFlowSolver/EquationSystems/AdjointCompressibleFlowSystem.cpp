@@ -1293,55 +1293,6 @@ namespace Nektar
         }
     }
     
-    NekDouble AdjointCompressibleFlowSystem::v_GetTimeStep(
-            const Array<OneD, const Array<OneD, NekDouble> > &inarray)
-    {
-        int n;
-        int nElements = m_fields[0]->GetExpSize();
-        const Array<OneD, int> ExpOrder = GetNumExpModesPerExp();
-        
-        Array<OneD, NekDouble> tstep      (nElements, 0.0);
-        Array<OneD, NekDouble> stdVelocity(nElements);
-        
-        // Get standard velocity to compute the time-step limit
-        GetStdVelocity(inarray, stdVelocity);
-        
-        // Factors to compute the time-step limit
-        NekDouble minLength;
-        NekDouble alpha   = MaxTimeStepEstimator();
-        NekDouble cLambda = 0.2; // Spencer book-317
-        
-        // Loop over elements to compute the time-step limit for each element
-        for(n = 0; n < nElements; ++n)
-        {
-            int npoints = m_fields[0]->GetExp(n)->GetTotPoints();
-            Array<OneD, NekDouble> one2D(npoints, 1.0);
-            NekDouble Area = m_fields[0]->GetExp(n)->Integral(one2D);
-            
-            if (m_fields[0]->GetExp(n)->as<LocalRegions::TriExp>())
-            {
-                minLength = 2.0 * sqrt(Area);
-            }
-            else if (m_fields[0]->GetExp(n)->as<LocalRegions::QuadExp>())
-            {
-                minLength = sqrt(Area);
-            }
-            else if (m_fields[0]->GetExp(n)->as<LocalRegions::HexExp>())
-            {
-                minLength = sqrt(Area);
-            }
-            
-            tstep[n] = m_cflSafetyFactor * alpha * minLength
-            / (stdVelocity[n] * cLambda
-               * (ExpOrder[n] - 1) * (ExpOrder[n] - 1));
-        }
-        
-        // Get the minimum time-step limit and return the time-step
-        NekDouble TimeStep = Vmath::Vmin(nElements, tstep, 1);
-        m_comm->AllReduce(TimeStep, LibUtilities::ReduceMin);
-        return TimeStep;
-    }
-    
     void AdjointCompressibleFlowSystem::GetAdjointFluxVector(
               const Array<OneD, Array<OneD, NekDouble> > &inarray,
                     Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray)

@@ -226,16 +226,6 @@ namespace Nektar
                  Array<OneD, Array<OneD, NekDouble> > &BwdDir,
                  Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &FwdDirDIFF,
                  Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &BwdDirDIFF);
-        void GetFluxVectorDeAlias(
-            const Array<OneD, Array<OneD, NekDouble> >         &physfield,
-            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &flux);
-        void GetViscousFluxVector(
-            const Array<OneD, Array<OneD, NekDouble> >         &physfield,
-            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &derivatives,
-            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &viscousTensor);
-        void GetFluxVectorPDESC(
-            const Array<OneD, Array<OneD, NekDouble> >               &physfield,
-            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &flux);
         void GetViscousFluxVectorDeAlias(
             const Array<OneD, Array<OneD, NekDouble> >         &physfield,
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &derivatives,
@@ -247,18 +237,9 @@ namespace Nektar
             const Array<OneD, const Array<OneD,       NekDouble> >&physfield,
             const Array<OneD, const Array<OneD,       NekDouble> >&velocity,
                   Array<OneD,                         NekDouble>  &pressure);
-        void GetDirectSolution(
-                  Array<OneD, Array<OneD, NekDouble> > &directSol);
         void GetVelocityVector(
             const Array<OneD,       Array<OneD,       NekDouble> >&physfield,
                   Array<OneD,       Array<OneD,       NekDouble> >&velocity);
-        void GetStdVelocity(
-            const Array<OneD, const Array<OneD,       NekDouble> >&inarray,
-                  Array<OneD,                         NekDouble>  &stdV);
-        void WallViscousBC(
-            int                                                 bcRegion,
-            int                                                 cnt,
-            Array<OneD, Array<OneD, NekDouble> >               &physarray);
         void SymmetryBC(
             int                                                 bcRegion,
             int                                                 cnt,
@@ -267,14 +248,9 @@ namespace Nektar
             int                                                 bcRegion,
             int                                                 cnt,
             Array<OneD, Array<OneD, NekDouble> >               &physarray);
-        void ExtrapOrder0BC(
-            int                                                 bcRegion, 
-            int                                                 cnt, 
-            Array<OneD, Array<OneD, NekDouble> >               &physarray);
         virtual bool v_PostIntegrate(int step);
                   NekDouble CalcSteadyState();
-        virtual NekDouble v_GetTimeStep(
-            const Array<OneD, const Array<OneD, NekDouble> > &inarray);
+
         
         void CheckForRestart(NekDouble &time);
         

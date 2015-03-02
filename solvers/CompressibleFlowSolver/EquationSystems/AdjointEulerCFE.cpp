@@ -352,13 +352,6 @@ namespace Nektar
                 AdjointWallBC(n, cnt, inarray);
             }
             
-            // Extrapolation of the data at the boundaries
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() == 
-                SpatialDomains::eExtrapOrder0)
-            {
-                ExtrapOrder0BC(n, cnt, inarray);
-            }
-            
             // Time Dependent Boundary Condition (specified in meshfile)
             if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
                 SpatialDomains::eTimeDependent)
@@ -370,20 +363,6 @@ namespace Nektar
                 }
             }
             
-            // Isentropic Vortex Boundary Condition
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                SpatialDomains::eIsentropicVortex)
-            {
-                SetBoundaryIsentropicVortex(n, time, cnt, inarray);
-            }
-            
-            // Ringleb Flow Inflow and outflow Boundary Condition
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                SpatialDomains::eRinglebFlow)
-            {
-                SetBoundaryRinglebFlow(n, time, cnt, inarray);
-            }
-            
             cnt += m_fields[0]->GetBndCondExpansions()[n]->GetExpSize();
         }
     }
@@ -392,27 +371,4 @@ namespace Nektar
      * @brief Get the exact solutions for isentropic vortex and Ringleb
      * flow problems.
      */
-    void AdjointEulerCFE::v_EvaluateExactSolution(
-        unsigned int                         field,
-        Array<OneD, NekDouble>              &outfield,
-        const NekDouble                      time)
-    {
-        switch(m_problemType)
-        {
-            case eIsentropicVortex:
-            {
-                GetExactIsentropicVortex(field, outfield, time);
-                break;
-            }
-            case eRinglebFlow:
-            {
-                GetExactRinglebFlow(field, outfield);
-                break;
-            }
-            default:
-            {
-                break;
-            }
-        }
-    }
 }
