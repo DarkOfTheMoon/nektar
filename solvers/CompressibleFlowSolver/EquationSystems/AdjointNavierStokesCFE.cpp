@@ -165,7 +165,7 @@ namespace Nektar
             {
                 
                 std::string filename = m_session->GetFunctionFilename("InitialConditions", 0.0);
-                std::string chkout = std::to_string(m_cnt);
+                std::string chkout = boost::lexical_cast<string>(m_cnt);
                 for (int q = 0; q < nvariables; ++q)
                 {
                     std::vector<LibUtilities::FieldDefinitionsSharedPtr> FieldDef;

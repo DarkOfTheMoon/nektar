@@ -424,7 +424,6 @@ namespace Nektar
                     // Get Change of Variable matrices
                     GetConservToPrimVariableInvMat(m_dVdU);
                     GetConservToPrimVariableInvMatDiv(m_dVdU, m_dVdUdXi);
-                    
                     // Get d(J^v_v)/dxi = d(dFv/dV)/dxi
                     GetJacobianAddConvFlux(m_JacAddPrim);
                     // Get d(J^v_v)/dxi = d(dFv/dV)/dxi
@@ -667,7 +666,8 @@ namespace Nektar
         if (m_numCheck != 0)
         {
             string basefile = m_session->GetFunctionFilename("BaseFlow", 0);
-            std::string chkout = std::to_string(m_finalCheck-m_cnt);
+            //std::string chkout = std::to_string(m_finalCheck-m_cnt);
+            std::string chkout = boost::lexical_cast<string>(m_finalCheck-m_cnt);
             std::string basename = basefile+"_"+chkout+".chk";
             
             m_advection->ImportFldBase(basename, m_fields);
@@ -703,10 +703,10 @@ namespace Nektar
                 GetDerivJacobian(m_JacCons, m_JacDivCons);
                 
                 m_advection->SetAdjointFluxVector(
-                    &AdjointCompressibleFlowSystem::GetAdjointFluxVector, this);
+                &AdjointCompressibleFlowSystem::GetAdjointFluxVector, this);
                 
                 m_advection->SetJacTransposeDivVector(
-                    &AdjointCompressibleFlowSystem::GetAdjointDerivJacVector, this);
+                &AdjointCompressibleFlowSystem::GetAdjointDerivJacVector, this);
             }
             else if(m_EqTypeStr == "AdjointNavierStokesCFE")
             {
@@ -962,7 +962,7 @@ namespace Nektar
                     = m_session->GetFunctionFilename(
                                 "InitialConditions", m_session->GetVariable(i));
                     
-                    std::string chkout = std::to_string(m_cnt);
+                    std:string chkout = boost::lexical_cast<string>(m_cnt);
                     
                     if (m_cnt != 0)
                     {
@@ -3176,7 +3176,7 @@ namespace Nektar
             // row 4;
             Vmath::Zero(nq, &JacVisc[2][0][2][0][0], 1);
             Vmath::Vcopy(nq, &TwoOThreeMuVector[0], 1, &JacVisc[2][0][2][1][0], 1);
-            Vmath::Neg(nq, &JacVisc[2][0][2][1][0], 1);
+            Vmath::Neg(nq,  &JacVisc[2][0][2][1][0], 1);
             Vmath::Zero(nq, &JacVisc[2][0][2][2][0], 1);
             Vmath::Zero(nq, &JacVisc[2][0][2][3][0], 1);
             
