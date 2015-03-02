@@ -1644,7 +1644,7 @@ namespace Nektar
             // tmp2 = -u*v*z_rhov;
             Vmath::Vmul(nq, &inarray[2][0], 1, &tmp2[0], 1, &tmp2[0], 1);
             
-            // tmp3 = u*v;
+            // tmp3 = u*w;
             Vmath::Vmul(nq, &vel[0][0], 1, &vel[2][0], 1, &tmp3[0], 1);
             
             // tmp3 = -u*w;
@@ -1740,7 +1740,7 @@ namespace Nektar
             Vmath::Smul(nq, -GammaMinOne, &tmp2[0], 1, &tmp2[0], 1);
             
             // tmp2 = -(gamma-1) * u * v * z_rhoE
-            Vmath::Vmul(nq, &inarray[3][0], 1, &tmp2[0], 1, &tmp2[0], 1);
+            Vmath::Vmul(nq, &inarray[4][0], 1, &tmp2[0], 1, &tmp2[0], 1);
             
             Vmath::Vadd(nq, &tmp[0], 1, &tmp1[0], 1, &outarray[2][0][0], 1);
             Vmath::Vadd(nq, &outarray[2][0][0], 1, &tmp2[0], 1, &outarray[2][0][0], 1);
@@ -1825,14 +1825,14 @@ namespace Nektar
             
             // ====================================================
             
-            // tmp3 = u*w;
-            Vmath::Vmul(nq, &vel[0][0], 1, &vel[2][0], 1, &tmp3[0], 1);
+            // tmp3 = v*w;
+            Vmath::Vmul(nq, &vel[1][0], 1, &vel[2][0], 1, &tmp3[0], 1);
             
             // tmp3 = -u*w;
             Vmath::Neg(nq, &tmp3[0], 1);
             
-            // tmp2 = -u*w*z_rhou;
-            Vmath::Vmul(nq, &inarray[1][0], 1, &tmp3[0], 1, &tmp3[0], 1);
+            // tmp2 = -u*w*z_rhow;
+            Vmath::Vmul(nq, &inarray[3][0], 1, &tmp3[0], 1, &tmp3[0], 1);
             
             // ====================================================
             
@@ -1849,7 +1849,7 @@ namespace Nektar
                         &tmp4[0], 1);
             
             // tmp3 = z_rhoE*u((gamma-1)/2*velsq-H);
-            Vmath::Vmul(nq, &inarray[3][0], 1, &tmp4[0], 1, &tmp4[0], 1);
+            Vmath::Vmul(nq, &inarray[4][0], 1, &tmp4[0], 1, &tmp4[0], 1);
             
             Vmath::Vadd(nq, &tmp[0], 1, &tmp2[0], 1, &outarray[0][1][0], 1);
             Vmath::Vadd(nq, &outarray[0][1][0], 1, &tmp3[0], 1, &outarray[0][1][0], 1);
@@ -1879,7 +1879,7 @@ namespace Nektar
             Vmath::Vmul(nq, &tmp2[0], 1, &inarray[1][0], 1, &tmp2[0], 1);
             
             //====================================================
-            // tmp3 = u
+            // tmp3 = w
             Vmath::Vcopy(nq, &vel[2][0], 1, &tmp3[0], 1);
             
             // tmp3 = w * z_rhow
@@ -1902,36 +1902,6 @@ namespace Nektar
             Vmath::Vadd(nq, &outarray[2][1][0], 1, &tmp2[0], 1, &outarray[2][1][0], 1);
             Vmath::Vadd(nq, &outarray[2][1][0], 1, &tmp3[0], 1, &outarray[2][1][0], 1);
             Vmath::Vadd(nq, &outarray[2][1][0], 1, &tmp4[0], 1, &outarray[2][1][0], 1);
-            // ====================================================
-            
-            Vmath::Zero(nq, &tmp[0], 1);
-            Vmath::Zero(nq, &tmp1[0], 1);
-            Vmath::Zero(nq, &tmp2[0], 1);
-            Vmath::Zero(nq, &tmp3[0], 1);
-            
-            // tmp = -(gamma-1) * u
-            Vmath::Smul(nq, -GammaMinOne, &vel[0][0], 1, &tmp[0], 1);
-            
-            // tmp = -(gamma-1) * u * z_rhov
-            Vmath::Vmul(nq, &tmp[0], 1, &inarray[2][0], 1, &tmp[0], 1);
-            
-            // tmp1 = v * z_rhou
-            Vmath::Vmul(nq, &vel[1][0], 1, &inarray[1][0], 1, &tmp1[0], 1);
-            
-            // tmp2 =  u * v
-            Vmath::Vmul(nq, &vel[0][0], 1, &vel[1][0], 1, &tmp2[0], 1);
-            
-            // tmp2 = -(gamma-1)* u * v
-            Vmath::Smul(nq, -GammaMinOne, &tmp2[0], 1, &tmp2[0], 1);
-            
-            // tmp2 = -(gamma-1)* u * v * z_rhoE
-            Vmath::Vmul(nq, &inarray[3][0], 1, &tmp2[0], 1, &tmp2[0], 1);
-            
-            Vmath::Vadd(nq, &tmp[0], 1, &tmp1[0], 1, &outarray[1][1][0], 1);
-            
-            Vmath::Vadd(nq, &outarray[1][1][0], 1, &tmp2[0], 1, &outarray[1][1][0], 1);
-            
-            // ====================================================
             // ====================================================
             
             Vmath::Zero(nq, &tmp[0], 1);
@@ -2011,16 +1981,16 @@ namespace Nektar
             Vmath::Zero(nq, &tmp3[0], 1);
             Vmath::Zero(nq, &tmp4[0], 1);
             
-            // tmp = v^2
+            // tmp = w^2
             Vmath::Vmul(nq, &vel[2][0], 1, &vel[2][0], 1, &tmp[0], 1);
             
             // tmp1 = (gamma-1)/2 * velsq
             Vmath::Smul(nq, HalfGammaMinOne, &velsq[0], 1, &tmp1[0], 1);
             
-            // tmp = (gamma-1)/2 * velsq - v^2
+            // tmp = (gamma-1)/2 * velsq - w^2
             Vmath::Vsub(nq, &tmp1[0], 1, &tmp[0], 1, &tmp[0], 1);
             
-            // tmp = z_rhov*((gamma/2 - 1/2)*(v1^2 + v2^2) - v1^2)
+            // tmp = z_rhow*((gamma/2 - 1/2)*(v1^2 + v2^2) - w^2)
             Vmath::Vmul(nq, &inarray[3][0], 1, &tmp[0], 1, &tmp[0], 1);
             
             // ====================================================
@@ -2060,7 +2030,7 @@ namespace Nektar
                         &tmp4[0], 1);
             
             // tmp3 = z_rhoE*u((gamma-1)/2*velsq-H);
-            Vmath::Vmul(nq, &inarray[3][0], 1, &tmp4[0], 1, &tmp4[0], 1);
+            Vmath::Vmul(nq, &inarray[4][0], 1, &tmp4[0], 1, &tmp4[0], 1);
             
             Vmath::Vadd(nq, &tmp[0], 1, &tmp2[0], 1, &outarray[0][2][0], 1);
             Vmath::Vadd(nq, &outarray[0][2][0], 1, &tmp3[0], 1, &outarray[0][2][0], 1);
@@ -2074,9 +2044,12 @@ namespace Nektar
             Vmath::Zero(nq, &tmp3[0], 1);
             Vmath::Zero(nq, &tmp4[0], 1);
             
+            Vmath::Vcopy(nq, &inarray[0][0], 1, &tmp[0], 1);
+            
+            Vmath::Smul(nq, ThreeMinGam, &vel[2][0], 1, &tmp1[0], 1);
             // tmp1 = -(gamma-3) * w
             Vmath::Smul(nq, ThreeMinGam, &vel[2][0], 1, &tmp1[0], 1);
-            // tmp1 = -(gamma-3) * w * z_rhov
+            // tmp1 = -(gamma-3) * w * z_rhow
             Vmath::Vmul(nq, &tmp1[0], 1, &inarray[3][0], 1, &tmp1[0], 1);
             
             //====================================================
@@ -2091,7 +2064,7 @@ namespace Nektar
             Vmath::Vcopy(nq, &vel[1][0], 1, &tmp3[0], 1);
             
             // tmp3 = v * z_rhov
-            Vmath::Vmul(nq, &tmp3[0], 1, &inarray[3][0], 1, &tmp3[0], 1);
+            Vmath::Vmul(nq, &tmp3[0], 1, &inarray[2][0], 1, &tmp3[0], 1);
             
             //====================================================
             // tmp4 = w^2
@@ -2106,7 +2079,7 @@ namespace Nektar
             // tmp4 = ((gamma-1) * w^2+H)*z_rhoE
             Vmath::Vmul(nq, &inarray[4][0], 1, &tmp4[0], 1, &tmp4[0], 1);
             
-            Vmath::Vadd(nq, &tmp[0], 1, &tmp1[0], 1, &outarray[2][1][0], 1);
+            Vmath::Vadd(nq, &tmp[0], 1, &tmp1[0], 1, &outarray[3][2][0], 1);
             Vmath::Vadd(nq, &outarray[3][2][0], 1, &tmp2[0], 1, &outarray[3][2][0], 1);
             Vmath::Vadd(nq, &outarray[3][2][0], 1, &tmp3[0], 1, &outarray[3][2][0], 1);
             Vmath::Vadd(nq, &outarray[3][2][0], 1, &tmp4[0], 1, &outarray[3][2][0], 1);
@@ -2133,7 +2106,7 @@ namespace Nektar
             Vmath::Smul(nq, -GammaMinOne, &tmp2[0], 1, &tmp2[0], 1);
             
             // tmp2 = -(gamma-1)* u * w * z_rhoE
-            Vmath::Vmul(nq, &inarray[3][0], 1, &tmp2[0], 1, &tmp2[0], 1);
+            Vmath::Vmul(nq, &inarray[4][0], 1, &tmp2[0], 1, &tmp2[0], 1);
             Vmath::Vadd(nq, &tmp[0], 1, &tmp1[0], 1, &outarray[1][2][0], 1);
             Vmath::Vadd(nq, &outarray[1][2][0], 1, &tmp2[0], 1, &outarray[1][2][0], 1);
             
@@ -2173,10 +2146,10 @@ namespace Nektar
             Vmath::Zero(nq, &tmp3[0], 1);
             
             Vmath::Smul(nq, GammaMinOne, &inarray[3][0], 1, &tmp[0], 1);
-            Vmath::Smul(nq, m_gamma, &vel[1][0], 1, &tmp1[0], 1);
+            
+            Vmath::Smul(nq, m_gamma, &vel[2][0], 1, &tmp1[0], 1);
             Vmath::Vmul(nq, &tmp1[0], 1, &inarray[4][0], 1, &tmp1[0], 1);
-            
-            
+        
             Vmath::Vadd(nq, &tmp[0], 1, &tmp1[0], 1, &outarray[4][2][0], 1);
         }
     }
