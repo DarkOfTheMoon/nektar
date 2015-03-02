@@ -1511,13 +1511,8 @@ namespace Nektar
                                                  inarray + phys_offset,
                                                  e_tmp = tmp);
                     
-                    /*LocalRegions::Expansion1DSharedPtr traceEl =
-                    elmtToTrace[n][e]->as<LocalRegions::Expansion1D>();*/
-                    
-                    //==================OLD IMPLEMENTATION REMOVE ==============
-                    LocalRegions::Expansion1DSharedPtr traceEl = boost::dynamic_pointer_cast<LocalRegions::Expansion1D>(m_trace->GetExp(e));
-                    //==========================================================
-                    
+                    LocalRegions::Expansion1DSharedPtr traceEl =
+                    elmtToTrace[n][e]->as<LocalRegions::Expansion1D>();
                     
                     if (traceEl->GetRightAdjacentElementEdge() == -1)
                     {
