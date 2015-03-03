@@ -365,7 +365,6 @@ namespace Nektar
     {
         static NekDouble gamma = m_params["gamma"]();
         
-        
         static NekDouble R  = 287.05;
         static NekDouble k  = 0.0257;
         static NekDouble mu = 0.415274;
@@ -431,8 +430,5 @@ namespace Nektar
         
         FadjL = 0.0;
         FadjR = 0.0;
-        
-        //std::cout << rhof << " " << rhouf << " " << rhovf << " " << rhowf << " " << Ef << std::endl;
-
     }
 }

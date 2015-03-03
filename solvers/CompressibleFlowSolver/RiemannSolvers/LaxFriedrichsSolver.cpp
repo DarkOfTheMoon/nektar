@@ -113,10 +113,10 @@ namespace Nektar
         NekDouble S    = std::max(uRoe+cRoe, std::max(uR+cR, -uL+cL));
         NekDouble sign = 1.0;
         
-        if(S == -uL+cL)
+        /*if(S == -uL+cL)
         {
             sign = -1.0;
-        }
+        }*/
         
         // Lax-Friedrichs Riemann rho flux
         rhof  = 0.5 * ((rhouL + rhouR) - sign * S * (rhoR -rhoL));
@@ -182,13 +182,13 @@ namespace Nektar
                             (uRoe * uRoe + vRoe * vRoe + wRoe * wRoe)));
         
         // Minimum and maximum wave speeds
-        NekDouble S    = std::max(uRoe+cRoe, std::max(uR+cR, -uL+cL));
+        NekDouble S    = std::max(uRoe+cRoe, std::max(uR+cR, uL+cL));
         NekDouble sign = 1.0;
-        
+        /*
         if(S == -uL+cL)
         {
             sign = -1.0;
-        }
+        }*/
         
         // Lax-Friedrichs Riemann rho flux
         rhof  = 0.5 * ((rhouL + rhouR) - sign * S * (rhoR -rhoL));
@@ -260,7 +260,7 @@ namespace Nektar
                                 (uRoe * uRoe + vRoe * vRoe + wRoe * wRoe)));
         
         // Minimum and maximum wave speeds
-        NekDouble S    = std::max(uRoe+cRoe, std::max(uRdir+cRdir, -uLdir+cLdir));
+        NekDouble S    = std::max(uRoe+cRoe, std::max(uRdir+cRdir, uLdir+cLdir));
         NekDouble sign = 1.0;
         
         /*if(S == -uLdir+cLdir)
@@ -274,8 +274,8 @@ namespace Nektar
                   zrhowL_flux = 0.0, zrhowR_flux = 0.0,
                   zEL_flux    = 0.0, zER_flux    = 0.0;
         
-        NekDouble vsqLdir = pow(uLdir,2)+pow(vLdir,2);
-        NekDouble vsqRdir = pow(uRdir,2)+pow(vRdir,2);
+        NekDouble vsqLdir = pow(uLdir,2)+pow(vLdir,2)+pow(wLdir,2);
+        NekDouble vsqRdir = pow(uRdir,2)+pow(vRdir,2)+pow(wRdir,2);
         // =====================================================================
         
         zrhoL_flux =     (0.5*(gamma-1)*vsqLdir-pow(uLdir,2))*rhouL
