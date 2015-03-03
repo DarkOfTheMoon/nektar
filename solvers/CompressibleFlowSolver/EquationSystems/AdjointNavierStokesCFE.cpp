@@ -229,6 +229,12 @@ namespace Nektar
                     }
                 }
             }
+            
+            if (dumpInitialConditions)
+            {
+                // Dump initial conditions to file
+                Checkpoint_Output(0);
+            }
         }
         
         if (m_session->GetComm()->GetRank() == 0)
@@ -236,12 +242,6 @@ namespace Nektar
             cout << endl;
             cout << "======================================================================="<< endl;
             cout << endl;
-        }
-        
-        if (dumpInitialConditions)
-        {
-            // Dump initial conditions to file
-            Checkpoint_Output(0);
         }
     }
 
