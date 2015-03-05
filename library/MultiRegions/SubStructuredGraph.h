@@ -153,8 +153,70 @@ namespace Nektar
         class MultiLevelBisectedGraph
         {
         public:
-            MULTI_REGIONS_EXPORT MultiLevelBisectedGraph(
-                const Array<OneD, const int> sepTree);
+            MULTI_REGIONS_EXPORT static MultiLevelBisectedGraphSharedPtr
+                CreateMultiLevelBisectedGraph(
+                    const Array<OneD, const int> sepTree,
+                    int& pOffset)
+            {
+
+                int recurLevel    = sepTree[pOffset+0];
+                int nLeftIntDofs  = sepTree[pOffset+2];
+                int nRightIntDofs = sepTree[pOffset+3];
+                int nBndDofs      = sepTree[pOffset+4];
+
+                // Beware!  This is altering a call-by-reference parameter.
+                pOffset += 5;
+
+                MultiLevelBisectedGraphSharedPtr newMLGBPtr =
+                    MemoryManager<MultiLevelBisectedGraph>::
+                        AllocateSharedPtr(nBndDofs);
+
+                bool daughtersConstructed[2] = {false,false};
+                
+                while ( ((pOffset) < sepTree.num_elements()) &&
+                    (sepTree[pOffset+0] > recurLevel) ) 
+                {         
+                    switch (sepTree[pOffset+1])
+                    {
+                        case 1:
+                        {
+                            newMLGBPtr->m_leftDaughterGraph =
+                                CreateMultiLevelBisectedGraph(sepTree, pOffset);
+                            daughtersConstructed[0] = true;
+                            break;
+                        }
+                        case 2:
+                        {
+                            newMLGBPtr->m_rightDaughterGraph = 
+                                CreateMultiLevelBisectedGraph(sepTree, pOffset);
+                            daughtersConstructed[1] = true;
+                            break;
+                        }
+                        default:
+                        {
+                            NEKERROR(ErrorUtil::efatal,"Invalid branch id");
+                        }
+                    }
+                }
+
+                if (!daughtersConstructed[0] && nLeftIntDofs)
+                {
+                    newMLGBPtr->m_leftDaughterGraph = MemoryManager<
+                        MultiLevelBisectedGraph>::AllocateSharedPtr(nLeftIntDofs);
+                }
+                
+                if (!daughtersConstructed[1] && nRightIntDofs)
+                {
+                    newMLGBPtr->m_rightDaughterGraph = MemoryManager<
+                        MultiLevelBisectedGraph>::AllocateSharedPtr(nRightIntDofs);
+                }
+
+                return newMLGBPtr;
+
+            }
+
+           // MULTI_REGIONS_EXPORT MultiLevelBisectedGraph(
+           //     const Array<OneD, const int> sepTree);
             MULTI_REGIONS_EXPORT MultiLevelBisectedGraph(
                 MultiLevelBisectedGraphSharedPtr oldLevel,
                 const int                        nPartition);
@@ -163,8 +225,8 @@ namespace Nektar
             MULTI_REGIONS_EXPORT ~MultiLevelBisectedGraph(void);
 
             MULTI_REGIONS_EXPORT int  GetTotDofs() const;
-            MULTI_REGIONS_EXPORT void SetGlobalNumberingOffset();
-            MULTI_REGIONS_EXPORT void DumpNBndDofs(void) const;
+            MULTI_REGIONS_EXPORT int  SetGlobalNumberingOffset(int pOffset=0);
+            MULTI_REGIONS_EXPORT void DumpNBndDofs(int pLevel=0) const;
             MULTI_REGIONS_EXPORT void CollectLeaves(
                 std::vector<SubGraphSharedPtr>& leaves) const;
             MULTI_REGIONS_EXPORT int  CutLeaves();
@@ -201,40 +263,46 @@ namespace Nektar
                 Array<OneD, int>& perm,  
                 Array<OneD, int>& iperm) const;
 
-            MULTI_REGIONS_EXPORT void ExpandGraphWithVertexWeights(
-                const Array<OneD, const int>& wgts);
+            MULTI_REGIONS_EXPORT int ExpandGraphWithVertexWeights(
+                const Array<OneD, const int>& wgts,
+                int pOffset=0);
 
             MULTI_REGIONS_EXPORT void MaskPatches(
                 const int               leveltomask, 
-                Array<OneD, NekDouble>& maskarray) const;
+                Array<OneD, NekDouble>& maskarray,
+                int pLevel=0) const;
             
             MULTI_REGIONS_EXPORT int GetNpatchesWithInterior(
-                const int whichlevel) const;
+                const int whichlevel,
+                int pLevel=0) const;
 
             MULTI_REGIONS_EXPORT void GetNintDofsPerPatch(
                 const int                  whichlevel, 
-                Array<OneD, unsigned int> &outarray) const;
+                Array<OneD, unsigned int> &outarray,
+                int pLevel=0) const;
             
             MULTI_REGIONS_EXPORT int GetInteriorOffset(
                 const int whichlevel, 
-                const int patch = 0) const;
+                const int patch = 0,
+                int pLevel=0) const;
 
             MULTI_REGIONS_EXPORT std::vector<SubGraphSharedPtr> 
-                GetInteriorBlocks(const int whichlevel) const;
+                GetInteriorBlocks(const int whichlevel, int pLevel=0) const;
 
             MULTI_REGIONS_EXPORT int GetNumGlobalDofs(
-                const int whichlevel) const;
+                const int whichlevel, int pLevel=0) const;
 
-            MULTI_REGIONS_EXPORT int GetNlevels() const;
+            MULTI_REGIONS_EXPORT int GetNlevels(int pLevel=0) const;
 
-            MULTI_REGIONS_EXPORT void Dump() const;
+            MULTI_REGIONS_EXPORT void Dump(int pLevel=0) const;
 
         protected:
             std::vector<SubGraphSharedPtr> m_IntBlocks;
             BottomUpSubStructuredGraphSharedPtr m_daughterGraph;
 
         private:
-            void SetBottomUpReordering(Array<OneD, int>& iperm) const;
+            int SetBottomUpReordering(Array<OneD, int>& iperm,
+                int pOffset=0) const;
 
             inline BottomUpSubStructuredGraphSharedPtr GetDaughterGraph() const
             {
