@@ -1289,6 +1289,7 @@ namespace Nektar
             // non-embedded mesh (point can only match one element)
             else
             {
+                //FIXME static considered harmful (for threads)
                 static int start = 0;
                 int min_id  = 0;
                 NekDouble resid_min = 1e6;
