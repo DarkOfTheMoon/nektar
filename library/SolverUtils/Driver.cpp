@@ -40,7 +40,7 @@ namespace Nektar
 namespace SolverUtils
 {
 
-std::string Driver::evolutionOperatorLookupIds[6] = {
+std::string Driver::evolutionOperatorLookupIds[7] = {
     LibUtilities::SessionReader::RegisterEnumValue(
             "EvolutionOperator","Nonlinear"      ,eNonlinear),
     LibUtilities::SessionReader::RegisterEnumValue(
@@ -49,6 +49,8 @@ std::string Driver::evolutionOperatorLookupIds[6] = {
             "EvolutionOperator","Adjoint"        ,eAdjoint),
     LibUtilities::SessionReader::RegisterEnumValue(
             "EvolutionOperator","TransientGrowth",eTransientGrowth),
+    LibUtilities::SessionReader::RegisterEnumValue(
+            "EvolutionOperator","TransientAdjoint",eTransientAdjoint),
     LibUtilities::SessionReader::RegisterEnumValue(
             "EvolutionOperator","SkewSymmetric"  ,eSkewSymmetric),
     LibUtilities::SessionReader::RegisterEnumValue(
@@ -111,7 +113,8 @@ void Driver::v_InitObject(ostream &out)
                     "EvolutionOperator");
 
         m_nequ = ((m_EvolutionOperator == eTransientGrowth ||
-                   m_EvolutionOperator == eAdaptiveSFD) ? 2 : 1);
+                   m_EvolutionOperator == eAdaptiveSFD ||
+                   m_EvolutionOperator == eTransientAdjoint) ? 2 : 1);
 
         m_equ = Array<OneD, EquationSystemSharedPtr>(m_nequ);
 
@@ -149,6 +152,44 @@ void Driver::v_InitObject(ostream &out)
                 m_equ[0] = GetEquationSystemFactory().CreateInstance(
                                     vEquation, m_session);
                 break;
+            case eTransientAdjoint:
+            {
+                //forward timestepping
+                std::string vEquation1;
+                //backward timestepping
+                if (vEquation == "AdjointEulerCFE")
+                {
+                    vEquation1 = "EulerCFE";
+                }
+                else if(vEquation == "AdjointNavierStokesCFE")
+                {
+                    vEquation1 = "NavierStokesCFE";
+                }
+                
+                string          meshfile;
+                string          FwdCondFile;
+                vector<string>  FwdFilename;
+                
+                //meshfile = m_session->GetSessionName() + ".xml";
+                
+                meshfile = m_session->GetFunctionFilename("BaseFlow", 0)+".xml";
+                cout << meshfile << endl;
+                FwdCondFile = meshfile;
+                FwdFilename.push_back(meshfile);
+                FwdFilename.push_back(FwdCondFile);
+                session_fwd = LibUtilities::SessionReader::CreateInstance(
+                            0, NULL, FwdFilename, m_session->GetComm());
+                
+                // principle equations are adjoint
+                m_equ[0] = GetEquationSystemFactory().CreateInstance(
+                                    vEquation1, session_fwd);
+                
+                // secondary equations are forward
+                m_equ[1] = GetEquationSystemFactory().CreateInstance(
+                                    vEquation, m_session);
+            }
+                break;
+
             case eAdaptiveSFD:
             {
                 // Coupling SFD method and Arnoldi algorithm
@@ -158,6 +199,7 @@ void Driver::v_InitObject(ostream &out)
                 string          LinNSCondFile;
                 vector<string>  LinNSFilename;
                 meshfile = m_session->GetSessionName() + ".gz";
+                
                 LinNSCondFile = m_session->GetSessionName();
                 LinNSCondFile += "_LinNS.xml";
                 LinNSFilename.push_back(meshfile);
@@ -178,7 +220,6 @@ void Driver::v_InitObject(ostream &out)
                 break;
             default:
                 ASSERTL0(false, "Unrecognised evolution operator.");
-
         }
     }
     catch (int e)

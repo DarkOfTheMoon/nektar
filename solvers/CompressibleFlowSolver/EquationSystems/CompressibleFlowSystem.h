@@ -121,7 +121,8 @@ namespace Nektar
         StdRegions::StdQuadExpSharedPtr     m_OrthoQuadExp;
         StdRegions::StdHexExpSharedPtr      m_OrthoHexExp;
         bool                                m_smoothDiffusion;
-
+        
+        Array<OneD, Array<OneD, NekDouble> > m_un;
         CompressibleFlowSystem(
             const LibUtilities::SessionReaderSharedPtr& pSession);
 
@@ -232,6 +233,9 @@ namespace Nektar
                   Array<OneD,       Array<OneD, NekDouble> > outarrayForcing);
         virtual NekDouble v_GetTimeStep(
             const Array<OneD, const Array<OneD, NekDouble> > &inarray);
+        virtual bool v_PostIntegrate(int step);
+        NekDouble CalcSteadyState();
+
         virtual void v_SetInitialConditions(
             NekDouble initialtime = 0.0,
             bool dumpInitialConditions = true,

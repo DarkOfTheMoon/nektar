@@ -78,11 +78,19 @@ namespace Nektar
             NekDouble NumVar = m_equ[0]->GetNvariables();
             m_dt = m_equ[0]->GetTimeStep();
             
-            
             string advName;
-            m_session->LoadSolverInfo("AdvectionType", advName, "WeakDG");
-            m_session->LoadParameter ("numCheck",   m_numCheck,   1.0);
+            m_session->LoadSolverInfo("AdvectionType",   advName, "WeakDG");
+            m_session->LoadParameter ("numCheck",        m_numCheck,   0.0);
+            m_session->LoadParameter ("numSteps",        m_numSteps,   0.0);
+            m_session->LoadParameter ("IO_CheckSteps",   m_numInterSteps,   0.0);
+
+            if (m_numCheck == 0)
+            {
+                m_numCheck = m_numSteps/m_numInterSteps;
+            }
             
+            m_session->LoadSolverInfo("CheckPointType", m_CheckPointType, "Non");
+
             //AdvectionSystemSharedPtr A = m_equ[0]->as<AdvectionSystem>();
             AdvectionSharedPtr A = SolverUtils::GetAdvectionFactory().CreateInstance(advName, advName);
             NumVar = m_equ[0]->UpdateFields()[0]->GetCoordim(0);
@@ -99,55 +107,108 @@ namespace Nektar
                     NumVar += 1;
                 }
             }
-            
-            Array<OneD, MultiRegions::ExpListSharedPtr> fields
-            = m_equ[0]->UpdateFields();
-            
-            time(&starttime);
-            
-            for (int i = 0; i < m_numCheck; ++i)
+            switch (m_EvolutionOperator)
             {
-                m_equ[0]->PrintSummary(out);
-                
-                m_equ[0]->DoInitialise();
-                
-                m_equ[0]->DoSolve();
-                
-                m_equ[0]->Checkpoint_Output(i+1);
-                
-            }
-            time(&endtime);
-            
-            if (m_comm->GetRank() == 0)
-            {
-                CPUtime = difftime(endtime, starttime);
-                cout << "-------------------------------------------" << endl;
-                cout << "Total Computation Time = " << CPUtime << "s" << endl;
-                cout << "-------------------------------------------" << endl;
-            }
-                
-                // Evaluate and output computation time and solution accuracy.
-                // The specific format of the error output is essential for the
-                // regression tests to work.
-                // Evaluate L2 Error
-            for(int i = 0; i < m_equ[0]->GetNvariables(); ++i)
-            {
-                    Array<OneD, NekDouble> exactsoln(m_equ[0]->GetTotPoints(), 0.0);
-                    
-                    // Evaluate "ExactSolution" function, or zero array
-                m_equ[0]->EvaluateExactSolution(i, exactsoln,
-                                                    m_equ[0]->GetFinalTime());
-                    
-                NekDouble vL2Error   = m_equ[0]->L2Error  (i, exactsoln);
-                NekDouble vLinfError = m_equ[0]->LinfError(i, exactsoln);
-                    
-                if (m_comm->GetRank() == 0)
+                case eTransientAdjoint:
                 {
-                        out << "L 2 error (variable " << m_equ[0]->GetVariable(i)
-                        << ") : " << vL2Error << endl;
-                        out << "L inf error (variable " << m_equ[0]->GetVariable(i)
-                    << ") : " << vLinfError << endl;
+                    NekDouble Q = m_numSteps/m_numInterSteps;
+                    int cnt = 1;
+                    for (int i = 0; i < Q; i++)
+                    {
+                        // Per checkpoint, a forward and a backward time integration needs to be performed. Hence two time integrations need to be performed.
+                        // Adjoint backwards loop;
+                        
+                        // Direct forward loop;
+                       
+                        int k  = Q-cnt;
+                        m_equ[0]->PrintSummary(out);
+                            
+                        // Start a new forward simulation from a new initial condition. baseflow_{k}.chk;
+                            
+                        m_equ[0]->DoInitialise();
+                            
+                        // Solve the forward problem from
+                        // baseflow_{k}.chk to baseflow_{k+1}.chk
+                        // where k  = Q-cnt;
+                        // Make sure every single timestep, a .chk file is outputted!
+                        
+                        m_equ[0]->DoSolve();
+                        
+                        //m_equ[1]->PrintSummary(out);
+                        
+                        // Start a new forward simulation from a initial condition. adjflow_{z}.chk;
+                        cout << "m_numInterSteps " << m_numInterSteps << endl;
+                        for (int j = 0; j < m_numInterSteps; ++j)
+                        {
+                            m_equ[1]->DoInitialise();
+                            
+                            // Solve the forward problem from
+                            // baseflow_{z}.chk to baseflow_{z+1}.chk
+                            // where k  = Q-cnt;
+                            // Make sure every single timestep, a .chk file is outputted!
+                            
+                            m_equ[1]->DoSolve();
+                            
+                            m_equ[1]->Checkpoint_Output(i+1);
+                        }
+                        
+                        cnt++;
+                    }
                 }
+                    break;
+                    
+                default:
+                    
+                    Array<OneD, MultiRegions::ExpListSharedPtr> fields
+                    = m_equ[0]->UpdateFields();
+                    
+                    time(&starttime);
+                    
+                    for (int i = 0; i < m_numCheck; ++i)
+                    {
+                        m_equ[0]->PrintSummary(out);
+                        
+                        m_equ[0]->DoInitialise();
+                        
+                        m_equ[0]->DoSolve();
+                        
+                        m_equ[0]->Checkpoint_Output(i+1);
+                    }
+                    
+                    time(&endtime);
+                    
+                    if (m_comm->GetRank() == 0)
+                    {
+                        CPUtime = difftime(endtime, starttime);
+                        cout << "-------------------------------------------" << endl;
+                        cout << "Total Computation Time = " << CPUtime << "s" << endl;
+                        cout << "-------------------------------------------" << endl;
+                    }
+                    
+                    // Evaluate and output computation time and solution accuracy.
+                    // The specific format of the error output is essential for the
+                    // regression tests to work.
+                    // Evaluate L2 Error
+                    for(int i = 0; i < m_equ[0]->GetNvariables(); ++i)
+                    {
+                        Array<OneD, NekDouble> exactsoln(m_equ[0]->GetTotPoints(), 0.0);
+                        
+                        // Evaluate "ExactSolution" function, or zero array
+                        m_equ[0]->EvaluateExactSolution(i, exactsoln,
+                                                       m_equ[0]->GetFinalTime());
+                        
+                        NekDouble vL2Error   = m_equ[0]->L2Error  (i, exactsoln);
+                        NekDouble vLinfError = m_equ[0]->LinfError(i, exactsoln);
+                        
+                        if (m_comm->GetRank() == 0)
+                        {
+                            out << "L 2 error (variable " << m_equ[0]->GetVariable(i)
+                            << ") : " << vL2Error << endl;
+                            out << "L inf error (variable " << m_equ[0]->GetVariable(i)
+                            << ") : " << vLinfError << endl;
+                        }
+                    }
+                    break;
             }
             
         }

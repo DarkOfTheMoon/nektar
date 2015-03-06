@@ -345,6 +345,5 @@ namespace Nektar
         
         // Lax-Friedrichs Riemann E flux
         Ef    = 0.5 * ((zEL_flux + zER_flux)  + sign *   S * (ER - EL));// - sign * S * (ER - EL));
-        
     }
 }

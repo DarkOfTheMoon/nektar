@@ -8,6 +8,7 @@ namespace Nektar
             eDirect,
             eAdjoint,
             eTransientGrowth,
+            eTransientAdjoint,
             eSkewSymmetric,
             eAdaptiveSFD
         };

@@ -69,7 +69,6 @@ namespace Nektar
             m_session->LoadParameter ("pInfBase",     m_pInfBase, 1.0);
             m_session->LoadParameter ("alphaInfBase", m_alphaInfBase, 0.0);
             m_session->LoadParameter ("Lref",           m_Lref, 1.0);
-            m_session->LoadSolverInfo("Target",         m_Target,  "NoN");
             
             // Setting up the normals
             int i;

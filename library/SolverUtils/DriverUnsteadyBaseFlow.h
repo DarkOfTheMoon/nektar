@@ -100,6 +100,9 @@ namespace Nektar
         private:
             NekDouble m_dt;
             NekDouble m_numCheck;
+            NekDouble m_numSteps;
+            NekDouble m_numInterSteps;
+            string    m_CheckPointType;
 	};
     }	
 } //end of namespace

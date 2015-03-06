@@ -74,7 +74,6 @@ namespace Nektar
             NekDouble                            m_rhoInf;
             NekDouble                            m_pInf;
             NekDouble                            m_AlphaInf;
-            std::string                          m_Target;
             
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_viscTensor;
             

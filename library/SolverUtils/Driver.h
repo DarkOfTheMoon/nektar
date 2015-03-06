@@ -87,6 +87,7 @@ protected:
     /// Session reader object
     LibUtilities::SessionReaderSharedPtr        m_session;
 
+    LibUtilities::SessionReaderSharedPtr        session_fwd;
     /// I the Coupling between SFD and arnoldi
     LibUtilities::SessionReaderSharedPtr        session_LinNS;
 

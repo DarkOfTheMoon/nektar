@@ -83,19 +83,19 @@ namespace Nektar
         m_session->LoadParameter("Gamma", m_gamma, 1.4);
         
         // Get E0 parameter from session file.
-        ASSERTL0(m_session->DefinesParameter("pInf"),
-                 "Compressible flow sessions must define a pInf parameter.");
-        m_session->LoadParameter("pInf", m_pInf, 101325);
+        /*ASSERTL0(m_session->DefinesParameter("pInf"),
+                 "Compressible flow sessions must define a pInfBase parameter.");
+        m_session->LoadParameter("pInfBase", m_pInfBase, 101325);
         
         // Get rhoInf parameter from session file.
-        ASSERTL0(m_session->DefinesParameter("rhoInf"),
+        ASSERTL0(m_session->DefinesParameter("rhoInfBase"),
                  "Compressible flow sessions must define a rhoInf parameter.");
-        m_session->LoadParameter("rhoInf", m_rhoInf, 1.225);
+        m_session->LoadParameter("rhoInfBase", m_rhoInfBase, 1.225);
         
         // Get uInf parameter from session file.
-        ASSERTL0(m_session->DefinesParameter("uInf"),
+        ASSERTL0(m_session->DefinesParameter("uInfBase"),
                  "Compressible flow sessions must define a uInf parameter.");
-        m_session->LoadParameter("uInf", m_uInf, 0.1);
+        m_session->LoadParameter("uInfBase", m_uInfBase, 0.1);
         
         // Get vInf parameter from session file.
         if (m_spacedim == 2 || m_spacedim == 3)
@@ -103,31 +103,30 @@ namespace Nektar
             ASSERTL0(m_session->DefinesParameter("vInf"),
                      "Compressible flow sessions must define a vInf parameter"
                      "for 2D/3D problems.");
-            m_session->LoadParameter("vInf", m_vInf, 0.0);
+            m_session->LoadParameter("vInfBase", m_vInfBase, 0.0);
         }
         
         // Get wInf parameter from session file.
         if (m_spacedim == 3)
         {
-            ASSERTL0(m_session->DefinesParameter("wInf"),
+            ASSERTL0(m_session->DefinesParameter("wInfBase"),
                      "Compressible flow sessions must define a wInf parameter"
                      "for 3D problems.");
-            m_session->LoadParameter("wInf", m_wInf, 0.0);
-        }
+            m_session->LoadParameter("wInfBase", m_wInf, 0.0);
+        }*/
+        
         m_session->LoadParameter ("GasConstant",    m_gasConstant,     287.058);
         m_session->LoadParameter ("Twall",          m_Twall,            300.15);
         m_session->LoadSolverInfo("ViscosityType",  m_ViscosityType,"Constant");
-        m_session->LoadSolverInfo("Target",         m_Target,            "NoN");
         m_session->LoadParameter ("mu",             m_mu,             1.78e-05);
         m_session->LoadParameter ("thermalConductivity",
                                            m_thermalConductivity,       0.0257);
-        m_session->LoadParameter ("rhoInfBase",   m_rhoInfBase,            0.0);
-        m_session->LoadParameter ("uInfBase",     m_uInfBase,              1.0);
-        m_session->LoadParameter ("vInfBase",     m_vInfBase,              1.0);
-        m_session->LoadParameter ("pInfBase",     m_pInfBase,              1.0);
-        m_session->LoadParameter ("alphaInfBase", m_alphaInfBase,          0.0);
+        m_session->LoadParameter ("alphaInfBase",   m_alphaInfBase,        0.0);
+        m_session->LoadParameter ("betaInfBase",    m_alphaInfBase,        0.0);
+        m_session->LoadParameter ("Fx",             m_Fx,                  0.0);
+        m_session->LoadParameter ("Fy",             m_Fy,                  0.0);
+        m_session->LoadParameter ("Fz",             m_Fz,                  0.0);
         m_session->LoadParameter ("Lref",           m_Lref,                1.0);
-        m_session->LoadParameter ("alpha",          m_alpha,               0.0);
         m_session->LoadParameter ("numCheck",       m_numCheck,              0);
         m_session->LoadParameter ("finalCheck",     m_finalCheck,            0);
         m_session->LoadParameter ("thermalConductivity",
@@ -208,7 +207,7 @@ namespace Nektar
                 {
                     m_baseflow[i] = Array<OneD, NekDouble> (nPoints, 0.0);
                 }
-                //
+                //INITIALISING BASE FLOW FIND OTHER WAY PERHAPS. PUT IT IN V_DOINITIALISE(...)
                 string basefile = m_session->GetFunctionFilename("BaseFlow", 0);
                 m_advection->ImportFldBase(basefile, m_fields);
                 m_advection->GetBaseFlow(m_baseflow);
@@ -1034,17 +1033,6 @@ namespace Nektar
         
         if (m_spacedim == 2)
         {
-            NekDouble norm_fac = 1.0;
-            
-            NekDouble Dx = norm_fac * cos (m_alphaInfBase);
-            NekDouble Dy = norm_fac * sin (m_alphaInfBase);
-            
-            NekDouble Lx = -norm_fac * sin(m_alphaInfBase);
-            NekDouble Ly =  norm_fac * cos(m_alphaInfBase);
-            
-            // Adjust the physical values of the trace to take
-            // user defined boundaries into account
-            
             eMax = m_fields[0]->GetBndCondExpansions()[bcRegion]->GetExpSize();
             
             for (e = 0; e < eMax; ++e)
@@ -1055,13 +1043,9 @@ namespace Nektar
                 GetPhys_Offset(e);
                 id2 = m_fields[0]->GetTrace()->GetPhys_Offset(traceBndMap[cnt+e]);
                 
-                Array<OneD, Array<OneD, NekDouble> > DragDir(m_spacedim);
-                DragDir[0] = Array<OneD, NekDouble> (nBCEdgePts, Dx);
-                DragDir[1] = Array<OneD, NekDouble> (nBCEdgePts, Dy);
-                
-                Array<OneD, Array<OneD, NekDouble> > LiftDir(m_spacedim);
-                LiftDir[0] = Array<OneD, NekDouble> (nBCEdgePts, Lx);
-                LiftDir[1] = Array<OneD, NekDouble> (nBCEdgePts, Ly);
+                Array<OneD, Array<OneD, NekDouble> > Force(m_spacedim);
+                Force[0] = Array<OneD, NekDouble> (nBCEdgePts, m_Fx);
+                Force[1] = Array<OneD, NekDouble> (nBCEdgePts, m_Fy);
                 
                 // set z_rho = 0 at wall
                 Vmath::Neg(nBCEdgePts,&Fwdnew[0][id2], 1);
@@ -1072,37 +1056,20 @@ namespace Nektar
                 Vmath::Neg(nBCEdgePts,&Fwdnew[3][id2], 1);
                 
                 // In case of lift or drag as cost function, add forcing
-                if (m_Target == "Drag")
-                {
-                    Vmath::Vadd(nBCEdgePts,
-                                &Fwdnew[1][id2], 1,
-                                &DragDir[0][0], 1,
-                                &Fwdnew[1][id2], 1);
+                Vmath::Vadd(nBCEdgePts,
+                            &Fwdnew[1][id2], 1,
+                            &Force[0][0], 1,
+                            &Fwdnew[1][id2], 1);
                     
-                    Vmath::Vadd(nBCEdgePts,
-                                &Fwdnew[2][id2], 1,
-                                &DragDir[1][0], 1,
-                                &Fwdnew[2][id2], 1);
-                }
-                
-                if (m_Target == "Lift")
-                {
-                    
-                    Vmath::Vadd(nBCEdgePts,
-                                &Fwdnew[1][id2], 1,
-                                &LiftDir[0][0], 1,
-                                &Fwdnew[1][id2], 1);
-                    
-                    Vmath::Vadd(nBCEdgePts,
-                                &Fwdnew[2][id2], 1,
-                                &LiftDir[1][0], 1,
-                                &Fwdnew[2][id2], 1);
-                }
+                Vmath::Vadd(nBCEdgePts,
+                            &Fwdnew[2][id2], 1,
+                            &Force[1][0], 1,
+                            &Fwdnew[2][id2], 1);
                 
                 for (i = 0; i < nVariables; ++i)
                 {
                     Vmath::Vcopy(nBCEdgePts, &Fwdnew[i][id2], 1,
-                                 &(m_fields[i]->GetBndCondExpansions()[bcRegion]->
+                       &(m_fields[i]->GetBndCondExpansions()[bcRegion]->
                                    UpdatePhys())[id1], 1);
                 }
             }
@@ -1111,14 +1078,6 @@ namespace Nektar
         if (m_spacedim == 3)
         {
             NekDouble norm_fac = 1.0;
-            
-            NekDouble Dx = norm_fac * cos (m_alphaInfBase);
-            NekDouble Dy = norm_fac * sin (m_alphaInfBase);
-            NekDouble Dz = 0.0;
-            
-            NekDouble Lx = -norm_fac * sin(m_alphaInfBase);
-            NekDouble Ly =  norm_fac * cos(m_alphaInfBase);
-            NekDouble Lz =  0.0;
             
             // Adjust the physical values of the trace to take
             // user defined boundaries into account
@@ -1133,16 +1092,11 @@ namespace Nektar
                 GetPhys_Offset(e);
                 id2 = m_fields[0]->GetTrace()->GetPhys_Offset(traceBndMap[cnt+e]);
                 
-                Array<OneD, Array<OneD, NekDouble> > DragDir(m_spacedim);
-                DragDir[0] = Array<OneD, NekDouble> (nBCEdgePts, Dx);
-                DragDir[1] = Array<OneD, NekDouble> (nBCEdgePts, Dy);
-                DragDir[2] = Array<OneD, NekDouble> (nBCEdgePts, Dz);
-                
-                Array<OneD, Array<OneD, NekDouble> > LiftDir(m_spacedim);
-                LiftDir[0] = Array<OneD, NekDouble> (nBCEdgePts, Lx);
-                LiftDir[1] = Array<OneD, NekDouble> (nBCEdgePts, Ly);
-                LiftDir[2] = Array<OneD, NekDouble> (nBCEdgePts, Lz);
-                
+                Array<OneD, Array<OneD, NekDouble> > Force(m_spacedim);
+                Force[0] = Array<OneD, NekDouble> (nBCEdgePts, m_Fx);
+                Force[1] = Array<OneD, NekDouble> (nBCEdgePts, m_Fy);
+                Force[2] = Array<OneD, NekDouble> (nBCEdgePts, m_Fz);
+        
                 // set z_rho = 0 at wall
                 Vmath::Neg(nBCEdgePts,&Fwdnew[0][id2], 1);
                 // set z_rhou = z_rhov = z_rhow = 0 at wall
@@ -1153,42 +1107,20 @@ namespace Nektar
                 Vmath::Neg(nBCEdgePts,&Fwdnew[4][id2], 1);
                 
                 // In case of lift or drag as cost function, add forcing
-                if (m_Target == "Drag")
-                {
-                    Vmath::Vadd(nBCEdgePts,
-                                &Fwdnew[1][id2], 1,
-                                &DragDir[0][0], 1,
-                                &Fwdnew[1][id2], 1);
-                    
-                    Vmath::Vadd(nBCEdgePts,
-                                &Fwdnew[2][id2], 1,
-                                &DragDir[1][0], 1,
-                                &Fwdnew[2][id2], 1);
-                    
-                    Vmath::Vadd(nBCEdgePts,
-                                &Fwdnew[3][id2], 1,
-                                &DragDir[2][0], 1,
-                                &Fwdnew[3][id2], 1);
-                }
+                Vmath::Vadd(nBCEdgePts,
+                            &Fwdnew[1][id2], 1,
+                            &Force[0][0], 1,
+                            &Fwdnew[1][id2], 1);
                 
-                if (m_Target == "Lift")
-                {
-                    
-                    Vmath::Vadd(nBCEdgePts,
-                                &Fwdnew[1][id2], 1,
-                                &LiftDir[0][0], 1,
-                                &Fwdnew[1][id2], 1);
-                    
-                    Vmath::Vadd(nBCEdgePts,
-                                &Fwdnew[2][id2], 1,
-                                &LiftDir[1][0], 1,
-                                &Fwdnew[2][id2], 1);
-                    
-                    Vmath::Vadd(nBCEdgePts,
-                                &Fwdnew[3][id2], 1,
-                                &LiftDir[2][0], 1,
-                                &Fwdnew[3][id2], 1);
-                }
+                Vmath::Vadd(nBCEdgePts,
+                            &Fwdnew[2][id2], 1,
+                            &Force[1][0], 1,
+                            &Fwdnew[2][id2], 1);
+                
+                Vmath::Vadd(nBCEdgePts,
+                            &Fwdnew[3][id2], 1,
+                            &Force[2][0], 1,
+                            &Fwdnew[3][id2], 1);
                 
                 for (i = 0; i < nVariables; ++i)
                 {
@@ -4611,7 +4543,8 @@ namespace Nektar
                     //==========================================================
                     // For Euler
                     
-                    if (m_EqTypeStr=="AdjointEulerCFE" && m_EqTypeStr=="AdjointEulerADCFE")
+                    if (m_EqTypeStr=="AdjointEulerCFE"
+                            && m_EqTypeStr=="AdjointEulerADCFE")
                     {
                         for (int i = 0; i < m_spacedim; ++i)
                         {

@@ -103,7 +103,6 @@ namespace Nektar
         NekDouble                           m_gasConstant;
         NekDouble                           m_Twall;
         std::string                         m_ViscosityType;
-        std::string                         m_Target;
         std::string                         m_shockCaptureType;
 	    std::string                         m_EqTypeStr;
         NekDouble                           m_mu;
@@ -122,6 +121,9 @@ namespace Nektar
         int                                 m_cnt;
         StdRegions::StdQuadExpSharedPtr     m_OrthoQuadExp;
         StdRegions::StdHexExpSharedPtr      m_OrthoHexExp;
+        NekDouble                           m_Fx;
+        NekDouble                           m_Fy;
+        NekDouble                           m_Fz;
         
         Array<OneD, Array<OneD, NekDouble> > m_un;
         
