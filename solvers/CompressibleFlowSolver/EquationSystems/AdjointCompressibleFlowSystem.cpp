@@ -1015,9 +1015,6 @@ namespace Nektar
         Array<OneD, Array<OneD, NekDouble> > Fwd(nVariables);
         Array<OneD, Array<OneD, NekDouble> > Fwdnew(nVariables);
         
-        Array<OneD, Array<OneD, NekDouble> > BwdDir(nVariables);
-        Array<OneD, Array<OneD, NekDouble> > FwdDir(nVariables);
-        
         for (i = 0; i < nVariables; ++i)
         {
             Fwd[i] = Array<OneD, NekDouble>(nTracePts);
@@ -1047,31 +1044,23 @@ namespace Nektar
                 Force[0] = Array<OneD, NekDouble> (nBCEdgePts, m_Fx);
                 Force[1] = Array<OneD, NekDouble> (nBCEdgePts, m_Fy);
                 
-                // set z_rho = 0 at wall
-                Vmath::Neg(nBCEdgePts,&Fwdnew[0][id2], 1);
-                // set z_rhou = z_rhov = z_rhow = 0 at wall
-                Vmath::Neg(nBCEdgePts, &Fwdnew[1][id2], 1);
-                Vmath::Neg(nBCEdgePts, &Fwdnew[2][id2], 1);
-                // set z_rhoE = 0 at wall
-                Vmath::Neg(nBCEdgePts,&Fwdnew[3][id2], 1);
+                Array<OneD, NekDouble> zeros(nBCEdgePts, 0.0);
+               
+                Vmath::Vcopy(nBCEdgePts, &zeros[0], 1,
+                             &(m_fields[0]->GetBndCondExpansions()[bcRegion]->
+                               UpdatePhys())[id1], 1);
                 
-                // In case of lift or drag as cost function, add forcing
-                Vmath::Vadd(nBCEdgePts,
-                            &Fwdnew[1][id2], 1,
-                            &Force[0][0], 1,
-                            &Fwdnew[1][id2], 1);
-                    
-                Vmath::Vadd(nBCEdgePts,
-                            &Fwdnew[2][id2], 1,
-                            &Force[1][0], 1,
-                            &Fwdnew[2][id2], 1);
+                Vmath::Vcopy(nBCEdgePts, &Force[0][0], 1,
+                             &(m_fields[1]->GetBndCondExpansions()[bcRegion]->
+                               UpdatePhys())[id1], 1);
                 
-                for (i = 0; i < nVariables; ++i)
-                {
-                    Vmath::Vcopy(nBCEdgePts, &Fwdnew[i][id2], 1,
-                       &(m_fields[i]->GetBndCondExpansions()[bcRegion]->
-                                   UpdatePhys())[id1], 1);
-                }
+                Vmath::Vcopy(nBCEdgePts, &Force[1][0], 1,
+                             &(m_fields[2]->GetBndCondExpansions()[bcRegion]->
+                               UpdatePhys())[id1], 1);
+                
+                Vmath::Vcopy(nBCEdgePts, &zeros[0], 1,
+                             &(m_fields[3]->GetBndCondExpansions()[bcRegion]->
+                               UpdatePhys())[id1], 1);
             }
         }
         
@@ -1097,37 +1086,25 @@ namespace Nektar
                 Force[1] = Array<OneD, NekDouble> (nBCEdgePts, m_Fy);
                 Force[2] = Array<OneD, NekDouble> (nBCEdgePts, m_Fz);
         
-                // set z_rho = 0 at wall
-                Vmath::Neg(nBCEdgePts,&Fwdnew[0][id2], 1);
-                // set z_rhou = z_rhov = z_rhow = 0 at wall
-                Vmath::Neg(nBCEdgePts, &Fwdnew[1][id2], 1);
-                Vmath::Neg(nBCEdgePts, &Fwdnew[2][id2], 1);
-                Vmath::Neg(nBCEdgePts,&Fwdnew[3][id2], 1);
-                // set z_rhoE = 0 at wall
-                Vmath::Neg(nBCEdgePts,&Fwdnew[4][id2], 1);
+                Vmath::Vcopy(nBCEdgePts, &zeros[0], 1,
+                             &(m_fields[0]->GetBndCondExpansions()[bcRegion]->
+                               UpdatePhys())[id1], 1);
                 
-                // In case of lift or drag as cost function, add forcing
-                Vmath::Vadd(nBCEdgePts,
-                            &Fwdnew[1][id2], 1,
-                            &Force[0][0], 1,
-                            &Fwdnew[1][id2], 1);
+                Vmath::Vcopy(nBCEdgePts, &Force[0][0], 1,
+                             &(m_fields[1]->GetBndCondExpansions()[bcRegion]->
+                               UpdatePhys())[id1], 1);
                 
-                Vmath::Vadd(nBCEdgePts,
-                            &Fwdnew[2][id2], 1,
-                            &Force[1][0], 1,
-                            &Fwdnew[2][id2], 1);
+                Vmath::Vcopy(nBCEdgePts, &Force[1][0], 1,
+                             &(m_fields[2]->GetBndCondExpansions()[bcRegion]->
+                               UpdatePhys())[id1], 1);
                 
-                Vmath::Vadd(nBCEdgePts,
-                            &Fwdnew[3][id2], 1,
-                            &Force[2][0], 1,
-                            &Fwdnew[3][id2], 1);
+                Vmath::Vcopy(nBCEdgePts, &Force[2][0], 1,
+                             &(m_fields[3]->GetBndCondExpansions()[bcRegion]->
+                               UpdatePhys())[id1], 1);
                 
-                for (i = 0; i < nVariables; ++i)
-                {
-                    Vmath::Vcopy(nBCEdgePts, &Fwdnew[i][id2], 1,
-                                 &(m_fields[i]->GetBndCondExpansions()[bcRegion]->
-                                   UpdatePhys())[id1], 1);
-                }
+                Vmath::Vcopy(nBCEdgePts, &zeros[0], 1,
+                             &(m_fields[4]->GetBndCondExpansions()[bcRegion]->
+                               UpdatePhys())[id1], 1);
             }
         }
         // Copy boundary adjusted values into the boundary expansion
