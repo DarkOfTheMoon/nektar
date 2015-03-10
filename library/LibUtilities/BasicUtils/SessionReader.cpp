@@ -182,85 +182,10 @@ namespace Nektar
          *
          * @param   argc        Number of command-line arguments
          * @param   argv        Array of command-line arguments
-         */
-        SessionReader::SessionReader(int argc, char *argv[]) :
-        		m_xmlDoc(1), m_parameters(1), m_solverInfo(1), m_geometricInfo(1),
-        		m_expressions(1), m_exprEvaluator(), m_functions(1), m_variables(1), m_tags(1),
-        		m_filters(1), m_bndRegOrder(1)
-        {
-            // threads not initialised yet
-            m_xmlDoc[0] = 0;
-            m_filenames = ParseCommandLineArguments(argc, argv);
-
-            ASSERTL0(m_filenames.size() > 0, "No session file(s) given.");
-
-            m_sessionName = ParseSessionName(m_filenames);
-            m_exprEvaluator[0] = new AnalyticExpressionEvaluator();
-
-            // Create communicator
-            CreateComm(argc, argv);
-
-            // If running in parallel change the default global sys solution
-            // type.
-            if (m_comm->GetSize() > 1)
-            {
-                GetSolverInfoDefaults()["GLOBALSYSSOLN"] = 
-                    "IterativeStaticCond";
-            }
-        }
-
-
-        /**
-         *
-         */
-        SessionReader::SessionReader(
-            int                             argc,
-            char                           *argv[],
-            const std::vector<std::string> &pFilenames,
-            const CommSharedPtr            &pComm) :
-    			m_xmlDoc(1), m_parameters(1), m_solverInfo(1), m_geometricInfo(1),
-    			m_expressions(1), m_exprEvaluator(1), m_functions(1), m_variables(1), m_tags(1),
-        		m_filters(1), m_bndRegOrder(1)
-        {
-            // threads not initialised yet
-            ASSERTL0(pFilenames.size() > 0, "No filenames specified.");
-
-            ParseCommandLineArguments(argc, argv);
-            m_xmlDoc[0]    = 0;
-            m_filenames    = pFilenames;
-
-            m_sessionName = ParseSessionName(m_filenames);
-            m_exprEvaluator[0] = new AnalyticExpressionEvaluator();
-
-            // Create communicator
-            if (!pComm.get())
-            {
-                CreateComm(argc, argv);
-            }
-            else
-            {
-                m_comm = pComm;
-            }
-
-            // If running in parallel change the default global sys solution
-            // type.
-            if (m_comm->GetSize() > 1)
-            {
-                GetSolverInfoDefaults()["GLOBALSYSSOLN"] = 
-                    "IterativeStaticCond";
-            }
-        }
-
-       /**
-         * This constructor is the same as above, but sets up the ThreadedComm
-         * style parallelism.
-         *
-         * @param   argc        Number of command-line arguments
-         * @param   argv        Array of command-line arguments
          * @param   pMainFunc   The "main" part of the application using the library.
-         * Runs in parallel.
          */
-        SessionReader::SessionReader(int argc, char *argv[], void (*pMainFunc)(SessionReaderSharedPtr)) :
+        SessionReader::SessionReader(int argc, char *argv[],
+            void (*pMainFunc)(SessionReaderSharedPtr)) :
         		m_xmlDoc(1), m_parameters(1), m_solverInfo(1), m_geometricInfo(1),
         		m_expressions(1), m_exprEvaluator(1), m_functions(1), m_variables(1), m_tags(1),
         		m_filters(1), m_mainFunc(pMainFunc), m_bndRegOrder(1)
@@ -409,8 +334,12 @@ namespace Nektar
                 }
             }
 
-        	// DoMain()
-        	m_session->m_mainFunc(m_session);
+            // Run the main function passed in.  If it's not been set
+            // then we just return.  Control will be returned to whatever
+            // just constructed the SessionReader which will run _serially_.
+            // A check has already been made that if nthreads > 1 then
+            // there is a mainFunc set.
+            if (m_session->m_mainFunc) m_session->m_mainFunc(m_session);
 
         }
 
@@ -2068,7 +1997,7 @@ namespace Nektar
         {
         	bool threadedCommDone = false;
             unsigned int vNumThr = m_threadManager->GetMaxNumWorkers();
-            if (m_comm->GetSize() > 1)
+            if (m_comm->GetSize() > 1 || vNumThr > 1)
             {
                 int nProcZ  = 1;
                 int nProcY  = 1;
@@ -2115,11 +2044,13 @@ namespace Nektar
                                             ->SplitComm(nProcX,nProcY);
             }
 
+            /*
             if (!threadedCommDone && vNumThr > 1)
             {
             	CommSharedPtr vTmpComm(new ThreadedComm(m_comm, m_threadManager));
             	m_comm = vTmpComm;
             }
+            */
         }
 
 
@@ -2914,12 +2845,22 @@ namespace Nektar
         {
             int nthreads;
             LoadParameter("NThreads", nthreads, 1);
-            cerr << "Number of threads will be: " << nthreads << endl;
+
+            if (nthreads > 1 && m_mainFunc == 0)
+            {
+                cerr << "This solver has not been set up to do threaded"
+                    " parallelism (no MainFunc() passed to SessionReader())."
+                    << endl << "Number of threads set to 1." << endl;
+                nthreads = 1;
+            }
+
             // Decide what implementation of ThreadManager you want here.
-//            m_threadManager = Thread::GetThreadManagerFactory().CreateInstance("ThreadManagerBoost", nthreads);
             ThreadMaster &vTM = Thread::GetThreadMaster();
-            vTM.SetThreadingType("ThreadManagerBoost");
+            vTM.SetThreadingType("ThreadManagerBoost"); // or whatever
+            // This ThreadManager will run the SessionJob jobs.
+            // It runs the ThreadedComm class.
             m_threadManager = vTM.CreateInstance("SessionJob", nthreads);
+            cerr << "Number of threads will be: " << nthreads << endl;
 
             Nektar::InitMemoryPools(nthreads, true);
             m_xmlDoc.resize(nthreads);
@@ -2948,7 +2889,6 @@ namespace Nektar
 
         }
 
-        //SJCFIXME -- remove this?
         Nektar::Thread::ThreadManagerSharedPtr SessionReader::GetThreadManager()
         {
         	return m_threadManager;

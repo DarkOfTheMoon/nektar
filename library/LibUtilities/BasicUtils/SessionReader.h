@@ -143,10 +143,11 @@ namespace Nektar
              * of the object.
              */
             LIB_UTILITIES_EXPORT static SessionReaderSharedPtr CreateInstance(
-                int argc, char *argv[])
+                int argc, char *argv[],
+                void (*pMainFunc)(SessionReaderSharedPtr) = 0)
             {
                 SessionReaderSharedPtr p = MemoryManager<
-                    LibUtilities::SessionReader>::AllocateSharedPtr(argc, argv);
+                    LibUtilities::SessionReader>::AllocateSharedPtr(argc, argv, pMainFunc);
                 p->InitSession();
                 return p;
             }
@@ -165,11 +166,12 @@ namespace Nektar
                 int                       argc,
                 char                     *argv[],
                 std::vector<std::string> &pFilenames,
-                const CommSharedPtr      &pComm = CommSharedPtr())
+                const CommSharedPtr      &pComm = CommSharedPtr(),
+                void (*pMainFunc)(SessionReaderSharedPtr) = 0)
             {
                 SessionReaderSharedPtr p = MemoryManager<
                     LibUtilities::SessionReader>
-                        ::AllocateSharedPtr(argc, argv, pFilenames, pComm);
+                        ::AllocateSharedPtr(argc, argv, pFilenames, pComm, pMainFunc);
                 p->InitSession();
                 return p;
             }
@@ -178,48 +180,8 @@ namespace Nektar
                 int                             argc, 
                 char                           *argv[], 
                 const std::vector<std::string> &pFilenames, 
-                const CommSharedPtr            &pComm);
-
-            /**
-             * @brief Creates an instance of the SessionReader class.
-             *
-             * As for SessionReaderSharedPtr CreateInstance(int argc, char *argv[])
-             * but also sets up ThreadedComm style parallelism.
-             */
-            LIB_UTILITIES_EXPORT static SessionReaderSharedPtr CreateInstance(
-                int argc, char *argv[], void (*pMainFunc)(SessionReaderSharedPtr))
-            {
-                SessionReaderSharedPtr p = MemoryManager<
-                    LibUtilities::SessionReader>::AllocateSharedPtr(argc, argv, pMainFunc);
-                p->InitSession();
-                return p;
-            }
-
-            /**
-             * @brief Creates an instance of the SessionReader class initialised
-             *        using a separate list of XML documents.
-             *
-             * As for SessionReaderSharedPtr CreateInstance(
-             *  int                       argc,
-             *  char                     *argv[],
-             *  std::vector<std::string> &pFilenames,
-             *  const CommSharedPtr      &pComm = CommSharedPtr())
-             * but also sets up ThreadedComm style parallelism.
-             */
-            LIB_UTILITIES_EXPORT static SessionReaderSharedPtr CreateInstance(
-                    int                       argc,
-                    char                     *argv[],
-                    std::vector<std::string> &pFilenames,
-                    void (*pMainFunc)(SessionReaderSharedPtr),
-                    const CommSharedPtr      &pComm = CommSharedPtr()
-                    )
-            {
-                SessionReaderSharedPtr p = MemoryManager<
-                    LibUtilities::SessionReader>
-                        ::AllocateSharedPtr(argc, argv, pFilenames, pComm, pMainFunc);
-                p->InitSession();
-                return p;
-            }
+                const CommSharedPtr            &pComm,
+                void (*pMainFunc)(SessionReaderSharedPtr) = 0);
 
             /// Destructor
             LIB_UTILITIES_EXPORT ~SessionReader();
@@ -531,19 +493,9 @@ namespace Nektar
             /// Main constructor
             LIB_UTILITIES_EXPORT SessionReader(
                 int                             argc,
-                char                           *argv[]);
-
-            /// Main constructor
-            LIB_UTILITIES_EXPORT SessionReader(
-                int                             argc, 
                 char                           *argv[],
-                void (*pMainFunc)(SessionReaderSharedPtr));
-            LIB_UTILITIES_EXPORT SessionReader(
-                int                             argc, 
-                char                           *argv[], 
-                const std::vector<std::string> &pFilenames, 
-                const CommSharedPtr            &pComm,
-                void (*pMainFunc)(SessionReaderSharedPtr));
+                void (*pMainFunc)(SessionReaderSharedPtr) = 0);
+
             LIB_UTILITIES_EXPORT void InitSession();
 
             /// Returns a shared pointer to the current object.

@@ -7,6 +7,7 @@
 
 #include <LibUtilities/Communication/ThreadedComm.h>
 #include <LibUtilities/BasicUtils/SharedArray.hpp>
+#include <iostream>
 
 
 namespace Nektar
@@ -20,6 +21,7 @@ namespace Nektar
 				m_resInt(m_numworkers), m_ListOfThrSendDataDbl(m_numworkers),
 				m_ListOfConstThrSendDataDbl(m_numworkers),
 				m_ListOfThrSendDataInt(m_numworkers),
+                m_ListOfThrSendDataUIntVector(m_numworkers),
 				m_ListOfConstThrSendDataLon(m_numworkers),
 				m_SendOffsetArr(m_numMPI),
 				m_SendSizeArr(m_numMPI),
@@ -851,7 +853,8 @@ namespace Nektar
 		{
 			if (m_tm->GetWorkerNum() == 0) {
 				m_comm->SplitComm(pRows, pColumns);
-				CommSharedPtr vTmpColumn(new ThreadedComm(m_comm->GetColumnComm(), m_tm));
+				//CommSharedPtr vTmpColumn(new ThreadedComm(m_comm->GetColumnComm(), m_tm));
+				CommSharedPtr vTmpColumn = m_comm->GetColumnComm();
 				CommSharedPtr vTmpRow(new ThreadedComm(m_comm->GetRowComm(), m_tm));
 				m_commColumn = vTmpColumn;
 				m_commRow= vTmpRow;

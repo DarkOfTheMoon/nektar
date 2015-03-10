@@ -1121,9 +1121,9 @@ namespace Nektar
                     }
 #else
                     int j;
-                    static DNekMatSharedPtr   m_Ixm, m_Ixp;
-                    static int sav_ncoeffs = 0;
-                    if(!m_Ixm.get() || e_ncoeffs != sav_ncoeffs)
+//                    static DNekMatSharedPtr   m_Ixm, m_Ixp;
+//                    static int sav_ncoeffs = 0;
+                    if(!m_Ixm.get() || e_ncoeffs != m_sav_ncoeffs)
                     {
                         LibUtilities::BasisSharedPtr BASE;
                         const LibUtilities::PointsKey
@@ -1141,7 +1141,7 @@ namespace Nektar
                         coords[0] = 1.0;
                         m_Ixp = BASE->GetI(coords); 
 
-                        sav_ncoeffs = e_ncoeffs; 
+                        m_sav_ncoeffs = e_ncoeffs;
                     }
                     
                     t_offset = GetTrace()->GetCoeff_Offset(elmtToTrace[n][0]->GetElmtId());

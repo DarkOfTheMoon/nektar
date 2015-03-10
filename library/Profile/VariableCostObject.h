@@ -86,6 +86,7 @@ class VariableCostObject
         #endif //NEKTAR_USE_EXPRESSION_TEMPLATES
         
 
+        // Assume no threading.
         static int slowdownFactor;
         static unsigned int size;
 

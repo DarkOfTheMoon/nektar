@@ -267,6 +267,10 @@ namespace Nektar
             SpatialDomains::BoundaryConditionsSharedPtr GetDomainBCs(const SpatialDomains::CompositeMap &domain,
                                                                      const SpatialDomains::BoundaryConditions &Allbcs,
                                                                      const std::string &variable);
+
+            // used in DisContField1D::v_AddTraceIntegral
+            DNekMatSharedPtr   m_Ixm, m_Ixp;
+            int m_sav_ncoeffs;
         };
 
         typedef boost::shared_ptr<DisContField1D>   DisContField1DSharedPtr;

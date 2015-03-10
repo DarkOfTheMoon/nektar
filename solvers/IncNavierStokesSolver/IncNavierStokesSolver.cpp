@@ -39,24 +39,26 @@
 using namespace Nektar;
 using namespace Nektar::SolverUtils;
 
+void MainFunc(LibUtilities::SessionReaderSharedPtr pSession);
+
 int main(int argc, char *argv[])
 {
     LibUtilities::SessionReaderSharedPtr session;
-    string vDriverModule;
-    DriverSharedPtr drv;
+//    string vDriverModule;
+//    DriverSharedPtr drv;
   
     try
     {
         // Create session reader.
-        session = LibUtilities::SessionReader::CreateInstance(argc, argv);
+        session = LibUtilities::SessionReader::CreateInstance(argc, argv, MainFunc);
         
-        // Create driver
-        session->LoadSolverInfo("Driver", vDriverModule, "Standard");
-        drv = GetDriverFactory().CreateInstance(vDriverModule, session);
-
-        // Execute driver
-        drv->Execute();
-
+//        // Create driver
+//        session->LoadSolverInfo("Driver", vDriverModule, "Standard");
+//        drv = GetDriverFactory().CreateInstance(vDriverModule, session);
+//
+//        // Execute driver
+//        drv->Execute();
+//
         // Finalise communications
         session->Finalise();
     }
@@ -70,4 +72,19 @@ int main(int argc, char *argv[])
     }
     
     return 0;
+}
+
+void MainFunc(LibUtilities::SessionReaderSharedPtr pSession)
+{
+    string vDriverModule;
+    DriverSharedPtr drv;
+
+    // Create driver
+    pSession->LoadSolverInfo("Driver", vDriverModule, "Standard");
+
+    drv = GetDriverFactory().CreateInstance(vDriverModule, pSession);
+
+    // Execute driver
+    drv->Execute();
+
 }

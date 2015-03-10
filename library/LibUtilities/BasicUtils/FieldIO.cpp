@@ -92,6 +92,10 @@ namespace Nektar
                      "instantiate a FieldIO object for parallel use.");
             }
 #endif
+            ASSERTL0(Nektar::Thread::GetThreadMaster().
+                GetInstance("SessionJob")->GetMaxNumWorkers() == 1,
+                 "This static function is not available in parallel. Please"
+                 "instantiate a FieldIO object for parallel use.");
             CommSharedPtr c = GetCommFactory().CreateInstance("Serial", 0, 0);
             FieldIO f(c);
             f.Write(outFile, fielddefs, fielddata, fieldinfomap);
@@ -128,6 +132,10 @@ namespace Nektar
                      "instantiate a FieldIO object for parallel use.");
             }
 #endif
+            ASSERTL0(Nektar::Thread::GetThreadMaster().
+                GetInstance("SessionJob")->GetMaxNumWorkers() == 1,
+                 "This static function is not available in parallel. Please"
+                 "instantiate a FieldIO object for parallel use.");
             CommSharedPtr c = GetCommFactory().CreateInstance("Serial", 0, 0);
             FieldIO f(c);
             f.Import(infilename, fielddefs, fielddata, fieldinfomap, ElementiDs);
