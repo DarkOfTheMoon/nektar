@@ -320,10 +320,10 @@ void AdjointAdvectionWeakDGNS::v_Advect(
     }
 
     m_AdjointFluxVector(inarray, fluxvector);
-    m_JacTransposeDivVector(inarray, JacTransVec);
+    //m_JacTransposeDivVector(inarray, JacTransVec);
     
     m_AddfluxVector(inarray, addfluxvector);
-    m_AddJacTransposeDivVector(inarray, addJacTransVec);
+    //m_AddJacTransposeDivVector(inarray, addJacTransVec);
     
     // Get the advection part (without numerical flux)
     for(i = 0; i < nConvectiveFields; ++i)
@@ -350,18 +350,18 @@ void AdjointAdvectionWeakDGNS::v_Advect(
             // conservative form, an additional term where the derivatives
             // of the transposed jacobians are multiplied with the basis hence,
             
-            fields[i]->IProductWRTBase(JacTransVec[i][j],
-                                       outarray_tmp[i]);
+            //fields[i]->IProductWRTBase(JacTransVec[i][j],
+            //                           outarray_tmp[i]);
             
-            fields[i]->IProductWRTBase(addJacTransVec[i][j],
-                                       outarray_tmp5[i]);
+            //fields[i]->IProductWRTBase(addJacTransVec[i][j],
+            //                           outarray_tmp5[i]);
             
             Vmath::Vadd(nCoeffs,
                         outarray[i], 1,
-                        outarray_tmp[i], 1,
+                        outarray_tmp3[i], 1,
                         outarray_tmp2[i], 1);
             
-            Vmath::Vadd(nCoeffs,
+            /*Vmath::Vadd(nCoeffs,
                         outarray_tmp2[i], 1,
                         outarray_tmp3[i], 1,
                         outarray_tmp4[i], 1);
@@ -369,10 +369,10 @@ void AdjointAdvectionWeakDGNS::v_Advect(
             Vmath::Vadd(nCoeffs,
                         outarray_tmp4[i], 1,
                         outarray_tmp5[i], 1,
-                        outarray[i], 1);
+                        outarray[i], 1);*/
             
             Vmath::Vadd(nCoeffs,
-                        outarray[i], 1,
+                        outarray_tmp2[i], 1,
                         tmp[i], 1,
                         tmp[i], 1);
         }

@@ -121,8 +121,6 @@ namespace Nektar
         m_session->LoadParameter ("mu",             m_mu,             1.78e-05);
         m_session->LoadParameter ("thermalConductivity",
                                            m_thermalConductivity,       0.0257);
-        m_session->LoadParameter ("alphaInfBase",   m_alphaInfBase,        0.0);
-        m_session->LoadParameter ("betaInfBase",    m_alphaInfBase,        0.0);
         m_session->LoadParameter ("Fx",             m_Fx,                  0.0);
         m_session->LoadParameter ("Fy",             m_Fy,                  0.0);
         m_session->LoadParameter ("Fz",             m_Fz,                  0.0);
@@ -217,32 +215,32 @@ namespace Nektar
                     m_JacCons = Array<OneD, Array<OneD, Array<OneD,
                     Array<OneD, NekDouble> > > > (m_spacedim);
                     
-                    m_JacDivCons = Array<OneD, Array<OneD, Array<OneD,
-                    Array<OneD, NekDouble> > > > (m_spacedim);
+                    //m_JacDivCons = Array<OneD, Array<OneD, Array<OneD,
+                    //Array<OneD, NekDouble> > > > (m_spacedim);
                     
                     for (int i = 0; i < m_spacedim; ++i)
                     {
                         m_JacCons[i] = Array<OneD, Array<OneD,
                         Array<OneD, NekDouble> > > (nVar);
                         
-                        m_JacDivCons[i] = Array<OneD, Array<OneD,
-                        Array<OneD, NekDouble> > > (nVar);
+                        //m_JacDivCons[i] = Array<OneD, Array<OneD,
+                        //Array<OneD, NekDouble> > > (nVar);
                         
                         for (int j = 0; j < nVar; ++j)
                         {
                             m_JacCons[i][j] = Array<OneD, Array<OneD,
                             NekDouble > > (nVar);
                             
-                            m_JacDivCons[i][j] = Array<OneD, Array<OneD,
-                            NekDouble > > (nVar);
+                            //m_JacDivCons[i][j] = Array<OneD, Array<OneD,
+                            //NekDouble > > (nVar);
                             
                             for (int k = 0; k < nVar; k++)
                             {
                                 m_JacCons[i][j][k] = Array<OneD,
                                 NekDouble> (nPoints, 0.0);
                                 
-                                m_JacDivCons[i][j][k] = Array<OneD,
-                                NekDouble> (nPoints, 0.0);
+                                //m_JacDivCons[i][j][k] = Array<OneD,
+                                //NekDouble> (nPoints, 0.0);
                             }
                         }
                     }
@@ -250,13 +248,13 @@ namespace Nektar
                     // Not working in 3D yet
                     GetJacobianConvFlux(m_JacCons);
                     // Get d(J^c_v)/dxi = d(dFcdV)/dxi
-                    GetDerivJacobian(m_JacCons, m_JacDivCons);
+                    //GetDerivJacobian(m_JacCons, m_JacDivCons);
                 
                     m_advection->SetAdjointFluxVector(
                     &AdjointCompressibleFlowSystem::GetAdjointFluxVector, this);
                     
-                    m_advection->SetJacTransposeDivVector(
-                    &AdjointCompressibleFlowSystem::GetAdjointDerivJacVector, this);
+                    //m_advection->SetJacTransposeDivVector(
+                    //&AdjointCompressibleFlowSystem::GetAdjointDerivJacVector, this);
                 }
                 if (m_EqTypeStr == "AdjointNavierStokesCFE")
                 {
@@ -267,32 +265,32 @@ namespace Nektar
                     m_JacCons = Array<OneD, Array<OneD, Array<OneD,
                     Array<OneD, NekDouble> > > > (m_spacedim);
                     
-                    m_JacDivCons = Array<OneD, Array<OneD, Array<OneD,
-                    Array<OneD, NekDouble> > > > (m_spacedim);
+                    //m_JacDivCons = Array<OneD, Array<OneD, Array<OneD,
+                    //Array<OneD, NekDouble> > > > (m_spacedim);
                     
                     for (int i = 0; i < m_spacedim; ++i)
                     {
                         m_JacCons[i] = Array<OneD, Array<OneD,
                         Array<OneD, NekDouble> > > (nVar);
                         
-                        m_JacDivCons[i] = Array<OneD, Array<OneD,
-                        Array<OneD, NekDouble> > > (nVar);
+                        //m_JacDivCons[i] = Array<OneD, Array<OneD,
+                        //Array<OneD, NekDouble> > > (nVar);
                         
                         for (int j = 0; j < nVar; ++j)
                         {
                             m_JacCons[i][j] = Array<OneD, Array<OneD,
                             NekDouble > > (nVar);
                             
-                            m_JacDivCons[i][j] = Array<OneD, Array<OneD,
-                            NekDouble > > (nVar);
+                            //m_JacDivCons[i][j] = Array<OneD, Array<OneD,
+                            //NekDouble > > (nVar);
                             
                             for (int k = 0; k < nVar; k++)
                             {
                                 m_JacCons[i][j][k] = Array<OneD,
                                 NekDouble> (nPoints, 0.0);
                                 
-                                m_JacDivCons[i][j][k] = Array<OneD,
-                                NekDouble> (nPoints, 0.0);
+                                //m_JacDivCons[i][j][k] = Array<OneD,
+                                //NekDouble> (nPoints, 0.0);
                             }
                         }
                     }
@@ -300,13 +298,13 @@ namespace Nektar
                     // Not working in 3D yet
                     GetJacobianConvFlux(m_JacCons);
                     // Get d(J^c_v)/dxi = d(dFcdV)/dxi
-                    GetDerivJacobian(m_JacCons, m_JacDivCons);
+                    //GetDerivJacobian(m_JacCons, m_JacDivCons);
                     
                     m_advection->SetAdjointFluxVector(
                     &AdjointCompressibleFlowSystem::GetAdjointFluxVector, this);
                     
-                    m_advection->SetJacTransposeDivVector(
-                    &AdjointCompressibleFlowSystem::GetAdjointDerivJacVector, this);
+                    //m_advection->SetJacTransposeDivVector(
+                    //&AdjointCompressibleFlowSystem::GetAdjointDerivJacVector, this);
                     
                     m_dVdUdXi = Array<OneD, Array<OneD, Array<OneD,
                     Array<OneD, NekDouble> > > > (m_spacedim);
@@ -314,11 +312,11 @@ namespace Nektar
                     m_JacAddPrim = Array<OneD, Array<OneD, Array<OneD,
                     Array<OneD, NekDouble> > > > (m_spacedim);
                     
-                    m_JacAddDivPrim = Array<OneD, Array<OneD, Array<OneD,
-                    Array<OneD, NekDouble> > > > (m_spacedim);
+                    //m_JacAddDivPrim = Array<OneD, Array<OneD, Array<OneD,
+                    //Array<OneD, NekDouble> > > > (m_spacedim);
                     
-                    m_JacAddDivCons = Array<OneD, Array<OneD, Array<OneD,
-                    Array<OneD, NekDouble> > > > (m_spacedim);
+                    //m_JacAddDivCons = Array<OneD, Array<OneD, Array<OneD,
+                    //Array<OneD, NekDouble> > > > (m_spacedim);
                     
                     m_JacAddCons = Array<OneD, Array<OneD, Array<OneD,
                     Array<OneD, NekDouble> > > > (m_spacedim);
@@ -331,14 +329,14 @@ namespace Nektar
                         m_JacAddPrim[i] = Array<OneD, Array<OneD,
                         Array<OneD, NekDouble> > > (nVar);
                         
-                        m_JacAddDivPrim[i] = Array<OneD, Array<OneD,
-                        Array<OneD, NekDouble> > > (nVar);
+                        //m_JacAddDivPrim[i] = Array<OneD, Array<OneD,
+                        //Array<OneD, NekDouble> > > (nVar);
                         
                         m_JacAddCons[i] = Array<OneD, Array<OneD,
                         Array<OneD, NekDouble> > > (nVar);
                         
-                        m_JacAddDivCons[i] = Array<OneD, Array<OneD,
-                        Array<OneD, NekDouble> > > (nVar);
+                        //m_JacAddDivCons[i] = Array<OneD, Array<OneD,
+                        //Array<OneD, NekDouble> > > (nVar);
                         
                         for (int j = 0; j < nVar; ++j)
                         {
@@ -348,28 +346,28 @@ namespace Nektar
                             m_JacAddPrim[i][j] = Array<OneD, Array<OneD,
                             NekDouble > > (nVar);
                             
-                            m_JacAddDivPrim[i][j] = Array<OneD, Array<OneD,
-                            NekDouble > > (nVar);
+                            //m_JacAddDivPrim[i][j] = Array<OneD, Array<OneD,
+                            //NekDouble > > (nVar);
                             
                             m_JacAddCons[i][j] = Array<OneD, Array<OneD,
                             NekDouble > > (nVar);
                             
-                            m_JacAddDivCons[i][j] = Array<OneD, Array<OneD,
-                            NekDouble > > (nVar);
+                            //m_JacAddDivCons[i][j] = Array<OneD, Array<OneD,
+                            //NekDouble > > (nVar);
                             
                             for (int k = 0; k < nVar; k++)
                             {
+                                m_dVdUdXi[i][j][k] = Array<OneD,
+                                NekDouble> (nPoints, 0.0);
+
                                 m_JacAddPrim[i][j][k] = Array<OneD,
                                 NekDouble> (nPoints, 0.0);
                                 
-                                m_dVdUdXi[i][j][k] = Array<OneD,
-                                NekDouble> (nPoints, 0.0);
+                                //m_JacAddDivPrim[i][j][k] = Array<OneD,
+                                //NekDouble> (nPoints, 0.0);
                                 
-                                m_JacAddDivPrim[i][j][k] = Array<OneD,
-                                NekDouble> (nPoints, 0.0);
-                                
-                                m_JacAddDivCons[i][j][k] = Array<OneD,
-                                NekDouble> (nPoints, 0.0);
+                                //m_JacAddDivCons[i][j][k] = Array<OneD,
+                                //NekDouble> (nPoints, 0.0);
                                 
                                 m_JacAddCons[i][j][k] = Array<OneD,
                                 NekDouble> (nPoints, 0.0);
@@ -426,13 +424,15 @@ namespace Nektar
                     // Get d(J^v_v)/dxi = d(dFv/dV)/dxi
                     GetJacobianAddConvFlux(m_JacAddPrim);
                     // Get d(J^v_v)/dxi = d(dFv/dV)/dxi
-                    GetDerivJacobian(m_JacAddPrim, m_JacAddDivPrim);
+                    //GetDerivJacobian(m_JacAddPrim, m_JacAddDivPrim);
                     // Get the viscous jacobians
                     GetJacobianViscousFluxPrim(m_JacVisc);
                     // Obtain the jacobians in conservative form
                     
                     if (m_spacedim == 2)
                     {
+                        
+                        /*
                         Array<OneD, NekDouble> tmpAddConsXPar1(nPoints, 0.0);
                         Array<OneD, NekDouble> tmpAddConsXPar2(nPoints, 0.0);
                         
@@ -490,7 +490,7 @@ namespace Nektar
                                                 &m_JacAddDivCons[1][i][j][0], 1);
                                 }
                             }
-                        }
+                        }*/
                         for (int i = 0; i < nVar; ++i)
                         {
                             for (int j = 0; j < nVar; ++j)
@@ -515,7 +515,7 @@ namespace Nektar
                     if (m_spacedim == 3)
                     {
                         // Allocate memory
-                        
+                        /*
                         Array<OneD, NekDouble> tmpAddConsXPar1(nPoints, 0.0);
                         Array<OneD, NekDouble> tmpAddConsXPar2(nPoints, 0.0);
                         
@@ -524,6 +524,7 @@ namespace Nektar
                         
                         Array<OneD, NekDouble> tmpAddConsZPar1(nPoints, 0.0);
                         Array<OneD, NekDouble> tmpAddConsZPar2(nPoints, 0.0);
+                        
                         
                         for (int i = 0; i < nVar; ++i)
                         {
@@ -544,6 +545,7 @@ namespace Nektar
                                 for (int k = 0; k < nVar; ++k)
                                 {
                                     //
+                                    
                                     Vmath::Vvtvp(nPoints,
                                                  &m_dVdUdXi[0][i][k][0], 1,
                                                  &m_JacAddPrim[0][k][j][0], 1,
@@ -600,7 +602,7 @@ namespace Nektar
                                                 &m_JacAddDivCons[2][i][j][0], 1);
                                 }
                             }
-                        }
+                        }*/
                         for (int i = 0; i < nVar; ++i)
                         {
                             for (int j = 0; j < nVar; ++j)
@@ -632,8 +634,8 @@ namespace Nektar
                     m_advection->SetAddFluxVector(
                     &AdjointCompressibleFlowSystem::GetAdjointAddConvFluxVector, this);
                     
-                    m_advection->SetAddJacTransposeDivVector(
-                    &AdjointCompressibleFlowSystem::GetAdjointDerivAddJacVector, this);
+                    //m_advection->SetAddJacTransposeDivVector(
+                    //&AdjointCompressibleFlowSystem::GetAdjointDerivAddJacVector, this);
                     
                     m_diffusion->SetFluxVectorNS(&AdjointCompressibleFlowSystem::GetAdjointViscousFluxVector, this);
                 }
@@ -1086,6 +1088,8 @@ namespace Nektar
                 Force[1] = Array<OneD, NekDouble> (nBCEdgePts, m_Fy);
                 Force[2] = Array<OneD, NekDouble> (nBCEdgePts, m_Fz);
         
+                Array<OneD, NekDouble> zeros(nBCEdgePts, 0.0);
+                
                 Vmath::Vcopy(nBCEdgePts, &zeros[0], 1,
                              &(m_fields[0]->GetBndCondExpansions()[bcRegion]->
                                UpdatePhys())[id1], 1);
