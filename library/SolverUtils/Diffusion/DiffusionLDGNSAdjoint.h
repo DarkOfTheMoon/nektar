@@ -74,6 +74,10 @@ namespace Nektar
             NekDouble                            m_rhoInf;
             NekDouble                            m_pInf;
             NekDouble                            m_AlphaInf;
+            NekDouble                            m_Fx;
+            NekDouble                            m_Fy;
+            NekDouble                            m_Fz;
+
             
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_viscTensor;
             

@@ -69,6 +69,11 @@ namespace Nektar
             m_session->LoadParameter ("pInfBase",     m_pInfBase, 1.0);
             m_session->LoadParameter ("alphaInfBase", m_alphaInfBase, 0.0);
             m_session->LoadParameter ("Lref",           m_Lref, 1.0);
+            m_session->LoadParameter ("Fx",          m_Fx, 0.0);
+            m_session->LoadParameter ("Fy",          m_Fy, 0.0);
+            m_session->LoadParameter ("Fz",          m_Fz, 0.0);
+
+
             
             // Setting up the normals
             int i;
@@ -324,7 +329,82 @@ namespace Nektar
                 
                 if (fields[0]->GetBndConditions()[n]->
                     GetBoundaryConditionType() ==
-                    SpatialDomains::eDirichlet)
+                    SpatialDomains::eDirichlet &&
+                    fields[0]->GetBndConditions()[n]->
+                    GetUserDefined() ==
+                    SpatialDomains::eAdjointWall)
+                {
+                    for (e = 0; e < eMax; ++e)
+                    {
+                        nBCEdgePts = fields[0]->GetBndCondExpansions()[n]->
+                        GetExp(e)->GetTotPoints();
+                        id1 = fields[0]->GetBndCondExpansions()[n]->
+                        GetPhys_Offset(e);
+                        id2 = fields[0]->GetTrace()->GetPhys_Offset(traceBndMap[cnt+e]);
+                        
+                        
+                        if (m_spaceDim == 2)
+                        {
+                            Array<OneD, Array<OneD, NekDouble> > Force(m_spaceDim);
+                            Force[0] = Array<OneD, NekDouble> (nBCEdgePts, m_Fx);
+                            Force[1] = Array<OneD, NekDouble> (nBCEdgePts, m_Fy);
+                            Array<OneD, NekDouble> zeros(nBCEdgePts, 0.0);
+                            Vmath::Vcopy(nBCEdgePts,
+                                         &zeros[0], 1,
+                                         &penaltyfluxO1[0][id2], 1);
+                            
+                            Vmath::Vcopy(nBCEdgePts,
+                                         &Force[0][0], 1,
+                                         &penaltyfluxO1[1][id2], 1);
+                            
+                            Vmath::Vcopy(nBCEdgePts,
+                                         &Force[1][0], 1,
+                                         &penaltyfluxO1[2][id2], 1);
+                            
+                            Vmath::Vcopy(nBCEdgePts,
+                                         &zeros[0], 1,
+                                         &penaltyfluxO1[m_spaceDim+1][id2], 1);
+                        }
+                        
+                        if (m_spaceDim == 3)
+                        {
+                            Array<OneD, Array<OneD, NekDouble> > Force(m_spaceDim);
+                            Force[0] = Array<OneD, NekDouble> (nBCEdgePts, m_Fx);
+                            Force[1] = Array<OneD, NekDouble> (nBCEdgePts, m_Fy);
+                            Force[2] = Array<OneD, NekDouble> (nBCEdgePts, m_Fz);
+                            Array<OneD, NekDouble> zeros(nBCEdgePts, 0.0);
+
+                            Vmath::Vcopy(nBCEdgePts,
+                                         &zeros[0], 1,
+                                         &penaltyfluxO1[0][id2], 1);
+                            
+                            Vmath::Vcopy(nBCEdgePts,
+                                         &Force[0][0], 1,
+                                         &penaltyfluxO1[1][id2], 1);
+                            
+                            Vmath::Vcopy(nBCEdgePts,
+                                         &Force[1][0], 1,
+                                         &penaltyfluxO1[2][id2], 1);
+                            
+                            Vmath::Vcopy(nBCEdgePts,
+                                         &Force[2][0], 1,
+                                         &penaltyfluxO1[2][id2], 1);
+                            
+                            Vmath::Vcopy(nBCEdgePts,
+                                         &zeros[0], 1,
+                                         &penaltyfluxO1[m_spaceDim+1][id2], 1);
+                        }
+                    }
+                    
+                    cnt += fields[0]->GetBndCondExpansions()[n]->GetExpSize();
+                }
+                
+                if (fields[0]->GetBndConditions()[n]->
+                    GetBoundaryConditionType() ==
+                    SpatialDomains::eDirichlet &&
+                    fields[0]->GetBndConditions()[n]->
+                    GetUserDefined() !=
+                    SpatialDomains::eAdjointWall)
                 {
                     for (e = 0; e < eMax; ++e)
                     {
@@ -350,6 +430,7 @@ namespace Nektar
                     
                     cnt += fields[0]->GetBndCondExpansions()[n]->GetExpSize();
                 }
+                
             }
         }
         /**
