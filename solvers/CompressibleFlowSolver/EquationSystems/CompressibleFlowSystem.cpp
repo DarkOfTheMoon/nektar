@@ -257,6 +257,14 @@ namespace Nektar
     {
         UnsteadySystem::v_GenerateSummary(s);
     }
+    
+    void CompressibleFlowSystem::v_Checkpoint_BaseFlow(const int n)
+    {
+        std::string outname =  m_sessionName +  "_BaseFlow_" +
+        boost::lexical_cast<std::string>(n);
+        
+        WriteFld(outname + ".chk");
+    }
 
     /**
      * @brief Wall boundary conditions for compressible flow problems.

@@ -110,7 +110,7 @@ namespace Nektar
                                                (uRoe * uRoe + vRoe * vRoe + wRoe * wRoe)));
         
         // Minimum and maximum wave speeds
-        NekDouble S    = std::max(uRoe+cRoe, std::max(uR+cR, -uL+cL));
+        NekDouble S    = std::max(uRoe+cRoe, std::max(uR+cR, uL+cL));
         NekDouble sign = 1.0;
         
         /*if(S == -uL+cL)

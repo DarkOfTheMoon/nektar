@@ -236,6 +236,8 @@ namespace Nektar
         virtual bool v_PostIntegrate(int step);
         NekDouble CalcSteadyState();
 
+        virtual void v_Checkpoint_BaseFlow(const int n);
+        
         virtual void v_SetInitialConditions(
             NekDouble initialtime = 0.0,
             bool dumpInitialConditions = true,

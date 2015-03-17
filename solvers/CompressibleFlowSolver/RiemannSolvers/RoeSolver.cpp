@@ -271,8 +271,8 @@ namespace Nektar
                     zrhowL_flux = 0.0, zrhowR_flux = 0.0,
                     zEL_flux    = 0.0, zER_flux    = 0.0;
         
-        NekDouble vsqLdir = pow(uLdir,2)+pow(vLdir,2);
-        NekDouble vsqRdir = pow(uRdir,2)+pow(vRdir,2);
+        NekDouble vsqLdir = pow(uLdir,2)+pow(vLdir,2)+pow(wLdir,2);
+        NekDouble vsqRdir = pow(uRdir,2)+pow(vRdir,2)+pow(wRdir,2);
         
         // HLLC Riemann fluxes (positive case)
         
@@ -291,11 +291,11 @@ namespace Nektar
                         +uLdir*rhovL
                         -uLdir*vLdir*(gamma-1)*EL;
         
-        zrhowL_flux =    -(wLdir*(gamma-1))*rhouL
-                         +uLdir*rhowL
-                         -uLdir*wLdir*(gamma-1)*EL;
+        zrhowL_flux =   -(wLdir*(gamma-1))*rhouL
+                        +uLdir*rhowL
+                        -uLdir*wLdir*(gamma-1)*EL;
         
-        zEL_flux    =    (gamma-1)*rhouL + (gamma*uLdir)*EL;
+        zEL_flux    =   (gamma-1)*rhouL + (gamma*uLdir)*EL;
         
         //==================================
         

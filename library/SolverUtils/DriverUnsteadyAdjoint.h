@@ -33,8 +33,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef NEKTAR_SOLVERUTILS_DRIVERUnsteadyBaseFlow_H
-#define NEKTAR_SOLVERUTILS_DRIVERUnsteadyBaseFlow_H
+#ifndef NEKTAR_SOLVERUTILS_DRIVERUnsteadyAdjoint_H
+#define NEKTAR_SOLVERUTILS_DRIVERUnsteadyAdjoint_H
 
 #include <SolverUtils/Driver.h>
 
@@ -43,14 +43,14 @@ namespace Nektar
     namespace SolverUtils
     {
         /// Base class for the development of solvers.
-        class DriverUnsteadyBaseFlow: public Driver
+        class DriverUnsteadyAdjoint: public Driver
         {
         public:
-            friend class MemoryManager<DriverUnsteadyBaseFlow>;
+            friend class MemoryManager<DriverUnsteadyAdjoint>;
 
             /// Creates an instance of this class
             static DriverSharedPtr create(const LibUtilities::SessionReaderSharedPtr& pSession) {
-                DriverSharedPtr p = MemoryManager<DriverUnsteadyBaseFlow>::AllocateSharedPtr(pSession);
+                DriverSharedPtr p = MemoryManager<DriverUnsteadyAdjoint>::AllocateSharedPtr(pSession);
                 p->InitObject();
                 return p;
             }
@@ -60,10 +60,10 @@ namespace Nektar
             
         protected:
             /// Constructor
-            SOLVER_UTILS_EXPORT DriverUnsteadyBaseFlow(const LibUtilities::SessionReaderSharedPtr pSession);
+            SOLVER_UTILS_EXPORT DriverUnsteadyAdjoint(const LibUtilities::SessionReaderSharedPtr pSession);
 
             /// Destructor
-            SOLVER_UTILS_EXPORT virtual ~DriverUnsteadyBaseFlow();
+            SOLVER_UTILS_EXPORT virtual ~DriverUnsteadyAdjoint();
         
             /// Second-stage initialisation
             SOLVER_UTILS_EXPORT virtual void v_InitObject(ostream &out = cout);
@@ -107,5 +107,5 @@ namespace Nektar
     }	
 } //end of namespace
 
-#endif //NEKTAR_SOLVERUTILS_DRIVERUnsteadyBaseFlow_H
+#endif //NEKTAR_SOLVERUTILS_DRIVERUnsteadyAdjoint_H
 

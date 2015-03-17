@@ -114,6 +114,9 @@ namespace Nektar
         NekDouble                           m_vInfBase;
         NekDouble                           m_pInfBase;
         NekDouble                           m_alphaInfBase;
+        NekDouble                           m_Skappa;
+        NekDouble                           m_Kappa;
+        NekDouble                           m_mu0;
         NekDouble                           m_Lref;
         NekDouble                           m_alpha;
         int                                 m_numCheck;
@@ -250,6 +253,21 @@ namespace Nektar
             int                                                 bcRegion,
             int                                                 cnt,
             Array<OneD, Array<OneD, NekDouble> >               &physarray);
+        void GetSensor(
+        const Array<OneD, const Array<OneD,       NekDouble> > &physarray,
+              Array<OneD,                         NekDouble>   &Sensor,
+              Array<OneD,                         NekDouble>   &SensorKappa);
+        void GetArtificialDynamicViscosity(
+        const Array<OneD,  Array<OneD, NekDouble> > &physfield,
+              Array<OneD,                    NekDouble  > &mu_var);
+        void GetSoundSpeed(
+        const Array<OneD,       Array<OneD,       NekDouble> >&physfield,
+              Array<OneD,                         NekDouble>  &pressure,
+              Array<OneD,                         NekDouble>  &soundspeed);
+        void GetAbsoluteVelocity(
+        const Array<OneD, const Array<OneD, NekDouble> > &inarray,
+              Array<OneD,                   NekDouble>   &Vtot);
+        
         virtual bool v_PostIntegrate(int step);
                   NekDouble CalcSteadyState();
 

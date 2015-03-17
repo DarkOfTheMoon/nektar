@@ -11,6 +11,7 @@ IF( NEKTAR_SOLVER_COMPRESSIBLE_FLOW )
        ./EquationSystems/NavierStokesCFE.cpp
        ./EquationSystems/AdjointCompressibleFlowSystem.cpp
        ./EquationSystems/AdjointEulerCFE.cpp
+       ./EquationSystems/AdjointEulerADCFE.cpp
        ./EquationSystems/AdjointNavierStokesCFE.cpp
        ./Filters/FilterEnergy.cpp
        ./AdvectionTerms/AdjointAdvectionWeakDG.cpp
