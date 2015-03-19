@@ -37,7 +37,7 @@ namespace Nektar
 
 		{
 			ASSERTL0(m_numworkers > 1, "ThreadedComm cannot be used unless there is more than 1 thread");
-            m_size = m_comm->GetSize() * m_numworkers;
+            m_size = m_numMPI * m_numworkers;
 
             m_type = m_comm->GetType() + " + " + m_tm->GetType();
 
@@ -1058,6 +1058,28 @@ namespace Nektar
                     m_comm->Recv(r, pRecvData[j]);
                 }
             }
+        }
+
+        void ThreadedComm::v_Bcast(Array<OneD, int>& pData)
+        {
+            unsigned int vThr = m_tm->GetWorkerNum();
+            if (vThr == 0)
+            {
+                //do underlying bcast send and receive
+                m_comm->Bcast(pData);
+                m_bcastArrIntPtr = &pData;
+                m_tm->Hold();
+            }
+            else
+            {
+                // distribute to other threads
+                m_tm->Hold();
+                for (int i=0; i < m_bcastArrIntPtr->num_elements(); ++i)
+                {
+                    pData[i] = (*m_bcastArrIntPtr)[i];
+                }
+            }
+            m_tm->Hold(); // in case of immediate re-entry
         }
 
         template<class DataType>

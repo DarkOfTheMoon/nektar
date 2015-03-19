@@ -644,6 +644,15 @@ namespace Nektar
             m_commColumn = boost::shared_ptr<Comm>(new CommMpi(newComm));
         }
 
+        void CommMpi::v_Bcast(Array<OneD, int>& pData)
+        {
+            MPI_Bcast(  pData.get(),
+                        (int) pData.num_elements(),
+                        MPI_INT,
+                        0,
+                        m_comm);
+        }
+
         // GsLib functions now belong here.
         using namespace Gs;
         Gs::gs_data* CommMpi::v_GsInit(const Array<OneD, long> pId)
@@ -681,7 +690,5 @@ namespace Nektar
             }
             nektar_gs(pU.get(), gs_double, pOp, false, pGsh, 0);
         }
-
-
     }
 }

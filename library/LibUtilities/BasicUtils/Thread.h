@@ -325,16 +325,21 @@ namespace Nektar
  *     Multiple ThreadManagers should now be possible.  Each is identified with a string
  *     and can be recovered by calling Thread::GetThreadMaster().GetInstance(string).
  *
- *     ThreadMaster is thread-safe.
+ *     ThreadMaster is thread-safe apart from CreateInstance.  Call CreateInstance
+ *     in single threaded code only.
  */
         class ThreadMaster
         {
             private:
-                std::map<std::string, ThreadManagerSharedPtr> m_threadManagers;
+//                std::map<std::string, ThreadManagerSharedPtr> m_threadManagers;
+                std::vector<ThreadManagerSharedPtr> m_threadManagers;
                 boost::shared_mutex m_mutex;
                 std::string m_threadingType;
 
             public:
+                enum ThreadManagerName {
+                                        SessionJob
+                                        };
                 /**
                  * @brief Constructor
                  */
@@ -373,7 +378,7 @@ namespace Nektar
                  * Such code must be able to cope with the temporary ThreadStartupManager.
                  *
                  */
-                ThreadManagerSharedPtr GetInstance(const std::string &s);
+                ThreadManagerSharedPtr& GetInstance(const ThreadManagerName t);
                 /**
                  * @brief Creates an instance of a ThreadManager (which one is determined by
                  * a previous call to SetThreadingType) and associates it with
@@ -383,7 +388,8 @@ namespace Nektar
                  *
                  * An error occurs if this is called before SetThreadingType.
                  */
-                ThreadManagerSharedPtr CreateInstance(const std::string &s, unsigned int nThr);
+                ThreadManagerSharedPtr CreateInstance(const ThreadManagerName t,
+                    unsigned int nThr);
 
 
         };

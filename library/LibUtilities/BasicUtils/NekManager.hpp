@@ -102,7 +102,7 @@ namespace Nektar
                 {
                     if (!whichPool.empty())
                     {
-                        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob");
+                        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob);
                         unsigned int vThr = vThrMan->GetWorkerNum();
                         whichPool.append(boost::lexical_cast<std::string>(vThr));
 
@@ -237,7 +237,7 @@ namespace Nektar
 
                 static void ClearManager(std::string whichPool = "")
                 {
-                    Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob");
+                    Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob);
                     unsigned int vThr = vThrMan->GetWorkerNum();
                     typename ValueContainerPool::iterator x;
                     if (!whichPool.empty())
@@ -274,7 +274,7 @@ namespace Nektar
                     {
                         WriteLock v_wlock(m_mutex);
 
-                        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob");
+                        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob);
                         unsigned int vThr = vThrMan->GetWorkerNum();
                         whichPool.append(boost::lexical_cast<std::string>(vThr));
 
@@ -297,7 +297,7 @@ namespace Nektar
                     {
                         WriteLock v_wlock(m_mutex);
 
-                        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob");
+                        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob);
                         unsigned int vThr = vThrMan->GetWorkerNum();
                         whichPool.append(boost::lexical_cast<std::string>(vThr));
 

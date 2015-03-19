@@ -47,7 +47,7 @@ namespace Nektar
             static std::map<unsigned int,  TimeIntegrationSchemeManagerT *> s_threadTSScheme;
             static boost::shared_mutex s_TSSmutex;
 //            Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-            Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob");
+            Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob);
             unsigned int vThr = vThrMan->GetWorkerNum();
             boost::shared_lock<boost::shared_mutex> ReadLock(s_TSSmutex);
             if (s_threadTSScheme.count(vThr) == 0)

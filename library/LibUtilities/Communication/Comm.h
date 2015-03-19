@@ -148,6 +148,7 @@ namespace Nektar
                 LIB_UTILITIES_EXPORT inline void RecvFromAll(std::vector<std::vector<unsigned int> >&  pRecvData);
                 LIB_UTILITIES_EXPORT inline void RecvFromAll(std::vector<Array<OneD, int> >&  pRecvData);
                 LIB_UTILITIES_EXPORT inline void RecvFromAll(std::vector<Array<OneD, NekDouble> >&  pRecvData);
+                LIB_UTILITIES_EXPORT inline void Bcast(Array<OneD, int>&  pData);
 
             protected:
                 int m_size;                 ///< Number of processes
@@ -221,6 +222,8 @@ namespace Nektar
                 virtual void v_RecvFromAll(std::vector<std::vector<unsigned int> >&  pRecvData);
                 virtual void v_RecvFromAll(std::vector<Array<OneD, int> >&  pRecvData);
                 virtual void v_RecvFromAll(std::vector<Array<OneD, NekDouble> >&  pRecvData);
+
+                virtual void v_Bcast(Array<OneD, int>&  pData) = 0;
         };
 
 
@@ -567,6 +570,11 @@ namespace Nektar
         inline void Comm::RecvFromAll(std::vector<Array<OneD, NekDouble> >&  pRecvData)
         {
             v_RecvFromAll(pRecvData);
+        }
+
+        inline void Comm::Bcast(Array<OneD, int>&  pData)
+        {
+            v_Bcast(pData);
         }
     }
 }

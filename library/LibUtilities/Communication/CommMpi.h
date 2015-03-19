@@ -128,6 +128,7 @@ namespace Nektar
 									Array<OneD, int>& pRecvDataSizeMap,
 									Array<OneD, int>& pRecvDataOffsetMap);
             virtual void v_SplitComm(int pRows, int pColumns);
+            virtual void v_Bcast(Array<OneD, int>& pData);
             virtual Gs::gs_data* v_GsInit(const Array<OneD, long> pId);
             virtual void v_GsFinalise(Gs::gs_data *pGsh);
             virtual void v_GsUnique(Array<OneD, long> pId);

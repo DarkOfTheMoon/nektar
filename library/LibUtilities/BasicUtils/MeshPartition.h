@@ -39,7 +39,6 @@
 #include <boost/graph/subgraph.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <LibUtilities/Communication/Comm.h>
-#include <LibUtilities/BasicUtils/Thread.h>
 
 class TiXmlElement;
 
@@ -66,7 +65,7 @@ namespace Nektar
             LIB_UTILITIES_EXPORT MeshPartition(const SessionReaderSharedPtr& pSession);
             LIB_UTILITIES_EXPORT virtual ~MeshPartition();
 
-            LIB_UTILITIES_EXPORT void PartitionMesh(int pNumPartitions, bool shared = false);
+            LIB_UTILITIES_EXPORT void PartitionMesh(int nParts, bool shared = false);
             LIB_UTILITIES_EXPORT void WriteLocalPartition(
                     SessionReaderSharedPtr& pSession);
             LIB_UTILITIES_EXPORT void WriteAllPartitions(
@@ -76,8 +75,7 @@ namespace Nektar
             LIB_UTILITIES_EXPORT void GetCompositeOrdering(
                     CompositeOrdering &composites);
             LIB_UTILITIES_EXPORT void GetBndRegionOrdering(
-                    BndRegionOrdering &composites,
-                    unsigned int pThr);
+                    BndRegionOrdering &composites);
 
             LIB_UTILITIES_EXPORT void GetElementIDs(const int procid,
                                                     std::vector<unsigned int> &tmp);
@@ -209,12 +207,12 @@ namespace Nektar
             std::map<std::string, int>          m_fieldNameToId;
             std::vector<MultiWeight>            m_vertWeights;
 
-            Thread::ThreadManagerSharedPtr      m_threadManager;
-            CommSharedPtr                       m_comm;
+            BndRegionOrdering                   m_bndRegOrder;
 
             BoostSubGraph                       m_mesh;
             std::vector<BoostSubGraph>          m_localPartition;
-            std::vector<BndRegionOrdering>      m_bndRegOrder;
+
+            CommSharedPtr                       m_comm;
 
             bool                                m_weightingRequired;
             bool                                m_shared;
@@ -225,10 +223,9 @@ namespace Nektar
             void WeightElements();
             void CreateGraph(BoostSubGraph& pGraph);
             void PartitionGraph(BoostSubGraph& pGraph,
-                                int pNumPartitions);
-            void OutputPartition(SessionReaderSharedPtr& pSession, const BoostSubGraph& pGraph, TiXmlElement* pGeometry,
-            		unsigned int pThr);
-            void CheckPartitions(int nParts, Array<OneD, int> &pPart);
+                                int nParts,
+                                std::vector<BoostSubGraph>& pLocalPartition);
+
             virtual void PartitionGraphImpl(
                     int&                              nVerts,
                     int&                              nVertConds,
@@ -240,6 +237,8 @@ namespace Nektar
                     int&                              volume,
                     Nektar::Array<Nektar::OneD, int>& part) = 0;
 
+            void OutputPartition(SessionReaderSharedPtr& pSession, BoostSubGraph& pGraph, TiXmlElement* pGeometry);
+            void CheckPartitions(int nParts, Array<OneD, int> &pPart);
             int CalculateElementWeight(char elmtType, bool bndWeight, int na, int nb, int nc);
         };
 

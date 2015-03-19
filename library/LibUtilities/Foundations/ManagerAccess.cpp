@@ -100,7 +100,7 @@ namespace Nektar
             static std::map<unsigned int, PointsManagerT *> s_threadPointMan;
 //            Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
 //            unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
-            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob")->GetWorkerNum();
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetWorkerNum();
               boost::shared_lock<boost::shared_mutex> ReadLock(s_PMmutex);
             if (s_threadPointMan.count(vThr) == 0)
             {
@@ -128,7 +128,7 @@ namespace Nektar
               static boost::shared_mutex s_BMmutex;
 //            Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
 //            unsigned int vThr = vThrMan ? vThrMan->GetWorkerNum() : 0;
-              unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob")->GetWorkerNum();
+              unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetWorkerNum();
               boost::shared_lock<boost::shared_mutex> ReadLock(s_BMmutex);
             if (s_threadBasisMan.count(vThr) == 0)
             {

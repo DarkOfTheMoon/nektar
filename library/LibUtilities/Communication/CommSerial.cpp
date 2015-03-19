@@ -280,6 +280,11 @@ namespace Nektar
             ASSERTL0(false, "Cannot split a serial process.");
         }
 
+        void CommSerial::v_Bcast(Array<OneD, int>&  pData)
+        {
+            return;
+        }
+
         Gs::gs_data* CommSerial::v_GsInit(const Array<OneD, long> pId)
         {
         	return 0;

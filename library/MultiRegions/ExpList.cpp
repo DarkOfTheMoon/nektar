@@ -1291,7 +1291,7 @@ namespace Nektar
             {
                 //FIXME static considered harmful (for threads)
                 ASSERTL0(Nektar::Thread::GetThreadMaster().
-                    GetInstance("SessionJob")->GetMaxNumWorkers()==1,
+                    GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetMaxNumWorkers()==1,
                     "This part of the code not available for"
                     " threaded parallelism (remove local static).");
                 static int start = 0;

@@ -726,7 +726,7 @@ namespace Nektar
         bool SessionReader::DefinesParameter(const std::string& pName) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob")->GetWorkerNum();
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetWorkerNum();
             ParameterMap::const_iterator paramIter = m_parameters[vThr].find(vName);
             return (paramIter != m_parameters[vThr].end());
         }
@@ -744,7 +744,7 @@ namespace Nektar
             const std::string& pName) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob")->GetWorkerNum();
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetWorkerNum();
         	ParameterMap::const_iterator paramIter = m_parameters[vThr].find(vName);
 
             ASSERTL0(paramIter != m_parameters[vThr].end(),
@@ -761,7 +761,7 @@ namespace Nektar
             const std::string &pName, int &pVar) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob")->GetWorkerNum();
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetWorkerNum();
             ParameterMap::const_iterator paramIter = m_parameters[vThr].find(vName);
             ASSERTL0(paramIter != m_parameters[vThr].end(), "Required parameter '" +
                      pName + "' not specified in session.");
@@ -776,7 +776,7 @@ namespace Nektar
             const std::string &pName, int &pVar, const int &pDefault) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob")->GetWorkerNum();
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetWorkerNum();
             ParameterMap::const_iterator paramIter = m_parameters[vThr].find(vName);
             if(paramIter != m_parameters[vThr].end())
             {
@@ -796,7 +796,7 @@ namespace Nektar
             const std::string &pName, NekDouble& pVar) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob")->GetWorkerNum();
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetWorkerNum();
             ParameterMap::const_iterator paramIter = m_parameters[vThr].find(vName);
             ASSERTL0(paramIter != m_parameters[vThr].end(), "Required parameter '" +
                      pName + "' not specified in session.");
@@ -813,7 +813,7 @@ namespace Nektar
             const NekDouble   &pDefault) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob")->GetWorkerNum();
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetWorkerNum();
             ParameterMap::const_iterator paramIter = m_parameters[vThr].find(vName);
             if(paramIter != m_parameters[vThr].end())
             {
@@ -833,7 +833,7 @@ namespace Nektar
         void SessionReader::SetParameter(const std::string &pName, int &pVar) 
         {
             std::string vName = boost::to_upper_copy(pName);
-            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob")->GetWorkerNum();
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetWorkerNum();
             m_parameters[vThr][vName] = pVar;
         }
 
@@ -845,7 +845,7 @@ namespace Nektar
             const std::string &pName, NekDouble& pVar) 
         {
             std::string vName = boost::to_upper_copy(pName);
-            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob")->GetWorkerNum();
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetWorkerNum();
             m_parameters[vThr][vName] = pVar;
         }
 
@@ -857,7 +857,7 @@ namespace Nektar
         bool SessionReader::DefinesSolverInfo(const std::string &pName) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob")->GetWorkerNum();
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetWorkerNum();
             SolverInfoMap::const_iterator infoIter = m_solverInfo[vThr].find(vName);
             return (infoIter != m_solverInfo[vThr].end());
         }
@@ -870,7 +870,7 @@ namespace Nektar
             const std::string &pProperty) const
         {
             std::string vProperty = boost::to_upper_copy(pProperty);
-            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob")->GetWorkerNum();
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetWorkerNum();
             SolverInfoMap::const_iterator iter = m_solverInfo[vThr].find(vProperty);
 
             ASSERTL1(iter != m_solverInfo[vThr].end(),
@@ -886,7 +886,7 @@ namespace Nektar
             const std::string &pProperty, const std::string &pValue) 
         {
             std::string vProperty = boost::to_upper_copy(pProperty);
-            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob")->GetWorkerNum();
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetWorkerNum();
             SolverInfoMap::iterator iter = m_solverInfo[vThr].find(vProperty);
 
             ASSERTL1(iter != m_solverInfo[vThr].end(),
@@ -904,7 +904,7 @@ namespace Nektar
             const std::string &pDefault) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob")->GetWorkerNum();
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetWorkerNum();
             SolverInfoMap::const_iterator infoIter = m_solverInfo[vThr].find(vName);
             if(infoIter != m_solverInfo[vThr].end())
             {
@@ -927,7 +927,7 @@ namespace Nektar
             const bool        &pDefault) const
         {
             std::string vName = boost::to_upper_copy(pName);
-            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob")->GetWorkerNum();
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetWorkerNum();
             SolverInfoMap::const_iterator infoIter = m_solverInfo[vThr].find(vName);
             if(infoIter != m_solverInfo[vThr].end())
             {
@@ -950,7 +950,7 @@ namespace Nektar
             if (DefinesSolverInfo(pName))
             {
                 std::string vName = boost::to_upper_copy(pName);
-                unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob")->GetWorkerNum();
+                unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetWorkerNum();
                 SolverInfoMap::const_iterator iter = m_solverInfo[vThr].find(vName);
                 if(iter != m_solverInfo[vThr].end())
                 {
@@ -1414,7 +1414,7 @@ namespace Nektar
          */
         AnalyticExpressionEvaluator& SessionReader::GetExpressionEvaluator()
         {
-            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob")->GetWorkerNum();
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetWorkerNum();
             return *m_exprEvaluator[vThr];
         }
 
@@ -1691,13 +1691,11 @@ namespace Nektar
         void SessionReader::PartitionMesh()
         {
             ASSERTL0(m_comm.get(), "Communication not initialised.");
-        	ASSERTL0(m_threadManager, "Threading not initialised.");
 
             // Get row of comm, or the whole comm if not split
             CommSharedPtr vCommMesh = m_comm->GetRowComm();
             const bool isRoot = (m_comm->GetRank() == 0);
             unsigned int vThr = m_threadManager->GetWorkerNum();
-            unsigned int vNumThr = m_threadManager->GetMaxNumWorkers();
 
             // Delete any existing loaded mesh
             if (m_xmlDoc[vThr])
@@ -1773,9 +1771,8 @@ namespace Nektar
                                             vPartitionerName, vSession);
                 vPartitioner->PartitionMesh(nParts, true);
                 vPartitioner->WriteAllPartitions(vSession);
-                // These two are redundant?
                 vPartitioner->GetCompositeOrdering(m_compOrder);
-                vPartitioner->GetBndRegionOrdering(m_bndRegOrder[0], 0);
+                vPartitioner->GetBndRegionOrdering(m_bndRegOrder[0]);
 
                 if (isRoot && DefinesCmdLineArgument("part-info"))
                 {
@@ -1918,40 +1915,26 @@ namespace Nektar
                 }
                 else
                 {
-                    if (vThr == 0)
+                    // Need to load mesh on non-root processes.
+                    if (!isRoot)
                     {
-                        // Need to load mesh on non-root processes.
-                        if (!isRoot)
-                        {
-                            m_xmlDoc[0] = MergeDoc(m_filenames);
-                        }
-
-                        // Partitioner now operates in parallel
-                        // Each process receives partitioning over interconnect
-                        // and writes its own session file to the working directory.
-                        MeshPartitionSharedPtr vPartitioner =
-                                    GetMeshPartitionFactory().CreateInstance(
-                                                        vPartitionerName, vSession);
-                        vPartitioner->PartitionMesh(nParts, false);
-                        vPartitioner->WriteLocalPartition(vSession);
-                        vPartitioner->GetCompositeOrdering(m_compOrder);
-                        for (unsigned int i = 0; i < vNumThr; ++i) {
-                            vPartitioner->GetBndRegionOrdering(m_bndRegOrder[i], i);
-                        }
-
-                        if (DefinesCmdLineArgument("part-info") && isRoot)
-                        {
-                            vPartitioner->PrintPartInfo(std::cout);
-                        }
+                        m_xmlDoc[vThr] = MergeDoc(m_filenames);
                     }
-                    else
+
+                    // Partitioner now operates in parallel
+                    // Each process receives partitioning over interconnect
+                    // and writes its own session file to the working directory.
+                    MeshPartitionSharedPtr vPartitioner =
+                                GetMeshPartitionFactory().CreateInstance(
+                                                    vPartitionerName, vSession);
+                    vPartitioner->PartitionMesh(nParts, false);
+                    vPartitioner->WriteLocalPartition(vSession);
+                    vPartitioner->GetCompositeOrdering(m_compOrder);
+                    vPartitioner->GetBndRegionOrdering(m_bndRegOrder[vThr]);
+
+                    if (DefinesCmdLineArgument("part-info") && isRoot)
                     {
-                        // NB, matching the Block in MeshPartition::PartitionGraph, since vThr != 0 this will
-                        // actually not Block in the underlying comm of the ThreadedComm.
-                        if (m_threadManager->GetRankFromPartition(m_comm->GetRowComm()->GetRank()) == 0)
-                        {
-                            m_comm->GetColumnComm()->Block();
-                        }
+                        vPartitioner->PrintPartInfo(std::cout);
                     }
                 }
                 m_comm->Block();
@@ -1970,6 +1953,8 @@ namespace Nektar
                     delete m_xmlDoc[vThr];
                 }
                 m_xmlDoc[vThr] = new TiXmlDocument(vFilename);
+
+                ASSERTL0(m_xmlDoc[vThr], "Failed to create XML document object.");
 
             	bool loadOkay = m_xmlDoc[vThr]->LoadFile();
             	ASSERTL0(loadOkay, "Unable to load file: " + vFilename      +
@@ -2059,7 +2044,7 @@ namespace Nektar
          */
         void SessionReader::ReadParameters(TiXmlElement *conditions)
         {
-            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob")->GetWorkerNum();
+            unsigned int vThr = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetWorkerNum();
 
 
             if (!conditions)
@@ -2146,7 +2131,7 @@ namespace Nektar
         void SessionReader::ReadSolverInfo(TiXmlElement *conditions)
         {
             unsigned int vThr;
-            vThr     = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob")->GetWorkerNum();
+            vThr     = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetWorkerNum();
 
             m_solverInfo.clear();
             m_solverInfo[vThr] = GetSolverInfoDefaults();
@@ -2859,7 +2844,7 @@ namespace Nektar
             vTM.SetThreadingType("ThreadManagerBoost"); // or whatever
             // This ThreadManager will run the SessionJob jobs.
             // It runs the ThreadedComm class.
-            m_threadManager = vTM.CreateInstance("SessionJob", nthreads);
+            m_threadManager = vTM.CreateInstance(Nektar::Thread::ThreadMaster::SessionJob, nthreads);
             cerr << "Number of threads will be: " << nthreads << endl;
 
             Nektar::InitMemoryPools(nthreads, true);
@@ -2896,7 +2881,7 @@ namespace Nektar
 
         void SessionReader::SetUpXmlDoc(void)
         {
-            m_xmlDoc[Nektar::Thread::GetThreadMaster().GetInstance("SessionJob")->GetWorkerNum()]
+            m_xmlDoc[Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetWorkerNum()]
                 = MergeDoc(m_filenames);
         }
     }

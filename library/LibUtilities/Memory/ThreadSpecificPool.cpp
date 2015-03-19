@@ -38,52 +38,45 @@
 namespace Nektar
 {
     // sThrMan attempts to keep the ThreadManager from destructing before the ThreadPools do
-    static Nektar::Thread::ThreadManagerSharedPtr sThrMan;
     typedef boost::shared_ptr<std::vector<MemPool *> > MemoryPoolPool;
-    static bool s_threadPoolsEnabled = false;
+    static Nektar::Thread::ThreadManagerSharedPtr s_threadManager;
 
-    boost::shared_ptr<std::vector<MemPool *> >& GetMemoryPoolPool()
+    /**
+     * Returns a structure to hold multiple MemPools (one per thread).
+     * The result can be cached (as in GetMemoryPool() ).
+     *
+     */
+    MemoryPoolPool& GetMemoryPoolPool()
     {
         typedef Loki::SingletonHolder<MemoryPoolPool ,
                 Loki::CreateUsingNew,
-                Loki::NoDestroy > Type;
+                Loki::NoDestroy,
+                Loki::SingleThreaded> Type;
         MemoryPoolPool &p = Type::Instance();
+
         if (!p)
         {
             p = boost::shared_ptr<std::vector<MemPool *> >(new std::vector<MemPool *>(1,static_cast<MemPool*>(0)));
         }
+        (*p)[0] = new MemPool();
         return p;
     }
+
     MemPool& GetMemoryPool()
     {
-//        typedef Loki::SingletonHolder<MemPool ,
-//                Loki::CreateUsingNew,
-//                Loki::NoDestroy > Type;
-//        return Type::Instance();
-
         /*
          * Now have a single MemPool per thread (because MemPool is *not* thread safe).
          * We want to avoid locking in here because this function is used heavily.
          * Even shared locking causes a large slowdown.
          */
-//        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob");
+        static Nektar::Thread::ThreadMaster& sThrMaster = Nektar::Thread::GetThreadMaster();
+        static MemoryPoolPool& p = GetMemoryPoolPool();
+        Nektar::Thread::ThreadManagerSharedPtr vThrMan = s_threadManager ?
+            s_threadManager : sThrMaster.GetInstance(Nektar::Thread::ThreadMaster::SessionJob);
 
         unsigned int vThr = vThrMan->GetWorkerNum();
-        if (!sThrMan)
-        {
-            sThrMan = vThrMan;
-        }
-        static MemoryPoolPool &p = GetMemoryPoolPool();
-        if (!s_threadPoolsEnabled)
-        {
-            ASSERTL1(vThr == 0, "Using threaded memory pool before it's inited");
-            ASSERTL1(p, "Done goofed");
-            if ((*p)[0] == 0)
-            {
-                (*p)[0] = new MemPool();
-            }
-        }
+        ASSERTL1(s_threadManager || vThr == 0, 
+            "Using threaded memory pool before it's inited");
         return *((*p)[vThr]);
     }
 
@@ -94,9 +87,7 @@ namespace Nektar
      */
     void InitMemoryPools(unsigned int pNumThr, bool pEnabled)
     {
-//        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::ThreadManager::GetInstance();
-        Nektar::Thread::ThreadManagerSharedPtr vThrMan = Nektar::Thread::GetThreadMaster().GetInstance("SessionJob");
-        MemoryPoolPool &p = GetMemoryPoolPool();
+        MemoryPoolPool& p = GetMemoryPoolPool();
 
         p->resize(pNumThr);
         for (unsigned int i=0; i < pNumThr; ++i)
@@ -106,6 +97,6 @@ namespace Nektar
                 (*p)[i] = new MemPool();
             }
         }
-        s_threadPoolsEnabled = pEnabled;
+        s_threadManager = Nektar::Thread::GetThreadMaster().GetInstance(Nektar::Thread::ThreadMaster::SessionJob);
     }
 }

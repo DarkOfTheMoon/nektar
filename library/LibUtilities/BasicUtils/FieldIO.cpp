@@ -93,7 +93,7 @@ namespace Nektar
             }
 #endif
             ASSERTL0(Nektar::Thread::GetThreadMaster().
-                GetInstance("SessionJob")->GetMaxNumWorkers() == 1,
+                GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetMaxNumWorkers() == 1,
                  "This static function is not available in parallel. Please"
                  "instantiate a FieldIO object for parallel use.");
             CommSharedPtr c = GetCommFactory().CreateInstance("Serial", 0, 0);
@@ -133,7 +133,7 @@ namespace Nektar
             }
 #endif
             ASSERTL0(Nektar::Thread::GetThreadMaster().
-                GetInstance("SessionJob")->GetMaxNumWorkers() == 1,
+                GetInstance(Nektar::Thread::ThreadMaster::SessionJob)->GetMaxNumWorkers() == 1,
                  "This static function is not available in parallel. Please"
                  "instantiate a FieldIO object for parallel use.");
             CommSharedPtr c = GetCommFactory().CreateInstance("Serial", 0, 0);

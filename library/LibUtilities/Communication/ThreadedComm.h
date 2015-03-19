@@ -96,6 +96,10 @@ namespace Nektar
             std::vector<std::vector<unsigned int>*> m_sendToRankZeroVecInt;
             std::vector<Array<OneD, int>*>          m_sendToRankZeroArrInt;
             std::vector<Array<OneD, NekDouble>*>    m_sendToRankZeroArrDbl;
+            /**
+             * Pointer for Bcast
+             */
+            Array<OneD, int>*                       m_bcastArrIntPtr;
 
         protected:
             virtual void v_Finalise();
@@ -161,6 +165,7 @@ namespace Nektar
             virtual void v_RecvFromAll(std::vector<std::vector<unsigned int> >&  pRecvData);
             virtual void v_RecvFromAll(std::vector<Array<OneD, int> >&  pRecvData);
             virtual void v_RecvFromAll(std::vector<Array<OneD, NekDouble> >&  pRecvData);
+            virtual void v_Bcast(Array<OneD, int>& pData);
 
         private:
             template <typename DataType>

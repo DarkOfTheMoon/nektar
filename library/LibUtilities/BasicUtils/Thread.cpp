@@ -53,7 +53,7 @@ namespace Nektar
         }
         
         // ThreadMaster implementation
-        ThreadMaster::ThreadMaster() : m_threadManagers(), m_mutex(), m_threadingType()
+        ThreadMaster::ThreadMaster() : m_threadManagers(1), m_mutex(), m_threadingType()
         {
             // empty
         }
@@ -79,23 +79,22 @@ namespace Nektar
             m_threadingType = p_type;
         }
 
-        ThreadManagerSharedPtr ThreadMaster::GetInstance(const std::string &s)
+        ThreadManagerSharedPtr& ThreadMaster::GetInstance(const ThreadManagerName t)
         {
-            ReadLock v_rlock(m_mutex);
-            if (!m_threadManagers.count(s))
+            if ( !m_threadManagers[t] )
             {
-                v_rlock.unlock();
-                WriteLock v_wlock(m_mutex);
-                m_threadManagers[s] = ThreadManagerSharedPtr(new ThreadStartupManager());
+                m_threadManagers[t] = ThreadManagerSharedPtr(new ThreadStartupManager());
+                return m_threadManagers[t];
             }
-            return m_threadManagers[s];
+            return m_threadManagers[t];
         }
 
-        ThreadManagerSharedPtr ThreadMaster::CreateInstance(const std::string &s, unsigned int nThr)
+        ThreadManagerSharedPtr ThreadMaster::CreateInstance(const ThreadManagerName t,
+            unsigned int nThr)
         {
-            WriteLock v_wlock(m_mutex);
             ASSERTL0(!m_threadingType.empty(), "Trying to create a ThreadManager before SetThreadingType called");
-            return m_threadManagers[s] = Thread::GetThreadManagerFactory().CreateInstance(m_threadingType, nThr);
+            return m_threadManagers[t] =
+                Thread::GetThreadManagerFactory().CreateInstance(m_threadingType, nThr);
         }
 
         // ThreadDefaultManager
