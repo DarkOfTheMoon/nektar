@@ -66,7 +66,7 @@ DriverFactory& GetDriverFactory()
     typedef Loki::SingletonHolder<DriverFactory,
     Loki::CreateUsingNew,
     Loki::NoDestroy,
-    Loki::ClassLevelLockable> Type;
+    Loki::SingleThreaded> Type;
     return Type::Instance();
 }
 

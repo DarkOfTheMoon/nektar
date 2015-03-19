@@ -203,7 +203,7 @@ namespace Nektar
             typedef Loki::SingletonHolder<GlobalLinSysFactory,
                 Loki::CreateUsingNew,
                 Loki::NoDestroy,
-                Loki::ClassLevelLockable> Type;
+                Loki::SingleThreaded> Type;
             return Type::Instance();
         }
 
