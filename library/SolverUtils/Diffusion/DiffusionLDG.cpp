@@ -141,7 +141,7 @@ namespace Nektar
                 Array<OneD, NekDouble> muvar(nPts, 0.0);
                 m_ArtificialDiffusionVector(inarray, muvar);
 	        
-	        int numConvFields = nConvectiveFields;
+	            int numConvFields = nConvectiveFields;
                 
                 if (m_shockCaptureType == "Smooth")
                 {

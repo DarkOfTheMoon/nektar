@@ -192,12 +192,11 @@ namespace Nektar
             // Obtain numerical fluxes
             v_NumericalFluxO2(fields, inarray, m_viscTensor, viscousFlux);
             
-            
-            
             if (m_ArtificialDiffusionVector) // with artificial viscosity
             {
                 Array<OneD, NekDouble> muvar(nPts, 0.0);
                 Array<OneD, Array<OneD, NekDouble> > physfields(nConvectiveFields);
+                
                 for (i = 0; i < nConvectiveFields; ++i)
                 {
                     physfields[i] = Array<OneD, NekDouble>(nPts, 0.0);
@@ -208,20 +207,13 @@ namespace Nektar
                 }
                 
                 m_ArtificialDiffusionVector(physfields, muvar);
-                            
-                // set-up the flux and derivatives arrays. Next to determining the
-                // derivatives of the primitive variables (u, v, T) we also need to obtain
-                // the derivatives of the conservative variables (rho, rhou, rhov, rhoE)
-                // for the artificial viscosity term.
                 
                 Array<OneD, Array<OneD, Array<OneD, NekDouble> > > flux  (nDim);
                 Array<OneD, Array<OneD, Array<OneD, NekDouble> > > derivatives(nDim);
                 for (j = 0; j < m_spaceDim; ++j)
                 {
-                    flux[j] = Array<OneD, Array<OneD, NekDouble> >(
-                                                            nConvectiveFields);
-                    derivatives[j]   = Array<OneD, Array<OneD, NekDouble> >(
-                                                            nConvectiveFields);
+                    flux[j] = Array<OneD, Array<OneD, NekDouble> >(nConvectiveFields);
+                    derivatives[j]   = Array<OneD, Array<OneD, NekDouble> >(nConvectiveFields);
                     
                     for (i = 0; i < nConvectiveFields; ++i)
                     {
@@ -230,6 +222,8 @@ namespace Nektar
                         derivatives[j][i]   = Array<OneD, NekDouble>(nPts, 0.0);
                     }
                 }
+                
+                v_NumFluxforScalar(fields, physfields, flux);
                 
                 for (j = 0; j < nDim; ++j)
                 {
@@ -249,6 +243,13 @@ namespace Nektar
                                    physfields,
                                    derivatives,
                                    flux[0]);
+                
+                
+                // set-up the flux and derivatives arrays. Next to determining the
+                // derivatives of the primitive variables (u, v, T) we also need to obtain
+                // the derivatives of the conservative variables (rho, rhou, rhov, rhoE)
+                // for the artificial viscosity term.
+                
                 
                 int numConvFields = nConvectiveFields;
                 
@@ -362,6 +363,139 @@ namespace Nektar
          * @brief Builds the numerical flux for the 1st order derivatives
          *
          */
+        void DiffusionLDGNS::v_NumFluxforScalar(
+            const Array<OneD, MultiRegions::ExpListSharedPtr>        &fields,
+            const Array<OneD, Array<OneD, NekDouble> >               &ufield,
+                  Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &uflux)
+        {
+            int i, j;
+            int nTracePts  = fields[0]->GetTrace()->GetTotPoints();
+            int nvariables = fields.num_elements();
+            int nDim       = uflux.num_elements();
+            
+            Array<OneD, NekDouble > Fwd     (nTracePts);
+            Array<OneD, NekDouble > Bwd     (nTracePts);
+            Array<OneD, NekDouble > Vn      (nTracePts, 0.0);
+            Array<OneD, NekDouble > fluxtemp(nTracePts, 0.0);
+            
+            // Get the normal velocity Vn
+            for(i = 0; i < nDim; ++i)
+            {
+                Vmath::Svtvp(nTracePts, 1.0, m_traceNormals[i], 1,
+                             Vn, 1, Vn, 1);
+            }
+            
+            // Get the sign of (v \cdot n), v = an arbitrary vector
+            // Evaluate upwind flux:
+            // uflux = \hat{u} \phi \cdot u = u^{(+,-)} n
+            for (j = 0; j < nDim; ++j)
+            {
+                for (i = 0; i < nvariables ; ++i)
+                {
+                    // Compute Fwd and Bwd value of ufield of i direction
+                    fields[i]->GetFwdBwdTracePhys(ufield[i], Fwd, Bwd);
+                    
+                    // if Vn >= 0, flux = uFwd, i.e.,
+                    // edge::eForward, if V*n>=0 <=> V*n_F>=0, pick uflux = uFwd
+                    // edge::eBackward, if V*n>=0 <=> V*n_B<0, pick uflux = uFwd
+                    
+                    // else if Vn < 0, flux = uBwd, i.e.,
+                    // edge::eForward, if V*n<0 <=> V*n_F<0, pick uflux = uBwd
+                    // edge::eBackward, if V*n<0 <=> V*n_B>=0, pick uflux = uBwd
+                    
+                    fields[i]->GetTrace()->Upwind(/*m_traceNormals[j]*/Vn,
+                                                  Fwd, Bwd, fluxtemp);
+                    
+                    // Imposing weak boundary condition with flux
+                    // if Vn >= 0, uflux = uBwd at Neumann, i.e.,
+                    // edge::eForward, if V*n>=0 <=> V*n_F>=0, pick uflux = uBwd
+                    // edge::eBackward, if V*n>=0 <=> V*n_B<0, pick uflux = uBwd
+                    
+                    // if Vn >= 0, uflux = uFwd at Neumann, i.e.,
+                    // edge::eForward, if V*n<0 <=> V*n_F<0, pick uflux = uFwd
+                    // edge::eBackward, if V*n<0 <=> V*n_B>=0, pick uflux = uFwd
+                    
+                    if(fields[0]->GetBndCondExpansions().num_elements())
+                    {
+                        v_WeakPenaltyforScalar(fields, i, ufield[i], fluxtemp);
+                    }
+                    
+                    // if Vn >= 0, flux = uFwd*(tan_{\xi}^- \cdot \vec{n}),
+                    // i.e,
+                    // edge::eForward, uFwd \(\tan_{\xi}^Fwd \cdot \vec{n})
+                    // edge::eBackward, uFwd \(\tan_{\xi}^Bwd \cdot \vec{n})
+                    
+                    // else if Vn < 0, flux = uBwd*(tan_{\xi}^- \cdot \vec{n}),
+                    // i.e,
+                    // edge::eForward, uBwd \(\tan_{\xi}^Fwd \cdot \vec{n})
+                    // edge::eBackward, uBwd \(\tan_{\xi}^Bwd \cdot \vec{n})
+                    
+                    Vmath::Vmul(nTracePts,
+                                m_traceNormals[j], 1,
+                                fluxtemp, 1,
+                                uflux[j][i], 1);
+                }
+            }
+        }
+        
+        
+        
+        void DiffusionLDGNS::v_WeakPenaltyforScalar(
+                const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
+                const int                                          var,
+                const Array<OneD, const NekDouble>                &ufield,
+                      Array<OneD,       NekDouble>                &penaltyflux)
+        {
+            int i, e, id1, id2;
+            
+            // Number of boundary regions
+            int nBndEdgePts, nBndEdges;
+            int cnt         = 0;
+            int nBndRegions = fields[var]->GetBndCondExpansions().num_elements();
+            int nTracePts   = fields[0]->GetTrace()->GetTotPoints();
+            Array<OneD, NekDouble > uplus(nTracePts);
+            
+            fields[var]->ExtractTracePhys(ufield, uplus);
+            for (i = 0; i < nBndRegions; ++i)
+            {
+                // Number of boundary expansion related to that region
+                nBndEdges = fields[var]->
+                GetBndCondExpansions()[i]->GetExpSize();
+                
+                // Weakly impose boundary conditions by modifying flux values
+                for (e = 0; e < nBndEdges ; ++e)
+                {
+                    nBndEdgePts = fields[var]->
+                    GetBndCondExpansions()[i]->GetExp(e)->GetTotPoints();
+                    
+                    id1 = fields[var]->
+                    GetBndCondExpansions()[i]->GetPhys_Offset(e);
+                    
+                    id2 = fields[0]->GetTrace()->
+                    GetPhys_Offset(fields[0]->GetTraceMap()->
+                                   GetBndCondTraceToGlobalTraceMap(cnt++));
+                    
+                    // For Dirichlet boundary condition: uflux = g_D
+                    if (fields[var]->GetBndConditions()[i]->
+                        GetBoundaryConditionType() == SpatialDomains::eDirichlet)
+                    {
+                        Vmath::Vcopy(nBndEdgePts,
+                                     &(fields[var]->
+                                       GetBndCondExpansions()[i]->
+                                       GetPhys())[id1], 1,
+                                     &penaltyflux[id2], 1);
+                    }
+                    // For Neumann boundary condition: uflux = u+
+                    else if ((fields[var]->GetBndConditions()[i])->
+                             GetBoundaryConditionType() == SpatialDomains::eNeumann)
+                    {
+                        Vmath::Vcopy(nBndEdgePts,
+                                     &uplus[id2], 1, 
+                                     &penaltyflux[id2], 1);
+                    }
+                }
+            }
+        }
         
         void DiffusionLDGNS::v_NumFluxforVector(
             const Array<OneD, MultiRegions::ExpListSharedPtr>        &fields,

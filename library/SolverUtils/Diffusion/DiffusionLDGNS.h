@@ -114,6 +114,17 @@ namespace Nektar
                 m_homoDerivs = deriv;
             }
             
+            virtual void v_NumFluxforScalar(
+                const Array<OneD, MultiRegions::ExpListSharedPtr>       &fields,
+                const Array<OneD, Array<OneD, NekDouble> >              &ufield,
+                      Array<OneD, Array<OneD, Array<OneD, NekDouble> > >&uflux);
+            
+            virtual void v_WeakPenaltyforScalar(
+                const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
+                const int                                          var,
+                const Array<OneD, const NekDouble>                &ufield,
+                      Array<OneD,       NekDouble>                &penaltyflux);
+            
             virtual void v_NumFluxforVector(
                 const Array<OneD, MultiRegions::ExpListSharedPtr>       &fields,
                 const Array<OneD, Array<OneD, NekDouble> >              &ufield,
