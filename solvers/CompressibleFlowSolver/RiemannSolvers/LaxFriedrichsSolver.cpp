@@ -260,7 +260,7 @@ namespace Nektar
                                 (uRoe * uRoe + vRoe * vRoe + wRoe * wRoe)));
         
         // Minimum and maximum wave speeds
-        NekDouble S    = std::max(uRoe+cRoe, std::max(uRdir+cRdir, uLdir+cLdir));
+        NekDouble S    = std::min(-uRoe-cRoe, std::min(-uRdir-cRdir, -uLdir-cLdir));
         NekDouble sign = 1.0;
         
         /*if(S == -uLdir+cLdir)
@@ -332,18 +332,18 @@ namespace Nektar
         
         // =====================================================================
         // Lax-Friedrichs Riemann rho flux
-        rhof  = 0.5 * ((zrhoL_flux + zrhoR_flux) + sign * S * (rhoR - rhoL));// - sign * S * (rhoR - rhoL));
+        rhof  = 0.5 * ((zrhoL_flux + zrhoR_flux) - sign * S * (rhoR - rhoL));// - sign * S * (rhoR - rhoL));
         
         // Lax-Friedrichs Riemann rhou flux
-        rhouf = 0.5 * ((zrhouL_flux + zrhouR_flux)  + sign *  S * (rhouR - rhouL));// - sign * S * (rhouR - rhouL));
+        rhouf = 0.5 * ((zrhouL_flux + zrhouR_flux)  - sign *  S * (rhouR - rhouL));// - sign * S * (rhouR - rhouL));
         
         // Lax-Friedrichs Riemann rhov flux
-        rhovf = 0.5 * ((zrhovL_flux + zrhovR_flux)  + sign *  S * (rhovR - rhovL));// - sign * S * (rhovR - rhovL));
+        rhovf = 0.5 * ((zrhovL_flux + zrhovR_flux)  - sign *  S * (rhovR - rhovL));// - sign * S * (rhovR - rhovL));
         
         // Lax-Friedrichs Riemann rhow flux
-        rhowf = 0.5 * ((zrhowL_flux + zrhowR_flux)  + sign *  S * (rhowR - rhowL));// - sign * S * (rhowR - rhowL));
+        rhowf = 0.5 * ((zrhowL_flux + zrhowR_flux)  - sign *  S * (rhowR - rhowL));// - sign * S * (rhowR - rhowL));
         
         // Lax-Friedrichs Riemann E flux
-        Ef    = 0.5 * ((zEL_flux + zER_flux)  + sign *   S * (ER - EL));// - sign * S * (ER - EL));
+        Ef    = 0.5 * ((zEL_flux + zER_flux)  - sign *   S * (ER - EL));// - sign * S * (ER - EL));
     }
 }

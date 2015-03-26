@@ -282,71 +282,71 @@ namespace Nektar
                         -uLdir*(hLdir - vsqLdir*0.5*(gamma-1))*EL;
         
         zrhouL_flux =   rhoL
-                        -(uLdir*(gamma-3))*rhouL
+                        -(uLdir*(gamma-3.0))*rhouL
                         +vLdir*rhovL
                         +wLdir*rhowL
-                        +(hLdir+uLdir*uLdir*(1-gamma))*EL;
+                        +(hLdir+uLdir*uLdir*(1.0-gamma))*EL;
         
-        zrhovL_flux =   -(vLdir*(gamma-1))*rhouL
+        zrhovL_flux =   -(vLdir*(gamma-1.0))*rhouL
                         +uLdir*rhovL
-                        -uLdir*vLdir*(gamma-1)*EL;
+                        -uLdir*vLdir*(gamma-1.0)*EL;
         
-        zrhowL_flux =   -(wLdir*(gamma-1))*rhouL
+        zrhowL_flux =   -(wLdir*(gamma-1.0))*rhouL
                         +uLdir*rhowL
-                        -uLdir*wLdir*(gamma-1)*EL;
+                        -uLdir*wLdir*(gamma-1.0)*EL;
         
         zEL_flux    =   (gamma-1)*rhouL + (gamma*uLdir)*EL;
         
         //==================================
         
-        zrhoR_flux =     (0.5*(gamma-1)*vsqRdir-pow(uRdir,2))*rhouR
+        zrhoR_flux =     (0.5*(gamma-1.0)*vsqRdir-pow(uRdir,2.0))*rhouR
                         -uRdir*vRdir*rhovR
                         -uRdir*wRdir*rhowR
-                        -uRdir*(hRdir - vsqRdir*0.5*(gamma-1))*ER;
+                        -uRdir*(hRdir - vsqRdir*0.5*(gamma-1.0))*ER;
         
         zrhouR_flux =    rhoR
-                        -(uRdir*(gamma-3))*rhouR
+                        -(uRdir*(gamma-3.0))*rhouR
                         +vRdir*rhovR
                         +wRdir*rhowR
-                        +(hRdir+pow(uRdir,2)*(1-gamma))*ER;
+                        +(hRdir+pow(uRdir,2.0)*(1.0-gamma))*ER;
         
         zrhovR_flux =   -(vRdir*(gamma-1))*rhouR
                         +uRdir*rhovR
-                        -uRdir*vRdir*(gamma-1)*ER;
+                        -uRdir*vRdir*(gamma-1.0)*ER;
         
-        zrhowR_flux =   -(wRdir*(gamma-1))*rhouR
+        zrhowR_flux =   -(wRdir*(gamma-1.0))*rhouR
                         +uRdir*rhowR
-                        -uRdir*wRdir*(gamma-1)*ER;
+                        -uRdir*wRdir*(gamma-1.0)*ER;
         
-        zER_flux    =    (gamma-1)*rhouR + (gamma*uRdir)*ER;
+        zER_flux    =    (gamma-1.0)*rhouR + (gamma*uRdir)*ER;
         
         //======================================================================
         
-        rhof  = 0.5*(zrhoR_flux+zrhoL_flux);
-        rhouf = 0.5*(zrhouR_flux+zrhouL_flux);
-        rhovf = 0.5*(zrhovR_flux+zrhovL_flux);
-        rhowf = 0.5*(zrhowR_flux+zrhowL_flux);
-        Ef    = 0.5*(zER_flux+zEL_flux);
+        rhof  = -0.5*(zrhoR_flux+zrhoL_flux);
+        rhouf = -0.5*(zrhouR_flux+zrhouL_flux);
+        rhovf = -0.5*(zrhovR_flux+zrhovL_flux);
+        rhowf = -0.5*(zrhowR_flux+zrhowL_flux);
+        Ef    = -0.5*(zER_flux+zEL_flux);
         
         // Compute eigenvalues \lambda_i (equation 11.58).
         NekDouble uRoeAbs = fabs(uRoe);
         NekDouble lambda[5] = {
-            fabs(uRoe - cRoe),
+            fabs(uRoe + cRoe),
             uRoeAbs,
             uRoeAbs,
             uRoeAbs,
-            fabs(uRoe + cRoe)
+            fabs(uRoe - cRoe)
         };
         
         // Finally perform summation (11.29).
         for (int i = 0; i < 5; ++i)
         {
             NekDouble ahat = 0.5*alpha[i]*lambda[i];
-            rhof  += ahat*k[i][0];
-            rhouf += ahat*k[i][1];
-            rhovf += ahat*k[i][2];
-            rhowf += ahat*k[i][3];
-            Ef    += ahat*k[i][4];
+            rhof  -= ahat*k[i][0];
+            rhouf -= ahat*k[i][1];
+            rhovf -= ahat*k[i][2];
+            rhowf -= ahat*k[i][3];
+            Ef    -= ahat*k[i][4];
         }
     }
     

@@ -798,7 +798,7 @@ namespace Nektar
                 
                 Array<OneD, NekDouble> zeros(nBCEdgePts, 0.0);
                
-                Vmath::Vcopy(nBCEdgePts, &zeros[0], 1,
+                /*Vmath::Vcopy(nBCEdgePts, &zeros[0], 1,
                              &(m_fields[0]->GetBndCondExpansions()[bcRegion]->
                                UpdatePhys())[id1], 1);
                 
@@ -811,6 +811,40 @@ namespace Nektar
                                UpdatePhys())[id1], 1);
                 
                 Vmath::Vcopy(nBCEdgePts, &zeros[0], 1,
+                             &(m_fields[3]->GetBndCondExpansions()[bcRegion]->
+                               UpdatePhys())[id1], 1);*/
+                
+                Vmath::Neg(nBCEdgePts,&Fwdnew[0][id2], 1);
+                
+                // set z_rhou = z_rhov = 0 at wall
+                Vmath::Neg(nBCEdgePts, &Fwdnew[1][id2], 1);
+                Vmath::Neg(nBCEdgePts, &Fwdnew[2][id2], 1);
+                // set z_rhoE = 0 at wall
+                Vmath::Neg(nBCEdgePts,&Fwdnew[3][id2], 1);
+                
+                Vmath::Vadd(nBCEdgePts,
+                            &Fwdnew[1][id2], 1,
+                            &Force[0][0], 1,
+                            &Fwdnew[1][id2], 1);
+                
+                Vmath::Vadd(nBCEdgePts,
+                            &Fwdnew[2][id2], 1,
+                            &Force[1][0], 1,
+                            &Fwdnew[2][id2], 1);
+                
+                Vmath::Vcopy(nBCEdgePts, &Fwdnew[0][id2], 1,
+                             &(m_fields[0]->GetBndCondExpansions()[bcRegion]->
+                               UpdatePhys())[id1], 1);
+                
+                Vmath::Vcopy(nBCEdgePts, &Fwdnew[1][id2], 1,
+                             &(m_fields[1]->GetBndCondExpansions()[bcRegion]->
+                               UpdatePhys())[id1], 1);
+                
+                Vmath::Vcopy(nBCEdgePts, &Fwdnew[2][id2], 1,
+                             &(m_fields[2]->GetBndCondExpansions()[bcRegion]->
+                               UpdatePhys())[id1], 1);
+                
+                Vmath::Vcopy(nBCEdgePts, &Fwdnew[3][id2], 1,
                              &(m_fields[3]->GetBndCondExpansions()[bcRegion]->
                                UpdatePhys())[id1], 1);
             }
@@ -982,7 +1016,7 @@ namespace Nektar
         GetPressure      (m_baseflow, vel, pressure);
         
         Array<OneD, NekDouble> ones(nq, 1.0);
-        
+                
         // determine u^2+v^2+w^2;
         for (i = 0; i < m_spacedim; ++i)
         {
@@ -1271,6 +1305,17 @@ namespace Nektar
             Vmath::Vmul(nq, &tmp1[0], 1, &inarray[3][0], 1, &tmp1[0], 1);
             
             Vmath::Vadd(nq, &tmp[0], 1, &tmp1[0], 1, &outarray[3][1][0], 1);
+            
+            
+            Vmath::Neg(nq, &outarray[0][0][0], 1);
+            Vmath::Neg(nq, &outarray[1][0][0], 1);
+            Vmath::Neg(nq, &outarray[2][0][0], 1);
+            Vmath::Neg(nq, &outarray[3][0][0], 1);
+            
+            Vmath::Neg(nq, &outarray[0][1][0], 1);
+            Vmath::Neg(nq, &outarray[1][1][0], 1);
+            Vmath::Neg(nq, &outarray[2][1][0], 1);
+            Vmath::Neg(nq, &outarray[3][1][0], 1);
             
         }
         if (m_spacedim == 3)

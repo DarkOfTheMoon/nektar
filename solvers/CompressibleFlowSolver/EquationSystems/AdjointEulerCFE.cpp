@@ -274,6 +274,11 @@ namespace Nektar
         Array<OneD, Array<OneD, NekDouble> > advVel(m_spacedim);
         
         m_advection->Advect(nvariables, m_fields, advVel, inarray, outarray, time);
+        
+        for (i = 0; i < nvariables; ++i)
+        {
+            Vmath::Neg(npoints, outarray[i], 1);
+        }
     }
     
     /**

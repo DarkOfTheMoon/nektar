@@ -285,15 +285,12 @@ namespace Nektar
         
         m_diffusion->Diffuse(nvariables, m_fields, inarray, outarrayDiff);
         
-        if (m_shockCaptureType == "NonSmooth")
+        for (i = 0; i < nvariables; ++i)
         {
-            for (i = 0; i < nvariables; ++i)
-            {
-                Vmath::Vadd(npoints,
-                            outarrayAdv[i], 1,
-                            outarrayDiff[i], 1,
-                            outarray[i], 1);
-            }
+            Vmath::Vadd(npoints,
+                        outarrayAdv[i], 1,
+                        outarrayDiff[i], 1,
+                        outarray[i], 1);
         }
     }
     

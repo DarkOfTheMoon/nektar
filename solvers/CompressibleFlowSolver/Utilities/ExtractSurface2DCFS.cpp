@@ -189,7 +189,7 @@ int main(int argc, char *argv[])
 
     //--------------------------------------------------------------------------
     // Set up Expansion information
-    vector< vector<LibUtilities::PointsType> > pointsType;
+    /*vector< vector<LibUtilities::PointsType> > pointsType;
     for (i = 0; i < fieldDef.size(); ++i)
     {
         vector<LibUtilities::PointsType> ptype;
@@ -198,15 +198,15 @@ int main(int argc, char *argv[])
             ptype.push_back(LibUtilities::ePolyEvenlySpaced);
         }
         pointsType.push_back(ptype);
-    }
-    graphShPt->SetExpansions(fieldDef, pointsType);
+    }*/
+    graphShPt->SetExpansions(fieldDef);
 
     //--------------------------------------------------------------------------
 
 
     //--------------------------------------------------------------------------
     // Define Expansion
-    int nfields = fieldDef[0]->m_fields.size();
+    int nfields = 4.0;//fieldDef[0]->m_fields.size();
     Array<OneD, MultiRegions::ExpListSharedPtr> Exp(nfields);
     Array<OneD, MultiRegions::ExpListSharedPtr> pFields(nfields);
 
@@ -729,7 +729,9 @@ int main(int argc, char *argv[])
                 if (pFields[0]->GetBndConditions()[b]->
                     GetUserDefined() == SpatialDomains::eWallViscous ||
                     pFields[0]->GetBndConditions()[b]->
-                    GetUserDefined() == SpatialDomains::eWall)
+                    GetUserDefined() == SpatialDomains::eWall ||
+                    pFields[0]->GetBndConditions()[b]->
+                    GetUserDefined() == SpatialDomains::eAdjointWall)
                 {
                     Vmath::Vcopy(nBndEdgePts, &traceX[id2], 1,
                                  &surfaceX[id1], 1);
@@ -769,7 +771,9 @@ int main(int argc, char *argv[])
                     if (pFields[j]->GetBndConditions()[b]->
                         GetUserDefined() == SpatialDomains::eWallViscous ||
                         pFields[j]->GetBndConditions()[b]->
-                        GetUserDefined() == SpatialDomains::eWall)
+                        GetUserDefined() == SpatialDomains::eWall ||
+                        pFields[0]->GetBndConditions()[b]->
+                        GetUserDefined() == SpatialDomains::eAdjointWall)
                     {
                         Vmath::Vcopy(nBndEdgePts, &traceFields[j][id2], 1,
                                      &surfaceFields[j][id1], 1);
@@ -804,7 +808,9 @@ int main(int argc, char *argv[])
                     if (pFields[0]->GetBndConditions()[b]->
                         GetUserDefined() == SpatialDomains::eWallViscous ||
                         pFields[0]->GetBndConditions()[b]->
-                        GetUserDefined() == SpatialDomains::eWall)
+                        GetUserDefined() == SpatialDomains::eWall ||
+                        pFields[0]->GetBndConditions()[b]->
+                        GetUserDefined() == SpatialDomains::eAdjointWall)
                     {
                         Vmath::Vcopy(nBndEdgePts, &traceFieldsAdded[j][id2], 1,
                                      &surfaceFieldsAdded[j][id1], 1);
