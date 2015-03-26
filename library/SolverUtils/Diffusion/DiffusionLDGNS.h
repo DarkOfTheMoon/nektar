@@ -70,7 +70,7 @@ namespace Nektar
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_viscTensor;
             
             Array<OneD, Array<OneD, NekDouble> > m_homoDerivs;
-            
+            std::string                          m_shockCaptureType;
             int                                  m_spaceDim;
             int                                  m_diffDim;
             
@@ -113,6 +113,20 @@ namespace Nektar
             {
                 m_homoDerivs = deriv;
             }
+            
+            virtual void v_NumFluxforVector(
+                const Array<OneD, MultiRegions::ExpListSharedPtr>       &fields,
+                const Array<OneD, Array<OneD, NekDouble> >              &ufield,
+                      Array<OneD, Array<OneD, Array<OneD, NekDouble> > >&qfield,
+                      Array<OneD, Array<OneD, NekDouble> >              &qflux);
+            
+            virtual void v_WeakPenaltyforVector(
+                const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
+                const int                                          var,
+                const int                                          dir,
+                const Array<OneD, const NekDouble>                &qfield,
+                      Array<OneD,       NekDouble>                &penaltyflux,
+                      NekDouble                                          C11);
             
             virtual Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &v_GetFluxTensor()
             {

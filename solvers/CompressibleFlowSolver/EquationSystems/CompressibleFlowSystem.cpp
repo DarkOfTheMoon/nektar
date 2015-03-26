@@ -252,6 +252,16 @@ namespace Nektar
                     m_diffusion->SetArtificialDiffusionVector(
                         &CompressibleFlowSystem::GetArtificialDynamicViscosity, this);
                 }
+                if (m_shockCaptureType=="NonSmooth" && m_EqTypeStr=="NavierStokesCFE")
+                {
+                    m_advection->SetFluxVector(&CompressibleFlowSystem::
+                                               GetFluxVector, this);
+                    
+                    m_diffusion->SetArtificialDiffusionVector(
+                    &CompressibleFlowSystem::GetArtificialDynamicViscosity, this);
+                    m_diffusion->SetFluxVectorNS(&CompressibleFlowSystem::
+                                                 GetViscousFluxVector, this);
+                }
 
                 // Setting up Riemann solver for advection operator
                 m_session->LoadSolverInfo("UpwindType", riemName, "Average");
@@ -3522,32 +3532,32 @@ namespace Nektar
         }
 
         Array<OneD, NekDouble> pressure(nPhys), soundspeed(nPhys), mach(nPhys);
-        Array<OneD, NekDouble> sensor(nPhys), SensorKappa(nPhys), smooth(nPhys);
+        Array<OneD, NekDouble> sensor(nPhys), SensorKappa(nPhys), artvisc(nPhys);
 
         GetPressure  (tmp, pressure);
         GetSoundSpeed(tmp, pressure, soundspeed);
         GetMach      (tmp, soundspeed, mach);
         GetSensor    (tmp, sensor, SensorKappa);
-        GetSmoothArtificialViscosity    (tmp, smooth);
+        GetArtificialDynamicViscosity    (tmp, artvisc);
 
         Array<OneD, NekDouble> pFwd(nCoeffs), sFwd(nCoeffs), mFwd(nCoeffs);
-        Array<OneD, NekDouble> sensFwd(nCoeffs), smoothFwd(nCoeffs);
+        Array<OneD, NekDouble> sensFwd(nCoeffs), artviscFwd(nCoeffs);
 
         m_fields[0]->FwdTrans(pressure,   pFwd);
         m_fields[0]->FwdTrans(soundspeed, sFwd);
         m_fields[0]->FwdTrans(mach,       mFwd);
         m_fields[0]->FwdTrans(sensor,     sensFwd);
-        m_fields[0]->FwdTrans(smooth,     smoothFwd);
+        m_fields[0]->FwdTrans(artvisc,     artviscFwd);
 
         variables.push_back  ("p");
         variables.push_back  ("a");
         variables.push_back  ("Mach");
         variables.push_back  ("Sensor");
-        variables.push_back  ("SmoothVisc");
+        variables.push_back  ("ArtVisc");
         fieldcoeffs.push_back(pFwd);
         fieldcoeffs.push_back(sFwd);
         fieldcoeffs.push_back(mFwd);
         fieldcoeffs.push_back(sensFwd);
-        fieldcoeffs.push_back(smoothFwd);
+        fieldcoeffs.push_back(artviscFwd);
     }
 }
