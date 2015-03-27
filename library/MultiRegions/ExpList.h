@@ -684,6 +684,10 @@ namespace Nektar
                       Array<OneD,NekDouble> &Fwd,
                       Array<OneD,NekDouble> &Bwd);
 
+            inline void AverageTracePhys(
+                const Array<OneD, const NekDouble> &inarray,
+                      Array<OneD,NekDouble> &outarray);
+            
             inline void ExtractTracePhys(Array<OneD,NekDouble> &outarray);
 
             inline void ExtractTracePhys(
@@ -1058,6 +1062,10 @@ namespace Nektar
 
             virtual void v_ExtractTracePhys(
                 Array<OneD,NekDouble> &outarray);
+            
+            virtual void v_AverageTracePhys(
+               const Array<OneD, const NekDouble> &inarray,
+                    Array<OneD,NekDouble> &outarray);
 
             virtual void v_ExtractTracePhys(
                 const Array<OneD, const NekDouble> &inarray,
@@ -1939,6 +1947,13 @@ namespace Nektar
             Array<OneD, Array<OneD, NekDouble> > &normals)
         {
             v_GetNormals(normals);
+        }
+        
+        inline void ExpList::AverageTracePhys(
+            const Array<OneD, const NekDouble> &inarray,
+                  Array<OneD,NekDouble> &outarray)
+        {
+            v_AverageTracePhys(inarray,outarray);
         }
 
         inline void ExpList::AddTraceIntegral(
