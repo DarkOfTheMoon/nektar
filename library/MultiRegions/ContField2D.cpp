@@ -1045,5 +1045,13 @@ namespace Nektar
             return GetBndConditions();
         }
 
+        /**
+         * Reset the GlobalLinSys Manager 
+         */
+        void ContField2D::v_ClearGlobalLinSysManager(void)
+        {
+            m_globalLinSysManager.ClearManager("GlobalLinSys");
+        }
+
     } // end of namespace
 } //end of namespace

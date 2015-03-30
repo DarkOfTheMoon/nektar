@@ -186,6 +186,7 @@ namespace Nektar
                     CoeffState coeffstate);
 
 
+            virtual void v_ClearGlobalLinSysManager(void);
         };
         typedef boost::shared_ptr<ContField3D>      ContField3DSharedPtr;
 
