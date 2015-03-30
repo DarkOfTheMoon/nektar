@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// File Shallow.cpp
+// File OceanWaveSystem.cpp
 //
 // For more information, please see: http://www.nektar.info
 //
@@ -33,15 +33,15 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#include <ADRSolver/EquationSystems/Shallow.h>
+#include <OceanWaveSolver/EquationSystems/OceanWaveSystem.h>
 #include <iostream>
 #include <iomanip>
 
 namespace Nektar
 {
-    string Shallow::className = GetEquationSystemFactory().RegisterCreatorFunction("Shallow", Shallow::create);
+    string OceanWaveSystem::className = GetEquationSystemFactory().RegisterCreatorFunction("OceanWaveSystem", OceanWaveSystem::create);
 
-    Shallow::Shallow(
+    OceanWaveSystem::OceanWaveSystem(
             const LibUtilities::SessionReaderSharedPtr& pSession)
         : UnsteadySystem(pSession)
     {
@@ -50,7 +50,7 @@ namespace Nektar
     /**
      * @brief Initialisation object for the unsteady diffusion problem.
      */
-    void Shallow::v_InitObject()
+    void OceanWaveSystem::v_InitObject()
     {
         UnsteadySystem::v_InitObject();
 
@@ -280,7 +280,7 @@ namespace Nektar
                 m_session->LoadSolverInfo("DiffusionType", diffName, "LDG");
                 //m_diffusion = SolverUtils::GetDiffusionFactory().
                 //    CreateInstance(diffName, diffName);
-                //m_diffusion->SetFluxVector(&Shallow::
+                //m_diffusion->SetFluxVector(&OceanWaveSystem::
                 //                           GetFluxVector, this);
                 //std::cout << "END" << std::endl;
 //
@@ -304,26 +304,26 @@ namespace Nektar
         
         //if (m_explicitDiffusion)
         //{
-            m_ode.DefineOdeRhs    (&Shallow::DoOdeRhs,        this);
-            m_ode.DefineProjection(&Shallow::DoOdeProjection, this);
+            m_ode.DefineOdeRhs    (&OceanWaveSystem::DoOdeRhs,        this);
+            m_ode.DefineProjection(&OceanWaveSystem::DoOdeProjection, this);
 
         std::cout << "hi" << std::endl;
         //}
         //else
         //{
         //    m_ode.DefineImplicitSolve(
-        //                        &Shallow::DoImplicitSolve, this);
+        //                        &OceanWaveSystem::DoImplicitSolve, this);
         //}
     }
 
     /**
      * @brief Unsteady diffusion problem destructor.
      */
-    Shallow::~Shallow()
+    OceanWaveSystem::~OceanWaveSystem()
     {
     }
 
-    void Shallow::v_GenerateSummary(SummaryList& s)
+    void OceanWaveSystem::v_GenerateSummary(SummaryList& s)
     {
         UnsteadySystem::v_GenerateSummary(s);
         if(m_useSpecVanVisc)
@@ -343,7 +343,7 @@ namespace Nektar
      * @param time       Time.
      */
 
-     void Shallow::SetBoundaryConditions(
+     void OceanWaveSystem::SetBoundaryConditions(
     Array<OneD, Array<OneD, NekDouble> > &inarray,
     NekDouble time)
   { 
@@ -376,7 +376,7 @@ namespace Nektar
   }
 
 
-     void Shallow::WallBoundary(
+     void OceanWaveSystem::WallBoundary(
         int                                   bcRegion,
         int                                   cnt, 
         Array<OneD, Array<OneD, NekDouble> > &physarray)
@@ -455,7 +455,7 @@ namespace Nektar
 
 
 
-    void Shallow::DoOdeRhs(
+    void OceanWaveSystem::DoOdeRhs(
         const Array<OneD, const  Array<OneD, NekDouble> > &inarray,
               Array<OneD,        Array<OneD, NekDouble> > &outarray,
         const NekDouble time)
@@ -585,7 +585,7 @@ namespace Nektar
     }
 
 
-  void Shallow::WallBoundary2D(int bcRegion, int cnt, Array<OneD, Array<OneD, NekDouble> > &physarray)
+  void OceanWaveSystem::WallBoundary2D(int bcRegion, int cnt, Array<OneD, Array<OneD, NekDouble> > &physarray)
   { 
 
     int i;
@@ -637,7 +637,7 @@ namespace Nektar
      * @param outarray   Calculated solution.
      * @param time       Time.
      */
-    void Shallow::DoOdeProjection(
+    void OceanWaveSystem::DoOdeProjection(
         const Array<OneD, const Array<OneD, NekDouble> > &inarray,
               Array<OneD,       Array<OneD, NekDouble> > &outarray,
         const NekDouble time)
@@ -709,7 +709,7 @@ namespace Nektar
     /** 
      * @brief Implicit solution of the unsteady diffusion problem.
      */
-    void Shallow::DoImplicitSolve(
+    void OceanWaveSystem::DoImplicitSolve(
         const Array<OneD, const Array<OneD, NekDouble> > &inarray,
               Array<OneD,       Array<OneD, NekDouble> > &outarray,
         const NekDouble time,
@@ -762,7 +762,7 @@ namespace Nektar
     /** 
      * @brief Return the flux vector for the unsteady diffusion problem.
      */
-    void Shallow::GetFluxVector(
+    void OceanWaveSystem::GetFluxVector(
         const int i, 
         const int j,
         const Array<OneD, Array<OneD, NekDouble> > &physfield,
@@ -777,7 +777,7 @@ namespace Nektar
         Vmath::Vcopy(GetNpoints(), physfield[i], 1, flux[j], 1);
     }
 
-    void Shallow::spongefunction4(const Array<OneD, NekDouble> & x, NekDouble alpha, NekDouble p, int type, Array<OneD, NekDouble> & cr)
+    void OceanWaveSystem::spongefunction4(const Array<OneD, NekDouble> & x, NekDouble alpha, NekDouble p, int type, Array<OneD, NekDouble> & cr)
     {
         int n = x.num_elements();
         NekDouble xmin = Vmath::Vmin(n,x,1);
@@ -809,7 +809,7 @@ namespace Nektar
     }
 
     
-    void Shallow::lineartravellingwave1D(NekDouble H,NekDouble c, NekDouble k, NekDouble z, NekDouble h, NekDouble w, NekDouble t, const Array<OneD, NekDouble> & x, Array<OneD, NekDouble> & eta, Array<OneD, NekDouble> & pp )
+    void OceanWaveSystem::lineartravellingwave1D(NekDouble H,NekDouble c, NekDouble k, NekDouble z, NekDouble h, NekDouble w, NekDouble t, const Array<OneD, NekDouble> & x, Array<OneD, NekDouble> & eta, Array<OneD, NekDouble> & pp )
     {
         int n = x.num_elements();
 
@@ -827,7 +827,7 @@ namespace Nektar
         Vmath::Smul(n, -H*c/2.0*cosh(k*(z+h))/sinh(k*h), xsin, 1, pp, 1);
     }
 
-    void Shallow::WaveForcing(NekDouble time, const Array<OneD, NekDouble> & E, const Array<OneD, NekDouble> & P, Array<OneD, NekDouble> & rhsE, Array<OneD, NekDouble> & rhsP)
+    void OceanWaveSystem::WaveForcing(NekDouble time, const Array<OneD, NekDouble> & E, const Array<OneD, NekDouble> & P, Array<OneD, NekDouble> & rhsE, Array<OneD, NekDouble> & rhsP)
     {
         //SHOULD BE CHANGED:
         NekDouble dt = m_timestep;

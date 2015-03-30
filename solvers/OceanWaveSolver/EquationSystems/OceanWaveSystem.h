@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// File Shallow.h
+// File OceanWaveSolver.h
 //
 // For more information, please see: http://www.nektar.info
 //
@@ -33,8 +33,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef NEKTAR_SOLVERS_ADRSOLVER_EQUATIONSYSTEMS_Shallow_H
-#define NEKTAR_SOLVERS_ADRSOLVER_EQUATIONSYSTEMS_Shallow_H
+#ifndef NEKTAR_SOLVERS_ADRSOLVER_EQUATIONSYSTEMS_OceanWaveSystem_H
+#define NEKTAR_SOLVERS_ADRSOLVER_EQUATIONSYSTEMS_OceanWaveSystem_H
 
 #include <SolverUtils/UnsteadySystem.h>
 #include <SolverUtils/Diffusion/Diffusion.h>
@@ -43,15 +43,15 @@ using namespace Nektar::SolverUtils;
 
 namespace Nektar
 {
-    class Shallow : public UnsteadySystem
+    class OceanWaveSystem : public UnsteadySystem
     {
     public:
-        friend class MemoryManager<Shallow>;
+        friend class MemoryManager<OceanWaveSystem>;
 
         /// Creates an instance of this class
         static EquationSystemSharedPtr create(
                 const LibUtilities::SessionReaderSharedPtr& pSession) {
-            EquationSystemSharedPtr p = MemoryManager<Shallow>::AllocateSharedPtr(pSession);
+            EquationSystemSharedPtr p = MemoryManager<OceanWaveSystem>::AllocateSharedPtr(pSession);
             p->InitObject();
             return p;
         } 
@@ -59,7 +59,7 @@ namespace Nektar
         static std::string className;
 
         /// Destructor
-        virtual ~Shallow();
+        virtual ~OceanWaveSystem();
 
     protected:
         bool m_useSpecVanVisc;
@@ -70,7 +70,7 @@ namespace Nektar
         
         virtual void v_GenerateSummary(SummaryList &s);
         
-        Shallow(
+        OceanWaveSystem(
                 const LibUtilities::SessionReaderSharedPtr& pSession);
         
         virtual void v_InitObject();
