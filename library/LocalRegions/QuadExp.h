@@ -215,6 +215,8 @@ namespace Nektar
             LOCAL_REGIONS_EXPORT void v_DropLocStaticCondMatrix(
                         const MatrixKey &mkey);
 
+            LOCAL_REGIONS_EXPORT void v_DropLocMatrix(
+                        const MatrixKey &mkey);
 
             //---------------------------------------
             // Operators

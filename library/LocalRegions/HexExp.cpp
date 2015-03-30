@@ -2085,6 +2085,11 @@ namespace Nektar
             m_staticCondMatrixManager.DeleteObject(mkey);
         }
 
+        void HexExp::v_DropLocMatrix(const MatrixKey &mkey)
+        {
+            m_matrixManager.DeleteObject(mkey);
+        }
+
         void HexExp::v_LaplacianMatrixOp_MatFree_Kernel(
                 const Array<OneD, const NekDouble> &inarray,
                       Array<OneD,       NekDouble> &outarray,

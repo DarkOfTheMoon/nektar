@@ -814,6 +814,11 @@ namespace Nektar
             m_staticCondMatrixManager.DeleteObject(mkey);
         }
 
+        void PyrExp::v_DropLocMatrix(const MatrixKey &mkey)
+        {
+            m_matrixManager.DeleteObject(mkey);
+        }
+
         DNekScalMatSharedPtr PyrExp::CreateMatrix(const MatrixKey &mkey)
         {
             DNekScalMatSharedPtr returnval;

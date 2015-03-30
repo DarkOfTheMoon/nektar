@@ -1228,6 +1228,11 @@ namespace Nektar
             m_staticCondMatrixManager.DeleteObject(mkey);
         }
 
+        void PrismExp::v_DropLocMatrix(const MatrixKey &mkey)
+        {
+            m_matrixManager.DeleteObject(mkey);
+        }
+
         DNekScalMatSharedPtr PrismExp::CreateMatrix(const MatrixKey &mkey)
         {
             DNekScalMatSharedPtr returnval;

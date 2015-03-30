@@ -1991,6 +1991,10 @@ namespace Nektar
             m_staticCondMatrixManager.DeleteObject(mkey);
         }
 
+        void QuadExp::v_DropLocMatrix(const MatrixKey &mkey)
+        {
+            m_matrixManager.DeleteObject(mkey);
+        }
 
         void QuadExp::v_MassMatrixOp(
             const Array<OneD, const NekDouble> &inarray,

@@ -196,6 +196,9 @@ namespace Nektar
             LOCAL_REGIONS_EXPORT void v_DropLocStaticCondMatrix(
                         const MatrixKey &mkey);
 
+            LOCAL_REGIONS_EXPORT void v_DropLocMatrix(
+                            const MatrixKey &mkey);
+
             LOCAL_REGIONS_EXPORT void SetUpInverseTransformationMatrix(
                 const DNekMatSharedPtr & m_transformationmatrix,
                 DNekMatSharedPtr m_inversetransformationmatrix,

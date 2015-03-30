@@ -990,6 +990,12 @@ namespace Nektar
             NEKERROR(ErrorUtil::efatal, "This function is only valid for LocalRegions");
         }
 
+
+        void StdExpansion::v_DropLocMatrix(const LocalRegions::MatrixKey &mkey)
+        {
+            NEKERROR(ErrorUtil::efatal, "This function is only valid for LocalRegions");
+        }
+
         StdRegions::Orientation StdExpansion::v_GetForient(int face)
 
         {

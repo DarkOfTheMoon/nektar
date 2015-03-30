@@ -393,6 +393,12 @@ namespace Nektar
                                            vVarCoeffMap);
 
             vExp->DropLocStaticCondMatrix(matkey);
+            
+            // remove lcoal matrix if variable coefficients involved. 
+            if(m_linSysKey.GetNVarCoeffs() > 0)
+            {
+                vExp->DropLocMatrix(matkey);
+            }
         }
 
         void GlobalLinSys::v_InitObject()
