@@ -122,6 +122,28 @@ namespace Vmath
         {
             *y = pow( *x, f );
             x += incx;
+            y += incy; 
+        }
+    }
+
+    template<class T> void Vsin(int n, const T *x, const int incx,
+                T *y, const int incy)
+    {
+        while (n--)
+        {
+            *y = sin( *x );
+            x += incx;
+            y += incy;
+        }
+    }
+
+    template<class T> void Vcos(int n, const T *x, const int incx,
+                T *y, const int incy)
+    {
+        while (n--)
+        {
+            *y = cos( *x );
+            x += incx;
             y += incy;
         }
     }

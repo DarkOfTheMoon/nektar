@@ -176,6 +176,22 @@
             Vexp(n, &x[0], incx, &y[0], incy);
         }
 
+        template<class T> void Vcos(int n, const Array<OneD,const T> &x, const int incx, Array<OneD,T> &y, const int incy)
+        {
+            ASSERTL1(n*incx <= x.num_elements()+x.GetOffset(),"Array out of bounds");
+            ASSERTL1(n*incy <= y.num_elements()+y.GetOffset(),"Array out of bounds");
+
+            Vcos(n, &x[0], incx, &y[0], incy);
+        }
+
+        template<class T> void Vsin(int n, const Array<OneD,const T> &x, const int incx, Array<OneD,T> &y, const int incy)
+        {
+            ASSERTL1(n*incx <= x.num_elements()+x.GetOffset(),"Array out of bounds");
+            ASSERTL1(n*incy <= y.num_elements()+y.GetOffset(),"Array out of bounds");
+
+            Vsin(n, &x[0], incx, &y[0], incy);
+        }
+
         template<class T> void Vpow(int n, const Array<OneD,const T> &x, const int incx, const T f, Array<OneD,T> &y, const int incy)
         {
             ASSERTL1(n*incx <= x.num_elements()+x.GetOffset(),"Array out of bounds");
