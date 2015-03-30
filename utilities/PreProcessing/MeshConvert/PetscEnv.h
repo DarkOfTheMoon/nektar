@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-//  File: OutputNekpp.h
+//  File: PetscEnv.h
 //
 //  For more information, please see: http://www.nektar.info/
 //
@@ -29,45 +29,44 @@
 //  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 //  DEALINGS IN THE SOFTWARE.
 //
-//  Description: GMSH converter.
+//  Description: Wrap up the PETSc environment
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef UTILITIES_PREPROCESSING_MESHCONVERT_OUTPUTNEKPP
-#define UTILITIES_PREPROCESSING_MESHCONVERT_OUTPUTNEKPP
+#ifndef UTILITIES_PREPROCESSING_MESHCONVERT_PETSCENV
+#define UTILITIES_PREPROCESSING_MESHCONVERT_PETSCENV
 
-#include <tinyxml.h>
-#include "Module.h"
-#include "OutputXmlBase.h"
 namespace Nektar
 {
     namespace Utilities
     {
-        /// Converter for Gmsh files.
-        class OutputNekpp : public OutputXmlBase
+        class PetscEnv
         {
-        public:
-            /// Creates an instance of this class
-            static boost::shared_ptr<Module> create(MeshSharedPtr m) {
-                return MemoryManager<OutputNekpp>::AllocateSharedPtr(m);
-            }
-            static ModuleKey className;
-            
-            OutputNekpp(MeshSharedPtr m);
-            virtual ~OutputNekpp();
-            
-            /// Write mesh to output file.
-            virtual void Process();
+            public:
+                /**
+                 * Initialize the  environment, if it has not already been
+                 * If it has, this does nothing.
+                 *
+                 * @param argc The number of arguments provided
+                 * @param argv The array of argument strings
+                 */
+                PetscEnv(int* argc, char*** argv);
+                /**
+                 * If this instance created the env, shut it down.
+                 * Otherwise, does nothing.
+                 */
+                ~PetscEnv();
 
-        private:
-            /// Writes the <NODES> section of the XML file.
-            void WriteXmlNodes(TiXmlElement * pRoot);
-            /// Writes the <EDGES> section of the XML file.
-            void WriteXmlEdges(TiXmlElement * pRoot);
-            /// Writes the <FACES> section of the XML file if needed.
-            void WriteXmlFaces(TiXmlElement * pRoot);
-            /// Writes the <ELEMENTS> section of the XML file.
-            void WriteXmlElements(TiXmlElement * pRoot);
+                static bool Initialized();
+                static bool Finalized();
+
+            private:
+                // Make copy c'tor and copy assign private to ensure uncopyable.
+                PetscEnv(const PetscEnv&);
+                const PetscEnv& operator=(const PetscEnv&);
+
+                /// Whether this instance called Init
+                bool doesOwnPetsc;
         };
     }
 }

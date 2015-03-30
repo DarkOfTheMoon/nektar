@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-//  File: OutputNekpp.h
+//  File: OutputDmplex.h
 //
 //  For more information, please see: http://www.nektar.info/
 //
@@ -29,45 +29,45 @@
 //  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 //  DEALINGS IN THE SOFTWARE.
 //
-//  Description: GMSH converter.
+//  Description: Mesh converter module base classes.
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef UTILITIES_PREPROCESSING_MESHCONVERT_OUTPUTNEKPP
-#define UTILITIES_PREPROCESSING_MESHCONVERT_OUTPUTNEKPP
+#ifndef UTILITIES_PREPROCESSING_MESHCONVERT_OUTPUTDMPLEX
+#define UTILITIES_PREPROCESSING_MESHCONVERT_OUTPUTDMPLEX
 
-#include <tinyxml.h>
-#include "Module.h"
-#include "OutputXmlBase.h"
+#include "OutputNekpp.h"
+
 namespace Nektar
 {
     namespace Utilities
     {
         /// Converter for Gmsh files.
-        class OutputNekpp : public OutputXmlBase
+        class OutputDmplex : public OutputXmlBase
         {
-        public:
-            /// Creates an instance of this class
-            static boost::shared_ptr<Module> create(MeshSharedPtr m) {
-                return MemoryManager<OutputNekpp>::AllocateSharedPtr(m);
-            }
-            static ModuleKey className;
-            
-            OutputNekpp(MeshSharedPtr m);
-            virtual ~OutputNekpp();
-            
-            /// Write mesh to output file.
-            virtual void Process();
+            public:
+                /// Creates an instance of this class
+                static boost::shared_ptr<Module> create(MeshSharedPtr m)
+                {
+                    return MemoryManager<OutputDmplex>::AllocateSharedPtr(m);
+                }
+                static ModuleKey className;
 
-        private:
-            /// Writes the <NODES> section of the XML file.
-            void WriteXmlNodes(TiXmlElement * pRoot);
-            /// Writes the <EDGES> section of the XML file.
-            void WriteXmlEdges(TiXmlElement * pRoot);
-            /// Writes the <FACES> section of the XML file if needed.
-            void WriteXmlFaces(TiXmlElement * pRoot);
-            /// Writes the <ELEMENTS> section of the XML file.
-            void WriteXmlElements(TiXmlElement * pRoot);
+                OutputDmplex(MeshSharedPtr m);
+                virtual ~OutputDmplex();
+
+                /// Write mesh to output file.
+                virtual void Process();
+            protected:
+                /// Writes the <NODES> section of the XML file.
+                void WriteXmlNodes(TiXmlElement * pRoot);
+                /// Writes the <EDGES> section of the XML file.
+                void WriteXmlEdges(TiXmlElement * pRoot);
+                /// Writes the <FACES> section of the XML file if needed.
+                void WriteXmlFaces(TiXmlElement * pRoot);
+                /// Writes the <ELEMENTS> section of the XML file.
+                void WriteXmlElements(TiXmlElement * pRoot);
+                /// Writes the <CURVES> section of the XML file if needed.
         };
     }
 }

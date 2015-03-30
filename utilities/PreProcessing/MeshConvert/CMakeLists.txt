@@ -10,6 +10,7 @@ SET(MeshConvertHeaders
     Module.h
     OutputGmsh.h
     OutputNekpp.h
+    OutputXmlBase.h
     ProcessBL.h
     ProcessCyl.h
     ProcessDetectSurf.h
@@ -34,6 +35,7 @@ SET(MeshConvertSources
     Module.cpp
     OutputGmsh.cpp
     OutputNekpp.cpp
+    OutputXmlBase.cpp
     ProcessBL.cpp
     ProcessCyl.cpp
     ProcessDetectSurf.cpp
@@ -44,6 +46,12 @@ SET(MeshConvertSources
     ProcessSpherigon.cpp
     ProcessTetSplit.cpp
 )
+
+IF (NEKTAR_USE_PETSC)
+    # Add input module when ready
+    SET(MeshConvertHeaders ${MeshConvertHeaders} OutputDmplex.h PetscEnv.h)
+    SET(MeshConvertSources ${MeshConvertSources} OutputDmplex.cpp PetscEnv.cpp)
+ENDIF (NEKTAR_USE_PETSC)
 
 IF (NEKTAR_USE_VTK)
     SET(MeshConvertHeaders ${MeshConvertHeaders} InputVtk.h OutputVtk.h)
@@ -59,6 +67,10 @@ IF (NEKTAR_USE_VTK)
         TARGET_LINK_LIBRARIES(MeshConvert vtkCommonCore vtkIOLegacy)
     ENDIF ()
 ENDIF (NEKTAR_USE_VTK)
+
+IF (NEKTAR_USE_PETSC)
+  TARGET_LINK_LIBRARIES(MeshConvert petsc)
+ENDIF (NEKTAR_USE_PETSC)
 
 # Gmsh tests
 ADD_NEKTAR_TEST        (Gmsh/CubeAllElements)
