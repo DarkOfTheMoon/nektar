@@ -544,6 +544,8 @@ namespace Nektar
         // RHS computation using the new advection base class
 
         Vmath::Zero(m_fields[0]->GetNcoeffs(),m_fields[0]->UpdateCoeffs(),1);
+
+        m_fields[0]->ClearGlobalLinSysManager();
         m_fields[0]->HelmSolve(m_fields[0]->GetPhys(),
                                    m_fields[0]->UpdateCoeffs(),
                                    NullFlagList,
