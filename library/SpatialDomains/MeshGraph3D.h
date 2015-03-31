@@ -37,6 +37,7 @@
 #define NEKTAR_SPATIALDOMAINS_MESHGRAPH3D_H
 
 #include <SpatialDomains/MeshGraph.h>
+#include <SpatialDomains/MeshGraph2D.h>
 #include <SpatialDomains/TriGeom.h>
 #include <SpatialDomains/SpatialDomainsDeclspec.h>
 #include <boost/unordered_map.hpp>
@@ -58,7 +59,15 @@ namespace Nektar
 
             SPATIAL_DOMAINS_EXPORT MeshGraph3D();
             SPATIAL_DOMAINS_EXPORT MeshGraph3D(const LibUtilities::SessionReaderSharedPtr &pSession, const DomainRangeShPtr &rng = NullDomainRangeShPtr);
+
+            /// Make a meshgraph3D by extruding the mesh graph 2D by
+            /// one layer            
+            SPATIAL_DOMAINS_EXPORT MeshGraph3D(const MeshGraph2DSharedPtr TwoD_Mesh2D, 
+                                               const NekDouble height);
+
             SPATIAL_DOMAINS_EXPORT virtual ~MeshGraph3D();
+
+
 
             SPATIAL_DOMAINS_EXPORT void ReadGeometry(const std::string &infilename);
             SPATIAL_DOMAINS_EXPORT void ReadGeometry(TiXmlDocument &doc);

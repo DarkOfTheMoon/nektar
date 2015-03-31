@@ -55,9 +55,11 @@ namespace Nektar
             ReadExpansions(pSession->GetDocument());
         }
 
+
         MeshGraph3D::~MeshGraph3D()
         {
         }
+
 
         void MeshGraph3D::ReadGeometry(const std::string &infilename)
         {
@@ -1088,5 +1090,40 @@ namespace Nektar
                 }
             }
         }
+
+        
+        MeshGraph3D::MeshGraph3D(const MeshGraph2DSharedPtr mesh2D, 
+                                 const NekDouble height)
+        {
+            m_spaceDimension = 3; 
+            int max_vertID = -1;
+
+            
+            // extend the number of vertices
+            const PointGeomMap vertSet2D = mesh2D->GetAllVertMap();
+
+            // loop over vertice & make new vert and add to set
+            PointGeomMap::const_iterator it; 
+            
+            // find max index
+            for(it = vertSet2D.begin(); it != vertSet2D.end(); ++it)
+            {
+                max_vertID = max(max_vertID, it->first);
+            }
+            max_vertID++;
+
+            
+            for(it = vertSet2D.begin(); it != vertSet2D.end(); ++it)
+            {
+                int newId = it->first + max_vertID; 
+                PointGeomSharedPtr pt = it->second;
+                PointGeomSharedPtr vert(MemoryManager<PointGeom>::AllocateSharedPtr(m_spaceDimension, newId, pt->x(), pt->y(), -height));
+                
+                vert->SetGlobalID(newId);
+                m_vertSet[newId] = vert;
+            }
+        }
+
+
     }; //end of namespace
 }; //end of namespace
