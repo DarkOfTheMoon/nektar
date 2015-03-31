@@ -34,6 +34,7 @@
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
+
 #include <SpatialDomains/Geometry.h>
 
 namespace Nektar
@@ -299,6 +300,16 @@ namespace Nektar
             return m_coordim;
         }
 
+        void Geometry::v_Reset(CurveMap &curvedEdges,
+                               CurveMap &curvedFaces)
+        {
+            // Reset state
+            m_state            = eNotFilled;
+            m_geomFactorsState = eNotFilled;
+
+            // Junk geometric factors
+            m_geomFactors = GeomFactorsSharedPtr();
+        }
     }; //end of namespace
 }; //end of namespace
 

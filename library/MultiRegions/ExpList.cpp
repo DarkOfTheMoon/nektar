@@ -1363,6 +1363,31 @@ namespace Nektar
         }
 
         /**
+         * @brief Reset geometry information and reset matrix managers.
+         */
+        void ExpList::v_Reset()
+        {
+            // Reset matrix managers.
+            LibUtilities::NekManager<LocalRegions::MatrixKey,
+                DNekScalMat, LocalRegions::MatrixKey::opLess>::ClearManager();
+            LibUtilities::NekManager<LocalRegions::MatrixKey,
+                DNekScalBlkMat, LocalRegions::MatrixKey::opLess>::ClearManager();
+
+            // Loop over all elements and reset geometry information.
+            for (int i = 0; i < m_exp->size(); ++i)
+            {
+                (*m_exp)[i]->GetGeom()->Reset(m_graph->GetCurvedEdges(),
+                                              m_graph->GetCurvedFaces());
+            }
+
+            // Loop over all elements and rebuild geometric factors.
+            for (int i = 0; i < m_exp->size(); ++i)
+            {
+                (*m_exp)[i]->Reset();
+            }
+        }
+
+        /**
          * Write Tecplot Files Header
          * @param   outfile Output file name.
          * @param   var                 variables names
@@ -1370,6 +1395,11 @@ namespace Nektar
         void ExpList::v_WriteTecplotHeader(std::ostream &outfile,
                                            std::string    var)
         {
+            if (GetNumElmts() == 0)
+            {
+                return;
+            }
+
             int coordim  = GetExp(0)->GetCoordim();
             char vars[3] = { 'x', 'y', 'z' };
 
@@ -2449,6 +2479,11 @@ namespace Nektar
                                   Array<OneD, NekDouble> &coord_1,
                                   Array<OneD, NekDouble> &coord_2)
         {
+            if (GetNumElmts() == 0)
+            {
+                return;
+            }
+
             int    i;
             Array<OneD, NekDouble> e_coord_0;
             Array<OneD, NekDouble> e_coord_1;

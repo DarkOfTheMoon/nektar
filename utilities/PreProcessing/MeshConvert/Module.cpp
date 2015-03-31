@@ -190,7 +190,7 @@ namespace Nektar
                             
                             // Update edge to element map.
                             (*(testIns.first))->m_elLink.push_back(
-                                             pair<ElementSharedPtr,int>(elmt[i],j));
+                                pair<ElementSharedPtr,int>(elmt[i],j));
                         }
                     }
                 }
@@ -221,6 +221,16 @@ namespace Nektar
                          "Too many elements in boundary map!");
                 pair<ElementSharedPtr, int> eMap = (*it)->m_elLink.at(0);
                 eMap.first->SetBoundaryLink(eMap.second, i);
+
+                // Copy curvature (why didn't I do this before...)
+                if ((*it)->m_edgeNodes.size() > 0)
+                {
+                    ElementSharedPtr edge = m_mesh->m_element[1][i];
+                    if (edge->GetVertex(0) == (*it)->m_n1)
+                    {
+                        edge->SetVolumeNodes((*it)->m_edgeNodes);
+                    }
+                }
             }
         }
 
@@ -569,6 +579,27 @@ namespace Nektar
                     ElmtConfig conf(LibUtilities::ePrism, 1, false, false, true);
                     ElementSharedPtr el = GetElementFactory().CreateInstance(
                         LibUtilities::ePrism, conf, nodes, tags);
+
+                    // Now transfer high-order information back into
+                    // place. TODO: Face curvature.
+                    for (j = 0; j < 9; ++j)
+                    {
+                        EdgeSharedPtr e1 = line[i]->GetEdge(j);
+                        for (k = 0; k < 9; ++k)
+                        {
+                            EdgeSharedPtr e2 = el->GetEdge(k);
+                            if (e1->m_n1 == e2->m_n1 && e1->m_n2 == e2->m_n2)
+                            {
+                                e2->m_edgeNodes = e1->m_edgeNodes;
+                            }
+                            else if (e1->m_n1 == e2->m_n1 && e1->m_n2 == e2->m_n2)
+                            {
+                                e2->m_edgeNodes = e1->m_edgeNodes;
+                                std::reverse(e2->m_edgeNodes.begin(),
+                                             e2->m_edgeNodes.end());
+                            }
+                        }
+                    }
 
                     // Replace old prism.
                     m_mesh->m_element[3][line[i]->GetId()] = el;
