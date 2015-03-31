@@ -1086,7 +1086,7 @@ namespace Nektar
         }
 
         
-        MeshGraph3D::MeshGraph3D(const MeshGraph2DSharedPtr mesh2D, 
+        MeshGraph3D::MeshGraph3D(const MeshGraphSharedPtr mesh2D, 
                                  const NekDouble height)
         {
             m_spaceDimension = 3; 
@@ -1111,10 +1111,16 @@ namespace Nektar
             {
                 int newId = it->first + max_vertID; 
                 PointGeomSharedPtr pt = it->second;
-                PointGeomSharedPtr vert(MemoryManager<PointGeom>::AllocateSharedPtr(m_spaceDimension, newId, pt->x(), pt->y(), -height));
+
+                // put in original vertex 
+                PointGeomSharedPtr vertorig(MemoryManager<PointGeom>::AllocateSharedPtr(m_spaceDimension, it->first, pt->x(), pt->y(), 0.0));
+                vertorig->SetGlobalID(it->first);
+                m_vertSet[it->first] = vertorig;
                 
-                vert->SetGlobalID(newId);
-                m_vertSet[newId] = vert;
+
+                PointGeomSharedPtr vertnew(MemoryManager<PointGeom>::AllocateSharedPtr(m_spaceDimension, newId, pt->x(), pt->y(), -height));
+                vertnew->SetGlobalID(newId);
+                m_vertSet[newId] = vertnew;
             }
         }
 

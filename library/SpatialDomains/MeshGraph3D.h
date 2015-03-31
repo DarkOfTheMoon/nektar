@@ -62,7 +62,7 @@ namespace Nektar
 
             /// Make a meshgraph3D by extruding the mesh graph 2D by
             /// one layer            
-            SPATIAL_DOMAINS_EXPORT MeshGraph3D(const MeshGraph2DSharedPtr TwoD_Mesh2D, 
+            SPATIAL_DOMAINS_EXPORT MeshGraph3D(const MeshGraphSharedPtr TwoD_Mesh2D, 
                                                const NekDouble height);
 
             SPATIAL_DOMAINS_EXPORT virtual ~MeshGraph3D();
