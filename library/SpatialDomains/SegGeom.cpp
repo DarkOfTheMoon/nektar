@@ -558,6 +558,10 @@ namespace Nektar
             return kNedges;
         }
 
+        CurveSharedPtr SegGeom::GetCurve(void)
+        {
+            return m_curve;
+        }
 
     }; //end of namespace
 }; //end of namespace

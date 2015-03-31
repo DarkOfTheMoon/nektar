@@ -1092,36 +1092,93 @@ namespace Nektar
             m_spaceDimension = 3; 
             int max_vertID = -1;
 
-            
             // extend the number of vertices
             const PointGeomMap vertSet2D = mesh2D->GetAllVertMap();
 
             // loop over vertice & make new vert and add to set
-            PointGeomMap::const_iterator it; 
+            PointGeomMap::const_iterator vertit; 
             
             // find max index
-            for(it = vertSet2D.begin(); it != vertSet2D.end(); ++it)
+            for(vertit = vertSet2D.begin(); vertit != vertSet2D.end(); ++vertit)
             {
-                max_vertID = max(max_vertID, it->first);
+                max_vertID = max(max_vertID, vertit->first);
             }
             max_vertID++;
 
-            
-            for(it = vertSet2D.begin(); it != vertSet2D.end(); ++it)
+            for(vertit = vertSet2D.begin(); vertit != vertSet2D.end(); ++vertit)
             {
-                int newId = it->first + max_vertID; 
-                PointGeomSharedPtr pt = it->second;
+                int newId = vertit->first + max_vertID; 
+                PointGeomSharedPtr pt = vertit->second;
 
                 // put in original vertex 
-                PointGeomSharedPtr vertorig(MemoryManager<PointGeom>::AllocateSharedPtr(m_spaceDimension, it->first, pt->x(), pt->y(), 0.0));
-                vertorig->SetGlobalID(it->first);
-                m_vertSet[it->first] = vertorig;
+                PointGeomSharedPtr vertorig(MemoryManager<PointGeom>::AllocateSharedPtr(m_spaceDimension, vertit->first, pt->x(), pt->y(), 0.0));
+                vertorig->SetGlobalID(vertit->first);
+                m_vertSet[vertit->first] = vertorig;
                 
 
                 PointGeomSharedPtr vertnew(MemoryManager<PointGeom>::AllocateSharedPtr(m_spaceDimension, newId, pt->x(), pt->y(), -height));
                 vertnew->SetGlobalID(newId);
                 m_vertSet[newId] = vertnew;
             }
+
+            // extend the number of vertices
+            const SegGeomMap Seg2D = mesh2D->GetAllSegGeoms();
+            SegGeomMap::const_iterator segit; 
+            int max_segID = -1;
+            // find max index
+            for(segit = Seg2D.begin(); segit != Seg2D.end(); ++segit)
+            {
+                max_segID = max(max_segID, segit->first);
+            }
+            max_segID++;
+
+            for(segit = Seg2D.begin(); segit != Seg2D.end(); ++segit)
+            {
+                SegGeomSharedPtr seg = segit->second;
+                
+                int idx0 = seg->GetVid(0);
+                int idx1 = seg->GetVid(1);
+
+                // Get original edges
+                PointGeomSharedPtr vertices[2];
+                vertices[0] = m_vertSet[idx0];
+                vertices[1] = m_vertSet[idx1];
+
+                SegGeomSharedPtr edge = MemoryManager<SegGeom>::AllocateSharedPtr(segit->first, m_spaceDimension, vertices, seg->GetCurve());
+
+                m_segGeoms[segit->first] = edge;
+                          
+                // Define lower edges
+                int newId = segit->first + max_segID; 
+
+                vertices[0] = m_vertSet[idx0 + max_vertID];
+                vertices[1] = m_vertSet[idx1 + max_vertID];
+                
+                
+                SegGeomSharedPtr newedge = MemoryManager<SegGeom>::AllocateSharedPtr(newId, m_spaceDimension, vertices, seg->GetCurve());
+
+                m_segGeoms[newId] = newedge;
+            }
+
+            // define new edges 
+            for(vertit = vertSet2D.begin(); vertit != vertSet2D.end(); ++vertit)
+            {
+                int newId = vertit->first + 2*max_segID; 
+
+                int idx0 = vertit->first; 
+                int idx1 = idx0 + max_vertID;
+
+                // Get original edges
+                PointGeomSharedPtr vertices[2];
+                vertices[0] = m_vertSet[idx0];
+                vertices[1] = m_vertSet[idx1];
+                
+                
+                SegGeomSharedPtr newedge = MemoryManager<SegGeom>::AllocateSharedPtr(newId, m_spaceDimension, vertices);
+
+                m_segGeoms[newId] = newedge;
+            }
+
         }
 
 

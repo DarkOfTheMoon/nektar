@@ -98,6 +98,8 @@ namespace Nektar
                 SPATIAL_DOMAINS_EXPORT static const int           kNverts = 2;
                 SPATIAL_DOMAINS_EXPORT static const int           kNedges = 1;
 
+                SPATIAL_DOMAINS_EXPORT CurveSharedPtr GetCurve(void);
+                
             protected:
                 int                                               m_eid;
                 std::list<CompToElmt>                             m_elmtMap;
@@ -168,6 +170,7 @@ namespace Nektar
                         Array<OneD, NekDouble>             &locCoord,
                         NekDouble                           tol,
                         NekDouble                          &resid);
+
             private:
                 /// Boolean indicating whether object owns the data
                 bool                            m_ownData;
