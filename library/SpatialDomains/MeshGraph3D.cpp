@@ -1084,13 +1084,13 @@ namespace Nektar
                 }
             }
         }
-
+        
         
         MeshGraph3D::MeshGraph3D(const MeshGraphSharedPtr mesh2D, 
                                  const NekDouble height)
         {
-            m_spaceDimension = 3; 
-            int max_vertID = -1;
+            m_spaceDimension =  3; 
+            int max_vertID   = -1;
 
             // extend the number of vertices
             const PointGeomMap vertSet2D = mesh2D->GetAllVertMap();
@@ -1178,9 +1178,179 @@ namespace Nektar
 
                 m_segGeoms[newId] = newedge;
             }
+            
+            const TriGeomMap trigeoms   = mesh2D->GetAllTriGeoms();
+            const QuadGeomMap quadgeoms = mesh2D->GetAllQuadGeoms();
+            TriGeomMap::const_iterator triit;
+            QuadGeomMap::const_iterator quadit;
+            int edge0,edge1,edge2,edge3;
+            
+            int max_nel2D = -1; 
+            for(triit = trigeoms.begin(); triit != trigeoms.end(); ++triit)
+            {
+                max_nel2D = max(max_nel2D,triit->first);
+            }
+
+            for(quadit = quadgeoms.begin(); quadit != quadgeoms.end(); 
+                ++quadit)
+            {
+                max_nel2D = max(max_nel2D,quadit->first);
+            }
+            max_nel2D++;
+            
+            for(triit = trigeoms.begin(); triit != trigeoms.end(); ++triit)
+            {
+                int indx = triit->first;
+                
+                edge0 = triit->second->GetEid(0);
+                edge1 = triit->second->GetEid(1);
+                edge2 = triit->second->GetEid(2);
+                
+                /// Create a TriGeom to hold the new definition.
+                SegGeomSharedPtr edges[TriGeom::kNedges] =
+                {
+                    GetSegGeom(edge0),
+                    GetSegGeom(edge1),
+                    GetSegGeom(edge2)
+                };
+                
+                StdRegions::Orientation edgeorient[TriGeom::kNedges] =
+                {
+                    SegGeom::GetEdgeOrientation(*edges[0], *edges[1]),
+                    SegGeom::GetEdgeOrientation(*edges[1], *edges[2]),
+                    SegGeom::GetEdgeOrientation(*edges[2], *edges[0])
+                };
+
+
+                TriGeomSharedPtr trigeom;
+                
+                trigeom = MemoryManager<TriGeom>::AllocateSharedPtr(indx, edges, edgeorient);
+
+                trigeom->SetGlobalID(indx);
+                m_triGeoms[indx] = trigeom;
+
+                // add bottom face
+                indx += max_nel2D;
+                
+                edge0 += max_segID;
+                edge1 += max_segID;
+                edge2 += max_segID;
+                
+                /// Create a TriGeom to hold the new definition.
+                SegGeomSharedPtr newedges[TriGeom::kNedges] =
+                {
+                    GetSegGeom(edge0),
+                    GetSegGeom(edge1),
+                    GetSegGeom(edge2)
+                };
+                
+                TriGeomSharedPtr newtrigeom;
+                
+                newtrigeom = MemoryManager<TriGeom>::AllocateSharedPtr(indx, newedges, edgeorient);
+
+                newtrigeom->SetGlobalID(indx);
+                m_triGeoms[indx] = newtrigeom;
+            }
+
+            for(quadit = quadgeoms.begin(); quadit != quadgeoms.end(); ++quadit)
+            {
+                // sort out edge in original expansion
+                int indx = quadit->first;
+                
+                edge0 = quadit->second->GetEid(0);
+                edge1 = quadit->second->GetEid(1);
+                edge2 = quadit->second->GetEid(2);
+                edge3 = quadit->second->GetEid(3);
+                
+                /// Create a QuadGeom to hold the new definition.
+                SegGeomSharedPtr edges[QuadGeom::kNedges] =
+                {
+                    GetSegGeom(edge0),
+                    GetSegGeom(edge1),
+                    GetSegGeom(edge2),
+                    GetSegGeom(edge3)
+                };
+                
+                StdRegions::Orientation edgeorient[QuadGeom::kNedges] =
+                {
+                    SegGeom::GetEdgeOrientation(*edges[0], *edges[1]),
+                    SegGeom::GetEdgeOrientation(*edges[1], *edges[2]),
+                    SegGeom::GetEdgeOrientation(*edges[2], *edges[3]),
+                    SegGeom::GetEdgeOrientation(*edges[3], *edges[0])
+                };
+
+
+                QuadGeomSharedPtr quadgeom;
+                
+                quadgeom = MemoryManager<QuadGeom>::AllocateSharedPtr(indx, edges, edgeorient);
+
+                quadgeom->SetGlobalID(indx);
+                m_quadGeoms[indx] = quadgeom;
+
+                // add bottom face
+                indx += max_nel2D;
+                
+                edge0 += max_segID;
+                edge1 += max_segID;
+                edge2 += max_segID;
+                edge3 += max_segID;
+                
+                /// Create a QuadGeom to hold the new definition.
+                SegGeomSharedPtr newedges[QuadGeom::kNedges] =
+                {
+                    GetSegGeom(edge0),
+                    GetSegGeom(edge1),
+                    GetSegGeom(edge2),
+                    GetSegGeom(edge3)
+                };
+                
+
+                QuadGeomSharedPtr newquadgeom;
+                
+                newquadgeom = MemoryManager<QuadGeom>::AllocateSharedPtr(indx, newedges, edgeorient);
+
+                newquadgeom->SetGlobalID(indx);
+                m_quadGeoms[indx] = newquadgeom;
+            }
+
+            // add new vertical faces which have to be quadrilaterals. 
+            for(segit = Seg2D.begin(); segit != Seg2D.end(); ++segit)
+            {
+                int indx = 2*max_nel2D + segit->first;
+                
+                edge0 = segit->second->GetEid();
+                edge1 = 2*max_segID + segit->second->GetVid(0);
+                edge2 = edge0 + max_segID; 
+                edge3 = 2*max_segID + segit->second->GetVid(1);
+                
+                /// Create a QuadGeom to hold the new definition.
+                SegGeomSharedPtr edges[QuadGeom::kNedges] =
+                {
+                    GetSegGeom(edge0),
+                    GetSegGeom(edge1),
+                    GetSegGeom(edge2),
+                    GetSegGeom(edge3)
+                };
+                
+                StdRegions::Orientation edgeorient[QuadGeom::kNedges] =
+                {
+                    SegGeom::GetEdgeOrientation(*edges[0], *edges[1]),
+                    SegGeom::GetEdgeOrientation(*edges[1], *edges[2]),
+                    SegGeom::GetEdgeOrientation(*edges[2], *edges[3]),
+                    SegGeom::GetEdgeOrientation(*edges[3], *edges[0])
+                };
+
+
+                QuadGeomSharedPtr quadgeom;
+                
+                quadgeom = MemoryManager<QuadGeom>::AllocateSharedPtr(indx, edges, edgeorient);
+
+                quadgeom->SetGlobalID(indx);
+                m_quadGeoms[indx] = quadgeom;
+            }
+
 
         }
-
-
+            
     }; //end of namespace
 }; //end of namespace
