@@ -1085,7 +1085,37 @@ namespace Nektar
             }
         }
         
-        
+        /** 
+         * @brief Given a 2D geometry in MeshGraph construct a layer
+         * of 3D elements of Prisms and/or Hexs. 
+         *
+         * This method uses the numbering of the existing manner:
+         *
+         *  Vertices are duplicated and offset by a height \a height
+         *  and given an offset of the maximum 2D vertex ID plus one
+         *
+         * Edges are defined starting with the existing edges and
+         * their global ids followed by a duplicated set of edges
+         * (offset by the value height) and with global ids that are
+         * offset by teh maximum 2D edge ID plus one. Finally the
+         * vertical new edges are defined using the global 2D vertex
+         * ID offset by twice the global edge ID plus one.
+         *
+         * Faces are defined by first using the 2D elements and their
+         * global 2D IDs. The lower faces are then defined in the
+         * order by offseting their global IDs by the maximum number
+         * of elements plus one. The Vetical quadrilaterla faces are
+         * then defined using the global 2D edge ids plus twice the
+         * number of global 2D ID (plus one).
+         *
+         * Finally elements can be defined by keeping the same global
+         * ids as the original 2D elements.
+         *
+         * @param mesh2d   MeshGraph of the 2D mesh
+         * @param height   The offset of the prism layer by -height
+         */
+         
+
         MeshGraph3D::MeshGraph3D(const MeshGraphSharedPtr mesh2D, 
                                  const NekDouble height)
         {
@@ -1221,7 +1251,6 @@ namespace Nektar
                     SegGeom::GetEdgeOrientation(*edges[2], *edges[0])
                 };
 
-
                 TriGeomSharedPtr trigeom;
                 
                 trigeom = MemoryManager<TriGeom>::AllocateSharedPtr(indx, edges, edgeorient);
@@ -1350,6 +1379,85 @@ namespace Nektar
             }
 
 
+            // write out all element based on faces we have now generated
+            for(triit = trigeoms.begin(); triit != trigeoms.end(); ++triit)
+            {
+                int indx = triit->first;
+
+                /// Create arrays for the tri and quad faces.
+                const int kNfaces = PrismGeom::kNfaces;
+                Geometry2DSharedPtr faces[kNfaces];
+                
+                // construct faces from current list 
+                // and numbering. 
+                faces[0] = m_quadGeoms[2*max_nel2D + triit->second->GetEid(0)];
+                faces[1] = m_triGeoms [indx];
+                faces[2] = m_quadGeoms[2*max_nel2D + triit->second->GetEid(1)];
+                faces[3] = m_triGeoms [indx + max_nel2D];
+                faces[4] = m_quadGeoms[2*max_nel2D + triit->second->GetEid(2)];
+                
+                PrismGeomSharedPtr prismgeom(MemoryManager<PrismGeom>::AllocateSharedPtr(faces));
+                prismgeom->SetGlobalID(indx);
+                
+                m_prismGeoms[indx] = prismgeom;
+                PopulateFaceToElMap(prismgeom, kNfaces);
+            }
+
+            for(quadit = quadgeoms.begin(); quadit != quadgeoms.end(); ++quadit)
+            {
+                int indx = quadit->first;
+
+                /// Create arrays for quad faces.
+                const int kNfaces = HexGeom::kNfaces;
+                QuadGeomSharedPtr faces[kNfaces];
+
+                // construct faces from current list 
+                // and numbering. 
+                faces[0] = m_quadGeoms[2*max_nel2D + quadit->second->GetEid(0)];
+                faces[1] = m_quadGeoms[indx];
+                faces[2] = m_quadGeoms[2*max_nel2D + quadit->second->GetEid(1)];
+                faces[3] = m_quadGeoms[indx + max_nel2D];
+                faces[4] = m_quadGeoms[2*max_nel2D + quadit->second->GetEid(3)];
+                faces[5] = m_quadGeoms[2*max_nel2D + quadit->second->GetEid(2)];
+                
+                HexGeomSharedPtr hexgeom(MemoryManager<HexGeom>::AllocateSharedPtr(faces));
+                hexgeom->SetGlobalID(indx);
+                
+                m_hexGeoms[indx] = hexgeom;
+                PopulateFaceToElMap(hexgeom, kNfaces);
+            }
+
+            // Set up composites and domain
+            CompositeMap fullDomain;
+            int cmp_idx = 0; 
+            
+            if(trigeoms.size())
+            {
+                Composite PrismComp(MemoryManager<GeometryVector>::AllocateSharedPtr());
+                PrismGeomMap::iterator pit; 
+                for(pit = m_prismGeoms.begin(); pit != m_prismGeoms.end(); ++pit)
+                {
+                    PrismComp->push_back(pit->second); 
+                }
+                m_meshComposites[cmp_idx] = PrismComp;
+                fullDomain[cmp_idx++] = PrismComp;
+            }
+
+            if(quadgeoms.size())
+            {
+                Composite HexComp(MemoryManager<GeometryVector>::AllocateSharedPtr());
+                
+                HexGeomMap::iterator hit; 
+                for(hit = m_hexGeoms.begin(); hit != m_hexGeoms.end(); ++hit)
+                {
+                    HexComp->push_back(hit->second); 
+                }
+                m_meshComposites[cmp_idx] = HexComp;
+                fullDomain[cmp_idx++] = HexComp;
+            }
+
+            // Define Domain 
+            m_domain.push_back(fullDomain);
         }
             
     }; //end of namespace

@@ -1692,7 +1692,6 @@ namespace Nektar
             TiXmlElement *domTag = new TiXmlElement("DOMAIN");
             stringstream domString;
 
-#if 0 
             domString << " C[";
             // TODO: Fix this
             CompositeMap::iterator cIt2 = m_domain[0].end();
@@ -1708,7 +1707,6 @@ namespace Nektar
             }
 
             domString << "] ";
-#endif
             domTag->LinkEndChild(new TiXmlText(domString.str()));
             geomTag->LinkEndChild(domTag);
         }
