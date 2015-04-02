@@ -56,6 +56,481 @@ namespace Nektar
         }
 
 
+        
+        /** 
+         * @brief Given a 2D geometry in MeshGraph construct a layer
+         * of 3D elements of Prisms and/or Hexs. 
+         *
+         * This method uses the numbering of the existing manner:
+         *
+         *  Vertices are duplicated and offset by a height \a height
+         *  and given an offset of the maximum 2D vertex ID plus one
+         *
+         * Edges are defined starting with the existing edges and
+         * their global ids followed by a duplicated set of edges
+         * (offset by the value height) and with global ids that are
+         * offset by teh maximum 2D edge ID plus one. Finally the
+         * vertical new edges are defined using the global 2D vertex
+         * ID offset by twice the global edge ID plus one.
+         *
+         * Faces are defined by first using the 2D elements and their
+         * global 2D IDs. The lower faces are then defined in the
+         * order by offseting their global IDs by the maximum number
+         * of elements plus one. The Vetical quadrilaterla faces are
+         * then defined using the global 2D edge ids plus twice the
+         * number of global 2D ID (plus one).
+         *
+         * Finally elements can be defined by keeping the same global
+         * ids as the original 2D elements.
+         *
+         * @param mesh2d   MeshGraph of the 2D mesh
+         * @param height   The offset of the prism layer by -height
+         */
+         
+
+        MeshGraph3D::MeshGraph3D(const LibUtilities::SessionReaderSharedPtr &pSession,
+                                 const MeshGraphSharedPtr mesh2D, 
+                                 const NekDouble height)
+            : MeshGraph(pSession)
+        {
+            m_spaceDimension =  3; 
+            m_meshDimension  =  3; 
+            int max_vertID   = -1;
+
+            // extend the number of vertices
+            const PointGeomMap vertSet2D = mesh2D->GetAllVertMap();
+
+            // loop over vertice & make new vert and add to set
+            PointGeomMap::const_iterator vertit; 
+            
+            // find max index
+            for(vertit = vertSet2D.begin(); vertit != vertSet2D.end(); ++vertit)
+            {
+                max_vertID = max(max_vertID, vertit->first);
+            }
+            max_vertID++;
+            m_session->GetComm()->AllReduce(max_vertID,LibUtilities::ReduceMax);
+
+            for(vertit = vertSet2D.begin(); vertit != vertSet2D.end(); ++vertit)
+            {
+                int newId = vertit->first + max_vertID; 
+                PointGeomSharedPtr pt = vertit->second;
+
+                // put in original vertex 
+                PointGeomSharedPtr vertorig(MemoryManager<PointGeom>::AllocateSharedPtr(m_spaceDimension, vertit->first, pt->x(), pt->y(), 0.0));
+                vertorig->SetGlobalID(vertit->first);
+                m_vertSet[vertit->first] = vertorig;
+                
+
+                PointGeomSharedPtr vertnew(MemoryManager<PointGeom>::AllocateSharedPtr(m_spaceDimension, newId, pt->x(), pt->y(), -height));
+                vertnew->SetGlobalID(newId);
+                m_vertSet[newId] = vertnew;
+            }
+
+            // extend the number of vertices
+            const SegGeomMap Seg2D = mesh2D->GetAllSegGeoms();
+            SegGeomMap::const_iterator segit; 
+            int max_segID = -1;
+            // find max index
+            for(segit = Seg2D.begin(); segit != Seg2D.end(); ++segit)
+            {
+                max_segID = max(max_segID, segit->first);
+            }
+            max_segID++;
+            m_session->GetComm()->AllReduce(max_segID,LibUtilities::ReduceMax);
+
+            for(segit = Seg2D.begin(); segit != Seg2D.end(); ++segit)
+            {
+                SegGeomSharedPtr seg = segit->second;
+                
+                int idx0 = seg->GetVid(0);
+                int idx1 = seg->GetVid(1);
+
+                // Get original edges
+                PointGeomSharedPtr vertices[2];
+                vertices[0] = m_vertSet[idx0];
+                vertices[1] = m_vertSet[idx1];
+
+                SegGeomSharedPtr edge = MemoryManager<SegGeom>::AllocateSharedPtr(segit->first, m_spaceDimension, vertices, seg->GetCurve());
+
+                m_segGeoms[segit->first] = edge;
+                          
+                // Define lower edges
+                int newId = segit->first + max_segID; 
+
+                vertices[0] = m_vertSet[idx0 + max_vertID];
+                vertices[1] = m_vertSet[idx1 + max_vertID];
+                
+                
+                SegGeomSharedPtr newedge = MemoryManager<SegGeom>::AllocateSharedPtr(newId, m_spaceDimension, vertices, seg->GetCurve());
+
+                m_segGeoms[newId] = newedge;
+            }
+
+            // define new edges 
+            for(vertit = vertSet2D.begin(); vertit != vertSet2D.end(); ++vertit)
+            {
+                int newId = vertit->first + 2*max_segID; 
+
+                int idx0 = vertit->first; 
+                int idx1 = idx0 + max_vertID;
+
+                // Get original edges
+                PointGeomSharedPtr vertices[2];
+                vertices[0] = m_vertSet[idx0];
+                vertices[1] = m_vertSet[idx1];
+                
+                
+                SegGeomSharedPtr newedge = MemoryManager<SegGeom>::AllocateSharedPtr(newId, m_spaceDimension, vertices);
+
+                m_segGeoms[newId] = newedge;
+            }
+
+            
+            // Define curved edges;
+            CurveMap curveEdge = mesh2D->GetCurvedEdges();
+            CurveMap::iterator cit;
+            
+            // top edge curves
+            for(cit = curveEdge.begin(); cit != curveEdge.end(); ++cit)
+            {
+                m_curvedEdges[cit->first] = cit->second;
+            }
+            
+            // bottom edge curves
+            for(cit = curveEdge.begin(); cit != curveEdge.end(); ++cit)
+            {
+                int edgeid = cit->first + max_segID;
+                
+                CurveSharedPtr curve(MemoryManager<Curve>::AllocateSharedPtr(edgeid, cit->second->m_ptype));
+                
+                for(int i = 0; i < cit->second->m_points.size(); ++i)
+                {
+                    PointGeomSharedPtr vert(MemoryManager<PointGeom>::
+                                            AllocateSharedPtr(m_meshDimension, 
+                                               edgeid, cit->second->m_points[i]->x(),
+                                               cit->second->m_points[i]->y(),
+                                               cit->second->m_points[i]->z() - height));
+
+                    curve->m_points.push_back(vert);
+                }
+
+                m_curvedEdges[cit->first + max_segID] = curve;
+            }
+            
+            const TriGeomMap trigeoms   = mesh2D->GetAllTriGeoms();
+            const QuadGeomMap quadgeoms = mesh2D->GetAllQuadGeoms();
+            TriGeomMap::const_iterator triit;
+            QuadGeomMap::const_iterator quadit;
+            int edge0,edge1,edge2,edge3;
+            
+            int max_nel2D = -1; 
+            for(triit = trigeoms.begin(); triit != trigeoms.end(); ++triit)
+            {
+                max_nel2D = max(max_nel2D,triit->first);
+            }
+
+            for(quadit = quadgeoms.begin(); quadit != quadgeoms.end(); 
+                ++quadit)
+            {
+                max_nel2D = max(max_nel2D,quadit->first);
+            }
+            max_nel2D++;
+            m_session->GetComm()->AllReduce(max_nel2D,LibUtilities::ReduceMax);
+            
+            for(triit = trigeoms.begin(); triit != trigeoms.end(); ++triit)
+            {
+                int indx = triit->first;
+                
+                edge0 = triit->second->GetEid(0);
+                edge1 = triit->second->GetEid(1);
+                edge2 = triit->second->GetEid(2);
+                
+                /// Create a TriGeom to hold the new definition.
+                SegGeomSharedPtr edges[TriGeom::kNedges] =
+                {
+                    GetSegGeom(edge0),
+                    GetSegGeom(edge1),
+                    GetSegGeom(edge2)
+                };
+                
+                StdRegions::Orientation edgeorient[TriGeom::kNedges] =
+                {
+                    SegGeom::GetEdgeOrientation(*edges[0], *edges[1]),
+                    SegGeom::GetEdgeOrientation(*edges[1], *edges[2]),
+                    SegGeom::GetEdgeOrientation(*edges[2], *edges[0])
+                };
+
+                TriGeomSharedPtr trigeom;
+                
+                trigeom = MemoryManager<TriGeom>::AllocateSharedPtr(indx, edges, edgeorient);
+
+                trigeom->SetGlobalID(indx);
+                m_triGeoms[indx] = trigeom;
+
+                // add bottom face
+                indx += max_nel2D;
+                
+                edge0 += max_segID;
+                edge1 += max_segID;
+                edge2 += max_segID;
+                
+                /// Create a TriGeom to hold the new definition.
+                SegGeomSharedPtr newedges[TriGeom::kNedges] =
+                {
+                    GetSegGeom(edge0),
+                    GetSegGeom(edge1),
+                    GetSegGeom(edge2)
+                };
+                
+                TriGeomSharedPtr newtrigeom;
+                
+                newtrigeom = MemoryManager<TriGeom>::AllocateSharedPtr(indx, newedges, edgeorient);
+
+                newtrigeom->SetGlobalID(indx);
+                m_triGeoms[indx] = newtrigeom;
+            }
+
+            for(quadit = quadgeoms.begin(); quadit != quadgeoms.end(); ++quadit)
+            {
+                // sort out edge in original expansion
+                int indx = quadit->first;
+                
+                edge0 = quadit->second->GetEid(0);
+                edge1 = quadit->second->GetEid(1);
+                edge2 = quadit->second->GetEid(2);
+                edge3 = quadit->second->GetEid(3);
+                
+                /// Create a QuadGeom to hold the new definition.
+                SegGeomSharedPtr edges[QuadGeom::kNedges] =
+                {
+                    GetSegGeom(edge0),
+                    GetSegGeom(edge1),
+                    GetSegGeom(edge2),
+                    GetSegGeom(edge3)
+                };
+                
+                StdRegions::Orientation edgeorient[QuadGeom::kNedges] =
+                {
+                    SegGeom::GetEdgeOrientation(*edges[0], *edges[1]),
+                    SegGeom::GetEdgeOrientation(*edges[1], *edges[2]),
+                    SegGeom::GetEdgeOrientation(*edges[2], *edges[3]),
+                    SegGeom::GetEdgeOrientation(*edges[3], *edges[0])
+                };
+
+
+                QuadGeomSharedPtr quadgeom;
+                
+                quadgeom = MemoryManager<QuadGeom>::AllocateSharedPtr(indx, edges, edgeorient);
+
+                quadgeom->SetGlobalID(indx);
+                m_quadGeoms[indx] = quadgeom;
+
+                // add bottom face
+                indx += max_nel2D;
+                
+                edge0 += max_segID;
+                edge1 += max_segID;
+                edge2 += max_segID;
+                edge3 += max_segID;
+                
+                /// Create a QuadGeom to hold the new definition.
+                SegGeomSharedPtr newedges[QuadGeom::kNedges] =
+                {
+                    GetSegGeom(edge0),
+                    GetSegGeom(edge1),
+                    GetSegGeom(edge2),
+                    GetSegGeom(edge3)
+                };
+                
+
+                QuadGeomSharedPtr newquadgeom;
+                
+                newquadgeom = MemoryManager<QuadGeom>::AllocateSharedPtr(indx, newedges, edgeorient);
+
+                newquadgeom->SetGlobalID(indx);
+                m_quadGeoms[indx] = newquadgeom;
+            }
+
+            // add new vertical faces which have to be quadrilaterals. 
+            for(segit = Seg2D.begin(); segit != Seg2D.end(); ++segit)
+            {
+                int indx = 2*max_nel2D + segit->first;
+                
+                edge0 = segit->second->GetEid();
+                edge1 = 2*max_segID + segit->second->GetVid(0);
+                edge2 = edge0 + max_segID; 
+                edge3 = 2*max_segID + segit->second->GetVid(1);
+                
+                /// Create a QuadGeom to hold the new definition.
+                SegGeomSharedPtr edges[QuadGeom::kNedges] =
+                {
+                    GetSegGeom(edge0),
+                    GetSegGeom(edge1),
+                    GetSegGeom(edge2),
+                    GetSegGeom(edge3)
+                };
+                
+                StdRegions::Orientation edgeorient[QuadGeom::kNedges] =
+                {
+                    SegGeom::GetEdgeOrientation(*edges[0], *edges[1]),
+                    SegGeom::GetEdgeOrientation(*edges[1], *edges[2]),
+                    SegGeom::GetEdgeOrientation(*edges[2], *edges[3]),
+                    SegGeom::GetEdgeOrientation(*edges[3], *edges[0])
+                };
+
+
+                QuadGeomSharedPtr quadgeom;
+                
+                quadgeom = MemoryManager<QuadGeom>::AllocateSharedPtr(indx, edges, edgeorient);
+
+                quadgeom->SetGlobalID(indx);
+                m_quadGeoms[indx] = quadgeom;
+            }
+
+            // write out all element based on faces we have now generated
+            for(triit = trigeoms.begin(); triit != trigeoms.end(); ++triit)
+            {
+                int indx = triit->first;
+                
+                /// Create arrays for the tri and quad faces.
+                const int kNfaces = PrismGeom::kNfaces;
+                Geometry2DSharedPtr faces[kNfaces];
+                
+                // construct faces from current list 
+                // and numbering. 
+                faces[0] = m_quadGeoms[2*max_nel2D + triit->second->GetEid(0)];
+                faces[1] = m_triGeoms [indx];
+                faces[2] = m_quadGeoms[2*max_nel2D + triit->second->GetEid(1)];
+                faces[3] = m_triGeoms [indx + max_nel2D];
+                faces[4] = m_quadGeoms[2*max_nel2D + triit->second->GetEid(2)];
+                
+                PrismGeomSharedPtr prismgeom(MemoryManager<PrismGeom>::AllocateSharedPtr(faces));
+                prismgeom->SetGlobalID(indx);
+                
+                m_prismGeoms[indx] = prismgeom;
+                PopulateFaceToElMap(prismgeom, kNfaces);
+            }
+
+            for(quadit = quadgeoms.begin(); quadit != quadgeoms.end(); ++quadit)
+            {
+                int indx = quadit->first;
+
+                /// Create arrays for quad faces.
+                const int kNfaces = HexGeom::kNfaces;
+                QuadGeomSharedPtr faces[kNfaces];
+
+                // construct faces from current list 
+                // and numbering. 
+                faces[0] = m_quadGeoms[2*max_nel2D + quadit->second->GetEid(0)];
+                faces[1] = m_quadGeoms[indx];
+                faces[2] = m_quadGeoms[2*max_nel2D + quadit->second->GetEid(1)];
+                faces[3] = m_quadGeoms[indx + max_nel2D];
+                faces[4] = m_quadGeoms[2*max_nel2D + quadit->second->GetEid(3)];
+                faces[5] = m_quadGeoms[2*max_nel2D + quadit->second->GetEid(2)];
+                
+                HexGeomSharedPtr hexgeom(MemoryManager<HexGeom>::AllocateSharedPtr(faces));
+                hexgeom->SetGlobalID(indx);
+                
+                m_hexGeoms[indx] = hexgeom;
+                PopulateFaceToElMap(hexgeom, kNfaces);
+            }
+
+            // Set up composites and domain
+            CompositeMap fullDomain;
+            int cmp_idx = 0; 
+            
+            if(trigeoms.size())
+            {
+                Composite PrismComp(MemoryManager<GeometryVector>::AllocateSharedPtr());
+                PrismGeomMap::iterator pit; 
+                for(pit = m_prismGeoms.begin(); pit != m_prismGeoms.end(); ++pit)
+                {
+                    PrismComp->push_back(pit->second); 
+                }
+                m_meshComposites[cmp_idx] = PrismComp;
+                fullDomain[cmp_idx++] = PrismComp;
+            }
+
+            if(quadgeoms.size())
+            {
+                Composite HexComp(MemoryManager<GeometryVector>::AllocateSharedPtr());
+                
+                HexGeomMap::iterator hit; 
+                for(hit = m_hexGeoms.begin(); hit != m_hexGeoms.end(); ++hit)
+                {
+                    HexComp->push_back(hit->second); 
+                }
+                m_meshComposites[cmp_idx] = HexComp;
+                fullDomain[cmp_idx++] = HexComp;
+            }
+
+            // Define Domain 
+            m_domain.push_back(fullDomain);
+
+            // define original 2D elements as one composite
+            {
+                Composite Top2DComp(MemoryManager<GeometryVector>::AllocateSharedPtr());
+                Composite Bot2DComp(MemoryManager<GeometryVector>::AllocateSharedPtr());
+                
+                // use Explist since this has same ordering as any
+                // expansion generated with MeshGraph2D
+                const SpatialDomains::ExpansionMap &expansions
+                    = mesh2D->GetExpansions();
+                
+                SpatialDomains::ExpansionMap::const_iterator expIt;
+                for (expIt = expansions.begin(); expIt != expansions.end(); ++expIt)
+                {
+                    SpatialDomains::TriGeomSharedPtr  TriangleGeom;
+                    SpatialDomains::QuadGeomSharedPtr QuadrilateralGeom;
+                    
+                    if ((TriangleGeom = boost::dynamic_pointer_cast<SpatialDomains
+                         ::TriGeom>(expIt->second->m_geomShPtr)))
+                    {
+                        int idx = TriangleGeom->GetGlobalID();
+                        Top2DComp->push_back(m_triGeoms[idx]);
+                        Bot2DComp->push_back(m_triGeoms[idx+max_nel2D]);
+                    }
+                    else if ((QuadrilateralGeom = boost::dynamic_pointer_cast<
+                          SpatialDomains::QuadGeom>(expIt->second->m_geomShPtr)))
+                    {
+                        int idx = QuadrilateralGeom->GetGlobalID();
+                        Top2DComp->push_back(m_quadGeoms[idx]);
+                        Bot2DComp->push_back(m_quadGeoms[idx+max_nel2D]);
+                    }
+                    else
+                    {
+                        ASSERTL0(false, "dynamic cast to a proper Geometry2D "
+                                 "failed");
+                    }
+                }    
+                
+                m_meshComposites[cmp_idx++] = Top2DComp;
+                m_meshComposites[cmp_idx++] = Bot2DComp;
+            }
+            
+            // fainlly add all composite that were part of original 2D mesh;
+            CompositeMap comp2D = mesh2D->GetComposites();
+            CompositeMapIter compit; 
+            for(compit = comp2D.begin(); compit != comp2D.end(); ++compit)
+            {
+                // check to see if a segment and if so assume part of
+                // original composite list
+                if(boost::dynamic_pointer_cast<SegGeom>((*(compit->second))[0]))
+                {
+                    Composite NewComp(MemoryManager<GeometryVector>::AllocateSharedPtr());
+                    for(int i = 0; i < compit->second->size(); ++i)
+                    {
+                        int idx = (*(compit->second))[i]->GetGlobalID() + 
+                            2*max_nel2D;
+                        
+                        NewComp->push_back(m_quadGeoms[idx]);
+                    }
+                    m_meshComposites[cmp_idx++] = NewComp;
+                }
+            }
+        }
+
         MeshGraph3D::~MeshGraph3D()
         {
         }
@@ -1083,455 +1558,6 @@ namespace Nektar
                     tmp->push_back(elementFace);
                 }
             }
-        }
-        
-        /** 
-         * @brief Given a 2D geometry in MeshGraph construct a layer
-         * of 3D elements of Prisms and/or Hexs. 
-         *
-         * This method uses the numbering of the existing manner:
-         *
-         *  Vertices are duplicated and offset by a height \a height
-         *  and given an offset of the maximum 2D vertex ID plus one
-         *
-         * Edges are defined starting with the existing edges and
-         * their global ids followed by a duplicated set of edges
-         * (offset by the value height) and with global ids that are
-         * offset by teh maximum 2D edge ID plus one. Finally the
-         * vertical new edges are defined using the global 2D vertex
-         * ID offset by twice the global edge ID plus one.
-         *
-         * Faces are defined by first using the 2D elements and their
-         * global 2D IDs. The lower faces are then defined in the
-         * order by offseting their global IDs by the maximum number
-         * of elements plus one. The Vetical quadrilaterla faces are
-         * then defined using the global 2D edge ids plus twice the
-         * number of global 2D ID (plus one).
-         *
-         * Finally elements can be defined by keeping the same global
-         * ids as the original 2D elements.
-         *
-         * @param mesh2d   MeshGraph of the 2D mesh
-         * @param height   The offset of the prism layer by -height
-         */
-         
-
-        MeshGraph3D::MeshGraph3D(const MeshGraphSharedPtr mesh2D, 
-                                 const NekDouble height)
-        {
-            m_spaceDimension =  3; 
-            int max_vertID   = -1;
-
-            // extend the number of vertices
-            const PointGeomMap vertSet2D = mesh2D->GetAllVertMap();
-
-            // loop over vertice & make new vert and add to set
-            PointGeomMap::const_iterator vertit; 
-            
-            // find max index
-            for(vertit = vertSet2D.begin(); vertit != vertSet2D.end(); ++vertit)
-            {
-                max_vertID = max(max_vertID, vertit->first);
-            }
-            max_vertID++;
-
-            for(vertit = vertSet2D.begin(); vertit != vertSet2D.end(); ++vertit)
-            {
-                int newId = vertit->first + max_vertID; 
-                PointGeomSharedPtr pt = vertit->second;
-
-                // put in original vertex 
-                PointGeomSharedPtr vertorig(MemoryManager<PointGeom>::AllocateSharedPtr(m_spaceDimension, vertit->first, pt->x(), pt->y(), 0.0));
-                vertorig->SetGlobalID(vertit->first);
-                m_vertSet[vertit->first] = vertorig;
-                
-
-                PointGeomSharedPtr vertnew(MemoryManager<PointGeom>::AllocateSharedPtr(m_spaceDimension, newId, pt->x(), pt->y(), -height));
-                vertnew->SetGlobalID(newId);
-                m_vertSet[newId] = vertnew;
-            }
-
-            // extend the number of vertices
-            const SegGeomMap Seg2D = mesh2D->GetAllSegGeoms();
-            SegGeomMap::const_iterator segit; 
-            int max_segID = -1;
-            // find max index
-            for(segit = Seg2D.begin(); segit != Seg2D.end(); ++segit)
-            {
-                max_segID = max(max_segID, segit->first);
-            }
-            max_segID++;
-
-            for(segit = Seg2D.begin(); segit != Seg2D.end(); ++segit)
-            {
-                SegGeomSharedPtr seg = segit->second;
-                
-                int idx0 = seg->GetVid(0);
-                int idx1 = seg->GetVid(1);
-
-                // Get original edges
-                PointGeomSharedPtr vertices[2];
-                vertices[0] = m_vertSet[idx0];
-                vertices[1] = m_vertSet[idx1];
-
-                SegGeomSharedPtr edge = MemoryManager<SegGeom>::AllocateSharedPtr(segit->first, m_spaceDimension, vertices, seg->GetCurve());
-
-                m_segGeoms[segit->first] = edge;
-                          
-                // Define lower edges
-                int newId = segit->first + max_segID; 
-
-                vertices[0] = m_vertSet[idx0 + max_vertID];
-                vertices[1] = m_vertSet[idx1 + max_vertID];
-                
-                
-                SegGeomSharedPtr newedge = MemoryManager<SegGeom>::AllocateSharedPtr(newId, m_spaceDimension, vertices, seg->GetCurve());
-
-                m_segGeoms[newId] = newedge;
-            }
-
-            // define new edges 
-            for(vertit = vertSet2D.begin(); vertit != vertSet2D.end(); ++vertit)
-            {
-                int newId = vertit->first + 2*max_segID; 
-
-                int idx0 = vertit->first; 
-                int idx1 = idx0 + max_vertID;
-
-                // Get original edges
-                PointGeomSharedPtr vertices[2];
-                vertices[0] = m_vertSet[idx0];
-                vertices[1] = m_vertSet[idx1];
-                
-                
-                SegGeomSharedPtr newedge = MemoryManager<SegGeom>::AllocateSharedPtr(newId, m_spaceDimension, vertices);
-
-                m_segGeoms[newId] = newedge;
-            }
-
-            
-            // Define curved edges;
-            CurveMap curveEdge = mesh2D->GetCurvedEdges();
-            CurveMap::iterator cit;
-            
-            // top edge curves
-            for(cit = curveEdge.begin(); cit != curveEdge.end(); ++cit)
-            {
-                m_curvedEdges[cit->first] = cit->second;
-            }
-            
-            // bottom edge curves
-            for(cit = curveEdge.begin(); cit != curveEdge.end(); ++cit)
-            {
-                int edgeid = cit->first + max_segID;
-                
-                CurveSharedPtr curve(MemoryManager<Curve>::AllocateSharedPtr(edgeid, cit->second->m_ptype));
-                
-                for(int i = 0; i < cit->second->m_points.size(); ++i)
-                {
-                    PointGeomSharedPtr vert(MemoryManager<PointGeom>::
-                                            AllocateSharedPtr(m_meshDimension, 
-                                               edgeid, cit->second->m_points[i]->x(),
-                                               cit->second->m_points[i]->y(),
-                                               cit->second->m_points[i]->z() - height));
-
-                    curve->m_points.push_back(vert);
-                }
-
-                m_curvedEdges[cit->first + max_segID] = curve;
-            }
-            
-            const TriGeomMap trigeoms   = mesh2D->GetAllTriGeoms();
-            const QuadGeomMap quadgeoms = mesh2D->GetAllQuadGeoms();
-            TriGeomMap::const_iterator triit;
-            QuadGeomMap::const_iterator quadit;
-            int edge0,edge1,edge2,edge3;
-            
-            int max_nel2D = -1; 
-            for(triit = trigeoms.begin(); triit != trigeoms.end(); ++triit)
-            {
-                max_nel2D = max(max_nel2D,triit->first);
-            }
-
-            for(quadit = quadgeoms.begin(); quadit != quadgeoms.end(); 
-                ++quadit)
-            {
-                max_nel2D = max(max_nel2D,quadit->first);
-            }
-            max_nel2D++;
-            
-            for(triit = trigeoms.begin(); triit != trigeoms.end(); ++triit)
-            {
-                int indx = triit->first;
-                
-                edge0 = triit->second->GetEid(0);
-                edge1 = triit->second->GetEid(1);
-                edge2 = triit->second->GetEid(2);
-                
-                /// Create a TriGeom to hold the new definition.
-                SegGeomSharedPtr edges[TriGeom::kNedges] =
-                {
-                    GetSegGeom(edge0),
-                    GetSegGeom(edge1),
-                    GetSegGeom(edge2)
-                };
-                
-                StdRegions::Orientation edgeorient[TriGeom::kNedges] =
-                {
-                    SegGeom::GetEdgeOrientation(*edges[0], *edges[1]),
-                    SegGeom::GetEdgeOrientation(*edges[1], *edges[2]),
-                    SegGeom::GetEdgeOrientation(*edges[2], *edges[0])
-                };
-
-                TriGeomSharedPtr trigeom;
-                
-                trigeom = MemoryManager<TriGeom>::AllocateSharedPtr(indx, edges, edgeorient);
-
-                trigeom->SetGlobalID(indx);
-                m_triGeoms[indx] = trigeom;
-
-                // add bottom face
-                indx += max_nel2D;
-                
-                edge0 += max_segID;
-                edge1 += max_segID;
-                edge2 += max_segID;
-                
-                /// Create a TriGeom to hold the new definition.
-                SegGeomSharedPtr newedges[TriGeom::kNedges] =
-                {
-                    GetSegGeom(edge0),
-                    GetSegGeom(edge1),
-                    GetSegGeom(edge2)
-                };
-                
-                TriGeomSharedPtr newtrigeom;
-                
-                newtrigeom = MemoryManager<TriGeom>::AllocateSharedPtr(indx, newedges, edgeorient);
-
-                newtrigeom->SetGlobalID(indx);
-                m_triGeoms[indx] = newtrigeom;
-            }
-
-            for(quadit = quadgeoms.begin(); quadit != quadgeoms.end(); ++quadit)
-            {
-                // sort out edge in original expansion
-                int indx = quadit->first;
-                
-                edge0 = quadit->second->GetEid(0);
-                edge1 = quadit->second->GetEid(1);
-                edge2 = quadit->second->GetEid(2);
-                edge3 = quadit->second->GetEid(3);
-                
-                /// Create a QuadGeom to hold the new definition.
-                SegGeomSharedPtr edges[QuadGeom::kNedges] =
-                {
-                    GetSegGeom(edge0),
-                    GetSegGeom(edge1),
-                    GetSegGeom(edge2),
-                    GetSegGeom(edge3)
-                };
-                
-                StdRegions::Orientation edgeorient[QuadGeom::kNedges] =
-                {
-                    SegGeom::GetEdgeOrientation(*edges[0], *edges[1]),
-                    SegGeom::GetEdgeOrientation(*edges[1], *edges[2]),
-                    SegGeom::GetEdgeOrientation(*edges[2], *edges[3]),
-                    SegGeom::GetEdgeOrientation(*edges[3], *edges[0])
-                };
-
-
-                QuadGeomSharedPtr quadgeom;
-                
-                quadgeom = MemoryManager<QuadGeom>::AllocateSharedPtr(indx, edges, edgeorient);
-
-                quadgeom->SetGlobalID(indx);
-                m_quadGeoms[indx] = quadgeom;
-
-                // add bottom face
-                indx += max_nel2D;
-                
-                edge0 += max_segID;
-                edge1 += max_segID;
-                edge2 += max_segID;
-                edge3 += max_segID;
-                
-                /// Create a QuadGeom to hold the new definition.
-                SegGeomSharedPtr newedges[QuadGeom::kNedges] =
-                {
-                    GetSegGeom(edge0),
-                    GetSegGeom(edge1),
-                    GetSegGeom(edge2),
-                    GetSegGeom(edge3)
-                };
-                
-
-                QuadGeomSharedPtr newquadgeom;
-                
-                newquadgeom = MemoryManager<QuadGeom>::AllocateSharedPtr(indx, newedges, edgeorient);
-
-                newquadgeom->SetGlobalID(indx);
-                m_quadGeoms[indx] = newquadgeom;
-            }
-
-            // add new vertical faces which have to be quadrilaterals. 
-            for(segit = Seg2D.begin(); segit != Seg2D.end(); ++segit)
-            {
-                int indx = 2*max_nel2D + segit->first;
-                
-                edge0 = segit->second->GetEid();
-                edge1 = 2*max_segID + segit->second->GetVid(0);
-                edge2 = edge0 + max_segID; 
-                edge3 = 2*max_segID + segit->second->GetVid(1);
-                
-                /// Create a QuadGeom to hold the new definition.
-                SegGeomSharedPtr edges[QuadGeom::kNedges] =
-                {
-                    GetSegGeom(edge0),
-                    GetSegGeom(edge1),
-                    GetSegGeom(edge2),
-                    GetSegGeom(edge3)
-                };
-                
-                StdRegions::Orientation edgeorient[QuadGeom::kNedges] =
-                {
-                    SegGeom::GetEdgeOrientation(*edges[0], *edges[1]),
-                    SegGeom::GetEdgeOrientation(*edges[1], *edges[2]),
-                    SegGeom::GetEdgeOrientation(*edges[2], *edges[3]),
-                    SegGeom::GetEdgeOrientation(*edges[3], *edges[0])
-                };
-
-
-                QuadGeomSharedPtr quadgeom;
-                
-                quadgeom = MemoryManager<QuadGeom>::AllocateSharedPtr(indx, edges, edgeorient);
-
-                quadgeom->SetGlobalID(indx);
-                m_quadGeoms[indx] = quadgeom;
-            }
-
-            // write out all element based on faces we have now generated
-            for(triit = trigeoms.begin(); triit != trigeoms.end(); ++triit)
-            {
-                int indx = triit->first;
-                
-                /// Create arrays for the tri and quad faces.
-                const int kNfaces = PrismGeom::kNfaces;
-                Geometry2DSharedPtr faces[kNfaces];
-                
-                // construct faces from current list 
-                // and numbering. 
-                faces[0] = m_quadGeoms[2*max_nel2D + triit->second->GetEid(0)];
-                faces[1] = m_triGeoms [indx];
-                faces[2] = m_quadGeoms[2*max_nel2D + triit->second->GetEid(1)];
-                faces[3] = m_triGeoms [indx + max_nel2D];
-                faces[4] = m_quadGeoms[2*max_nel2D + triit->second->GetEid(2)];
-                
-                PrismGeomSharedPtr prismgeom(MemoryManager<PrismGeom>::AllocateSharedPtr(faces));
-                prismgeom->SetGlobalID(indx);
-                
-                m_prismGeoms[indx] = prismgeom;
-                PopulateFaceToElMap(prismgeom, kNfaces);
-            }
-
-            for(quadit = quadgeoms.begin(); quadit != quadgeoms.end(); ++quadit)
-            {
-                int indx = quadit->first;
-
-                /// Create arrays for quad faces.
-                const int kNfaces = HexGeom::kNfaces;
-                QuadGeomSharedPtr faces[kNfaces];
-
-                // construct faces from current list 
-                // and numbering. 
-                faces[0] = m_quadGeoms[2*max_nel2D + quadit->second->GetEid(0)];
-                faces[1] = m_quadGeoms[indx];
-                faces[2] = m_quadGeoms[2*max_nel2D + quadit->second->GetEid(1)];
-                faces[3] = m_quadGeoms[indx + max_nel2D];
-                faces[4] = m_quadGeoms[2*max_nel2D + quadit->second->GetEid(3)];
-                faces[5] = m_quadGeoms[2*max_nel2D + quadit->second->GetEid(2)];
-                
-                HexGeomSharedPtr hexgeom(MemoryManager<HexGeom>::AllocateSharedPtr(faces));
-                hexgeom->SetGlobalID(indx);
-                
-                m_hexGeoms[indx] = hexgeom;
-                PopulateFaceToElMap(hexgeom, kNfaces);
-            }
-
-            // Set up composites and domain
-            CompositeMap fullDomain;
-            int cmp_idx = 0; 
-            
-            if(trigeoms.size())
-            {
-                Composite PrismComp(MemoryManager<GeometryVector>::AllocateSharedPtr());
-                PrismGeomMap::iterator pit; 
-                for(pit = m_prismGeoms.begin(); pit != m_prismGeoms.end(); ++pit)
-                {
-                    PrismComp->push_back(pit->second); 
-                }
-                m_meshComposites[cmp_idx] = PrismComp;
-                fullDomain[cmp_idx++] = PrismComp;
-            }
-
-            if(quadgeoms.size())
-            {
-                Composite HexComp(MemoryManager<GeometryVector>::AllocateSharedPtr());
-                
-                HexGeomMap::iterator hit; 
-                for(hit = m_hexGeoms.begin(); hit != m_hexGeoms.end(); ++hit)
-                {
-                    HexComp->push_back(hit->second); 
-                }
-                m_meshComposites[cmp_idx] = HexComp;
-                fullDomain[cmp_idx++] = HexComp;
-            }
-
-            // Define Domain 
-            m_domain.push_back(fullDomain);
-
-            // define original 2D elements as one composite
-            {
-                Composite Top2DComp(MemoryManager<GeometryVector>::AllocateSharedPtr());
-                Composite Bot2DComp(MemoryManager<GeometryVector>::AllocateSharedPtr());
-                
-                // use Explist since this has same ordering as any
-                // expansion generated with MeshGraph2D
-                const SpatialDomains::ExpansionMap &expansions
-                    = mesh2D->GetExpansions();
-                
-                SpatialDomains::ExpansionMap::const_iterator expIt;
-                for (expIt = expansions.begin(); expIt != expansions.end(); ++expIt)
-                {
-                    SpatialDomains::TriGeomSharedPtr  TriangleGeom;
-                    SpatialDomains::QuadGeomSharedPtr QuadrilateralGeom;
-                    
-                    if ((TriangleGeom = boost::dynamic_pointer_cast<SpatialDomains
-                         ::TriGeom>(expIt->second->m_geomShPtr)))
-                    {
-                        int idx = TriangleGeom->GetGlobalID();
-                        Top2DComp->push_back(m_triGeoms[idx]);
-                        Bot2DComp->push_back(m_triGeoms[idx+max_nel2D]);
-                    }
-                    else if ((QuadrilateralGeom = boost::dynamic_pointer_cast<
-                          SpatialDomains::QuadGeom>(expIt->second->m_geomShPtr)))
-                    {
-                        int idx = QuadrilateralGeom->GetGlobalID();
-                        Top2DComp->push_back(m_quadGeoms[idx]);
-                        Bot2DComp->push_back(m_quadGeoms[idx+max_nel2D]);
-                    }
-                    else
-                    {
-                        ASSERTL0(false, "dynamic cast to a proper Geometry2D "
-                                 "failed");
-                    }
-                }    
-                
-                m_meshComposites[cmp_idx++] = Top2DComp;
-                m_meshComposites[cmp_idx++] = Bot2DComp;
-
-            }
-
         }
             
     }; //end of namespace
