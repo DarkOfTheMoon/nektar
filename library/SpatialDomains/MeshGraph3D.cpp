@@ -88,7 +88,7 @@ namespace Nektar
             mesh = docHandle.FirstChildElement("NEKTAR").FirstChildElement("GEOMETRY").Element();
 
             ASSERTL0(mesh, "Unable to find GEOMETRY tag in file.");
-
+            
             ReadCurves(doc);
             ReadEdges(doc);
             ReadFaces(doc);
@@ -1208,6 +1208,38 @@ namespace Nektar
 
                 m_segGeoms[newId] = newedge;
             }
+
+            
+            // Define curved edges;
+            CurveMap curveEdge = mesh2D->GetCurvedEdges();
+            CurveMap::iterator cit;
+            
+            // top edge curves
+            for(cit = curveEdge.begin(); cit != curveEdge.end(); ++cit)
+            {
+                m_curvedEdges[cit->first] = cit->second;
+            }
+            
+            // bottom edge curves
+            for(cit = curveEdge.begin(); cit != curveEdge.end(); ++cit)
+            {
+                int edgeid = cit->first + max_segID;
+                
+                CurveSharedPtr curve(MemoryManager<Curve>::AllocateSharedPtr(edgeid, cit->second->m_ptype));
+                
+                for(int i = 0; i < cit->second->m_points.size(); ++i)
+                {
+                    PointGeomSharedPtr vert(MemoryManager<PointGeom>::
+                                            AllocateSharedPtr(m_meshDimension, 
+                                               edgeid, cit->second->m_points[i]->x(),
+                                               cit->second->m_points[i]->y(),
+                                               cit->second->m_points[i]->z() - height));
+
+                    curve->m_points.push_back(vert);
+                }
+
+                m_curvedEdges[cit->first + max_segID] = curve;
+            }
             
             const TriGeomMap trigeoms   = mesh2D->GetAllTriGeoms();
             const QuadGeomMap quadgeoms = mesh2D->GetAllQuadGeoms();
@@ -1378,12 +1410,11 @@ namespace Nektar
                 m_quadGeoms[indx] = quadgeom;
             }
 
-
             // write out all element based on faces we have now generated
             for(triit = trigeoms.begin(); triit != trigeoms.end(); ++triit)
             {
                 int indx = triit->first;
-
+                
                 /// Create arrays for the tri and quad faces.
                 const int kNfaces = PrismGeom::kNfaces;
                 Geometry2DSharedPtr faces[kNfaces];
@@ -1458,6 +1489,49 @@ namespace Nektar
 
             // Define Domain 
             m_domain.push_back(fullDomain);
+
+            // define original 2D elements as one composite
+            {
+                Composite Top2DComp(MemoryManager<GeometryVector>::AllocateSharedPtr());
+                Composite Bot2DComp(MemoryManager<GeometryVector>::AllocateSharedPtr());
+                
+                // use Explist since this has same ordering as any
+                // expansion generated with MeshGraph2D
+                const SpatialDomains::ExpansionMap &expansions
+                    = mesh2D->GetExpansions();
+                
+                SpatialDomains::ExpansionMap::const_iterator expIt;
+                for (expIt = expansions.begin(); expIt != expansions.end(); ++expIt)
+                {
+                    SpatialDomains::TriGeomSharedPtr  TriangleGeom;
+                    SpatialDomains::QuadGeomSharedPtr QuadrilateralGeom;
+                    
+                    if ((TriangleGeom = boost::dynamic_pointer_cast<SpatialDomains
+                         ::TriGeom>(expIt->second->m_geomShPtr)))
+                    {
+                        int idx = TriangleGeom->GetGlobalID();
+                        Top2DComp->push_back(m_triGeoms[idx]);
+                        Bot2DComp->push_back(m_triGeoms[idx+max_nel2D]);
+                    }
+                    else if ((QuadrilateralGeom = boost::dynamic_pointer_cast<
+                          SpatialDomains::QuadGeom>(expIt->second->m_geomShPtr)))
+                    {
+                        int idx = QuadrilateralGeom->GetGlobalID();
+                        Top2DComp->push_back(m_quadGeoms[idx]);
+                        Bot2DComp->push_back(m_quadGeoms[idx+max_nel2D]);
+                    }
+                    else
+                    {
+                        ASSERTL0(false, "dynamic cast to a proper Geometry2D "
+                                 "failed");
+                    }
+                }    
+                
+                m_meshComposites[cmp_idx++] = Top2DComp;
+                m_meshComposites[cmp_idx++] = Bot2DComp;
+
+            }
+
         }
             
     }; //end of namespace
