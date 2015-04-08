@@ -193,8 +193,8 @@ namespace Nektar
                     // Check type.
                     std::string conditionType = conditionElement->Value();
                     std::string attrData;
-					//for the inner map
-					std::vector<std::string>::iterator iter;
+                    //for the inner map
+                    std::vector<std::string>::iterator iter;
                     std::string attrName;
 					
                     attrData = conditionElement->Attribute("VAR");
@@ -204,19 +204,32 @@ namespace Nektar
                         iter = std::find(vars.begin(), vars.end(), attrData);
                         ASSERTL0(iter != vars.end(), (std::string("Cannot find variable: ") + attrData).c_str());
                     }
-					//end for the inner map
-					
-                    // All have var specified, or else all variables are zero.
-                    TiXmlAttribute *attr = conditionElement->FirstAttribute();
-					std::string userdefined = conditionElement->Attribute("USERDEFINEDTYPE");
-					
-					boost::tuple<std::string,std::string> bnd_pair=boost::make_tuple(conditionType,userdefined);
-					BoundaryConditionShPtr bnd=GetBoundaryConditionsFactory().CreateInstance(bnd_pair,m_session, conditionElement);
-					//I need to put bnd it inside a map 
-					(*boundaryConditions)[*iter]=bnd;
-				}						
-					
-				//outer mapping to regions ID
+
+                    std::string userdefined;
+
+                    const char *userdef =  conditionElement->Attribute("USERDEFINEDTYPE");
+                    if (userdef)
+                    {
+                        userdefined = userdef; 
+                    }
+                    else
+                    {
+                        userdefined = "NoUserDefined"; 
+                    }					
+
+                    boost::tuple<std::string,std::string> bnd_pair=boost::make_tuple(conditionType,userdefined);
+                    BoundaryConditionShPtr bnd=GetBoundaryConditionsFactory().CreateInstance(bnd_pair,m_session, conditionElement);
+                    
+                    boost::shared_ptr<SpatialDomains::DirichletBoundaryCondition>  eqn = boost::static_pointer_cast<SpatialDomains::DirichletBoundaryCondition>(bnd);
+
+                    //I need to put bnd it inside a map 
+
+                    (*boundaryConditions)[*iter]=bnd;
+
+                    conditionElement = conditionElement->NextSiblingElement();
+                }						
+		
+                //outer mapping to regions ID
                 m_boundaryConditions[boundaryRegionID] = boundaryConditions;
                 regionElement = regionElement->NextSiblingElement("REGION");
             }

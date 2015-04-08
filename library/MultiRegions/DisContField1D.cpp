@@ -624,7 +624,7 @@ namespace Nektar
                 region1ID = it->first;
                 region2ID = boost::static_pointer_cast<
                     SpatialDomains::PeriodicBoundaryCondition>(
-                        locBCond)->m_connectedBoundaryRegion;
+                             locBCond)->GetConnectedBoundaryRegion();
 
                 ASSERTL0(BregionToVertMap.count(region1ID) != 0, 
                          "Cannot determine vertex of region1ID");
@@ -1346,32 +1346,33 @@ namespace Nektar
                     if (m_bndConditions[i]->GetBoundaryConditionType() ==
                         SpatialDomains::eDirichlet)
                     {
+                        boost::shared_ptr<SpatialDomains::DirichletBoundaryCondition>  eqn = boost::static_pointer_cast<SpatialDomains::DirichletBoundaryCondition>(m_bndConditions[i]);
                         m_bndCondExpansions[i]->SetCoeff(0,
-                            (boost::static_pointer_cast<SpatialDomains
+                            (boost::dynamic_pointer_cast<SpatialDomains
                              ::DirichletBoundaryCondition>(m_bndConditions[i])
-                             ->m_dirichletCondition).Evaluate(x0[0],x1[0],x2[0],time));
+                             ->GetDirichletCondition())->Evaluate(x0[0],x1[0],x2[0],time));
                         m_bndCondExpansions[i]->SetPhys(0,m_bndCondExpansions[i]->GetCoeff(0));
                     }
                     else if (m_bndConditions[i]->GetBoundaryConditionType()
                             == SpatialDomains::eNeumann)
                     {
                         m_bndCondExpansions[i]->SetCoeff(0,
-                            (boost::static_pointer_cast<SpatialDomains
+                            (boost::dynamic_pointer_cast<SpatialDomains
                              ::NeumannBoundaryCondition>(m_bndConditions[i])
-                             ->m_neumannCondition).Evaluate(x0[0],x1[0],x2[0],time));
+                             ->GetNeumannCondition())->Evaluate(x0[0],x1[0],x2[0],time));
                     }
                     else if (m_bndConditions[i]->GetBoundaryConditionType()
                             == SpatialDomains::eRobin)
                     {
                         m_bndCondExpansions[i]->SetCoeff(0,
-                            (boost::static_pointer_cast<SpatialDomains
+                            (boost::dynamic_pointer_cast<SpatialDomains
                              ::RobinBoundaryCondition>(m_bndConditions[i])
-                             ->m_robinFunction).Evaluate(x0[0],x1[0],x2[0],time));
+                             ->GetRobinFunction())->Evaluate(x0[0],x1[0],x2[0],time));
                         
                         m_bndCondExpansions[i]->SetPhys(0,
-                            (boost::static_pointer_cast<SpatialDomains
+                            (boost::dynamic_pointer_cast<SpatialDomains
                              ::RobinBoundaryCondition>(m_bndConditions[i])
-                             ->m_robinPrimitiveCoeff).Evaluate(x0[0],x1[0],x2[0],time));
+                             ->GetRobinPrimitiveCoeff())->Evaluate(x0[0],x1[0],x2[0],time));
                         
                     }
                     else if (m_bndConditions[i]->GetBoundaryConditionType()

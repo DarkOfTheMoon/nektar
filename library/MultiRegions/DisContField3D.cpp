@@ -738,7 +738,7 @@
                 region1ID = it->first;
                 region2ID = boost::static_pointer_cast<
                     SpatialDomains::PeriodicBoundaryCondition>(
-                        locBCond)->m_connectedBoundaryRegion;
+                      locBCond)->GetConnectedBoundaryRegion();
 
                 // Check the region only contains a single composite.
                 ASSERTL0(it->second->size() == 1,
@@ -2441,7 +2441,7 @@
                     {
                         string filebcs = boost::static_pointer_cast<
                             SpatialDomains::DirichletBoundaryCondition>(
-                                m_bndConditions[i])->m_filename;
+                                m_bndConditions[i])->GetFilename();
                         
                         if (filebcs != "")
                         {
@@ -2449,11 +2449,12 @@
                         }
                         else
                         {
-                            LibUtilities::Equation  condition = boost::static_pointer_cast<SpatialDomains::
+                            LibUtilities::EquationSharedPtr  condition = 
+                                boost::dynamic_pointer_cast<SpatialDomains::
                                     DirichletBoundaryCondition >(
-                                    m_bndConditions[i])->m_dirichletCondition;
+                                 m_bndConditions[i])->GetDirichletCondition();
                             
-                            condition.Evaluate(x0, x1, x2, time, 
+                            condition->Evaluate(x0, x1, x2, time, 
                                                locExpList->UpdatePhys());
                             
                             locExpList->FwdTrans_BndConstrained(
@@ -2464,12 +2465,12 @@
                     else if (m_bndConditions[i]->GetBoundaryConditionType()
                              == SpatialDomains::eNeumann)
                     {
-                        LibUtilities::Equation condition = boost::
-                            static_pointer_cast<SpatialDomains::
+                        LibUtilities::EquationSharedPtr condition = boost::
+                            dynamic_pointer_cast<SpatialDomains::
                                 NeumannBoundaryCondition>(
-                                    m_bndConditions[i])->m_neumannCondition;
+                                 m_bndConditions[i])->GetNeumannCondition();
                         
-                        condition.Evaluate(x0, x1, x2, time, 
+                        condition->Evaluate(x0, x1, x2, time, 
                                            locExpList->UpdatePhys());
                         
                         locExpList->IProductWRTBase(locExpList->GetPhys(),
@@ -2478,17 +2479,17 @@
                     else if (m_bndConditions[i]->GetBoundaryConditionType()
                              == SpatialDomains::eRobin)
                     {
-                        LibUtilities::Equation condition = boost::
-                            static_pointer_cast<SpatialDomains::
+                        LibUtilities::EquationSharedPtr condition = boost::
+                            dynamic_pointer_cast<SpatialDomains::
                                 RobinBoundaryCondition>(
-                                    m_bndConditions[i])->m_robinFunction;
+                                m_bndConditions[i])->GetRobinFunction();
                         
-                        LibUtilities::Equation coeff = boost::
-                            static_pointer_cast<SpatialDomains::
+                        LibUtilities::EquationSharedPtr coeff = boost::
+                            dynamic_pointer_cast<SpatialDomains::
                                 RobinBoundaryCondition>(
-                                    m_bndConditions[i])->m_robinPrimitiveCoeff;
+                               m_bndConditions[i])->GetRobinPrimitiveCoeff();
                         
-                        condition.Evaluate(x0, x1, x2, time, 
+                        condition->Evaluate(x0, x1, x2, time, 
                                            locExpList->UpdatePhys());
                         
                         locExpList->IProductWRTBase(locExpList->GetPhys(),
@@ -2496,7 +2497,7 @@
                         
                         // Put primitive coefficient into the physical 
                         // space storage
-                        coeff.Evaluate(x0, x1, x2, time,
+                        coeff->Evaluate(x0, x1, x2, time,
                                        locExpList->UpdatePhys());
                         
                     }

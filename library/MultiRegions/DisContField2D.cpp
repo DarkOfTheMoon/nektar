@@ -734,7 +734,7 @@ namespace Nektar
                 region1ID = it->first;
                 region2ID = boost::static_pointer_cast<
                     SpatialDomains::PeriodicBoundaryCondition>(
-                        locBCond)->m_connectedBoundaryRegion;
+                         locBCond)->GetConnectedBoundaryRegion();
 
                 // From this identify composites. Note that in serial this will
                 // be an empty map.
@@ -2151,7 +2151,7 @@ namespace Nektar
                     {
                         string filebcs = boost::static_pointer_cast<
                             SpatialDomains::DirichletBoundaryCondition>(
-                                m_bndConditions[i])->m_filename;
+                                    m_bndConditions[i])->GetFilename();
                         
                         if (filebcs != "")
                         {
@@ -2159,13 +2159,13 @@ namespace Nektar
                         }
                         else
                         {
-                            LibUtilities::Equation condition = 
-                                boost::static_pointer_cast<
+                            LibUtilities::EquationSharedPtr condition = 
+                                boost::dynamic_pointer_cast<
                                     SpatialDomains::DirichletBoundaryCondition>
                                         (m_bndConditions[i])->
-                                            m_dirichletCondition;
+                                GetDirichletCondition();
                             
-                            condition.Evaluate(x0, x1, x2, time, 
+                            condition->Evaluate(x0, x1, x2, time, 
                                                locExpList->UpdatePhys());
                         }
 
@@ -2178,7 +2178,7 @@ namespace Nektar
                     {
                         string filebcs = boost::static_pointer_cast<
                             SpatialDomains::NeumannBoundaryCondition>(
-                                m_bndConditions[i])->m_filename;
+                             m_bndConditions[i])->GetFilename();
 
                         if (filebcs != "")
                         {
@@ -2186,12 +2186,11 @@ namespace Nektar
                         }
                         else
                         {
-                            LibUtilities::Equation condition =
-                                boost::static_pointer_cast<
+                            LibUtilities::EquationSharedPtr condition =
+                                boost::dynamic_pointer_cast<
                                     SpatialDomains::NeumannBoundaryCondition>
-                                        (m_bndConditions[i])->
-                                            m_neumannCondition;
-                            condition.Evaluate(x0, x1, x2, time, 
+                                (m_bndConditions[i])->GetNeumannCondition();
+                            condition->Evaluate(x0, x1, x2, time, 
                                                locExpList->UpdatePhys());
                         }
 
@@ -2204,7 +2203,7 @@ namespace Nektar
                     {
                         string filebcs = boost::static_pointer_cast<
                             SpatialDomains::RobinBoundaryCondition>
-                                (m_bndConditions[i])->m_filename;
+                            (m_bndConditions[i])->GetFilename();
                         
                         if (filebcs != "")
                         {
@@ -2212,26 +2211,26 @@ namespace Nektar
                         }
                         else
                         {
-                            LibUtilities::Equation condition = 
-                                boost::static_pointer_cast<
+                            LibUtilities::EquationSharedPtr condition = 
+                                boost::dynamic_pointer_cast<
                                     SpatialDomains::RobinBoundaryCondition>
-                                        (m_bndConditions[i])->
-                                            m_robinFunction;
-                            condition.Evaluate(x0, x1, x2, time,
+                                (m_bndConditions[i])->
+                                GetRobinFunction();
+                            condition->Evaluate(x0, x1, x2, time,
                                                locExpList->UpdatePhys());
                         }
 
-                        LibUtilities::Equation coeff =
-                            boost::static_pointer_cast<
+                        LibUtilities::EquationSharedPtr coeff =
+                            boost::dynamic_pointer_cast<
                                 SpatialDomains::RobinBoundaryCondition>(
-                                    m_bndConditions[i])->m_robinPrimitiveCoeff;
+                             m_bndConditions[i])->GetRobinPrimitiveCoeff();
                         locExpList->IProductWRTBase(
                             locExpList->GetPhys(),
                             locExpList->UpdateCoeffs());
 
                         // put primitive coefficient into the physical 
                         // space storage
-                        coeff.Evaluate(x0, x1, x2, time,
+                        coeff->Evaluate(x0, x1, x2, time,
                                        locExpList->UpdatePhys());
                     }    
                     else

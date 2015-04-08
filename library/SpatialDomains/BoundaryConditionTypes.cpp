@@ -1,20 +1,72 @@
+////////////////////////////////////////////////////////////////////////////////
+//
+//  File: BoundaryConditionsTypes.cpp
+//
+//  For more information, please see: http://www.nektar.info/
+//
+//  The MIT License
+//
+//  Copyright (c) 2006 Division of Applied Mathematics, Brown University (USA),
+//  Department of Aeronautics, Imperial College London (UK), and Scientific
+//  Computing and Imaging Institute, University of Utah (USA).
+//
+//  License for the specific language governing rights and limitations under
+//  Permission is hereby granted, free of charge, to any person obtaining a
+//  copy of this software and associated documentation files (the "Software"),
+//  to deal in the Software without restriction, including without limitation
+//  the rights to use, copy, modify, merge, publish, distribute, sublicense,
+//  and/or sell copies of the Software, and to permit persons to whom the
+//  Software is furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included
+//  in all copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+//  OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+//  THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+//  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+//  DEALINGS IN THE SOFTWARE.
+//
+//  Description:
+//
+//
+////////////////////////////////////////////////////////////////////////////////
 #include <vector>
-
+#include <LibUtilities/BasicUtils/ParseUtils.hpp>
 #include <SpatialDomains/BoundaryConditionTypes.h>
 
 namespace Nektar {
 namespace SpatialDomains {
 
-BCKey DirichletBoundaryCondition::m_type = GetBoundaryConditionsFactory().RegisterCreatorFunction(
-        BCKey("D",""),
+    // Register boundary conditions
+    BCKey DirichletBoundaryCondition::m_type = GetBoundaryConditionsFactory().RegisterCreatorFunction(
+        BCKey("D","NoUserDefined"),
         DirichletBoundaryCondition::create,
         "Dirichlet");
 
-DirichletBoundaryCondition::DirichletBoundaryCondition(const LibUtilities::SessionReaderSharedPtr &pSession,
-                            TiXmlElement* pBoundaryConditions):
+
+    BCKey NeumannBoundaryCondition::m_type = GetBoundaryConditionsFactory().RegisterCreatorFunction(
+        BCKey("N","NoUserDefined"),
+        NeumannBoundaryCondition::create,
+        "Neumann");
+
+
+    BCKey RobinBoundaryCondition::m_type = GetBoundaryConditionsFactory().RegisterCreatorFunction(
+        BCKey("R","NoUserDefined"),
+        RobinBoundaryCondition::create,
+        "Robin");
+
+    BCKey PeriodicBoundaryCondition::m_type = GetBoundaryConditionsFactory().RegisterCreatorFunction(
+        BCKey("P","NoUserDefined"),
+        PeriodicBoundaryCondition::create,
+        "Periodic");
+    
+    DirichletBoundaryCondition::DirichletBoundaryCondition(const LibUtilities::SessionReaderSharedPtr &pSession, TiXmlElement* pBoundaryConditions):
         BoundaryConditionBase(eDirichlet, std::string("")),
-        m_dirichletCondition(pSession, std::string(""))
-{
+        m_dirichletCondition(MemoryManager<LibUtilities::Equation>::AllocateSharedPtr(pSession, std::string("")))
+    {
 
     TiXmlAttribute *attr = pBoundaryConditions->FirstAttribute();
 
@@ -39,8 +91,8 @@ DirichletBoundaryCondition::DirichletBoundaryCondition(const LibUtilities::Sessi
 
             attrData = attr->Value();
             ASSERTL0(!attrData.empty(), "VALUE attribute must have associated value.");
-            LibUtilities::Equation m_dirichletCondition(pSession,attrData);
-            m_dirichletConditionPtr= MemoryManager<LibUtilities::Equation>::AllocateSharedPtr(pSession,attrData);
+            m_dirichletCondition = MemoryManager<LibUtilities::Equation>::AllocateSharedPtr(pSession, attrData);
+            
             pSession->SubstituteExpressions(attrData);
         }
         else if(attrName=="FILE")
@@ -65,11 +117,10 @@ NeumannBoundaryCondition::NeumannBoundaryCondition(
         const LibUtilities::SessionReaderSharedPtr &pSession,
               TiXmlElement* pBoundaryConditions):
     BoundaryConditionBase(eNeumann, std::string("")),
-    m_neumannCondition(pSession, std::string(""))
+                             m_neumannCondition(MemoryManager<LibUtilities::Equation>::AllocateSharedPtr(pSession, std::string("")))
 {
 
     TiXmlAttribute *attr = pBoundaryConditions->FirstAttribute();
-
 
     std::vector<std::string>::iterator iter;
     std::string attrName;
@@ -92,7 +143,8 @@ NeumannBoundaryCondition::NeumannBoundaryCondition(
 
             attrData = attr->Value();
             ASSERTL0(!attrData.empty(), "VALUE attribute must have associated value.");
-            LibUtilities::Equation m_neumannCondition(pSession,attrData);
+            m_neumannCondition = MemoryManager<LibUtilities::Equation>::AllocateSharedPtr(pSession, attrData);
+
             pSession->SubstituteExpressions(attrData);
         }
         else if(attrName=="FILE")
@@ -116,8 +168,8 @@ RobinBoundaryCondition::RobinBoundaryCondition(
         const LibUtilities::SessionReaderSharedPtr &pSession,
               TiXmlElement* pBoundaryConditions):
     BoundaryConditionBase(eRobin, std::string("")),
-    m_robinFunction(pSession, std::string("")),
-    m_robinPrimitiveCoeff(pSession, std::string(""))
+                             m_robinFunction(MemoryManager<LibUtilities::Equation>::AllocateSharedPtr(pSession, std::string(""))),
+                             m_robinPrimitiveCoeff(MemoryManager<LibUtilities::Equation>::AllocateSharedPtr(pSession, std::string("")))
 {
     TiXmlAttribute *attr = pBoundaryConditions->FirstAttribute();
 
@@ -145,9 +197,7 @@ RobinBoundaryCondition::RobinBoundaryCondition(
 
                 pSession->SubstituteExpressions(attrData1);
 
-                // here I need to instantiate a with attrData1;
-                LibUtilities::Equation m_robinFunction(pSession,attrData1);
-
+                m_robinFunction = MemoryManager<LibUtilities::Equation>::AllocateSharedPtr(pSession, attrData1);
 
                 attr = attr->Next();
                 ASSERTL0(attr, "Unable to read PRIMCOEFF attribute.");
@@ -160,7 +210,7 @@ RobinBoundaryCondition::RobinBoundaryCondition(
 
                 pSession->SubstituteExpressions(attrData1);
 
-                LibUtilities::Equation m_robinPrimitiveCoeff(pSession,attrData1);
+                m_robinPrimitiveCoeff = MemoryManager<LibUtilities::Equation>::AllocateSharedPtr(pSession, attrData1);
             }
             else if(attrName1=="FILE")
             {
@@ -197,26 +247,25 @@ PeriodicBoundaryCondition::PeriodicBoundaryCondition(
     attr = attr->Next();
     if(attr)
     {
-    attrName = attr->Name();
+        attrName = attr->Name();
+        
+        ASSERTL0(attrName == "VALUE", (std::string("Unknown attribute: ") + attrName).c_str());
+        
+        attrData = attr->Value();
+        ASSERTL0(!attrData.empty(), "VALUE attribute must have associated value.");
+        
+        int beg = attrData.find_first_of("[");
+        int end = attrData.find_first_of("]");
+        std::string periodicBndRegionIndexStr = attrData.substr(beg+1,end-beg-1);
+        ASSERTL0(beg < end, (std::string("Error reading periodic boundary region definition using") + 
+                             attrData).c_str());
 
-    ASSERTL0(attrName == "VALUE", (std::string("Unknown attribute: ") + attrName).c_str());
-
-    attrData = attr->Value();
-    ASSERTL0(!attrData.empty(), "VALUE attribute must have associated value.");
-
-    int beg = attrData.find_first_of("[");
-    int end = attrData.find_first_of("]");
-    std::string periodicBndRegionIndexStr = attrData.substr(beg+1,end-beg-1);
-    //ASSERTL0(beg < end, (std::string("Error reading periodic boundary region definition for boundary region: ")
-    //                     + boundaryRegionIDStrm.str()).c_str());
-
-    std::vector<unsigned int> periodicBndRegionIndex;
-    //bool parseGood = ParseUtils::GenerateSeqVector(periodicBndRegionIndexStr.c_str(), periodicBndRegionIndex);
-
-    //ASSERTL0(parseGood && (periodicBndRegionIndex.size()==1), (std::string("Unable to read periodic boundary condition for boundary region: ")
-    //                                                           + boundaryRegionIDStrm.str()).c_str());
-
-    m_connectedBoundaryRegion=periodicBndRegionIndex[0];
+        std::vector<unsigned int> periodicBndRegionIndex;
+        bool parseGood = ParseUtils::GenerateSeqVector(periodicBndRegionIndexStr.c_str(), periodicBndRegionIndex);
+        
+        ASSERTL0(parseGood && (periodicBndRegionIndex.size()==1), (std::string("Unable to identify periodic boundary condition in string: ")  + attrData).c_str());
+        
+        m_connectedBoundaryRegion=periodicBndRegionIndex[0];
     }
     else
     {
@@ -229,7 +278,7 @@ NotDefinedBoundaryCondition::NotDefinedBoundaryCondition(
         const LibUtilities::SessionReaderSharedPtr &pSession,
               TiXmlElement* pBoundaryConditions):
     BoundaryConditionBase(eNotDefined, std::string("")),
-    m_notDefinedCondition(pSession, std::string(""))
+    m_notDefinedCondition(MemoryManager<LibUtilities::Equation>::AllocateSharedPtr(pSession, std::string("")))
 {
 }
 
