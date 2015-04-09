@@ -386,7 +386,7 @@ namespace Nektar
                 {
                     SpatialDomains::BoundaryRegionShPtr breg(MemoryManager<SpatialDomains::BoundaryRegion>::AllocateSharedPtr());
                     
-                    // Set up Composite (GemetryVector) to contain vertex and put into bRegion 
+                    // Set up Composite (GeometryVector) to contain vertex and put into bRegion 
                     SpatialDomains::Composite gvec(MemoryManager<SpatialDomains::GeometryVector>::AllocateSharedPtr());
                     gvec->push_back(regIt->second);
                     (*breg)[regIt->first] = gvec;
@@ -396,7 +396,7 @@ namespace Nektar
                     SpatialDomains::BoundaryConditionMapShPtr bCondition = MemoryManager<SpatialDomains::BoundaryConditionMap>::AllocateSharedPtr();
 
                     // Set up just boundary condition for this variable. 
-                    SpatialDomains::BoundaryConditionShPtr notDefinedCondition(MemoryManager<SpatialDomains::NotDefinedBoundaryCondition>::AllocateSharedPtr(m_session, "0"));
+                    SpatialDomains::BoundaryConditionShPtr notDefinedCondition(MemoryManager<SpatialDomains::BoundaryConditionBase>::AllocateSharedPtr(SpatialDomains::eNotDefined));
                     (*bCondition)[variable] = notDefinedCondition;
                     
                     returnval->AddBoundaryConditions(bregions.size()+numNewBc,bCondition);
@@ -1327,12 +1327,7 @@ namespace Nektar
 
             for (i = 0; i < m_bndCondExpansions.num_elements(); ++i)
             {
-                if (time == 0.0 || m_bndConditions[i]->GetUserDefined() ==
-                    SpatialDomains::eTimeDependent || 
-                    m_bndConditions[i]->GetUserDefined() ==
-                    SpatialDomains::eQinflow  ||
-                    m_bndConditions[i]->GetUserDefined() ==
-                    SpatialDomains::eRCRterminal )
+                if (time == 0.0 || m_bndConditions[i]->IsTimeDependent())
                 {
                     m_bndCondExpansions[i]->GetCoords(x0, x1, x2);
                     
@@ -1346,7 +1341,6 @@ namespace Nektar
                     if (m_bndConditions[i]->GetBoundaryConditionType() ==
                         SpatialDomains::eDirichlet)
                     {
-                        boost::shared_ptr<SpatialDomains::DirichletBoundaryCondition>  eqn = boost::static_pointer_cast<SpatialDomains::DirichletBoundaryCondition>(m_bndConditions[i]);
                         m_bndCondExpansions[i]->SetCoeff(0,
                             (boost::dynamic_pointer_cast<SpatialDomains
                              ::DirichletBoundaryCondition>(m_bndConditions[i])

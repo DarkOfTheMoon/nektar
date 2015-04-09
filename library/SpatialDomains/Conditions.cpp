@@ -220,9 +220,11 @@ namespace Nektar
                     boost::tuple<std::string,std::string> bnd_pair=boost::make_tuple(conditionType,userdefined);
                     BoundaryConditionShPtr bnd=GetBoundaryConditionsFactory().CreateInstance(bnd_pair,m_session, conditionElement);
                     
-                    boost::shared_ptr<SpatialDomains::DirichletBoundaryCondition>  eqn = boost::static_pointer_cast<SpatialDomains::DirichletBoundaryCondition>(bnd);
-
-                    //I need to put bnd it inside a map 
+                    // turn on time dependent boolean
+                    if(userdefined == "TimeDependent")
+                    {
+                        bnd->SetIsTimeDependent(true);
+                    }
 
                     (*boundaryConditions)[*iter]=bnd;
 

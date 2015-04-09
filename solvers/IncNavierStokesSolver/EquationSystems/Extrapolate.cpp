@@ -806,7 +806,7 @@ namespace Nektar
                 // Now set up Velocity conditions.
                 for(int j = 0; j < m_bnd_dim; j++)
                 {
-                    if(UBndConds[j][n]->GetUserDefined()
+                    if(UBndConds[j][n]->GetUserDefinedType()
                                         == SpatialDomains::eHighOutflow)
                     {
                         cnt = cnt_start;

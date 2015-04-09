@@ -427,15 +427,14 @@ namespace Nektar
       {	
 	
           // Wall Boundary Condition
-          if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() == 
-              SpatialDomains::eWall)
+          if (m_fields[0]->GetBndConditions()[n]->GetUserDefinedType() == 
+              "Wall")
           {
               WallBoundary2D(n, cnt, inarray);
           }
 	
           // Time Dependent Boundary Condition (specified in meshfile)
-          if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() == 
-              SpatialDomains::eTimeDependent)
+          if (m_fields[0]->GetBndConditions()[n]->IsTimeDependent())
           {
               for (int i = 0; i < nvariables; ++i)
               {
@@ -457,8 +456,8 @@ namespace Nektar
         Array<OneD, Array<OneD, NekDouble> > &physarray)
     { 
         int i;
-        int nTracePts = GetTraceTotPoints();
-        int nvariables      = physarray.num_elements();
+        int nTracePts  = GetTraceTotPoints();
+        int nvariables = physarray.num_elements();
         
         // get physical values of the forward trace
         Array<OneD, Array<OneD, NekDouble> > Fwd(nvariables);
@@ -520,7 +519,8 @@ namespace Nektar
     }
     
 
-  void NonlinearSWE::WallBoundary2D(int bcRegion, int cnt, Array<OneD, Array<OneD, NekDouble> > &physarray)
+  void NonlinearSWE::WallBoundary2D(int bcRegion, int cnt, 
+                     Array<OneD, Array<OneD, NekDouble> > &physarray)
   { 
 
     int i;

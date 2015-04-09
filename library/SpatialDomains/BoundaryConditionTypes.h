@@ -79,7 +79,7 @@ class DirichletBoundaryCondition : public BoundaryConditionBase
     private:
         LibUtilities::EquationSharedPtr m_dirichletCondition;
         std::string m_filename;
-        static BCKey m_type;
+        static BCKey m_type[];
 };
 
 class NeumannBoundaryCondition : public BoundaryConditionBase
@@ -116,7 +116,7 @@ class NeumannBoundaryCondition : public BoundaryConditionBase
     private:
         LibUtilities::EquationSharedPtr m_neumannCondition;
         std::string m_filename;
-        static BCKey m_type;
+        static BCKey m_type[];
 };
 
 class RobinBoundaryCondition : public BoundaryConditionBase
@@ -166,7 +166,7 @@ class RobinBoundaryCondition : public BoundaryConditionBase
         LibUtilities::EquationSharedPtr m_robinFunction;
         LibUtilities::EquationSharedPtr m_robinPrimitiveCoeff;
         std::string m_filename;
-        static BCKey m_type;
+        static BCKey m_type[];
 };
 
 
@@ -198,37 +198,7 @@ public:
     
     private:
         unsigned int m_connectedBoundaryRegion;
-        static BCKey m_type;
-};
-
-// not sure this is required
-class NotDefinedBoundaryCondition : public BoundaryConditionBase
-{
-    public:
-        static BoundaryConditionBaseSharedPtr create(
-                const LibUtilities::SessionReaderSharedPtr &pSession,
-                TiXmlElement* pConditions) {
-            return MemoryManager<NotDefinedBoundaryCondition>::AllocateSharedPtr(pSession, pConditions);
-        }
-
-        NotDefinedBoundaryCondition(const LibUtilities::SessionReaderSharedPtr &pSession,
-                                      TiXmlElement* pBoundaryConditions);
-
-        NotDefinedBoundaryCondition(
-            const LibUtilities::SessionReaderSharedPtr &pSession,
-            const std::string& eqn,
-            const std::string& userDefined = std::string("NoUserDefined"),
-            const std::string& filename=std::string("")):
-        BoundaryConditionBase(eNotDefined, userDefined),
-            m_notDefinedCondition(MemoryManager<LibUtilities::Equation>::AllocateSharedPtr(pSession, eqn)),
-            m_filename(filename)
-            {
-            }
-                
-       private:
-                LibUtilities::EquationSharedPtr m_notDefinedCondition;
-        std::string m_filename;
-        static BCKey m_type;
+        static BCKey m_type[];
 };
 
 }

@@ -41,30 +41,47 @@ namespace Nektar {
 namespace SpatialDomains {
 
     // Register boundary conditions
-    BCKey DirichletBoundaryCondition::m_type = GetBoundaryConditionsFactory().RegisterCreatorFunction(
-        BCKey("D","NoUserDefined"),
-        DirichletBoundaryCondition::create,
-        "Dirichlet");
+    BCKey DirichletBoundaryCondition::m_type[] = 
+    {
+        GetBoundaryConditionsFactory().RegisterCreatorFunction(BCKey("D","NoUserDefined"),
+                                                               DirichletBoundaryCondition::create,
+                                                               "Dirichlet"),
+        GetBoundaryConditionsFactory().RegisterCreatorFunction(BCKey("D","TimeDependent"),
+                                                               DirichletBoundaryCondition::create,
+                                                               "Time dependent Dirichlet")
+    };
 
 
-    BCKey NeumannBoundaryCondition::m_type = GetBoundaryConditionsFactory().RegisterCreatorFunction(
-        BCKey("N","NoUserDefined"),
-        NeumannBoundaryCondition::create,
-        "Neumann");
+    BCKey NeumannBoundaryCondition::m_type[] = 
+    {
+        GetBoundaryConditionsFactory().RegisterCreatorFunction(BCKey("N","NoUserDefined"),
+                                                                NeumannBoundaryCondition::create,
+                                                                "Neumann"),
+        GetBoundaryConditionsFactory().RegisterCreatorFunction(BCKey("N","TimeDependent"),
+                                                               NeumannBoundaryCondition::create,
+                                                               "Time dependent Neumann")
+    };
 
+    BCKey RobinBoundaryCondition::m_type[] = 
+    {
+        GetBoundaryConditionsFactory().RegisterCreatorFunction(BCKey("R","NoUserDefined"),
+                                                               RobinBoundaryCondition::create,
+                                                               "Time dependent Robin"),
+        GetBoundaryConditionsFactory().RegisterCreatorFunction(BCKey("R","TimeDependent"),
+                                                               RobinBoundaryCondition::create,
+                                                               "Robin")
+    };
 
-    BCKey RobinBoundaryCondition::m_type = GetBoundaryConditionsFactory().RegisterCreatorFunction(
-        BCKey("R","NoUserDefined"),
-        RobinBoundaryCondition::create,
-        "Robin");
-
-    BCKey PeriodicBoundaryCondition::m_type = GetBoundaryConditionsFactory().RegisterCreatorFunction(
-        BCKey("P","NoUserDefined"),
-        PeriodicBoundaryCondition::create,
-        "Periodic");
+    BCKey PeriodicBoundaryCondition::m_type[] =
+    {
+        GetBoundaryConditionsFactory().RegisterCreatorFunction(BCKey("P","NoUserDefined"),
+                                                               PeriodicBoundaryCondition::create,
+                                                               "Periodic")
+    };
+    
     
     DirichletBoundaryCondition::DirichletBoundaryCondition(const LibUtilities::SessionReaderSharedPtr &pSession, TiXmlElement* pBoundaryConditions):
-        BoundaryConditionBase(eDirichlet, std::string("")),
+        BoundaryConditionBase(eDirichlet),
         m_dirichletCondition(MemoryManager<LibUtilities::Equation>::AllocateSharedPtr(pSession, std::string("")))
     {
 
@@ -115,9 +132,10 @@ namespace SpatialDomains {
 
 NeumannBoundaryCondition::NeumannBoundaryCondition(
         const LibUtilities::SessionReaderSharedPtr &pSession,
-              TiXmlElement* pBoundaryConditions):
-    BoundaryConditionBase(eNeumann, std::string("")),
-                             m_neumannCondition(MemoryManager<LibUtilities::Equation>::AllocateSharedPtr(pSession, std::string("")))
+        TiXmlElement* pBoundaryConditions):
+        BoundaryConditionBase(eNeumann),
+        m_neumannCondition(MemoryManager<LibUtilities::Equation>::
+                           AllocateSharedPtr(pSession, std::string("")))
 {
 
     TiXmlAttribute *attr = pBoundaryConditions->FirstAttribute();
@@ -165,11 +183,13 @@ NeumannBoundaryCondition::NeumannBoundaryCondition(
 }
 
 RobinBoundaryCondition::RobinBoundaryCondition(
-        const LibUtilities::SessionReaderSharedPtr &pSession,
-              TiXmlElement* pBoundaryConditions):
-    BoundaryConditionBase(eRobin, std::string("")),
-                             m_robinFunction(MemoryManager<LibUtilities::Equation>::AllocateSharedPtr(pSession, std::string(""))),
-                             m_robinPrimitiveCoeff(MemoryManager<LibUtilities::Equation>::AllocateSharedPtr(pSession, std::string("")))
+    const LibUtilities::SessionReaderSharedPtr &pSession,
+    TiXmlElement* pBoundaryConditions):
+    BoundaryConditionBase(eRobin),
+    m_robinFunction(MemoryManager<LibUtilities::Equation>::
+                    AllocateSharedPtr(pSession, std::string(""))),
+    m_robinPrimitiveCoeff(MemoryManager<LibUtilities::Equation>::
+                          AllocateSharedPtr(pSession, std::string("")))
 {
     TiXmlAttribute *attr = pBoundaryConditions->FirstAttribute();
 
@@ -224,16 +244,16 @@ RobinBoundaryCondition::RobinBoundaryCondition(
                 m_filename = attrData1;
             }
             attr = attr->Next();
-
+ 
         }
     }
 }
 
 
 PeriodicBoundaryCondition::PeriodicBoundaryCondition(
-        const LibUtilities::SessionReaderSharedPtr &pSession,
-              TiXmlElement* pBoundaryConditions):
-    BoundaryConditionBase(ePeriodic, std::string(""))
+    const LibUtilities::SessionReaderSharedPtr &pSession,
+    TiXmlElement* pBoundaryConditions):
+    BoundaryConditionBase(ePeriodic)
 {
 
     TiXmlAttribute *attr = pBoundaryConditions->FirstAttribute();
@@ -272,14 +292,6 @@ PeriodicBoundaryCondition::PeriodicBoundaryCondition(
         ASSERTL0(false, "Periodic boundary conditions should be explicitely defined");
     }
 
-}
-
-NotDefinedBoundaryCondition::NotDefinedBoundaryCondition(
-        const LibUtilities::SessionReaderSharedPtr &pSession,
-              TiXmlElement* pBoundaryConditions):
-    BoundaryConditionBase(eNotDefined, std::string("")),
-    m_notDefinedCondition(MemoryManager<LibUtilities::Equation>::AllocateSharedPtr(pSession, std::string("")))
-{
 }
 
 }

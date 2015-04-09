@@ -157,14 +157,14 @@ SPATIAL_DOMAINS_EXPORT BoundaryConditionsFactory& GetBoundaryConditionsFactory()
                     m_boundaryConditionType = boundaryType;
                 }
 
-                void SetUserDefined(BndUserDefinedType type)
+                void SetUserDefinedType(std::string type)
                 {
-                    m_userDefined = type;
+                    m_userDefinedType = type;
                 }
 
-                BndUserDefinedType GetUserDefined() const
+                std::string GetUserDefinedType() const
                 {
-                    return m_userDefined;
+                    return m_userDefinedType;
                 }
 
                 const std::string GetBndTypeAsString(BndUserDefinedType type)
@@ -172,9 +172,20 @@ SPATIAL_DOMAINS_EXPORT BoundaryConditionsFactory& GetBoundaryConditionsFactory()
                     return BndUserDefinedTypeMap[type];
                 }
 
+                void SetIsTimeDependent(bool val)
+                {
+                    m_isTimeDependent = val;
+                }
+
+                bool IsTimeDependent(void)
+                {
+                    return m_isTimeDependent;
+                }
+
             protected:
                 BoundaryConditionType m_boundaryConditionType;
-                BndUserDefinedType    m_userDefined;
+                std::string           m_userDefinedType;
+                bool                  m_isTimeDependent; 
         };
 
         typedef boost::shared_ptr<BoundaryConditionBase> BoundaryConditionBaseSharedPtr;

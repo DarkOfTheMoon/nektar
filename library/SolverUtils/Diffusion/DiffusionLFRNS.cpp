@@ -1343,8 +1343,7 @@ namespace Nektar
                         
                         // Reinforcing bcs for velocity in case of Wall bcs
                         if (fields[i]->GetBndConditions()[j]->
-                            GetUserDefined() == 
-                            SpatialDomains::eWallViscous)
+                            GetUserDefinedType() == "WallViscous")
                         {
                             Vmath::Zero(nBndEdgePts, 
                                         &scalarVariables[i][id2], 1);
@@ -1374,7 +1373,7 @@ namespace Nektar
                                          &scalarVariables[i][id2], 1, 
                                          &penaltyfluxO1[i][id2], 1);
                         }
-                        
+
                         // For Neumann boundary condition: uflux = u_+
                         else if ((fields[i]->GetBndConditions()[j])->
                                  GetBoundaryConditionType() == 
@@ -1425,8 +1424,7 @@ namespace Nektar
                     
                     // Imposing Temperature Twall at the wall 
                     if (fields[i]->GetBndConditions()[j]->
-                        GetUserDefined() == 
-                        SpatialDomains::eWallViscous)
+                        GetUserDefinedType() == "WallViscous")
                     {                        
                         Vmath::Vcopy(nBndEdgePts, 
                                      &Tw[0], 1, 

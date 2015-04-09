@@ -652,14 +652,7 @@ namespace Nektar
                     }
 
                     m_bndCondExpansions[cnt]  = locExpList;
-                    m_bndConditions[cnt]      = bc;
-                    SpatialDomains::BndUserDefinedType type = 
-                        m_bndConditions[cnt++]->GetUserDefined();
-                    if (type == SpatialDomains::eI || 
-                        type == SpatialDomains::eCalcBC)
-                    {
-                        SetUpPhysNormals();
-                    }
+                    m_bndConditions[cnt++]    = bc;
                 }
             }
         }
@@ -2125,9 +2118,7 @@ namespace Nektar
 
             for (i = 0; i < nbnd; ++i)
             {
-                if (time == 0.0 || 
-                    m_bndConditions[i]->GetUserDefined() == 
-                    SpatialDomains::eTimeDependent)
+                if (time == 0.0 || m_bndConditions[i]->IsTimeDependent())
                 {
                     locExpList = m_bndCondExpansions[i];
                     npoints    = locExpList->GetNpoints();
@@ -2233,22 +2224,6 @@ namespace Nektar
                         coeff->Evaluate(x0, x1, x2, time,
                                        locExpList->UpdatePhys());
                     }    
-                    else
-                    {
-                        ASSERTL0(false, "This type of BC not implemented yet");
-                    }
-                }
-                else if (m_bndConditions[i]->GetUserDefined()
-                            == SpatialDomains::eMovingBody)
-                {
-                    locExpList = m_bndCondExpansions[i];
-                    if (m_bndConditions[i]->GetBoundaryConditionType()
-                            == SpatialDomains::eDirichlet)
-                    {
-                        locExpList->FwdTrans_IterPerExp(
-                                    locExpList->GetPhys(),
-                                    locExpList->UpdateCoeffs());
-                    }
                     else
                     {
                         ASSERTL0(false, "This type of BC not implemented yet");
