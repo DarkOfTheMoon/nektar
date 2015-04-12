@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-//  File: ProcessMultiShear.h
+//  File: ProcessNitricOxide.h
 //
 //  For more information, please see: http://www.nektar.info/
 //
@@ -33,17 +33,17 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef UTILITIES_PREPROCESSING_FIELDCONVERT_PROCESSMULTISHEAR
-#define UTILITIES_PREPROCESSING_FIELDCONVERT_PROCESSMULTISHEAR
+#ifndef UTILITIES_PREPROCESSING_FIELDCONVERT_PROCESSNITRICOXIDE
+#define UTILITIES_PREPROCESSING_FIELDCONVERT_PROCESSNITRICOXIDE
 
-#include "../Module.h"
+#include "Module.h"
 
 namespace Nektar
 {
     namespace Utilities
     {
         /**
-         * @brief This processing module calculates the shear stress metrics and 
+         * @brief This processing module calculates the production of nitric oxide at the endothelium and 
          * writes it to a surface output file. 
          */
         class ProcessNitricOxide : public ProcessModule
@@ -51,7 +51,7 @@ namespace Nektar
         public:
             /// Creates an instance of this class
             static boost::shared_ptr<Module> create(FieldSharedPtr f) {
-                return MemoryManager<ProcessMultiShear>::AllocateSharedPtr(f);
+                return MemoryManager<ProcessNitricOxide>::AllocateSharedPtr(f);
             }
             static ModuleKey className;
             
@@ -60,6 +60,8 @@ namespace Nektar
             
             /// Write mesh to output file.
             virtual void Process(po::variables_map &vm);
+
+            void RK4();
         };
     }
 }
