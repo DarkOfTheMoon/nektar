@@ -54,6 +54,9 @@ namespace Nektar
 {
     namespace LibUtilities
     {
+        typedef boost::unique_lock<boost::shared_mutex> WriteLock;
+        typedef boost::shared_lock<boost::shared_mutex> ReadLock;
+
         template <typename KeyType>
         struct defOpLessCreator
         {
@@ -325,12 +328,10 @@ namespace Nektar
                 CreateFuncContainer m_keySpecificCreateFuncs;
                 static boost::shared_mutex m_mutex;
         };
+        template <typename KeyType, typename ValueT, typename opLessCreator> typename NekManager<KeyType, ValueT, opLessCreator>::ValueContainerPool NekManager<KeyType, ValueT, opLessCreator>::m_ValueContainerPool;
+        template <typename KeyType, typename ValueT, typename opLessCreator> typename NekManager<KeyType, ValueT, opLessCreator>::FlagContainerPool NekManager<KeyType, ValueT, opLessCreator>::m_managementEnabledContainerPool;
         template <typename KeyType, typename ValueT, typename opLessCreator>
-        typename NekManager<KeyType, ValueT, opLessCreator>::ValueContainerPool NekManager<KeyType, ValueT, opLessCreator>::m_ValueContainerPool;
-        template <typename KeyType, typename ValueT, typename opLessCreator>
-        typename NekManager<KeyType, ValueT, opLessCreator>::FlagContainerPool NekManager<KeyType, ValueT, opLessCreator>::m_managementEnabledContainerPool;
-        template <typename KeyType, typename ValueT, typename opLessCreator>
-        typename boost::shared_mutex NekManager<KeyType, ValueT, opLessCreator>::m_mutex;
+            typename boost::shared_mutex NekManager<KeyType, ValueT, opLessCreator>::m_mutex;
     }
 }
 
