@@ -54,12 +54,16 @@ namespace Nektar
         {
             int init = 0;
             MPI_Initialized(&init);
-            ASSERTL0(!init, "MPI has already been initialised.");
 
-            int retval = MPI_Init(&narg, &arg);
-            if (retval != MPI_SUCCESS)
+            if (init == false)
             {
-                ASSERTL0(false, "Failed to initialise MPI");
+                ASSERTL0(!init, "MPI has already been initialised.");
+
+                int retval = MPI_Init(&narg, &arg);
+                if (retval != MPI_SUCCESS)
+                {
+                    ASSERTL0(false, "Failed to initialise MPI");
+                }
             }
 
             m_comm = MPI_COMM_WORLD;

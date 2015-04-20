@@ -108,7 +108,7 @@ namespace Nektar
                 // In case of Galerkin explicit diffusion gives an error
                 if (m_explicitDiffusion)
                 {
-                    ASSERTL0(false, "Explicit Galerkin diffusion not set up.");
+                    //ASSERTL0(false, "Explicit Galerkin diffusion not set up.");
                 }
                 // In case of Galerkin implicit diffusion: do nothing
             }
@@ -161,11 +161,14 @@ namespace Nektar
         // Number of fields (variables of the problem)
         int nVariables = inarray.num_elements();
         
+        Vmath::Zero(outarray[0].num_elements(), outarray[0], 1);
+        Vmath::Zero(outarray[1].num_elements(), outarray[1], 1);
+
         // RHS computation using the new advection base class
-        m_diffusion->Diffuse(nVariables, 
-                             m_fields, 
-                             inarray, 
-                             outarray);
+        //m_diffusion->Diffuse(nVariables, 
+        //                     m_fields, 
+        //                     inarray, 
+        //                     outarray);
     }
 
     /**

@@ -74,6 +74,11 @@ namespace Nektar
         m_PhiToTop = Array<OneD, int>(npoints);
         m_PhiTo3D = Array<OneD, int>(npoints2);
 
+
+        //tmpPhi:
+        tmpPhi = Array<OneD, NekDouble>(npoints);
+        tmpRhsE = Array<OneD, NekDouble>(npoints);
+        tmpRhsP = Array<OneD, NekDouble>(npoints);
         
         Array<OneD, NekDouble> bnd_x(npoints2);
         Array<OneD, NekDouble> bnd_y(npoints2);
@@ -157,18 +162,33 @@ namespace Nektar
         }
 
         std::cout << "finishing setup..." << std::endl;
+
+
+
+        //SHOULD BE CHANGED:
+        m_dt = m_timestep;
+
+        m_Twave = 1;
+        m_hd = 1;
+        m_wwave = 2*M_PI/m_Twave;
+        m_g = 9.81;
+        m_Hwave = 0.02;
+        m_kh = 4.0269; //todo, change to use disper.
+        m_kwave = m_kh/m_hd;
+        m_lwave = 2*M_PI/m_kwave;
+        m_cwave = m_wwave/m_kwave;
+        m_h0 = 1;
+        
+        
+        
+        
+        
+        
+        
+        
         
 
-        //setup:
-        NekDouble h0 = 1;
-        NekDouble g = 9.82;
-        NekDouble lwave = 2;
-        NekDouble Hwave = 0.08934064760240; 
-        NekDouble kwave = 2*M_PI/lwave;
-        NekDouble kh = kwave*h0; //TODO: Adjust for variable h0
-        NekDouble cwave = sqrt(g/kwave*tanh(kh));
-        NekDouble Twave = lwave/cwave;
-        NekDouble wwave = 2*M_PI/Twave;
+        std::cout << "timestep: " << m_timestep << std::endl;
 
         
 
@@ -178,7 +198,7 @@ namespace Nektar
         int niZ2 = 0, niZ3 = 0;
         for (int i = 0; i < npoints; ++i)
         {
-            if (dirs_x[i] <= xmin + 2*lwave)
+            if (dirs_x[i] <= -0.5) //xmin + 2*m_lwave)
             {
                 //creating zone
                 if (dirs_y[i] < 0)
@@ -202,7 +222,7 @@ namespace Nektar
         niZ3 = 0;
         for (int i = 0; i < npoints; ++i)
         {
-            if (dirs_x[i] <= xmin + 2*lwave)
+            if (dirs_x[i] <= -0.5) //xmin + 2*m_lwave)
             {
                 //creating zone
                 if (dirs_y[i] < 0)
@@ -219,13 +239,6 @@ namespace Nektar
                 }
                 
             }
-            /*
-            if (dirs_x[i] > xmax - 2*lwave)
-            {
-                iZ3[niZ3] = i;
-                niZ3++;
-            }
-            */
         }
 
         std::cout << "finishing mappings..." << std::endl;
@@ -244,27 +257,8 @@ namespace Nektar
         spongefunction4(XiZ2, 0, 0, 10, crm);
         spongefunction4(XiZ3, 0, 5.0, 9, cfr);
         
-        std::cout << "hi" << std::endl;
+        std::cout << "hi" << std::endl;   
 
-        EquationSystem::SetBoundaryConditions(0);        
-
-        /*
-        if(m_session->DefinesParameter("d00"))
-        {
-            m_varcoeff[StdRegions::eVarCoeffD00]
-            = Array<OneD, NekDouble>(npoints, m_session->GetParameter("d00"));
-        }
-        if(m_session->DefinesParameter("d11"))
-        {
-            m_varcoeff[StdRegions::eVarCoeffD11]
-            = Array<OneD, NekDouble>(npoints, m_session->GetParameter("d11"));
-        }
-        if(m_session->DefinesParameter("d22"))
-        {
-            m_varcoeff[StdRegions::eVarCoeffD22]
-            = Array<OneD, NekDouble>(npoints, m_session->GetParameter("d22"));
-        }
-        */
 
         switch (m_projectionType)
         {
@@ -300,14 +294,12 @@ namespace Nektar
             }
         }
         
-        std::cout << "hi" << std::endl;
         
         //if (m_explicitDiffusion)
         //{
             m_ode.DefineOdeRhs    (&OceanWaveSystem::DoOdeRhs,        this);
             m_ode.DefineProjection(&OceanWaveSystem::DoOdeProjection, this);
 
-        std::cout << "hi" << std::endl;
         //}
         //else
         //{
@@ -347,32 +339,6 @@ namespace Nektar
     Array<OneD, Array<OneD, NekDouble> > &inarray,
     NekDouble time)
   { 
-      std::string varName;
-      int nvariables = m_fields.num_elements();
-      int cnt = 0;
-
-      // loop over Boundary Regions
-      for(int n = 0; n < m_fields[0]->GetBndConditions().num_elements(); ++n)
-      { 
-          // Wall Boundary Condition
-          if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() == 
-              SpatialDomains::eWall)
-          {
-              WallBoundary2D(n, cnt, inarray);
-          }
-    
-          // Time Dependent Boundary Condition (specified in meshfile)
-          if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() == 
-              SpatialDomains::eTimeDependent)
-          {
-              for (int i = 0; i < nvariables; ++i)
-              {
-                  varName = m_session->GetVariable(i);
-                  m_fields[i]->EvaluateBoundaryConditions(time, varName);
-              }
-          }
-          cnt += m_fields[0]->GetBndCondExpansions()[n]->GetExpSize();
-      }
   }
 
 
@@ -381,75 +347,6 @@ namespace Nektar
         int                                   cnt, 
         Array<OneD, Array<OneD, NekDouble> > &physarray)
     { 
-        
-        int i;
-        int nTracePts = GetTraceTotPoints();
-        int nvariables      = physarray.num_elements();
-
-        
-        // get physical values of the forward trace
-        Array<OneD, NekDouble> Fwd(nTracePts);
-        Array<OneD, NekDouble> Fwd2(nTracePts);
-        m_fields[0]->ExtractTracePhys(physarray[0], Fwd);
-        
-
-
-        // Adjust the physical values of the trace to take 
-        // user defined boundaries into account
-        int e, id1, id2, npts;
-
-        Array<OneD, Array<OneD, NekDouble> > traceNormals(3);
-        for (int i = 0; i < 3; ++i)
-         {
-             traceNormals[i] = Array<OneD, NekDouble>(nTracePts);
-         } 
-        m_fields[0]->GetTrace()->GetNormals(traceNormals);
-        
-        for (e = 0; e < m_fields[0]->GetBndCondExpansions()[bcRegion]
-                 ->GetExpSize(); ++e)
-        {
-            npts = m_fields[0]->GetBndCondExpansions()[bcRegion]->
-                GetExp(e)->GetTotPoints();
-            id1  = m_fields[0]->GetBndCondExpansions()[bcRegion]->
-                GetPhys_Offset(e);
-            id2  = m_fields[0]->GetTrace()->GetPhys_Offset(
-                        m_fields[0]->GetTraceMap()->
-                                    GetBndCondCoeffsToGlobalCoeffsMap(cnt+e));
-
-            
-            // For 2D/3D, define: v* = v - 2(v.n)n
-            Array<OneD, NekDouble> tmp(npts, 0.0);
-             
-            // Calculate (v.n)
-            for (i = 0; i < m_spacedim; ++i)
-            {
-                Vmath::Vvtvp(npts,
-                             Fwd+id2, 1,
-                             traceNormals[i]+id2, 1,
-                             tmp, 1,
-                             tmp, 1);    
-            }
-
-                       
-
-            // Calculate 2.0(v.n)
-            Vmath::Smul(npts, -2.0, tmp, 1, tmp, 1);
-            
-            // Calculate v* = v - 2.0(v.n)n
-            for (i = 0; i < m_spacedim; ++i)
-            {
-                for (int j = 0; j < npts; ++j)
-                {
-                    Fwd[id2+j] += tmp[j]*traceNormals[i][id2+j];
-                }
-            }
-            
-            // copy boundary adjusted values into the boundary expansion
-            Vmath::Vcopy(npts, &Fwd[id2], 1,
-                        &(m_fields[0]->GetBndCondExpansions()[bcRegion]->
-                        UpdatePhys())[id1], 1);
-            
-        }
         
     }
 
@@ -460,92 +357,49 @@ namespace Nektar
               Array<OneD,        Array<OneD, NekDouble> > &outarray,
         const NekDouble time)
     {
-        std::cout << "here" << std::endl;
-
-        // Number of fields (variables of the problem)
-        int nVariables = 1;
+        //std::cout << "here" << std::endl;
+        std::cout << time << std::endl;
 
         int npoints = inarray[0].num_elements();
 
-
-
-        NekDouble g = 9.82;
-        NekDouble h = 1.0;
-
-        std::cout << "here" << std::endl;
-
-        //compute d: (d = h + eta)
-        Array<OneD, NekDouble> d(npoints, h);
-        Vmath::Vadd(npoints, d, 1, inarray[2], 1, d, 1);
-
-        //
+        Array<OneD, NekDouble> d(npoints, m_h0);
         Array<OneD, NekDouble> Dzsigma(npoints);
-        Array<OneD, NekDouble> Dsigmax(npoints), Dsigmay(npoints);
-        Array<OneD, NekDouble> D2sigma(npoints);
-
-        std::cout << "here" << std::endl;
-
-        Array<OneD, NekDouble> X(npoints), Y(npoints), sigma(npoints);
-        m_fields[0]->GetCoords(X, Y, sigma);
-
-        Array<OneD, NekDouble> Ex(npoints), Ey(npoints), Es(npoints);
-        m_fields[2]->PhysDeriv(inarray[2], Ex, Ey, Es);
 
         Vmath::Sdiv(npoints, 1.0, d, 1, Dzsigma, 1);
-
-        Vmath::Vmul(npoints, Dzsigma, 1, sigma, 1, Dsigmax, 1);
-        Vmath::Vmul(npoints, Dsigmax, 1, Ey, 1, Dsigmay, 1);
-        Vmath::Vmul(npoints, Dsigmax, 1, Ex, 1, Dsigmax, 1);
 
 
         int npoints2 = m_PhiTo3D.num_elements();
 
-        Array<OneD, NekDouble> phi(npoints2);
         Array<OneD, NekDouble> phi2(npoints);
         Array<OneD, NekDouble> phi3(npoints, 1.0);
 
         Vmath::Vmul(npoints, Dzsigma, 1, Dzsigma, 1, phi2, 1);
-        Vmath::Vvtvp(npoints, Dsigmay, 1, Dsigmay, 1, phi2, 1, phi2, 1);
-        Vmath::Vvtvp(npoints, Dsigmax, 1, Dsigmax, 1, phi2, 1, phi2, 1);
-        
 
-
+        //Update boundaries for 3d problem:
         for (int i = 0; i < npoints2; ++i)
         {
             m_fields[0]->GetBndCondExpansions()[0]->UpdatePhys()[i] = inarray[1][m_PhiTo3D[i]];
         }
-
         m_fields[0]->GetBndCondExpansions()[0]->FwdTrans(m_fields[0]->GetBndCondExpansions()[0]->GetPhys(), 
                                                     m_fields[0]->GetBndCondExpansions()[0]->UpdateCoeffs());
 
         
+        //setup new conditions for laplace solver:
         m_factors[StdRegions::eFactorLambda] = 0.0;
         m_factors[StdRegions::eFactorTau] = 1.0;
-
-        /*
-        for (int i = 0; i < npoints; ++i)
-        {
-            NekDouble eta = inarray[2][m_PhiToTop[i]];
-            phi2[i] = 1.0/((h + eta)*(h + eta));
-            phi3[i] = 1.0;
-        }
-        */
-
-        
-
         StdRegions::VarCoeffMap m_varcoeff;
 
-        m_varcoeff[StdRegions::eVarCoeffD22] = phi2;
+        //should be changed in the non-linear case:
+        m_varcoeff[StdRegions::eVarCoeffD22] = phi3;
         m_varcoeff[StdRegions::eVarCoeffD11] = phi3;
         m_varcoeff[StdRegions::eVarCoeffD00] = phi3;
 
         
     
         // RHS computation using the new advection base class
-
         Vmath::Zero(m_fields[0]->GetNcoeffs(),m_fields[0]->UpdateCoeffs(),1);
 
-        m_fields[0]->ClearGlobalLinSysManager();
+        //m_fields[0]->ClearGlobalLinSysManager();
         m_fields[0]->HelmSolve(m_fields[0]->GetPhys(),
                                    m_fields[0]->UpdateCoeffs(),
                                    NullFlagList,
@@ -553,84 +407,61 @@ namespace Nektar
                                    m_varcoeff);
 
         m_fields[0]->BwdTrans(m_fields[0]->GetCoeffs(),
-                                              m_fields[0]->UpdatePhys());
+                                              tmpPhi);
 
-        m_fields[0]->SetPhysState(false);
 
+        //Find derivative of function.
+        Array<OneD, NekDouble> out_d0(npoints);
+        Array<OneD, NekDouble> out_d1(npoints);
         Array<OneD, NekDouble> out_d2(npoints);
-        m_fields[0]->PhysDeriv(2, m_fields[0]->GetPhys(), out_d2);
-
+        m_fields[0]->PhysDeriv(tmpPhi, out_d0, out_d1, out_d2);
         
 
+        //rhsE update:        
         for (int i = 0; i < npoints; ++i)
         {
-            NekDouble eta = inarray[2][m_PhiToTop[i]];
+            NekDouble eta = 0; //inarray[2][m_PhiToTop[i]];
             //std::cout << outarray[1][i] << " ";
-            outarray[2][i] = out_d2[m_PhiToTop[i]] / (h + eta);
-        }
-        //std::cout << "\n";
-
-        for (int i = 0; i < npoints; ++i)
-        {
-            outarray[1][i] = -g*inarray[2][m_PhiToTop[i]];
+            outarray[2][i] = out_d2[m_PhiToTop[i]] / ( m_h0 );
         }
         
 
-        //set d/dt phi = 0
+        //rhsP update:
+        for (int i = 0; i < npoints; ++i)
+        {
+            outarray[1][i] = -m_g * inarray[2][m_PhiToTop[i]];
+        }
+        
+        
+        //zero changes to 3d problem:
         Vmath::Zero(npoints, outarray[0], 1);
-        //Vmath::Zero(npoints, outarray[3], 1);
+
+
+        if (inarray.num_elements() > 5)
+        {
+            Vmath::Vcopy(npoints, outarray[2], 1, tmpRhsE, 1);
+            Vmath::Vcopy(npoints, outarray[1], 1, tmpRhsP, 1);
+        }
+
 
         //wave generation:
-        WaveForcing(time, inarray[1], inarray[2], outarray[1], outarray[2]);
+        WaveForcing(time, inarray[2], inarray[1], outarray[2], outarray[1]);
+
+        //display out_d2:
+        //Vmath::Vcopy(npoints, out_d2, 1, tmpPhi, 1);
+
+        for (int i = 3; i < inarray.num_elements(); ++i)
+        {
+            Vmath::Zero(npoints, outarray[i], 1);
+        }
 
         
     }
 
 
-  void OceanWaveSystem::WallBoundary2D(int bcRegion, int cnt, Array<OneD, Array<OneD, NekDouble> > &physarray)
-  { 
-
-    int i;
-    int nTraceNumPoints = GetTraceTotPoints();
-    int nvariables      = 1; //physarray.num_elements();
-    
-    // get physical values of the forward trace
-    Array<OneD, Array<OneD, NekDouble> > Fwd(nvariables);
-    for (i = 0; i < nvariables; ++i)
-      {
-    Fwd[i] = Array<OneD, NekDouble>(nTraceNumPoints);
-    m_fields[i]->ExtractTracePhys(physarray[i],Fwd[i]);
+      void OceanWaveSystem::WallBoundary2D(int bcRegion, int cnt, Array<OneD, Array<OneD, NekDouble> > &physarray)
+      { 
       }
-    
-    // Adjust the physical values of the trace to take 
-    // user defined boundaries into account
-    int e, id1, id2, npts;
-    
-    for(e = 0; e < m_fields[0]->GetBndCondExpansions()[bcRegion]->GetExpSize(); ++e)
-      {
-    npts = m_fields[0]->GetBndCondExpansions()[bcRegion]->GetExp(e)->GetNumPoints(0);
-    id1  = m_fields[0]->GetBndCondExpansions()[bcRegion]->GetPhys_Offset(e) ;
-    id2  = m_fields[0]->GetTrace()->GetPhys_Offset(m_fields[0]->GetTraceMap()->GetBndCondCoeffsToGlobalCoeffsMap(cnt+e));
-    
-          Array<OneD, NekDouble> tmp_n(npts);
-          Array<OneD, NekDouble> tmp_t(npts);
-          
-          Vmath::Vmul(npts,&Fwd[0][id2],1,&m_traceNormals[0][id2],1,&tmp_n[0],1);
-          Vmath::Vvtvp(npts,&Fwd[1][id2],1,&m_traceNormals[1][id2],1,&tmp_n[0],1,&tmp_n[0],1);
-          Vmath::Vvtvp(npts,&Fwd[2][id2],1,&m_traceNormals[2][id2],1,&tmp_n[0],1,&tmp_n[0],1);
-          
-          // negate the normal flux
-          Vmath::Neg(npts,tmp_n,1);               
-
-    // copy boundary adjusted values into the boundary expansion
-          /*
-    for (i = 0; i < nvariables; ++i)
-      {
-        Vmath::Vcopy(npts,&Fwd[i][id2], 1,&(m_fields[3]->GetBndCondExpansions()[bcRegion]->UpdatePhys())[id1],1);
-      }
-      */
-      }
-  }
 
     /**
      * @brief Compute the projection for the unsteady diffusion problem.
@@ -647,9 +478,16 @@ namespace Nektar
 
         int i;
         int nvariables = inarray.num_elements();
-        EquationSystem::SetBoundaryConditions(time);
 
         //SetBoundaryConditions(outarray, time);
+
+
+        //Find derivative of function.
+        int n = tmpPhi.num_elements();
+        Array<OneD, NekDouble> out_d0(n);
+        Array<OneD, NekDouble> out_d1(n);
+        Array<OneD, NekDouble> out_d2(n);
+        m_fields[0]->PhysDeriv(tmpPhi, out_d0, out_d1, out_d2);
 
         switch(m_projectionType)
         {
@@ -662,41 +500,44 @@ namespace Nektar
                 {
                     Vmath::Vcopy(npoints, inarray[i], 1, outarray[i], 1);
                 }
-                SetBoundaryConditions(outarray, time);
+                Vmath::Vcopy(npoints, tmpPhi, 1, outarray[0], 1);
+                //SetBoundaryConditions(outarray, time);
                 break;
             }
             case MultiRegions::eGalerkin:
             case MultiRegions::eMixed_CG_Discontinuous:
             {
                 Array<OneD, NekDouble> coeffs(m_fields[0]->GetNcoeffs());
-
-
-
-                for(i = 0; i < nvariables; ++i)
-                {
-                    Vmath::Vcopy(GetNpoints(), inarray[i], 1, outarray[i], 1);
-                }
-                SetBoundaryConditions(outarray, time);
                 for(i = 0; i < nvariables; ++i)
                 {  
-                    m_fields[i]->FwdTrans(outarray[i], coeffs);
-                    m_fields[i]->BwdTrans_IterPerExp(coeffs, outarray[i]);
+                    m_fields[i]->FwdTrans(inarray[i], coeffs);
+                    m_fields[i]->BwdTrans(coeffs, outarray[i]);
                 }
-                /*
-                Array<OneD, NekDouble> out_d0(GetNpoints()), out_d1(GetNpoints()), out_d2(GetNpoints());
-                m_fields[0]->PhysDeriv(outarray[0], out_d0, out_d1, out_d2);
-
-                Array<OneD, Array<OneD, NekDouble> > norms(3);
-                for (int i = 0; i < 3; ++i)
+                m_fields[0]->FwdTrans(tmpPhi, coeffs);
+                m_fields[0]->BwdTrans(coeffs, outarray[0]);
+                if (inarray.num_elements() > 3)
                 {
-                    norms[i] = Array<OneD, NekDouble>(GetNpoints(), 0.0);
+                    m_fields[3]->FwdTrans(out_d2, coeffs);
+                    m_fields[3]->BwdTrans(coeffs, outarray[3]);
                 }
+                
+                if (inarray.num_elements() > 5)
+                {
+                    /*
+                    m_fields[4]->FwdTrans(tmpRhsE, coeffs);
+                    m_fields[4]->BwdTrans(coeffs, outarray[4]);
 
-                Array<OneD, NekDouble> trace(GetTraceTotPoints());
+                    m_fields[5]->FwdTrans(tmpRhsP, coeffs);
+                    m_fields[5]->BwdTrans(coeffs, outarray[5]);
+                    */
 
-                //m_fields[3]->FwdTrans(out_d0, coeffs);
-                m_fields[3]->BwdTrans_IterPerExp(trace, outarray[3]);
-                */
+                    m_fields[4]->FwdTrans(out_d0, coeffs);
+                    m_fields[4]->BwdTrans(coeffs, outarray[4]);
+
+                    m_fields[5]->FwdTrans(out_d1, coeffs);
+                    m_fields[5]->BwdTrans(coeffs, outarray[5]);
+                }
+                
                 break;
             }
             default:
@@ -705,6 +546,8 @@ namespace Nektar
                 break;
             }
         }
+
+        //std::cout << "max: " << Vmath::Vmax(tmpPhi.num_elements(), tmpPhi, 1) << " min: " << Vmath::Vmin(tmpPhi.num_elements(), tmpPhi, 1) << std::endl;
 
     }
     
@@ -717,48 +560,7 @@ namespace Nektar
         const NekDouble time,
         const NekDouble lambda)
     {
-        /*
-        StdRegions::ConstFactorMap factors;
 
-        int nvariables = inarray.num_elements();
-        int npoints    = m_fields[0]->GetNpoints();
-        factors[StdRegions::eFactorLambda] = 1.0 / lambda / m_epsilon;
-        factors[StdRegions::eFactorTau]    = 1.0;
-        
-        if(m_useSpecVanVisc)
-        {
-            factors[StdRegions::eFactorSVVCutoffRatio] = m_sVVCutoffRatio;
-            factors[StdRegions::eFactorSVVDiffCoeff]   = m_sVVDiffCoeff/m_epsilon;
-        }
-
-        // We solve ( \nabla^2 - HHlambda ) Y[i] = rhs [i]
-        // inarray = input: \hat{rhs} -> output: \hat{Y}
-        // outarray = output: nabla^2 \hat{Y}
-        // where \hat = modal coeffs
-        for (int i = 0; i < nvariables; ++i)
-        {
-            // Multiply 1.0/timestep/lambda
-            Vmath::Smul(npoints, 
-                        -factors[StdRegions::eFactorLambda], 
-                        inarray[i], 1, 
-                        m_fields[i]->UpdatePhys(), 1);
-            
-            // Solve a system of equations with Helmholtz solver
-            m_fields[i]->HelmSolve(m_fields[i]->GetPhys(),
-                                   m_fields[i]->UpdateCoeffs(), 
-                                   NullFlagList, 
-                                   factors, 
-                                   m_varcoeff);
-            
-            m_fields[i]->BwdTrans(m_fields[i]->GetCoeffs(), 
-                                  m_fields[i]->UpdatePhys());
-            
-            m_fields[i]->SetPhysState(false);
-            
-            // The solution is Y[i]
-            outarray[i] = m_fields[i]->GetPhys();
-        }
-        */
     }
     
     /** 
@@ -771,12 +573,6 @@ namespace Nektar
               Array<OneD, Array<OneD, NekDouble> > &derivatives,
               Array<OneD, Array<OneD, NekDouble> > &flux)
     {
-        std::cout << "flux" << std::endl;
-        for(int k = 0; k < flux.num_elements(); ++k)
-        {
-            Vmath::Zero(GetNpoints(), flux[k], 1);
-        }
-        Vmath::Vcopy(GetNpoints(), physfield[i], 1, flux[j], 1);
     }
 
     void OceanWaveSystem::spongefunction4(const Array<OneD, NekDouble> & x, NekDouble alpha, NekDouble p, int type, Array<OneD, NekDouble> & cr)
@@ -804,11 +600,34 @@ namespace Nektar
                 Vmath::Smul(n, -2.0, x2, 1, x2, 1);
                 Vmath::Vadd(n, cr, 1, x2, 1, cr, 1);
                 break;
+            default:
+                ASSERTL0(false, "unknown sponge function...");
+                break;
 
         }
         
 
     }
+
+    //void OceanWaveSystem::disper(NekDouble g, NekDouble T, NekDouble h, NekDouble)
+
+    /*
+
+        function [kh] = disper(g,T,h,n)
+        % determine the dimensionless dispersion parameter
+        % for wave equations using the dispersion relation.
+        w = 2*pi/T;
+        kh = w^2*h/g;
+        kh = khsolve(g,w,kh,h,n);
+
+        function kh = khsolve(g,w,kh,h,n)
+        % to be used within the function disper for iterative solution of dispersion relation
+        for i = 1:n
+            kh = sqrt(w^2/g*h.*kh.*coth(kh));
+        end
+
+
+    */
 
     
     void OceanWaveSystem::lineartravellingwave1D(NekDouble H,NekDouble c, NekDouble k, NekDouble z, NekDouble h, NekDouble w, NekDouble t, const Array<OneD, NekDouble> & x, Array<OneD, NekDouble> & eta, Array<OneD, NekDouble> & pp )
@@ -825,100 +644,94 @@ namespace Nektar
         Vmath::Vcos(n, xtime, 1, xcos, 1);
         Vmath::Vsin(n, xtime, 1, xsin, 1);
 
+        //eta   =    H/2*cos(w*t-k*x);
         Vmath::Smul(n, H/2.0, xcos, 1, eta, 1);
+
+        //pp    = -H*c/2*cosh(k*(z+h))./sinh(k*h).*sin(w*t-k*x);
         Vmath::Smul(n, -H*c/2.0*cosh(k*(z+h))/sinh(k*h), xsin, 1, pp, 1);
     }
 
     void OceanWaveSystem::WaveForcing(NekDouble time, const Array<OneD, NekDouble> & E, const Array<OneD, NekDouble> & P, Array<OneD, NekDouble> & rhsE, Array<OneD, NekDouble> & rhsP)
-    {
-        //SHOULD BE CHANGED:
-        NekDouble dt = m_timestep;
+    {        
+        int n = m_fields[0]->GetTotPoints();
+        int niZ2 = iZ2.num_elements();
+        int niZ3 = iZ3.num_elements();
+        Array<OneD, NekDouble> X(n);
+        Array<OneD, NekDouble> Y(n);
+        Array<OneD, NekDouble> Z(n);
+        m_fields[0]->GetCoords(X,Y,Z);
 
-        NekDouble h0 = 1;
-        NekDouble g = 9.82;
-        NekDouble lwave = 2;
-        NekDouble Hwave = 0.08934064760240; 
-        NekDouble hd = 1;
-        NekDouble kwave = 2*M_PI/lwave;
-        NekDouble kh = kwave*h0; //TODO: Adjust for variable h0
-        NekDouble cwave = sqrt(g/kwave*tanh(kh));
-        NekDouble Twave = lwave/cwave;
-        NekDouble wwave = 2*M_PI/Twave;
+        NekDouble xmaxZ2 = Vmath::Vmax(niZ2, XiZ2, 1);
+
+        Vmath::Sadd(n, -xmaxZ2, X, 1, X, 1);
+
+        std::cout << Vmath::Vmax(n,X,1) << std::endl;
+    
+        Array<OneD, NekDouble> E2(n);
+        Array<OneD, NekDouble> P2(n);
+        lineartravellingwave1D(m_Hwave, m_cwave, m_kwave, 0, m_hd, m_wwave, time, X, E2, P2);
+
+
+        if (time < 5*m_Twave)
+        {
+            Vmath::Smul(n, time/(5*m_Twave), E2, 1, E2, 1);
+            Vmath::Smul(n, time/(5*m_Twave), P2, 1, P2, 1);
+        }
+
+
+        Array<OneD, NekDouble> crm_neg(niZ2);
+        Vmath::Sadd(niZ2, -1.0, crm, 1, crm_neg, 1);
+        Vmath::Neg(niZ2, crm_neg, 1);
+
+        Array<OneD, NekDouble> cfr_neg(niZ3);
+        Vmath::Sadd(niZ3, -1.0, cfr, 1, cfr_neg, 1);
+        Vmath::Neg(niZ3, cfr_neg, 1);
 
         
-            int n = m_fields[0]->GetTotPoints();
-            int niZ2 = iZ2.num_elements();
-            int niZ3 = iZ3.num_elements();
-            Array<OneD, NekDouble> X(n);
-            Array<OneD, NekDouble> Y(n);
-            Array<OneD, NekDouble> Z(n);
-            m_fields[0]->GetCoords(X,Y,Z);
+        //Create submatrices:
+        Array<OneD, NekDouble> EiZ2(niZ2);
+        Vmath::Gathr(niZ2, E, iZ2, EiZ2);
+        Array<OneD, NekDouble> E2iZ2(niZ2);
+        Vmath::Gathr(niZ2, E2, iZ2, E2iZ2);
+        Array<OneD, NekDouble> EiZ3(niZ3);
+        Vmath::Gathr(niZ3, E, iZ3, EiZ3);
 
-            NekDouble xmaxZ2 = Vmath::Vmax(niZ2, XiZ2, 1);
+        Array<OneD, NekDouble> PiZ2(niZ2);
+        Vmath::Gathr(niZ2, P, iZ2, PiZ2);
+        Array<OneD, NekDouble> P2iZ2(niZ2);
+        Vmath::Gathr(niZ2, P2, iZ2, P2iZ2);
+        Array<OneD, NekDouble> PiZ3(niZ3);
+        Vmath::Gathr(niZ3, P, iZ3, PiZ3);
 
-            Vmath::Sadd(n, -xmaxZ2, X, 1, X, 1);
         
-            Array<OneD, NekDouble> E2(n);
-            Array<OneD, NekDouble> P2(n);
-            lineartravellingwave1D(Hwave, cwave, kwave, 0, hd, wwave, time, X, E2, P2);
+        Array<OneD, NekDouble> rhsP2(n, 0.0);
+        Array<OneD, NekDouble> rhsE2(n, 0.0);
+        
+        //modify rhsE:
+        Vmath::Vsub(niZ2, E2iZ2, 1, EiZ2, 1, EiZ2, 1);
+        Vmath::Vmul(niZ2, EiZ2, 1, crm_neg, 1, EiZ2, 1);
+        Vmath::Smul(niZ2, 1.0/m_dt, EiZ2, 1, EiZ2, 1);
+        Vmath::Scatr(niZ2, EiZ2, iZ2, rhsE2);
 
-            if (time < 5*Twave)
-            {
-                Vmath::Smul(n, time/(5*Twave), E2, 1, E2, 1);
-                Vmath::Smul(n, time/(5*Twave), P2, 1, P2, 1);
-            }
+        Vmath::Vmul(niZ3, EiZ3, 1, cfr_neg, 1, EiZ3, 1);
+        Vmath::Smul(niZ3, -1.0/m_dt, EiZ3, 1, EiZ3, 1);
+        Vmath::Scatr(niZ3, EiZ3, iZ3, rhsE2);
 
-            Array<OneD, NekDouble> crm_neg(niZ2);
-            Vmath::Sadd(niZ2, -1.0, crm, 1, crm_neg, 1);
-            Vmath::Neg(niZ2, crm_neg, 1);
+        //modify rhsP:
+        Vmath::Vsub(niZ2, P2iZ2, 1, PiZ2, 1, PiZ2, 1);
+        Vmath::Vmul(niZ2, PiZ2, 1, crm_neg, 1, PiZ2, 1);
+        Vmath::Smul(niZ2, 1.0/m_dt, PiZ2, 1, PiZ2, 1);
+        Vmath::Scatr(niZ2, PiZ2, iZ2, rhsP2);
 
-            Array<OneD, NekDouble> cfr_neg(niZ3);
-            Vmath::Sadd(niZ3, -1.0, cfr, 1, cfr_neg, 1);
-            Vmath::Neg(niZ3, cfr_neg, 1);
+        Vmath::Vmul(niZ3, PiZ3, 1, cfr_neg, 1, PiZ3, 1);
+        Vmath::Smul(niZ3, -1.0/m_dt, PiZ3, 1, PiZ3, 1);
+        Vmath::Scatr(niZ3, PiZ3, iZ3, rhsP2);
 
-            
-            //Create submatrices:
-            Array<OneD, NekDouble> EiZ2(niZ2);
-            Vmath::Gathr(niZ2, E, iZ2, EiZ2);
-            Array<OneD, NekDouble> E2iZ2(niZ2);
-            Vmath::Gathr(niZ2, E2, iZ2, E2iZ2);
-            Array<OneD, NekDouble> EiZ3(niZ3);
-            Vmath::Gathr(niZ3, E, iZ3, EiZ3);
+        //final:
+        Vmath::Vadd(n, rhsE, 1, rhsE2, 1, rhsE, 1);
+        Vmath::Vadd(n, rhsP, 1, rhsP2, 1, rhsP, 1);
 
-            Array<OneD, NekDouble> PiZ2(niZ2);
-            Vmath::Gathr(niZ2, P, iZ2, PiZ2);
-            Array<OneD, NekDouble> P2iZ2(niZ2);
-            Vmath::Gathr(niZ2, P2, iZ2, P2iZ2);
-            Array<OneD, NekDouble> PiZ3(niZ3);
-            Vmath::Gathr(niZ3, P, iZ3, PiZ3);
-
-            
-            Array<OneD, NekDouble> rhsP2(n, 0.0);
-            Array<OneD, NekDouble> rhsE2(n, 0.0);
-            
-            //modify rhsE:
-            Vmath::Vsub(niZ2, E2iZ2, 1, EiZ2, 1, EiZ2, 1);
-            Vmath::Vmul(niZ2, EiZ2, 1, crm_neg, 1, EiZ2, 1);
-            Vmath::Smul(niZ2, 1.0/dt, EiZ2, 1, EiZ2, 1);
-            Vmath::Scatr(niZ2, EiZ2, iZ2, rhsE2);
-
-            Vmath::Vmul(niZ3, EiZ3, 1, cfr_neg, 1, EiZ3, 1);
-            Vmath::Smul(niZ3, -1.0/dt, EiZ3, 1, EiZ3, 1);
-            Vmath::Scatr(niZ3, EiZ3, iZ3, rhsE2);
-
-            //modify rhsP:
-            Vmath::Vsub(niZ2, P2iZ2, 1, PiZ2, 1, PiZ2, 1);
-            Vmath::Vmul(niZ2, PiZ2, 1, crm_neg, 1, PiZ2, 1);
-            Vmath::Smul(niZ2, 1.0/dt, PiZ2, 1, PiZ2, 1);
-            Vmath::Scatr(niZ2, PiZ2, iZ2, rhsP2);
-
-            Vmath::Vmul(niZ3, PiZ3, 1, cfr_neg, 1, PiZ3, 1);
-            Vmath::Smul(niZ3, -1.0/dt, PiZ3, 1, PiZ3, 1);
-            Vmath::Scatr(niZ3, PiZ3, iZ3, rhsP2);
-
-            //final:
-            Vmath::Vadd(n, rhsE, 1, rhsE2, 1, rhsE, 1);
-            Vmath::Vadd(n, rhsP, 1, rhsP2, 1, rhsP, 1);
+        
     }
     
 

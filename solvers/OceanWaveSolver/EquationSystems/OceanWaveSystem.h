@@ -130,6 +130,22 @@ namespace Nektar
         Array<OneD, NekDouble> cfr;
 
         Array<OneD, NekDouble> XiZ2;
+        Array<OneD, NekDouble> tmpPhi;
+        Array<OneD, NekDouble> tmpRhsE;
+        Array<OneD, NekDouble> tmpRhsP;
+
+    private:
+        NekDouble m_dt;
+        NekDouble m_h0;
+        NekDouble m_g;
+        NekDouble m_lwave;
+        NekDouble m_Hwave; 
+        NekDouble m_hd;
+        NekDouble m_kwave;
+        NekDouble m_kh; //TODO: Adjust for variable h0
+        NekDouble m_cwave;
+        NekDouble m_Twave;
+        NekDouble m_wwave;
     };
 }
 

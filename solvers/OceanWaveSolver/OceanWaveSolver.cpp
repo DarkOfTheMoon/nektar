@@ -55,9 +55,11 @@ int main(int argc, char *argv[])
         drv = GetDriverFactory().CreateInstance(vDriverModule, session);
 
         // Execute driver
+        std::cout << "finalizing..." << std::endl;
         drv->Execute();
 
         // Finalise session
+        std::cout << "finalizing..." << std::endl;
         session->Finalise();
     }
     catch (const std::runtime_error& e)

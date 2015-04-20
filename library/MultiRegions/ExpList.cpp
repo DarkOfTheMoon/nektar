@@ -1841,9 +1841,9 @@ namespace Nektar
                      "This method is not defined or valid for this class type");
         }
 
-        void ClearGlobalLinSysManager()
+        void ExpList::ClearGlobalLinSysManager()
         {
-            v_CleanGlobalLinSysManager();
+            v_ClearGlobalLinSysManager();
         }
 
         void ExpList::v_ClearGlobalLinSysManager(void)

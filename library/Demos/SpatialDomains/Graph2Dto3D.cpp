@@ -4,7 +4,7 @@
 #include <LibUtilities/Memory/NekMemoryManager.hpp>
 #include <LibUtilities/BasicUtils/SessionReader.h>
 #include <LibUtilities/Communication/Comm.h>
-#include <LibUtilities/Communication/CommMPI.h>
+//#include <LibUtilities/Communication/CommMpi.h>
 #include <SpatialDomains/MeshGraph2D.h>
 #include <SpatialDomains/MeshGraph3D.h>
 
@@ -47,9 +47,13 @@ int main(int argc, char *argv[])
         TiXmlDeclaration* decl = new TiXmlDeclaration( "1.0", "utf-8", "");
         doc.LinkEndChild(decl);
 
+        std::cout << "writing geometry..." << std::endl;
+
         // Write out geometry information.
         graph3D->WriteGeometry(doc);
         //----------------------------------------------
+
+        std::cout << "Writing file..." << std::endl;
 
         //----------------------------------------------
         // Save file.

@@ -15,6 +15,7 @@ IF( NEKTAR_SOLVER_ADR )
        ./EquationSystems/UnsteadyAdvectionDiffusion.cpp
        ./EquationSystems/UnsteadyInviscidBurger.cpp
       #./EquationSystems/CFLtester.cpp
+       ./EquationSystems/Andreas.cpp
        ./EquationSystems/EigenValuesAdvection.cpp)
 
     ADD_SOLVER_EXECUTABLE(ADRSolver solvers 
