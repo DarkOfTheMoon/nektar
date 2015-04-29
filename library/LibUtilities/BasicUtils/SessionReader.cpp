@@ -56,6 +56,7 @@ using namespace std;
 #include <LibUtilities/BasicUtils/MeshPartition.h>
 #include <LibUtilities/BasicUtils/ParseUtils.hpp>
 #include <LibUtilities/BasicUtils/FileSystem.h>
+#include <LibUtilities/BasicUtils/Thread.h>
 
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
@@ -1523,7 +1524,9 @@ namespace Nektar
                 }
 
                 m_comm = GetCommFactory().CreateInstance(vCommModule,argc,argv);
-            }
+            } 
+            Nektar::Thread::GetThreadMaster().SetThreadingType("ThreadManagerBoost");
+            Nektar::Thread::GetThreadMaster().CreateInstance(Nektar::Thread::ThreadMaster::GlobalLinSysStaticCond_v_SolveJob, 1);
         }
 
 

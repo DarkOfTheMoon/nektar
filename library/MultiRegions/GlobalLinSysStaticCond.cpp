@@ -40,6 +40,7 @@
 #include <LibUtilities/LinearAlgebra/StorageSmvBsr.hpp>
 #include <LibUtilities/LinearAlgebra/SparseDiagBlkMatrix.hpp>
 #include <LibUtilities/LinearAlgebra/SparseUtils.hpp>
+#include <LibUtilities/BasicUtils/Thread.h>
 
 namespace Nektar
 {
@@ -96,7 +97,88 @@ namespace Nektar
         {
 
         }
+
+        void GlobalLinSysStaticCond::SolveInt(
+            const int nGlobHomBndDofs, const int nDirBndDofs,
+            const bool dirForcCalculated,
+            const AssemblyMapSharedPtr &pLocToGloMap,
+            NekVector<NekDouble> &V_GlobHomBnd,
+            NekVector<NekDouble> &V_LocBnd,
+            NekVector<NekDouble> &V_GlobBnd,
+            NekVector<NekDouble> &F_Int,
+            NekVector<NekDouble> &V_Int)
+        {
+            DNekScalBlkMat &invD  = *m_invD;
+
+            if(nGlobHomBndDofs || nDirBndDofs)
+            {
+                DNekScalBlkMat &C     = *m_C;
+
+                if(dirForcCalculated && nDirBndDofs)
+                {
+                    pLocToGloMap->GlobalToLocalBnd(V_GlobHomBnd,V_LocBnd,
+                                                  nDirBndDofs);
+                }
+                else
+                {
+                    pLocToGloMap->GlobalToLocalBnd(V_GlobBnd,V_LocBnd);
+                }
+                F_Int = F_Int - C*V_LocBnd;
+            }
+
+            V_Int = invD*F_Int;
+        }
         
+        class GlobalLinSysStaticCond_v_SolveJob : public Nektar::Thread::ThreadJob
+        {
+            private:
+            GlobalLinSysStaticCond * const pGLSSC;
+            const int nGlobHomBndDofs;
+            const int nDirBndDofs;
+            const bool dirForcCalculated;
+            const AssemblyMapSharedPtr &pLocToGloMap;
+            NekVector<NekDouble> &V_GlobHomBnd;
+            NekVector<NekDouble> &V_LocBnd;
+            NekVector<NekDouble> &V_GlobBnd;
+            NekVector<NekDouble> &F_Int;
+            NekVector<NekDouble> &V_Int;
+
+            public:
+            GlobalLinSysStaticCond_v_SolveJob(
+                GlobalLinSysStaticCond * const ppGLSSC,
+                const int pnGlobHomBndDofs, const int pnDirBndDofs,
+                const bool pdirForcCalculated,
+                const AssemblyMapSharedPtr &ppLocToGloMap,
+                NekVector<NekDouble> &pV_GlobHomBnd,
+                NekVector<NekDouble> &pV_LocBnd,
+                NekVector<NekDouble> &pV_GlobBnd,
+                NekVector<NekDouble> &pF_Int,
+                NekVector<NekDouble> &pV_Int) :
+                    pGLSSC(ppGLSSC), nGlobHomBndDofs(pnGlobHomBndDofs),
+                    nDirBndDofs(pnDirBndDofs),
+                    dirForcCalculated(pdirForcCalculated),
+                    pLocToGloMap(ppLocToGloMap),
+                    V_GlobHomBnd(pV_GlobHomBnd),
+                    V_LocBnd(pV_LocBnd),
+                    V_GlobBnd(pV_GlobBnd),
+                    F_Int(pF_Int),
+                    V_Int(pV_Int)
+            {
+            }
+
+            ~GlobalLinSysStaticCond_v_SolveJob()
+            {
+            }
+
+            void Run()
+            {
+                pGLSSC->SolveInt(nGlobHomBndDofs, nDirBndDofs, dirForcCalculated,
+                    pLocToGloMap, V_GlobHomBnd, V_LocBnd, V_GlobBnd,
+                    F_Int, V_Int);
+            }
+
+
+        };
         
         /**
          *
@@ -107,16 +189,16 @@ namespace Nektar
             const AssemblyMapSharedPtr         &pLocToGloMap,
             const Array<OneD, const NekDouble> &dirForcing)
         {
-            bool dirForcCalculated = (bool) dirForcing.num_elements();
-            bool atLastLevel       = pLocToGloMap->AtLastLevel();
-            int  scLevel           = pLocToGloMap->GetStaticCondLevel();
+            const bool dirForcCalculated = (bool) dirForcing.num_elements();
+            const bool atLastLevel       = pLocToGloMap->AtLastLevel();
+            const int  scLevel           = pLocToGloMap->GetStaticCondLevel();
             
-            int nGlobDofs          = pLocToGloMap->GetNumGlobalCoeffs();
-            int nGlobBndDofs       = pLocToGloMap->GetNumGlobalBndCoeffs();
-            int nDirBndDofs        = pLocToGloMap->GetNumGlobalDirBndCoeffs();
-            int nGlobHomBndDofs    = nGlobBndDofs - nDirBndDofs;
-            int nLocBndDofs        = pLocToGloMap->GetNumLocalBndCoeffs();
-            int nIntDofs           = pLocToGloMap->GetNumGlobalCoeffs()
+            const int nGlobDofs          = pLocToGloMap->GetNumGlobalCoeffs();
+            const int nGlobBndDofs       = pLocToGloMap->GetNumGlobalBndCoeffs();
+            const int nDirBndDofs        = pLocToGloMap->GetNumGlobalDirBndCoeffs();
+            const int nGlobHomBndDofs    = nGlobBndDofs - nDirBndDofs;
+            const int nLocBndDofs        = pLocToGloMap->GetNumLocalBndCoeffs();
+            const int nIntDofs           = pLocToGloMap->GetNumGlobalCoeffs()
                 - nGlobBndDofs;
 
             Array<OneD, NekDouble> F = m_wsp + 2*nLocBndDofs;
@@ -147,6 +229,28 @@ namespace Nektar
 
             // set up normalisation factor for right hand side on first SC level
             DNekScalBlkMatSharedPtr sc = v_PreSolve(scLevel, F_GlobBnd);
+
+            // solve interior system
+            if(nIntDofs)
+            {
+                using namespace Nektar::Thread;
+                ThreadManagerSharedPtr vTM = GetThreadMaster().
+                        GetInstance(ThreadMaster::GlobalLinSysStaticCond_v_SolveJob);
+                if(!vTM->InThread())
+                {
+                    vTM->QueueJob( new GlobalLinSysStaticCond_v_SolveJob(
+                            this, nGlobHomBndDofs, nDirBndDofs, dirForcCalculated,
+                            pLocToGloMap, V_GlobHomBnd, V_LocBnd, V_GlobBnd,
+                            F_Int, V_Int) );
+                    vTM->Wait();
+                } else
+                {
+                    SolveInt(nGlobHomBndDofs, nDirBndDofs, dirForcCalculated,
+                    pLocToGloMap, V_GlobHomBnd, V_LocBnd, V_GlobBnd,
+                    F_Int, V_Int);
+                }
+
+            }
 
             if(nGlobHomBndDofs)
             {
@@ -229,29 +333,6 @@ namespace Nektar
                 }
             }
 
-            // solve interior system
-            if(nIntDofs)
-            {
-                DNekScalBlkMat &invD  = *m_invD;
-
-                if(nGlobHomBndDofs || nDirBndDofs)
-                {
-                    DNekScalBlkMat &C     = *m_C;
-
-                    if(dirForcCalculated && nDirBndDofs)
-                    {
-                        pLocToGloMap->GlobalToLocalBnd(V_GlobHomBnd,V_LocBnd,
-                                                      nDirBndDofs);
-                    }
-                    else
-                    {
-                        pLocToGloMap->GlobalToLocalBnd(V_GlobBnd,V_LocBnd);
-                    }
-                    F_Int = F_Int - C*V_LocBnd;
-                }
-
-                V_Int = invD*F_Int;
-            }
         }
 
 
