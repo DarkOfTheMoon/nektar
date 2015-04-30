@@ -37,6 +37,7 @@
 #define TIXML_USE_STL
 #endif
 
+#include <LibUtilities/BasicUtils/Thread.h>
 #include <LibUtilities/BasicUtils/SessionReader.h>
 #include <LibUtilities/BasicConst/GitRevision.h>
 
@@ -1510,6 +1511,10 @@ namespace Nektar
             int               &argc, 
             char*              argv[])
         {
+            Thread::GetThreadMaster().SetThreadingType("ThreadManagerBoost");
+            Thread::GetThreadMaster().CreateInstance(
+                Thread::ThreadMaster::AdvectionWeakDGJob, 1);
+
             if (argc == 0)
             {
                 m_comm = GetCommFactory().CreateInstance("Serial", 0, 0);

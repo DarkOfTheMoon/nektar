@@ -42,8 +42,12 @@ namespace Nektar
 {
     namespace SolverUtils
     {
+        class AdvectionWeakDGJob;
+
         class AdvectionWeakDG : public Advection
         {
+            friend class AdvectionWeakDGJob;
+
         public:
             static AdvectionSharedPtr create(std::string advType)
             {
@@ -54,6 +58,12 @@ namespace Nektar
 
         protected:
             AdvectionWeakDG();
+
+            void GetTraceSpace(
+                const int                                          nConvective,
+                const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
+                const Array<OneD, Array<OneD, NekDouble> >        &inarray,
+                      Array<OneD, Array<OneD, NekDouble> >        &numflux);
 
             virtual void v_InitObject(
                 LibUtilities::SessionReaderSharedPtr               pSession,

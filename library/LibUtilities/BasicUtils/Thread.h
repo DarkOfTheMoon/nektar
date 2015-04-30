@@ -339,6 +339,7 @@ namespace Nektar
             public:
                 enum ThreadManagerName {
                                         SessionJob,
+                                        AdvectionWeakDGJob,
                                         THREADMANAGER_MAX
                                         };
                 /**
