@@ -115,6 +115,7 @@ namespace Nektar
             m_session->LoadParameter("wInfBase", m_wInf, 0.0);
         }*/
         
+        
         m_session->LoadParameter ("GasConstant",    m_gasConstant,     287.058);
         m_session->LoadParameter ("Twall",          m_Twall,            300.15);
         m_session->LoadSolverInfo("ViscosityType",  m_ViscosityType,"Constant");
@@ -134,7 +135,8 @@ namespace Nektar
                                                  m_thermalConductivity, 0.0257);
         m_session->LoadSolverInfo("ShockCaptureType",
                                                   m_shockCaptureType,    "Off");
-        
+        m_session->LoadParameter("SteadyStateTol", m_steadyStateTol, 0.0);
+
         m_EqTypeStr = m_session->GetSolverInfo("EQTYPE");
 
         m_Cp      = m_gamma / (m_gamma - 1.0) * m_gasConstant;
@@ -4688,76 +4690,87 @@ namespace Nektar
     
     bool AdjointCompressibleFlowSystem::v_PostIntegrate(int step)
     {
-        NekDouble maxL2 = CalcSteadyState();
+        if (m_steadyStateTol > 0.0)
+        {
+            bool doOutput = step % m_infosteps == 0;
+            if (CalcSteadyState(doOutput))
+            {
+                if (m_comm->GetRank() == 0)
+                {
+                    cout << "Reached Steady State to tolerance "
+                    << m_steadyStateTol << endl;
+                }
+                return true;
+            }
+        }
         return false;
     }
     
-    NekDouble AdjointCompressibleFlowSystem::CalcSteadyState()
+    /**
+     * @brief Calculate whether the system has reached a steady state by
+     * observing residuals to a user-defined tolerance.
+     */
+    bool AdjointCompressibleFlowSystem::CalcSteadyState(bool output)
     {
-        int nPoints = GetTotPoints();
-        Array<OneD, NekDouble> L2   (m_fields.num_elements());
-        Array<OneD, NekDouble> numer(m_fields.num_elements());
-        Array<OneD, NekDouble> denom(m_fields.num_elements());
-        Array<OneD, Array<OneD, NekDouble> > unp1(m_fields.num_elements());
-        Array<OneD, Array<OneD, NekDouble> > diff(m_fields.num_elements());
-        Array<OneD, Array<OneD, NekDouble> > diff2(m_fields.num_elements());
-        Array<OneD, Array<OneD, NekDouble> > u2np1(m_fields.num_elements());
+        const int nPoints = GetTotPoints();
+        const int nFields = m_fields.num_elements();
         
+        // Holds L2 errors.
+        Array<OneD, NekDouble> L2      (nFields);
+        Array<OneD, NekDouble> residual(nFields);
         
-        for (int i = 0; i < m_fields.num_elements(); ++i)
+        for (int i = 0; i < nFields; ++i)
         {
-            unp1[i] = Array<OneD, NekDouble>(nPoints, 0.0);
-            diff[i] = Array<OneD, NekDouble>(nPoints, 0.0);
-            diff2[i] = Array<OneD, NekDouble>(nPoints, 0.0);
-            u2np1[i] = Array<OneD, NekDouble>(nPoints, 0.0);
+            Array<OneD, NekDouble> diff(nPoints);
             
-            Vmath::Vcopy(nPoints, m_fields[i]->GetPhys(), 1, unp1[i], 1);
-            Vmath::Vsub(nPoints, unp1[i], 1, m_un[i], 1, diff[i], 1);
-            Vmath::Vmul(nPoints, diff[i], 1, diff[i], 1, diff2[i], 1);
-            numer[i] = Vmath::Vsum(nPoints, diff2[i], 1);
-            m_comm->AllReduce(numer[i], LibUtilities::ReduceSum);
-            
-            Vmath::Vmul(nPoints, unp1[i], 1, unp1[i], 1, u2np1[i], 1);
-            denom[i] = Vmath::Vsum(nPoints, u2np1[i], 1);
-            m_comm->AllReduce(denom[i], LibUtilities::ReduceSum);
-            
-            L2[i] = sqrt(numer[i]/denom[i]);
-            
-            Vmath::Vcopy(nPoints, unp1[i], 1, m_un[i], 1);
+            Vmath::Vsub(nPoints, m_fields[i]->GetPhys(), 1, m_un[i], 1, diff, 1);
+            Vmath::Vmul(nPoints, diff, 1, diff, 1, diff, 1);
+            residual[i] = Vmath::Vsum(nPoints, diff, 1);
         }
         
-        NekDouble maxL2 = Vmath::Vmax(m_fields.num_elements(), L2, 1);
+        m_comm->AllReduce(residual, LibUtilities::ReduceSum);
         
-        if (m_fields.num_elements() == 3)
+        // L2 error
+        L2[0] = sqrt(residual[0]) / 1.0;
+        
+        for (int i = 1; i < nFields-1; ++i)
         {
-            if (m_comm->GetRank() == 0)
+            L2[i] = sqrt(residual[i]);
+        }
+        
+        //NekDouble Einf = m_pInf / (m_gamma-1.0) + 0.5 * m_rhoInf * m_UInf;
+        L2[nFields-1] = sqrt(residual[nFields-1]);// / Einf;
+        
+        if (m_comm->GetRank() == 0 && output)
+        {
+            // Output time
+            m_errFile << setprecision(8) << setw(17) << scientific << m_time;
+            
+            // Output residuals
+            for (int i = 0; i < nFields; ++i)
             {
-                cout << "L2_max = "  << maxL2 << endl;
+                m_errFile << setprecision(11) << setw(22) << scientific
+                << L2[i];
             }
+            
+            m_errFile << endl;
         }
-        else if (m_fields.num_elements() == 4)
+        
+        // Calculate maximum L2 error
+        NekDouble maxL2 = Vmath::Vmax(nFields, L2, 1);
+        
+        if (m_session->DefinesCmdLineArgument("verbose") &&
+            m_comm->GetRank() == 0 && output)
         {
-            if (m_comm->GetRank() == 0)
-            {
-                cout << "L2_max = "  << maxL2 << endl;
-            }
+            cout << "-- Maximum L^2 residual: " << maxL2 << endl;
         }
-        else if (m_fields.num_elements() == 5)
+        
+        if (maxL2 <= m_steadyStateTol)
         {
-            if (m_comm->GetRank() == 0)
-            {
-                cout << "L2_max = "  << maxL2 << endl;
-            }
+            return true;
         }
         
-        std::ofstream myfile;
-        myfile.open ("Convergence.txt", std::ios_base::app);
-        
-        myfile << maxL2 << endl;
-        
-        myfile.close();
-        
-        return maxL2;
+        return false;
     }
     
     void AdjointCompressibleFlowSystem::v_GenerateSummary(SolverUtils::SummaryList& s)

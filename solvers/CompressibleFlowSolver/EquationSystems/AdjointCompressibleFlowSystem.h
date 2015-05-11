@@ -113,6 +113,7 @@ namespace Nektar
         NekDouble                           m_uInfBase;
         NekDouble                           m_vInfBase;
         NekDouble                           m_pInfBase;
+        NekDouble                           m_UInf;
         NekDouble                           m_alphaInfBase;
         NekDouble                           m_Skappa;
         NekDouble                           m_Kappa;
@@ -127,6 +128,15 @@ namespace Nektar
         NekDouble                           m_Fx;
         NekDouble                           m_Fy;
         NekDouble                           m_Fz;
+        
+        // L2 error file
+        std::ofstream m_errFile;
+        
+        // Check for steady state at step interval
+        int m_steadyStateSteps;
+        
+        // Tolerance to which steady state should be evaluated at
+        NekDouble m_steadyStateTol;
         
         Array<OneD, Array<OneD, NekDouble> > m_un;
         
@@ -269,7 +279,7 @@ namespace Nektar
               Array<OneD,                   NekDouble>   &Vtot);
         
         virtual bool v_PostIntegrate(int step);
-                  NekDouble CalcSteadyState();
+        bool CalcSteadyState(bool output);
 
         
         void CheckForRestart(NekDouble &time);
