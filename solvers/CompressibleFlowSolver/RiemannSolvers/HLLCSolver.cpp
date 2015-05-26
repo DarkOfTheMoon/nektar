@@ -236,7 +236,7 @@ namespace Nektar
             NekDouble rhowML = rhoML * wL;
             NekDouble EML    = rhoML * (EL / rhoL +
                                         (SM - uL) * (SM + pL / (rhoL * (SL - uL))));
-            NekDouble EpsML  = EpsL * (SL - uL) / (SL - SM);
+            NekDouble EpsML  = 0;
             
             NekDouble rhoMR  = rhoR * (SR - uR) / (SR - SM);
             NekDouble rhouMR = rhoMR * SM;
@@ -244,7 +244,7 @@ namespace Nektar
             NekDouble rhowMR = rhoMR * wR;
             NekDouble EMR    = rhoMR * (ER / rhoR +
                                         (SM - uR) * (SM + pR / (rhoR * (SR - uR))));
-            NekDouble EpsMR    = EpsR * (SL - uR) / (SL - SM);
+            NekDouble EpsMR    = 0;
             
             if (SL < 0.0 && SM >= 0.0)
             {
@@ -253,7 +253,7 @@ namespace Nektar
                 rhovf = rhouL * vL + SL * (rhovML - rhovL);
                 rhowf = rhouL * wL + SL * (rhowML - rhowL);
                 Ef    = uL * (EL + pL) + SL * (EML - EL);
-                Epsf  = 0.0 + SL * (EpsML - EpsL);
+                Epsf  = 0.0;
             }
             else if(SM < 0.0 && SR > 0.0)
             {
@@ -262,7 +262,7 @@ namespace Nektar
                 rhovf = rhouR * vR + SR * (rhovMR - rhovR);
                 rhowf = rhouR * wR + SR * (rhowMR - rhowR);
                 Ef    = uR * (ER + pR) + SR * (EMR - ER);
-                Epsf  = 0.0 + SR * (EpsMR - EpsR);
+                Epsf  = 0.0;
             }
         }
     }

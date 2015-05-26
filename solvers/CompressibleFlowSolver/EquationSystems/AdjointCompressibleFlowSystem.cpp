@@ -822,7 +822,7 @@ namespace Nektar
                 Vmath::Neg(nBCEdgePts, &Fwdnew[1][id2], 1);
                 Vmath::Neg(nBCEdgePts, &Fwdnew[2][id2], 1);
                 // set z_rhoE = 0 at wall
-                Vmath::Neg(nBCEdgePts,&Fwdnew[3][id2], 1);
+                //Vmath::Neg(nBCEdgePts,&Fwdnew[3][id2], 1);
                 
                 Vmath::Vadd(nBCEdgePts,
                             &Fwdnew[1][id2], 1,
@@ -834,7 +834,11 @@ namespace Nektar
                             &Force[1][0], 1,
                             &Fwdnew[2][id2], 1);
                 
-                Vmath::Vcopy(nBCEdgePts, &Fwdnew[0][id2], 1,
+                //Vmath::Vcopy(nBCEdgePts, &Fwdnew[0][id2], 1,
+                //             &(m_fields[0]->GetBndCondExpansions()[bcRegion]->
+                //               UpdatePhys())[id1], 1);
+                
+                Vmath::Vcopy(nBCEdgePts, &zeros[0], 1,
                              &(m_fields[0]->GetBndCondExpansions()[bcRegion]->
                                UpdatePhys())[id1], 1);
                 
@@ -846,9 +850,13 @@ namespace Nektar
                              &(m_fields[2]->GetBndCondExpansions()[bcRegion]->
                                UpdatePhys())[id1], 1);
                 
-                Vmath::Vcopy(nBCEdgePts, &Fwdnew[3][id2], 1,
+                Vmath::Vcopy(nBCEdgePts, &zeros[0], 1,
                              &(m_fields[3]->GetBndCondExpansions()[bcRegion]->
                                UpdatePhys())[id1], 1);
+                
+                //Vmath::Vcopy(nBCEdgePts, &Fwdnew[3][id2], 1,
+                //             &(m_fields[3]->GetBndCondExpansions()[bcRegion]->
+                //               UpdatePhys())[id1], 1);
             }
         }
         

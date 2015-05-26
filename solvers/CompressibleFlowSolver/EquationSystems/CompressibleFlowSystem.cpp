@@ -355,27 +355,27 @@ namespace Nektar
             id2 = m_fields[0]->GetTrace()->GetPhys_Offset(traceBndMap[cnt+e]);
 
             // Boundary condition for epsilon term.
-            if (nVariables == m_spacedim+3)
+            if(nVariables == m_spacedim+3)
             {
-                NekDouble factor  = 1.0;
+                NekDouble Length  = 1.0;
+                NekDouble factor  = 2.0;
                 NekDouble factor2 = 1.0;
-
+                
                 Array<OneD, NekDouble > tmp2(nBCEdgePts, 0.0);
                 Vmath::Smul(nBCEdgePts,
                             factor,
                             &Fwd[nVariables-1][id2], 1,
                             &tmp2[0], 1);
-
+                
                 Vmath::Vsub(nBCEdgePts,
                             &Fwd[nVariables-1][id2], 1,
                             &tmp2[0], 1,
                             &Fwd[nVariables-1][id2], 1);
-
+                
                 Vmath::Smul(nBCEdgePts,
                             factor2,
                             &Fwd[nVariables-1][id2], 1,
                             &Fwd[nVariables-1][id2], 1);
-
             }
             // For 2D/3D, define: v* = v - 2(v.n)n
             Array<OneD, NekDouble> tmp(nBCEdgePts, 0.0);
@@ -3142,7 +3142,6 @@ namespace Nektar
 
             CoeffsCount += nQuadPointsElement;
         }
-
     }
 
     void CompressibleFlowSystem::GetForcingTerm(
@@ -3190,14 +3189,17 @@ namespace Nektar
                 pOrder[n + PointCount] = pOrderElmt[e];
 
                 // order 1.0e-06
-                Tau[n + PointCount] =
+                /*Tau[n + PointCount] =
                     1.0 / (m_C1*pOrder[n + PointCount]*LambdaMax);
-
+                
                 outarrayForcing[nvariables-1][n + PointCount] =
                     1 / Tau[n + PointCount] * (m_hFactor * LambdaMax /
                                         pOrder[n + PointCount] *
-                                        SensorKappa[n + PointCount] -
-                                        inarray[nvariables-1][n + PointCount]);
+                                        Sensor[n + PointCount] -
+                                        inarray[nvariables-1][n + PointCount]);*/
+                
+                outarrayForcing[nvariables-1][n + PointCount] = 1/m_C1*Sensor[n + PointCount] - inarray[nvariables-1][n + PointCount];//
+                
             }
             PointCount += nQuadPointsElement;
         }
@@ -3303,46 +3305,47 @@ namespace Nektar
     {
         int nvariables = physfield.num_elements();
         int nPts       = m_fields[0]->GetTotPoints();
-
-        Array<OneD, NekDouble > pressure   (nPts, 0.0);
-        Array<OneD, NekDouble > temperature(nPts, 0.0);
-        Array<OneD, NekDouble > sensor     (nPts, 0.0);
-        Array<OneD, NekDouble > SensorKappa(nPts, 0.0);
-        Array<OneD, NekDouble > absVelocity(nPts, 0.0);
-        Array<OneD, NekDouble > soundspeed (nPts, 0.0);
-        Array<OneD, NekDouble > Lambda     (nPts, 0.0);
-        Array<OneD, NekDouble > mu_var     (nPts, 0.0);
-        Array<OneD, NekDouble > h_minmin   (m_spacedim, 0.0);
+        
+        Array<OneD, NekDouble > pressure            (nPts, 0.0);
+        Array<OneD, NekDouble > temperature         (nPts, 0.0);
+        Array <OneD, NekDouble > sensor             (nPts, 0.0);
+        Array <OneD, NekDouble > SensorKappa        (nPts, 0.0);
+        Array <OneD, NekDouble > absVelocity        (nPts, 0.0);
+        Array <OneD, NekDouble > soundspeed         (nPts, 0.0);
+        Array <OneD, NekDouble > Lambda             (nPts, 0.0);
+        Array <OneD, NekDouble > mu_var             (nPts, 0.0);
+        Array <OneD, NekDouble > h_minmin           (m_spacedim, 0.0);
         Vmath::Zero(nPts, eps_bar, 1);
-
+        
         // Thermodynamic related quantities
         GetPressure(physfield, pressure);
         GetTemperature(physfield, pressure, temperature);
         GetSoundSpeed(physfield, pressure, soundspeed);
         GetAbsoluteVelocity(physfield, absVelocity);
         GetSensor(physfield, sensor, SensorKappa);
-
+        
         // Determine the maximum wavespeed
         Vmath::Vadd(nPts, absVelocity, 1, soundspeed, 1, Lambda, 1);
-
+        
         // Determine hbar = hx_i/h
         Array<OneD,int> pOrderElmt = GetNumExpModesPerExp();
-
+        
         NekDouble ThetaH = m_FacH;
         NekDouble ThetaL = m_FacL;
-
+        
         NekDouble Phi0     = (ThetaH+ThetaL)/2;
         NekDouble DeltaPhi = ThetaH-Phi0;
-
+        
         Vmath::Zero(eps_bar.num_elements(), eps_bar, 1);
-
-            /*Vmath::Smul(eps_bar.num_elements(),
-                    m_eps_max,
-                    &physfield[nvariables-1][0], 1,
-                    &eps_bar[0], 1);*/
-
+        
+        /*Vmath::Smul(eps_bar.num_elements(),
+         m_eps_max,
+         &physfield[nvariables-1][0], 1,
+         &eps_bar[0], 1);*/
+        /*
         for (int e = 0; e < eps_bar.num_elements(); e++)
         {
+            cout << physfield[nvariables-1][e] << endl;
             if (physfield[nvariables-1][e] <= (Phi0 - DeltaPhi))
             {
                 eps_bar[e] = 0;
@@ -3354,9 +3357,9 @@ namespace Nektar
             else if(abs(physfield[nvariables-1][e]-Phi0) < DeltaPhi)
             {
                 eps_bar[e] = m_mu0/2*(1+sin(M_PI*
-                (physfield[nvariables-1][e]-Phi0)/(2*DeltaPhi)));
+                                            (physfield[nvariables-1][e]-Phi0)/(2*DeltaPhi)));
             }
-        }
+        }*/
 
     }
 
@@ -3543,13 +3546,13 @@ namespace Nektar
         m_fields[0]->FwdTrans(soundspeed, sFwd);
         m_fields[0]->FwdTrans(mach,       mFwd);
         m_fields[0]->FwdTrans(sensor,     sensFwd);
-        m_fields[0]->FwdTrans(smooth,     smoothFwd);
+        m_fields[0]->FwdTrans(sensor,     smoothFwd);
 
         variables.push_back  ("p");
         variables.push_back  ("a");
         variables.push_back  ("Mach");
         variables.push_back  ("Sensor");
-        variables.push_back  ("SmoothVisc");
+        variables.push_back  ("Smooth");
         fieldcoeffs.push_back(pFwd);
         fieldcoeffs.push_back(sFwd);
         fieldcoeffs.push_back(mFwd);
