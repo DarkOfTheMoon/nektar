@@ -272,6 +272,7 @@ namespace Nektar
                     
                     if(fields[0]->GetBndCondExpansions().num_elements())
                     {
+                        //cout << i << endl;
                         v_WeakPenaltyforScalar(fields, i, ufield[i], fluxtemp);
                     }
                     
@@ -344,14 +345,19 @@ namespace Nektar
                         
                     }
                     
+                    
                     // Reinforcing bcs for velocity in case of Wall bcs
-                    if (var == nvar && fields[var]->GetBndConditions()[i]->
+                    if (fields[var]->GetBndConditions()[i]->
                         GetUserDefined() ==
-                        SpatialDomains::eWall)
+                        SpatialDomains::eWall && var == (nvar-1))
                     {
-                        Vmath::Zero(nBndEdgePts,
-                                    &penaltyflux[id2], 1);
+                        Vmath::Vcopy(nBndEdgePts,
+                                     &uplus[id2], 1,
+                                     &penaltyflux[id2], 1);
                     }
+                    
+                    
+
                     // For Neumann boundary condition: uflux = u+
                     else if ((fields[var]->GetBndConditions()[i])->
                              GetBoundaryConditionType() == SpatialDomains::eNeumann)
@@ -367,10 +373,10 @@ namespace Nektar
         
         
         void DiffusionLDG::v_NumFluxforVector(
-                                              const Array<OneD, MultiRegions::ExpListSharedPtr>        &fields,
-                                              const Array<OneD, Array<OneD, NekDouble> >               &ufield,
-                                              Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &qfield,
-                                              Array<OneD, Array<OneD, NekDouble> >               &qflux)
+            const Array<OneD, MultiRegions::ExpListSharedPtr>        &fields,
+            const Array<OneD, Array<OneD, NekDouble> >               &ufield,
+                Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &qfield,
+                Array<OneD, Array<OneD, NekDouble> >               &qflux)
         {
             int i, j;
             int nTracePts  = fields[0]->GetTrace()->GetTotPoints();
@@ -487,6 +493,7 @@ namespace Nektar
             Array<OneD,       NekDouble>                &penaltyflux,
                 NekDouble                                          C11)
         {
+            int nvar = fields.num_elements();
             int i, e, id1, id2;
             int nBndEdges, nBndEdgePts;
             int nBndRegions = fields[var]->GetBndCondExpansions().num_elements();
@@ -536,6 +543,19 @@ namespace Nektar
                                     &qtemp[id2], 1, 
                                     &penaltyflux[id2], 1);
                     }
+                    
+                    else if(fields[var]->GetBndConditions()[i]->
+                                GetUserDefined() ==
+                                SpatialDomains::eWall && var == (nvar-1))
+                    {
+                        Vmath::Vmul(nBndEdgePts,
+                                    &m_traceNormals[dir][id2], 1,
+                                    &(fields[var]->
+                                      GetBndCondExpansions()[i]->
+                                      GetPhys())[id1], 1,
+                                    &penaltyflux[id2], 1);
+                    }
+                    
                     // For Neumann boundary condition: qflux = g_N
                     else if((fields[var]->GetBndConditions()[i])->
                             GetBoundaryConditionType() == SpatialDomains::eNeumann)
