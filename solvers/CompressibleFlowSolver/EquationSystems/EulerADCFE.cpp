@@ -174,7 +174,7 @@ namespace Nektar
             for (i = 0; i < nvariables; ++i)
             {
                 outarrayAdv[i] = Array<OneD, NekDouble>(npoints, 0.0);
-                outarrayDiff[i] = Array<OneD, NekDouble>(npoints, 0.0);
+                outarrayDiff[i] = Array<OneD, NekDouble>(npoints, 1.0);
             }
             
             m_advection->Advect(nvariables, m_fields, advVel, inarray,
@@ -185,10 +185,7 @@ namespace Nektar
                 Vmath::Neg(npoints, outarrayAdv[i], 1);
             }
             
-            //cout << "adv " << Vmath::Vmax(npoints, &outarrayAdv[nvariables-1][0], 1)  << endl;
-
-            
-            /*const Array<OneD, int> ExpOrder = GetNumExpModesPerExp();
+            const Array<OneD, int> ExpOrder = GetNumExpModesPerExp();
 
             NekDouble pOrder = Vmath::Vmax(ExpOrder.num_elements(), ExpOrder, 1);
 
@@ -204,12 +201,12 @@ namespace Nektar
             Vmath::Vadd(npoints, a_vel, 1, u_abs, 1, wave_sp, 1);
 
             NekDouble max_wave_sp = Vmath::Vmax(npoints, wave_sp, 1);
-            */
+            
             Vmath::Smul(npoints,
                         m_C2,
                         outarrayDiff[nvariables-1], 1,
                         outarrayDiff[nvariables-1], 1);
-            /*
+
             Vmath::Smul(npoints,
                         max_wave_sp,
                         outarrayDiff[nvariables-1], 1,
@@ -218,12 +215,9 @@ namespace Nektar
             Vmath::Smul(npoints,
                         pOrder,
                         outarrayDiff[nvariables-1], 1,
-                        outarrayDiff[nvariables-1], 1);*/
+                        outarrayDiff[nvariables-1], 1);
             
-            //cout << "inarray " << Vmath::Vmax(npoints, &inarray[nvariables-1][0], 1)  << endl;
             m_diffusion->Diffuse(nvariables, m_fields, inarray, outarrayDiff);
-
-            //cout << "diff " << Vmath::Vmax(npoints, &outarrayDiff[nvariables-1][0], 1)  << endl;
 
             for (i = 0; i < nvariables; ++i)
             {
@@ -241,7 +235,6 @@ namespace Nektar
             }
 
             GetForcingTerm(inarray, outarrayForcing);
-            //cout << "force " << Vmath::Vmax(npoints, &outarrayForcing[nvariables-1][0], 1)  << endl;
 
             for (i = 0; i < nvariables; ++i)
             {
