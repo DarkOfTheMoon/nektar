@@ -3177,11 +3177,11 @@ namespace Nektar
                 // order 1.0e-06
                 Tau[n + PointCount] =
                     1.0 / (m_C1*pOrder[n + PointCount]*LambdaMax);
-                
+
                 outarrayForcing[nvariables-1][n + PointCount] =
                     1 / Tau[n + PointCount] * (LambdaMax /
                                         pOrder[n + PointCount] *
-                                        Sensor[n + PointCount] -
+                                        SensorKappa[n + PointCount] -
                                         inarray[nvariables-1][n + PointCount]);
                 
                 /*outarrayForcing[nvariables-1][n + PointCount] = m_C1*Sensor[n + PointCount] - inarray[nvariables-1][n + PointCount];*/
@@ -3545,39 +3545,46 @@ namespace Nektar
         const int nPhys   = m_fields[0]->GetNpoints();
         const int nCoeffs = m_fields[0]->GetNcoeffs();
         Array<OneD, Array<OneD, NekDouble> > tmp(m_fields.num_elements());
-
+        Array<OneD, Array<OneD, NekDouble> > force(m_fields.num_elements());
         for (int i = 0; i < m_fields.num_elements(); ++i)
         {
             tmp[i] = m_fields[i]->GetPhys();
+            force[i] = Array<OneD, NekDouble> (nPhys, 0.0);
         }
 
         Array<OneD, NekDouble> pressure(nPhys), soundspeed(nPhys), mach(nPhys);
-        Array<OneD, NekDouble> sensor(nPhys), SensorKappa(nPhys), smooth(nPhys, 0.0);
+        Array<OneD, NekDouble> sensor(nPhys), SensorKappa(nPhys), smooth(nPhys);
 
         GetPressure  (tmp, pressure);
         GetSoundSpeed(tmp, pressure, soundspeed);
         GetMach      (tmp, soundspeed, mach);
         GetSensor    (tmp, sensor, SensorKappa);
         GetSmoothArtificialViscosity    (tmp, smooth);
+        GetForcingTerm    (tmp, force);
 
         Array<OneD, NekDouble> pFwd(nCoeffs), sFwd(nCoeffs), mFwd(nCoeffs);
-        Array<OneD, NekDouble> sensFwd(nCoeffs), smoothFwd(nCoeffs);
+        Array<OneD, NekDouble> sensFwd(nCoeffs), smoothFwd(nCoeffs), forceFwd(nCoeffs), SensorKappaFwd(nCoeffs);
 
         m_fields[0]->FwdTrans(pressure,   pFwd);
         m_fields[0]->FwdTrans(soundspeed, sFwd);
         m_fields[0]->FwdTrans(mach,       mFwd);
         m_fields[0]->FwdTrans(sensor,     sensFwd);
         m_fields[0]->FwdTrans(smooth,     smoothFwd);
-
+        m_fields[0]->FwdTrans(SensorKappa,SensorKappaFwd);
+        m_fields[0]->FwdTrans(force[m_fields.num_elements()-1],      forceFwd);
         variables.push_back  ("p");
         variables.push_back  ("a");
         variables.push_back  ("Mach");
         variables.push_back  ("Sensor");
         variables.push_back  ("Smooth");
+        variables.push_back  ("SensorKappa");
+        variables.push_back  ("Forcing");
         fieldcoeffs.push_back(pFwd);
         fieldcoeffs.push_back(sFwd);
         fieldcoeffs.push_back(mFwd);
         fieldcoeffs.push_back(sensFwd);
         fieldcoeffs.push_back(smoothFwd);
+        fieldcoeffs.push_back(SensorKappaFwd);
+        fieldcoeffs.push_back(forceFwd);
     }
 }
