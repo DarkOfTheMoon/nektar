@@ -57,6 +57,9 @@ namespace Nektar
             m_session->LoadSolverInfo("ShockCaptureType",
                                       m_shockCaptureType,    "Off");
             
+            m_session->LoadParameter ("ViscBCFactor",  m_viscFac,       1.0);
+
+            
             // Setting up the normals
             int i;
             int nDim = pFields[0]->GetCoordim(0);
@@ -345,19 +348,24 @@ namespace Nektar
                         
                     }
                     
-                    
                     // Reinforcing bcs for velocity in case of Wall bcs
                     if (fields[var]->GetBndConditions()[i]->
                         GetUserDefined() ==
                         SpatialDomains::eWall && var == (nvar-1))
                     {
                         Vmath::Vcopy(nBndEdgePts,
-                                     &uplus[id2], 1,
+                                     &(fields[var]->
+                                       GetBndCondExpansions()[i]->
+                                       GetPhys())[id1], 1,
                                      &penaltyflux[id2], 1);
+                
+                        Vmath::Smul(nBndEdgePts,
+                                     ((1+m_viscFac)/2),
+                                     &penaltyflux[id2], 1,
+                                     &penaltyflux[id2], 1);
+                        
                     }
                     
-                    
-
                     // For Neumann boundary condition: uflux = u+
                     else if ((fields[var]->GetBndConditions()[i])->
                              GetBoundaryConditionType() == SpatialDomains::eNeumann)

@@ -105,6 +105,7 @@ namespace Nektar
         NekDouble                           m_C1;
         NekDouble                           m_C2;
         NekDouble                           m_hFactor;
+        NekDouble                           m_viscFac;
         NekDouble                           m_Prandtl;
         NekDouble                           m_amplitude;
         NekDouble                           m_omega;

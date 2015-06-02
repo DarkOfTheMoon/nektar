@@ -60,7 +60,7 @@ namespace Nektar
             Array<OneD, Array<OneD, NekDouble> >              m_traceNormals;
             LibUtilities::SessionReaderSharedPtr              m_session;
             std::string                                       m_EqTypeStr;
-            
+            NekDouble                                         m_viscFac;
             virtual void v_InitObject(
                 LibUtilities::SessionReaderSharedPtr               pSession,
                 Array<OneD, MultiRegions::ExpListSharedPtr>        pFields);

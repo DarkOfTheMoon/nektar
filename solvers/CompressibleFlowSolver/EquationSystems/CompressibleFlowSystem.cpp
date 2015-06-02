@@ -128,7 +128,7 @@ namespace Nektar
         m_session->LoadParameter ("mu0",           m_mu0,           1.0);
         m_session->LoadParameter ("FL",            m_FacL,          0.0);
         m_session->LoadParameter ("FH",            m_FacH,          0.0);
-        m_session->LoadParameter ("hFactor",       m_hFactor,       1.0);
+        m_session->LoadParameter ("ViscBCFactor",  m_viscFac,       1.0);
         m_session->LoadParameter ("epsMax",        m_eps_max,       1.0);
         m_session->LoadParameter ("C1",            m_C1,            3.0);
         m_session->LoadParameter ("C2",            m_C2,            5.0);
@@ -357,23 +357,9 @@ namespace Nektar
             // Boundary condition for epsilon term.
             if(nVariables == m_spacedim+3)
             {
-                NekDouble Length  = 1.0;
-                NekDouble factor  = 2.0;
-                NekDouble factor2 = 1.0;
-                
                 Array<OneD, NekDouble > tmp2(nBCEdgePts, 0.0);
                 Vmath::Smul(nBCEdgePts,
-                            factor,
-                            &Fwd[nVariables-1][id2], 1,
-                            &tmp2[0], 1);
-                
-                Vmath::Vsub(nBCEdgePts,
-                            &Fwd[nVariables-1][id2], 1,
-                            &tmp2[0], 1,
-                            &Fwd[nVariables-1][id2], 1);
-                
-                Vmath::Smul(nBCEdgePts,
-                            factor2,
+                            m_viscFac,
                             &Fwd[nVariables-1][id2], 1,
                             &Fwd[nVariables-1][id2], 1);
             }
@@ -3193,7 +3179,7 @@ namespace Nektar
                     1.0 / (m_C1*pOrder[n + PointCount]*LambdaMax);
                 
                 outarrayForcing[nvariables-1][n + PointCount] =
-                    1 / Tau[n + PointCount] * (m_hFactor * LambdaMax /
+                    1 / Tau[n + PointCount] * (LambdaMax /
                                         pOrder[n + PointCount] *
                                         Sensor[n + PointCount] -
                                         inarray[nvariables-1][n + PointCount]);
