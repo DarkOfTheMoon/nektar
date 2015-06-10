@@ -108,6 +108,11 @@ namespace Nektar
 
         Array<OneD, NekDouble> GetCellSolution(unsigned int idx);
 
+        Array<OneD, NekDouble> GetPhase()
+        {
+            return v_GetPhase();
+        }
+
     protected:
         /// Session
         LibUtilities::SessionReaderSharedPtr m_session;
@@ -155,6 +160,8 @@ namespace Nektar
         }
 
         virtual void v_SetInitialConditions() = 0;
+
+        virtual Array<OneD, NekDouble> v_GetPhase();
 
         void LoadCellModel();
     };

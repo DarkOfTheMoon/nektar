@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
                             vSession->GetFunction("InitialConditions", "u");
         vSol[0][0] = e->Evaluate(0.0, 0.0, 0.0, 0.0);
 
-        cout << "#";
+        cout << "# t    u";
         for (unsigned int i = 0; i < vCell->GetNumCellVariables(); ++i)
         {
             cout << "   " << vCell->GetCellVarName(i);

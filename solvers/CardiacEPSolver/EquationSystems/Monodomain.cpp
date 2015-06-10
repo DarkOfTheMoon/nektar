@@ -38,6 +38,7 @@
 #include <CardiacEPSolver/EquationSystems/Monodomain.h>
 #include <CardiacEPSolver/Filters/FilterCheckpointCellModel.h>
 #include <CardiacEPSolver/Filters/FilterCellHistoryPoints.h>
+#include <CardiacEPSolver/Filters/FilterPhase.h>
 
 namespace Nektar
 {
@@ -294,6 +295,12 @@ namespace Nektar
                 boost::shared_ptr<FilterCellHistoryPoints> c
                     = boost::dynamic_pointer_cast<FilterCellHistoryPoints>(
                                                                 m_filters[k]);
+                c->SetCellModel(m_cell);
+            }
+            if (x->first == "Phase")
+            {
+                boost::shared_ptr<FilterPhase> c
+                    = boost::dynamic_pointer_cast<FilterPhase>(m_filters[k]);
                 c->SetCellModel(m_cell);
             }
         }

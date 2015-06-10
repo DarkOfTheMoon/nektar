@@ -21,6 +21,7 @@ IF( NEKTAR_SOLVER_CARDIAC_EP )
        ./Filters/FilterElectrogram.cpp
        ./Filters/FilterBenchmark.cpp
        ./Filters/FilterCellHistoryPoints.cpp
+       ./Filters/FilterPhase.cpp
        ./Stimuli/Stimulus.cpp
        ./Stimuli/StimulusCircle.cpp
        ./Stimuli/StimulusRect.cpp

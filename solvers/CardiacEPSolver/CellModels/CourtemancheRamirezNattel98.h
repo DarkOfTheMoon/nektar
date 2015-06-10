@@ -78,6 +78,8 @@ namespace Nektar
 
         virtual std::string v_GetCellVarName(unsigned int idx);
 
+        virtual Array<OneD, NekDouble> v_GetPhase();
+
     private:
         NekDouble C_m;
         NekDouble g_Na;

@@ -83,7 +83,7 @@ namespace Nektar
         }
 
         // Use nodal projection if only triangles
-        if (s.size() == 1 && (s.count(LibUtilities::eTriangle) == 1 || 
+        if (s.size() == 1 && (s.count(LibUtilities::eTriangle) == 1 ||
                               s.count(LibUtilities::eTetrahedron) == 1))
         {
             // This is disabled for now as it causes problems at high order.
@@ -126,7 +126,7 @@ namespace Nektar
     void CellModel::Initialise()
     {
         ASSERTL1(m_nvar > 0, "Cell model must have at least 1 variable.");
-        
+
         m_cellSol = Array<OneD, Array<OneD, NekDouble> >(m_nvar);
         m_wsp = Array<OneD, Array<OneD, NekDouble> >(m_nvar);
         for (unsigned int i = 0; i < m_nvar; ++i)
@@ -320,6 +320,11 @@ namespace Nektar
     Array<OneD, NekDouble> CellModel::GetCellSolution(unsigned int idx)
     {
         return m_cellSol[idx];
+    }
+
+    Array<OneD, NekDouble> CellModel::v_GetPhase() {
+        Array<OneD, NekDouble> phase(m_nq, 0.0);
+        return phase;
     }
 
     void CellModel::LoadCellModel()

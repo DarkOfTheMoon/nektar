@@ -48,7 +48,7 @@ namespace Nektar
                         "CourtemancheRamirezNattel98",
                         CourtemancheRamirezNattel98::create,
                          "Ionic model of human atrial cell electrophysiology.");
-    
+
     // Register cell model variants
     std::string CourtemancheRamirezNattel98::lookupIds[2] = {
             LibUtilities::SessionReader::RegisterEnumValue("CellModelVariant",
@@ -56,7 +56,7 @@ namespace Nektar
             LibUtilities::SessionReader::RegisterEnumValue("CellModelVariant",
                     "AF", CourtemancheRamirezNattel98::eAF)
     };
-    
+
     // Register default variant
     std::string CourtemancheRamirezNattel98::def =
             LibUtilities::SessionReader::RegisterDefaultSolverInfo(
@@ -150,19 +150,19 @@ namespace Nektar
         m_concentrations.push_back(19);
         m_concentrations.push_back(20);
     }
-    
-    
-    
+
+
+
     /**
     *
     */
     CourtemancheRamirezNattel98::~CourtemancheRamirezNattel98()
     {
-        
+
     }
-    
-    
-    
+
+
+
     void CourtemancheRamirezNattel98::v_Update(
                      const Array<OneD, const  Array<OneD, NekDouble> >&inarray,
                            Array<OneD,        Array<OneD, NekDouble> >&outarray,
@@ -631,4 +631,15 @@ namespace Nektar
         }
     }
 
+    Array<OneD, NekDouble> CourtemancheRamirezNattel98::v_GetPhase()
+    {
+        Array<OneD, NekDouble> phase(m_nq, 0.0);
+
+        // Compute phase from f and f_Ca
+        for (int i = 0; i < m_nq; ++i)
+        {
+            phase[i] = atan2(m_cellSol[12][i]-0.5, m_cellSol[11][i]-0.75);
+        }
+        return phase;
+    }
 }
