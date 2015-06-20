@@ -1305,18 +1305,18 @@ namespace Nektar
 
             // Define storage for vertex transpose matrix and zero all entries
             MatrixStorage storage = eFULL;
-            DNekMatSharedPtr m_transformationmatrix;
-            DNekMatSharedPtr m_transposedtransformationmatrix;
+            DNekMatSharedPtr transformationmatrix;
+            DNekMatSharedPtr transposedtransformationmatrix;
 
-            m_transformationmatrix =
+            transformationmatrix =
                 MemoryManager<DNekMat>::AllocateSharedPtr(
                     nBndCoeffs, nBndCoeffs, 0.0, storage);
-            m_transposedtransformationmatrix =
+            transposedtransformationmatrix =
                 MemoryManager<DNekMat>::AllocateSharedPtr(
                     nBndCoeffs, nBndCoeffs, 0.0, storage);
 
-            DNekMat &R  = (*m_transformationmatrix);
-            DNekMat &RT = (*m_transposedtransformationmatrix);
+            DNekMat &R  = (*transformationmatrix);
+            DNekMat &RT = (*transposedtransformationmatrix);
 
             // Build the vertex-edge/face transform matrix: This matrix is
             // constructed from the submatrices corresponding to the couping
@@ -1654,12 +1654,12 @@ namespace Nektar
             if ((matrixType == StdRegions::ePreconR)||
                 (matrixType == StdRegions::ePreconRMass))
             {
-                return m_transformationmatrix;
+                return transformationmatrix;
             }
             else if ((matrixType == StdRegions::ePreconRT)||
                      (matrixType == StdRegions::ePreconRTMass))
             {
-                return m_transposedtransformationmatrix;
+                return transposedtransformationmatrix;
             }
             else
             {
@@ -1678,12 +1678,12 @@ namespace Nektar
 	 *  0 & 0 & \mathbf{I}} \end{array}\right]\f]
 	 */
         DNekMatSharedPtr Expansion3D::v_BuildInverseTransformationMatrix(
-            const DNekScalMatSharedPtr & m_transformationmatrix)
+            const DNekScalMatSharedPtr & transformationmatrix)
 	{
             int i, j, n, eid = 0, fid = 0;
             int nCoeffs = NumBndryCoeffs();
             NekDouble MatrixValue;
-            DNekScalMat &R = (*m_transformationmatrix);
+            DNekScalMat &R = (*transformationmatrix);
 
             // Define storage for vertex transpose matrix and zero all entries
             MatrixStorage storage = eFULL;
