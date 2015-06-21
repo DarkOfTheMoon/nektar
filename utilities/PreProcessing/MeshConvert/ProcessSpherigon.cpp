@@ -464,7 +464,9 @@ namespace Nektar
                 InputPlySharedPtr  plyfile;
                 
                 inply.open(normalfile.c_str());
-                
+                ASSERTL0(inply,string("Could not open input ply file: ") +
+                         normalfile);
+
                 int j;
                 MeshSharedPtr m = boost::shared_ptr<Mesh>(new Mesh());
                 plyfile = boost::shared_ptr<InputPly>(new InputPly(m));
@@ -936,7 +938,7 @@ namespace Nektar
                 }
             }
 
-            // Copy face nodes back into 3D element faces.
+            // Copy face nodes back into 3D element faces
             if (m_mesh->m_expDim == 3)
             {
                 set<pair<int,int> >::iterator it;

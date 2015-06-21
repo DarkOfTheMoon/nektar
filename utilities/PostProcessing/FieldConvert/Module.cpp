@@ -50,7 +50,8 @@ namespace Nektar
         {
             typedef Loki::SingletonHolder<ModuleFactory,
                 Loki::CreateUsingNew,
-                Loki::NoDestroy > Type;
+                Loki::NoDestroy,
+                Loki::SingleThreaded> Type;
             return Type::Instance();
         }
 
@@ -66,7 +67,7 @@ namespace Nektar
         {
             m_config["infile"] = ConfigOption(false, "", "Input filename.");
         }
-        
+
         OutputModule::OutputModule(FieldSharedPtr m) : Module(m)
         {
             m_config["outfile"] = ConfigOption(false, "", "Output filename.");
@@ -80,7 +81,7 @@ namespace Nektar
                 cerr << "File type " << fileType << " not supported for this "
                      << "module." << endl;
             }
-            
+
             m_f->m_inputfiles[fileType].push_back(fileName);
         }
         /**
@@ -96,7 +97,7 @@ namespace Nektar
                 abort();
             }
         }
-        
+
         /**
          * @brief Register a configuration option with a module.
          */
@@ -110,7 +111,7 @@ namespace Nektar
             }
 
             it->second.m_beenSet = true;
-            
+
             if (it->second.m_isBool)
             {
                 it->second.m_value = "1";
@@ -120,27 +121,27 @@ namespace Nektar
                 it->second.m_value = val;
             }
         }
-        
+
         /**
          * @brief Print out all configuration options for a module.
          */
         void Module::PrintConfig()
         {
             map<string, ConfigOption>::iterator it;
-            
+
             if (m_config.size() == 0)
             {
                 cerr << "No configuration options for this module." << endl;
                 return;
             }
-            
+
             for (it = m_config.begin(); it != m_config.end(); ++it)
             {
-                cerr << setw(10) << it->first << ": " << it->second.m_desc 
+                cerr << setw(10) << it->first << ": " << it->second.m_desc
                      << endl;
             }
         }
-        
+
         /**
          * @brief Sets default configuration options for those which have not
          * been set.
@@ -148,7 +149,7 @@ namespace Nektar
         void Module::SetDefaults()
         {
             map<string, ConfigOption>::iterator it;
-            
+
             for (it = m_config.begin(); it != m_config.end(); ++it)
             {
                 if (!it->second.m_beenSet)
@@ -163,7 +164,7 @@ namespace Nektar
          */
         void InputModule::PrintSummary()
         {
-            cout << "Field size = " << 
+            cout << "Field size = " <<
                 m_f->m_data[0].size() * sizeof(NekDouble) << endl;
         }
     }

@@ -404,6 +404,9 @@ namespace Nektar
                 ImportMultiFldFileIDs(infile,filenames, elementIDs_OnPartitions,
                                       fieldmetadatamap);
                 
+                // Load metadata
+                ImportFieldMetaData(infile,fieldmetadatamap);
+
                 if(ElementIDs == NullInt1DArray) //load all fields
                 {
                     for(int i = 0; i < filenames.size(); ++i)
@@ -967,7 +970,7 @@ namespace Nektar
                     std::string elementStr;
                     while(elementChild)
                     {
-                        if (elementChild->Type() == TiXmlNode::TEXT)
+                        if (elementChild->Type() == TiXmlNode::TINYXML_TEXT)
                         {
                             elementStr += elementChild->ToText()->ValueStr();
                         }
@@ -1120,14 +1123,17 @@ namespace Nektar
             fs::path specPath (outname);
 
             // Remove any existing file which is in the way
-            try
+            if(m_comm->RemoveExistingFiles())
             {
-                fs::remove_all(specPath);
-            }
-            catch (fs::filesystem_error& e)
-            {
-                ASSERTL0(e.code().value() == berrc::no_such_file_or_directory,
-                         "Filesystem error: " + string(e.what()));
+                try
+                {
+                    fs::remove_all(specPath);
+                }
+                catch (fs::filesystem_error& e)
+                {
+                    ASSERTL0(e.code().value() == berrc::no_such_file_or_directory,
+                             "Filesystem error: " + string(e.what()));
+                }
             }
 
             // serial processing just add ending.
@@ -1538,7 +1544,5 @@ namespace Nektar
             
             return datasize;
         }
-        
-
     }
 }

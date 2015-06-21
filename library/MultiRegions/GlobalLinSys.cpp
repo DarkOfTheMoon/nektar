@@ -45,7 +45,7 @@ namespace Nektar
 {
     namespace MultiRegions
     {
-        std::string GlobalLinSys::lookupIds[8] = {
+        std::string GlobalLinSys::lookupIds[12] = {
             LibUtilities::SessionReader::RegisterEnumValue(
                 "GlobalSysSoln", "DirectFull",
                 MultiRegions::eDirectFullMatrix),
@@ -69,7 +69,19 @@ namespace Nektar
                 MultiRegions::eXxtFullMatrix),
             LibUtilities::SessionReader::RegisterEnumValue(
                 "GlobalSysSoln", "XxtStaticCond",
-                MultiRegions::eXxtStaticCond)
+                MultiRegions::eXxtStaticCond),
+            LibUtilities::SessionReader::RegisterEnumValue(
+                "GlobalSysSoln", "XxtMultiLevelStaticCond",
+                MultiRegions::eXxtMultiLevelStaticCond),
+            LibUtilities::SessionReader::RegisterEnumValue(
+                "GlobalSysSoln", "PETScFull",
+                MultiRegions::ePETScFullMatrix),
+            LibUtilities::SessionReader::RegisterEnumValue(
+                "GlobalSysSoln", "PETScStaticCond",
+                MultiRegions::ePETScStaticCond),
+            LibUtilities::SessionReader::RegisterEnumValue(
+                "GlobalSysSoln", "PETScMultiLevelStaticCond",
+                MultiRegions::ePETScMultiLevelStaticCond)
         };
 
         std::string GlobalLinSys::def = LibUtilities::SessionReader::
@@ -190,7 +202,8 @@ namespace Nektar
         {
             typedef Loki::SingletonHolder<GlobalLinSysFactory,
                 Loki::CreateUsingNew,
-                Loki::NoDestroy > Type;
+                Loki::NoDestroy,
+                Loki::SingleThreaded> Type;
             return Type::Instance();
         }
 
@@ -384,6 +397,12 @@ namespace Nektar
         }
 
         void GlobalLinSys::v_InitObject()
+        {
+            NEKERROR(ErrorUtil::efatal, "Method does not exist" );
+	}
+
+        void GlobalLinSys::v_Initialise(
+            const boost::shared_ptr<AssemblyMap>& pLocToGloMap)
         {
             NEKERROR(ErrorUtil::efatal, "Method does not exist" );
 	}

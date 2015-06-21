@@ -146,7 +146,11 @@ namespace Nektar
 
             SetCoeffPhys();
 
-            SetupBoundaryConditions(HomoBasis, lhom, bcs, variable);
+            // Do not set up BCs if default variable
+            if(variable.compare("DefaultVar") != 0)
+            {
+                SetupBoundaryConditions(HomoBasis, lhom, bcs, variable);
+            }
 
             SetUpDG();
         }
@@ -244,8 +248,10 @@ namespace Nektar
             // case when the method is called from the constructor.
             for (n = 0; n < m_bndCondExpansions.num_elements(); ++n)
             {
-                if (time == 0.0 || m_bndConditions[n]->GetUserDefined() ==
-                   SpatialDomains::eTimeDependent)
+                if (time == 0.0 ||
+                    m_bndConditions[n]->IsTimeDependent() ||
+	            boost::iequals(m_bndConditions[n]->GetUserDefined(),
+                                   "MovingBody"))
                 {
                     m_bndCondExpansions[n]->HomogeneousFwdTrans(
                         m_bndCondExpansions[n]->GetCoeffs(),

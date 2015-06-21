@@ -563,11 +563,11 @@ namespace Nektar
                 {
                     for(i = 0; i < numPoints; ++i)
                     {
-                        m_bdata[ 2*p   *numPoints+i] = cos(p*M_PI*z[i]);
-                        m_bdata[(2*p+1)*numPoints+i] = -sin(p*M_PI*z[i]);
+                        m_bdata[ 2*p   *numPoints+i] =  cos(p*M_PI* (z[i]+1) );
+                        m_bdata[(2*p+1)*numPoints+i] = -sin(p*M_PI* (z[i]+1) );
 
-                        m_dbdata[ 2*p   *numPoints+i] = -p*M_PI*sin(p*M_PI*z[i]);
-                        m_dbdata[(2*p+1)*numPoints+i] = -p*M_PI*cos(p*M_PI*z[i]);
+                        m_dbdata[ 2*p   *numPoints+i] = -p*M_PI*sin(p*M_PI* (z[i]+1) );
+                        m_dbdata[(2*p+1)*numPoints+i] = -p*M_PI*cos(p*M_PI* (z[i]+1) );
                     }
                 }
 
@@ -579,11 +579,11 @@ namespace Nektar
 					
                 for(i = 0; i < numPoints; ++i)
                 {
-                    m_bdata[i] = cos(M_PI*z[i]);
-                    m_bdata[numPoints+i] = -sin(M_PI*z[i]);
+                    m_bdata[i] = cos(M_PI* (z[i]+1) );
+                    m_bdata[numPoints+i] = -sin(M_PI* (z[i]+1) );
 						
-                    m_dbdata[i] = -M_PI*sin(M_PI*z[i]);
-                    m_dbdata[numPoints+i] = -M_PI*cos(M_PI*z[i]);
+                    m_dbdata[i] = -M_PI*sin(M_PI* (z[i]+1) );
+                    m_dbdata[numPoints+i] = -M_PI*cos(M_PI* (z[i]+1) );
                 }
 					
                 for (p=1; p < numModes/2; ++p)
@@ -598,23 +598,19 @@ namespace Nektar
                     }
                 }
                 break;
-					
-					//Fourier Real Half Mode
-					case eFourierHalfModeRe:
-					
-					m_bdata[0] = cos(M_PI*z[0]);
-					m_dbdata[0] = -M_PI*sin(M_PI*z[0]);
-					break;
-					
-					//Fourier Imaginary Half Mode
-				    case eFourierHalfModeIm:
-					
-					m_bdata[0] = -sin(M_PI*z[0]);
-					m_dbdata[0] = -M_PI*cos(M_PI*z[0]);
-					break;
 
-					
-					
+            //Fourier Real Half Mode
+            case eFourierHalfModeRe:
+                m_bdata[0] = cos(M_PI*z[0]);
+                m_dbdata[0] = -M_PI*sin(M_PI*z[0]);
+                break;
+
+            //Fourier Imaginary Half Mode
+            case eFourierHalfModeIm:
+                m_bdata[0] = -sin(M_PI*z[0]);
+                m_dbdata[0] = -M_PI*cos(M_PI*z[0]);
+                break;
+
             case eChebyshev:
                 {
                     mode = m_bdata.data();

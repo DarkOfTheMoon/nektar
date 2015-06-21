@@ -41,7 +41,7 @@ namespace Nektar
 
     std::string RCROutflow::className
     = GetBoundaryFactory().RegisterCreatorFunction(
-        "RCRterminal",
+        "RCR-terminal",
         RCROutflow::create,
         "RCR  outflow boundary condition");
 
@@ -71,9 +71,9 @@ namespace Nektar
         const NekDouble time,
         int omega,int offset,int n)
     { 
-	NekDouble Q, A_r, u_r;
+	NekDouble A_r, u_r;
 	NekDouble A_u, u_u;
-        NekDouble A_l, u_l, u_0, c_0;
+        NekDouble A_l, u_l, c_0;
 
         Array<OneD, MultiRegions::ExpListSharedPtr> vessel(2);
 
