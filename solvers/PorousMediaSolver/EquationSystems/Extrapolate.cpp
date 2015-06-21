@@ -259,6 +259,12 @@ namespace Nektar
                 MountHOPBCs(m_HBCdata[j].m_ptsInElmt,kinvis,Q[i],Advection[i]);
             }
 
+            //Additional contribution to pressure (darcy)
+            for(int i = 0; i < m_bnd_dim; i++)
+            {
+                MountPermHOPBCs(m_HBCdata[j].m_ptsInElmt,kinvis,m_perm_inv,Velocity[i],Q[i]);
+            }
+            
             Pvals = m_PBndExp[m_HBCdata[j].m_bndryElmtID]->UpdateCoeffs()
                         + m_PBndExp[m_HBCdata[j].m_bndryElmtID]
                             ->GetCoeff_Offset(m_HBCdata[j].m_bndElmtOffset);
@@ -281,7 +287,7 @@ namespace Nektar
 
                     elmt->GetEdgePhysVals(m_HBCdata[j].m_elmtTraceID, Pbc,
                                           Velocity[0], BndValues[0]);
-                    elmt->GetEdgePhysVals(m_HBCdata[j].m_elmtTraceID, Pbc,
+                    elmt->GetEdgePhysVals(m_HBCdagta[j].m_elmtTraceID, Pbc,
                                           Velocity[1], BndValues[1]);
                     Pbc->NormVectorIProductWRTBase(BndValues[0], BndValues[1],
                                                    Uvals);

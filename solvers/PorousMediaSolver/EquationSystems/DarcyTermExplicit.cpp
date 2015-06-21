@@ -183,6 +183,20 @@ namespace Nektar
         }
     }
 
+    /**
+     * Additional contribution to high order pressure boundary condition
+     * due to darcy term
+     */
+    void DarcyTermExplicit::v_AddDarcyPressureTerm(
+        int nq,
+        NekDouble kinvis,
+        Array<OneD, Array<OneD, const NekDouble> > &Vel,
+        Array<OneD, Array<OneD, NekDouble> > &Q)
+
+    {
+    }
+
+
     void DarcyTermExplicit::v_GetImplicitDarcyFactor(
         Array<OneD, NekDouble> &permCoeff)
     {
@@ -287,6 +301,20 @@ namespace Nektar
             Vmath::Vvtvp(nqtot,tmp,1,inarray[i],1,outarray[i],1,outarray[i],1);
         }
     }
+
+    /**
+     * Additional contribution to high order pressure boundary condition
+     * due to darcy term
+     */
+    void DarcyTermExplicitSpatial::v_AddDarcyPressureTerm(
+        int nq,
+        NekDouble kinvis,
+        Array<OneD, Array<OneD, const NekDouble> > &Vel,
+        Array<OneD, Array<OneD, NekDouble> > &Q)
+
+    {
+    }
+
 
     void DarcyTermExplicitSpatial::v_GetImplicitDarcyFactor(
         Array<OneD, NekDouble> &permCoeff)
