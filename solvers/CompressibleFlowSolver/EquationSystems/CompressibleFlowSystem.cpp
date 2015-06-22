@@ -3175,16 +3175,16 @@ namespace Nektar
                 pOrder[n + PointCount] = pOrderElmt[e];
 
                 // order 1.0e-06
-                Tau[n + PointCount] =
+                /*Tau[n + PointCount] =
                     1.0 / (m_C1*pOrder[n + PointCount]*LambdaMax);
 
                 outarrayForcing[nvariables-1][n + PointCount] =
                     1 / Tau[n + PointCount] * (LambdaMax /
                                         pOrder[n + PointCount] *
                                         SensorKappa[n + PointCount] -
-                                        inarray[nvariables-1][n + PointCount]);
+                                        inarray[nvariables-1][n + PointCount]);*/
                 
-                /*outarrayForcing[nvariables-1][n + PointCount] = m_C1*Sensor[n + PointCount] - inarray[nvariables-1][n + PointCount];*/
+                outarrayForcing[nvariables-1][n + PointCount] = m_C1*SensorKappa[n + PointCount] - inarray[nvariables-1][n + PointCount];
                 
             }
             PointCount += nQuadPointsElement;
@@ -3474,7 +3474,7 @@ namespace Nektar
         std::ofstream m_file( "VariablePComposites.txt", std::ios_base::app);
         for (int e = 0; e < nElements; e++)
         {
-            m_file << "<C ID=\"" << e+1 << "\"> Q[" << e << "] </C>"<< endl;
+            m_file << "<C ID=\"" << e+1 << "\"> T[" << e << "] </C>"<< endl;
         }
         m_file.close();
 
@@ -3487,10 +3487,10 @@ namespace Nektar
             // Define thresholds
             // Ideally, these threshold values could be given
             // in the Session File
-            s_ds =  -5.0;
+            s_ds =  -2.1;
             //s_ds = s_0*log10(PolyOrder[e]);
-            s_sm = -6;
-            s_fl = -7;
+            s_sm = -2.5;
+            s_fl = -3.0;
 
 
             for (int i = 0; i < nQuadPointsElement; i++)
@@ -3503,17 +3503,12 @@ namespace Nektar
                     {
                         PolyOrder[npCount + i] = PolyOrder[npCount + i] - 1;
                     }
-                    else if(PolyOrder[e] < MinOrderShock)
-                    {
-                        PolyOrder[npCount + i] = PolyOrder[npCount + i] + 1;
-                    }
-
                 }
                 else if (se[npCount + i] > s_sm && se[npCount + i] < s_ds)
                 {
                     if (PolyOrder[npCount + i] < MaxOrder)
                     {
-                        PolyOrder[npCount + i] = PolyOrder[npCount + i] + 2;
+                        PolyOrder[npCount + i] = PolyOrder[npCount + i] + 1;
                     }
                 }
                 else if (se[npCount + i] > s_fl && se[npCount + i] < s_sm)
@@ -3530,7 +3525,7 @@ namespace Nektar
             }
             m_file2 << "<E COMPOSITE= \"C[" << e+1
                     << "]\" NUMMODES=\"" << PolyOrder[npCount + 1]
-                    << "\" TYPE=\"MODIFIED\" FIELDS=\"rho,rhou,rhov,rhow,E\" />"
+                    << "\" TYPE=\"MODIFIED\" FIELDS=\"rho,rhou,rhov,E\" />"
                     << endl;
             npCount += nQuadPointsElement;
         }
@@ -3545,46 +3540,44 @@ namespace Nektar
         const int nPhys   = m_fields[0]->GetNpoints();
         const int nCoeffs = m_fields[0]->GetNcoeffs();
         Array<OneD, Array<OneD, NekDouble> > tmp(m_fields.num_elements());
-        Array<OneD, Array<OneD, NekDouble> > force(m_fields.num_elements());
+        
         for (int i = 0; i < m_fields.num_elements(); ++i)
         {
             tmp[i] = m_fields[i]->GetPhys();
-            force[i] = Array<OneD, NekDouble> (nPhys, 0.0);
         }
-
-        Array<OneD, NekDouble> pressure(nPhys), soundspeed(nPhys), mach(nPhys);
-        Array<OneD, NekDouble> sensor(nPhys), SensorKappa(nPhys), smooth(nPhys);
-
+        
+        Array<OneD,int> ExpOrderElement = GetNumExpModesPerExp();
+        
+        int pOrder = ExpOrderElement[0]-1;
+        cout << pOrder << endl;
+        Array<OneD, NekDouble> pressure(nPhys), soundspeed(nPhys), mach(nPhys), sensor(nPhys), SensorKappa(nPhys), smooth(nPhys), varP(nPhys, pOrder);
+        
         GetPressure  (tmp, pressure);
         GetSoundSpeed(tmp, pressure, soundspeed);
         GetMach      (tmp, soundspeed, mach);
         GetSensor    (tmp, sensor, SensorKappa);
         GetSmoothArtificialViscosity    (tmp, smooth);
-        GetForcingTerm    (tmp, force);
-
-        Array<OneD, NekDouble> pFwd(nCoeffs), sFwd(nCoeffs), mFwd(nCoeffs);
-        Array<OneD, NekDouble> sensFwd(nCoeffs), smoothFwd(nCoeffs), forceFwd(nCoeffs), SensorKappaFwd(nCoeffs);
-
+        SetVarPOrderElmt                (tmp, varP);
+        
+        Array<OneD, NekDouble> pFwd(nCoeffs), sFwd(nCoeffs), mFwd(nCoeffs), sensFwd(nCoeffs), smoothFwd(nCoeffs), VarPFwd(nCoeffs);
+        
         m_fields[0]->FwdTrans(pressure,   pFwd);
         m_fields[0]->FwdTrans(soundspeed, sFwd);
         m_fields[0]->FwdTrans(mach,       mFwd);
         m_fields[0]->FwdTrans(sensor,     sensFwd);
         m_fields[0]->FwdTrans(smooth,     smoothFwd);
-        m_fields[0]->FwdTrans(SensorKappa,SensorKappaFwd);
-        m_fields[0]->FwdTrans(force[m_fields.num_elements()-1],      forceFwd);
+        m_fields[0]->FwdTrans(varP,     VarPFwd);
         variables.push_back  ("p");
         variables.push_back  ("a");
         variables.push_back  ("Mach");
         variables.push_back  ("Sensor");
-        variables.push_back  ("Smooth");
-        variables.push_back  ("SensorKappa");
-        variables.push_back  ("Forcing");
+        variables.push_back  ("SmoothVisc");
+        variables.push_back  ("VarP");
         fieldcoeffs.push_back(pFwd);
         fieldcoeffs.push_back(sFwd);
         fieldcoeffs.push_back(mFwd);
         fieldcoeffs.push_back(sensFwd);
         fieldcoeffs.push_back(smoothFwd);
-        fieldcoeffs.push_back(SensorKappaFwd);
-        fieldcoeffs.push_back(forceFwd);
+        fieldcoeffs.push_back(VarPFwd);
     }
 }

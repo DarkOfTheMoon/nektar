@@ -174,7 +174,7 @@ namespace Nektar
             for (i = 0; i < nvariables; ++i)
             {
                 outarrayAdv[i] = Array<OneD, NekDouble>(npoints, 0.0);
-                outarrayDiff[i] = Array<OneD, NekDouble>(npoints, 1.0);
+                outarrayDiff[i] = Array<OneD, NekDouble>(npoints, 0.0);
             }
             
             m_advection->Advect(nvariables, m_fields, advVel, inarray,
@@ -202,12 +202,9 @@ namespace Nektar
 
             NekDouble max_wave_sp = Vmath::Vmax(npoints, wave_sp, 1);
             
-            Vmath::Smul(npoints,
-                        m_C2,
-                        outarrayDiff[nvariables-1], 1,
-                        outarrayDiff[nvariables-1], 1);
+            
 
-            Vmath::Smul(npoints,
+            /*Vmath::Smul(npoints,
                         max_wave_sp,
                         outarrayDiff[nvariables-1], 1,
                         outarrayDiff[nvariables-1], 1);
@@ -215,10 +212,16 @@ namespace Nektar
             Vmath::Smul(npoints,
                         pOrder,
                         outarrayDiff[nvariables-1], 1,
-                        outarrayDiff[nvariables-1], 1);
+                        outarrayDiff[nvariables-1], 1);*/
             
             m_diffusion->Diffuse(nvariables, m_fields, inarray, outarrayDiff);
-
+            
+            
+            Vmath::Smul(npoints,
+                        m_C2,
+                        outarrayDiff[nvariables-1], 1,
+                        outarrayDiff[nvariables-1], 1);
+            
             for (i = 0; i < nvariables; ++i)
             {
                 Vmath::Vadd(npoints,
@@ -226,6 +229,7 @@ namespace Nektar
                             outarrayDiff[i], 1,
                             outarray[i], 1);
             }
+            
 
             Array<OneD, Array<OneD, NekDouble> > outarrayForcing(nvariables);
 
