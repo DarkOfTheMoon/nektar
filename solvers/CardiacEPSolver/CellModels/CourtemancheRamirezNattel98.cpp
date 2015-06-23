@@ -634,12 +634,16 @@ namespace Nektar
     Array<OneD, NekDouble> CourtemancheRamirezNattel98::v_GetPhase()
     {
         Array<OneD, NekDouble> phase(m_nq, 0.0);
-
-        // Compute phase from f and f_Ca
+        // Compute phase from u_i and u_a
         for (int i = 0; i < m_nq; ++i)
         {
-            phase[i] = atan2(m_cellSol[12][i]-0.5, m_cellSol[11][i]-0.75);
+            phase[i] = atan2(m_cellSol[5][i]-0.1, m_cellSol[6][i]-0.6);
+            if (i%100 == 0)
+            {
+                cerr << m_cellSol[5][i]-0.1 << "    " << m_cellSol[6][i]-0.6 << "    ";
+            }
         }
+        cerr << endl;
         return phase;
     }
 }
