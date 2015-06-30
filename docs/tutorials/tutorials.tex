@@ -31,7 +31,6 @@ openany, % A chapter may start on either a recto or verso page.
 \usepackage{makeidx}
 \usepackage{import}
 
-
 %%% PAGE LAYOUT 
 %%%-----------------------------------------------------------------------------
 \setlrmarginsandblock{0.15\paperwidth}{*}{1} % Left and right margin
@@ -303,9 +302,8 @@ colorlinks,
 citecolor=darkblue,
 filecolor=darkblue,
 linkcolor=darkblue,
-urlcolor=darkblue
+urlcolor=darkblue,
 pdfborder={0 0 0},      % No borders around internal hyperlinks
-pdfauthor={I am the Author} % author
 }
 \usepackage{memhfixc}   %
 
@@ -374,38 +372,12 @@ Scientific Computing and Imaging Institute, University of Utah, USA}
 \clearpage
 
 \chapter{Introduction}
-Nektar++ \cite{CaMoCoBoRo15} is a tensor product based finite element package
-designed to allow one to construct efficient classical low polynomial order
-$h$-type solvers (where $h$ is the size of the finite element) as well as higher
-$p$-order piecewise polynomial order solvers.  The framework currently has the
-following capabilities:
+The tutorials presented in the following aim to show the users of Nektar++ how to 
+utilise the various solvers available within the library, from the pre-processing steps 
+to the post-processing, passing through the setup and run of the simulation.
 
-\begin{itemize}
-\item Representation of one, two and three-dimensional fields as a collection of
- piecewise continuous or discontinuous polynomial domains.
-\item Segment, plane and volume domains are permissible, as well as domains
- representing curves and surfaces (dimensionally-embedded domains).
-\item Hybrid shaped elements, i.e triangles and quadrilaterals or tetrahedra,
-prisms and hexahedra.
-\item Both hierarchical and nodal expansion bases.
-\item Continuous or discontinuous Galerkin operators.
-\item Cross platform support for Linux, Mac OS X and Windows.
-\end{itemize}
-
-The framework comes with a number of solvers and also allows one to construct a
-variety of new solvers.
-
-Our current goals are to develop:
-\begin{itemize}
-\item Automatic auto-tuning of optimal operator implementations based upon not
-only $h$ and $p$ but also hardware considerations and mesh connectivity.
-\item Temporal and spatial adaption.
-\item Features enabling evaluation of high-order meshing techniques.
-\end{itemize}
-
-This document provides implementation details for the design of the libraries,
-Nektar++-specific data structures and algorithms and other development
-information.
+The document is organised such that each solver has at least one tutorial which 
+explains all the main functionalities. 
 
 \begin{warningbox}
 This document is still under development and may be incomplete in parts.
@@ -413,13 +385,15 @@ This document is still under development and may be incomplete in parts.
 
 \mainmatter
 
-%\import{core-concepts/}{core-concepts.tex}
+\import{tutorial1-adr/}{tutorial1-adr.tex}
 
-%\import{library-design/}{library-design.tex}
+\import{tutorial2-ape/}{tutorial2-ape.tex}
 
-%\import{data-structures-algorithms/}{data-structures-algorithms.tex}
+\import{tutorial3-incompressible-ns/}{tutorial3-incompressible-ns.tex}
 
-%\import{coding-standard/}{coding-standard.tex}
+\import{tutorial4-compressible-ns/}{tutorial4-compressible-ns.tex}
+
+\import{tutorial5-cardiac-ep/}{tutorial5-cardiac-ep.tex}
 
 %\appendix
 

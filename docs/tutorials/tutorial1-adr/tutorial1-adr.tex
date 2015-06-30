@@ -1,0 +1,72 @@
+% !TEX root = ../tutorials.tex
+\chapter{Advection Diffusion Reaction (ADR) Solver}
+\label{ADR}
+
+\section*{Introduction}
+Welcome to the Advection Diffusion Reaction (ADR) Solver tutorial for the Nektar++ library.
+This tutorial is intended to show the main features of the ADR solver in a simple and user-friendly 
+format. If you do not have already downloaded and installed Nektar++, please do so by visiting 
+\href{http://www.nektar.info}{nektar.info}, where you can also find the user-guide with the instructions 
+to install the library. This tutorial requires only the pre- and post-processing tools and the ADR 
+solver.
+
+
+
+\subsection*{Goals}
+After the completion of this tutorial, the user will be familiar with:
+\vspace{-0.5cm}
+\begin{itemize}
+\item the ADR solver;
+\item the pre- and post-processing routines;
+\item the external mesh generator Gmsh.
+\end{itemize}
+
+\subsection*{Resources}
+The files necessary to run this tutorial are included in ??.  
+Specifically, two files with extension \textsf{.xml} are needed as input to the code: 
+\vspace{-0.5cm}
+\begin{enumerate}
+\item a file containing the mesh: \textsf{.xml};
+\item a configuration file describing the options for the particular problem \textsf{.xml} .
+\end{enumerate}
+
+\begin{center}
+Now that you are ready, lets' start!
+\end{center}
+
+\section{Background}
+The ADR solver can solve various problems, including the unsteady advection, unsteady diffusion, 
+unsteady advection diffusion equation, etc. For a more detailed description of this solver, please 
+refer to the User-Guide. 
+
+In this tutorial we focus on the unsteady advection equation
+\begin{equation}
+\dfrac{\partial u}{\partial t} + \mathbf{V}\cdot\nabla u = 0,
+\label{eq:advection}
+\end{equation}
+where $u$ is the independent variable and $\mathbf{V} = [\text{V}_{x}\; \text{V}_{y}\; \text{V}_{z}]$ 
+is the advection velocity. The unsteady advection equation can be solved in one, two and three spatial 
+dimensions. We will here consider a two-dimensional problem, so that $\mathbf{V} = [\text{V}_{x}\; \text{V}_{y}]$.
+
+\section{Problem description}
+The problem we want to run consists of a two-dimensional Gaussian function travelling in the $x$-direction
+at a constant advection velocity. In order to model this problem we can create a computational domain 
+(also referred to as mesh or grid) on which we need to apply a two-dimensional Gaussian function 
+as initial condition and periodic boundary conditions at the mesh boundaries. 
+We can successively setup the other parameters of the problem, such as the time-step, the time-integration 
+scheme, the I/O configuration, etc.
+We can finally run the solver and post-process the data in order to visualise them.
+
+\section{Pre-processing}
+
+
+\section{Configuring the input files}
+ 
+
+\section{Running the solver}
+
+
+\section{Post-processing}
+
+
+\section{Results}
