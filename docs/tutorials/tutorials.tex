@@ -139,7 +139,6 @@ openany, % A chapter may start on either a recto or verso page.
 \pagestyle{standard}               % Choosing pagestyle and chapter pagestyle
 \aliaspagestyle{chapter}{chap} %
 
-
 %%% NEW COMMANDS
 %%%-----------------------------------------------------------------------------
 
@@ -154,18 +153,26 @@ openany, % A chapter may start on either a recto or verso page.
 \usepackage{listings} % Display code / shell commands
 \usepackage{lstautogobble}
 \usepackage{xspace}
+\usepackage{xcolor}
+\usepackage{listings} % Display code / shell commands
+\usepackage{lstautogobble}
 %\newcommand{\shellcommand}[1]{\begin{lstlisting} \#1 \end{lstlisting}
 \lstdefinestyle{BashInputStyle}{
   language=bash,
-  basicstyle=\small\sffamily,
+  basicstyle=\small\ttfamily,
 %  numbers=left,
 %  numberstyle=\tiny,
 %  numbersep=3pt,
-  frame=,
+  frame=single,
   columns=fullflexible,
-  backgroundcolor=\color{black!05},
-  linewidth=0.9\linewidth,
-  xleftmargin=0.1\linewidth
+  backgroundcolor=\color{yellow!10},
+  linewidth=0.95\linewidth,
+  xleftmargin=0.05\linewidth,
+  keepspaces=true,
+  framesep=5pt,
+  rulecolor=\color{black!30},
+  aboveskip=10pt,
+  autogobble=true
 }
 \definecolor{gray}{rgb}{0.4,0.4,0.4}
 \definecolor{darkblue}{rgb}{0.0,0.0,0.6}
@@ -194,8 +201,8 @@ openany, % A chapter may start on either a recto or verso page.
   frame=,
   columns=fullflexible,
   backgroundcolor=\color{black!05},
-  linewidth=0.9\linewidth,
-  xleftmargin=0.1\linewidth
+  linewidth=0.95\linewidth,
+  xleftmargin=0.05\linewidth
 }
 \lstdefinestyle{C++Style}{
   language=C++,
@@ -343,6 +350,7 @@ pdfborder={0 0 0},      % No borders around internal hyperlinks
 \endgroup}
 \makeatother
 
+
 %%% THE DOCUMENT
 %%% Where all the important stuff is included!
 %%%-------------------------------------------------------------------------------
@@ -351,6 +359,7 @@ pdfborder={0 0 0},      % No borders around internal hyperlinks
 Scientific Computing and Imaging Institute, University of Utah, USA}
 \title{Nektar++: Spectral/hp Element Framework}
 \date{\today}
+
 
 \begin{document}
 
