@@ -63,9 +63,7 @@ namespace Nektar
     void PorousMediaSplittingScheme::v_InitObject()
     {
         int n;
-        
         PorousMedia::v_InitObject();
-
         // Set m_pressure to point to last field of m_fields;
         if (boost::iequals(m_session->GetVariable(m_fields.num_elements()-1), "p"))
         {
@@ -76,9 +74,15 @@ namespace Nektar
         {
             ASSERTL0(false,"Need to set up pressure field definition");
         }
-        
-        PorousMedia::v_InitObject();
 
+        m_extrapolation = GetExtrapolateFactory().CreateInstance(
+            "Standard",
+            m_session,
+            m_fields,
+            m_pressure,
+            m_velocity,
+            m_advObject);
+        
         // Integrate only the convective fields
         for (n = 0; n < m_nConvectiveFields; ++n)
         {
@@ -88,7 +92,7 @@ namespace Nektar
         // set explicit time-intregration class operators
         m_ode.DefineOdeRhs(&PorousMediaSplittingScheme::EvaluateAdvection_SetPressureBCs, this);
 
-        //m_extrapolation->SubSteppingTimeIntegration(m_intScheme->GetIntegrationMethod(), m_intScheme);
+        m_extrapolation->SubSteppingTimeIntegration(m_intScheme->GetIntegrationMethod(), m_intScheme);
         m_extrapolation->GenerateHOPBCMap();
         
         // set implicit time-intregration class operators
@@ -191,6 +195,7 @@ namespace Nektar
         // Evaluate convection terms
         //m_advObject->DoAdvection(m_fields, m_nConvectiveFields, m_velocity,
         //inarray, outarray, m_time);
+        EvaluateAdvectionTerms(inarray, outarray);
         
         // Add forcing terms
         std::vector<SolverUtils::ForcingSharedPtr>::const_iterator x;

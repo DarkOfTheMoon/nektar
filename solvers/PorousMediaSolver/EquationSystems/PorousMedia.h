@@ -41,7 +41,7 @@
 #include <SolverUtils/AdvectionSystem.h>
 #include <LibUtilities/BasicUtils/SessionReader.h>
 #include <PorousMediaSolver/EquationSystems/DarcyTerm.h>
-#include <PorousMediaSolver/EquationSystems/Extrapolate.h>
+#include <PorousMediaSolver/EquationSystems/PressureTerm/Extrapolate.h>
 #include <SolverUtils/Forcing/Forcing.h>
 
 namespace Nektar

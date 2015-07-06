@@ -180,14 +180,15 @@ namespace Nektar
         // Inverted Permeability Matrix
         //m_perm_inv = Array<OneD, NekDouble> (3*(m_spacedim-1));
         */
-        m_extrapolation = MemoryManager<Extrapolate>::AllocateSharedPtr(
+        /*m_extrapolation = MemoryManager<Extrapolate>::AllocateSharedPtr(
             m_session,
             m_fields,
             m_pressure,
             m_darcyEvaluation,
-            m_velocity);
+            m_velocity,
+            m_advObject);
 
-        m_extrapolation->TimeIntegrationSteps(m_intScheme->GetIntegrationMethod(), m_intScheme);
+            m_extrapolation->TimeIntegrationSteps(m_intScheme->GetIntegrationMethod(), m_intScheme);*/
     }
 
     PorousMedia::~PorousMedia(void)

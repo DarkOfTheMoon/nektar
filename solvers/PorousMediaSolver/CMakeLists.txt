@@ -8,7 +8,9 @@ IF( NEKTAR_SOLVER_POROUSMEDIA )
        ./EquationSystems/DarcyTerm.cpp
        ./EquationSystems/DarcyTermExplicit.cpp
        ./EquationSystems/DarcyTermImplicit.cpp
-       ./EquationSystems/Extrapolate.cpp
+       ./EquationSystems/PressureTerm/Extrapolate.cpp
+       ./EquationSystems/PressureTerm/StandardExtrapolate.cpp
+       ./EquationSystems/PressureTerm/SubSteppingExtrapolate.cpp
        ./AdvectionTerms/NoAdvection.cpp
        ./PorousMediaSolver.cpp 
        )
