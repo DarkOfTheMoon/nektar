@@ -42,6 +42,7 @@
 #include <MultiRegions/ExpList.h>
 #include <LibUtilities/BasicUtils/SharedArray.hpp>
 #include <LibUtilities/TimeIntegration/TimeIntegrationWrapper.h>
+#include <PorousMediaSolver/EquationSystems/DarcyTerm.h>
 
 namespace Nektar
 {
@@ -78,6 +79,7 @@ namespace Nektar
             const LibUtilities::SessionReaderSharedPtr  pSession,
             Array<OneD, MultiRegions::ExpListSharedPtr> pFields,
             MultiRegions::ExpListSharedPtr              pPressure,
+            DarcyTermSharedPtr                          pDarcy,
             const Array<OneD, int>                      pVel);
         
         virtual ~Extrapolate();
@@ -133,6 +135,9 @@ namespace Nektar
         /// Pointer to field holding pressure field
         MultiRegions::ExpListSharedPtr m_pressure;
 	
+        DarcyTermSharedPtr m_darcy;
+
+        
         /// int which identifies which components of m_fields contains the
         /// velocity (u,v,w);
         Array<OneD, int> m_velocity;

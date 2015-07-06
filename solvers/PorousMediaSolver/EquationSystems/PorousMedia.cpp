@@ -51,12 +51,14 @@ namespace Nektar
      * \param
      */
     PorousMedia::PorousMedia(const LibUtilities::SessionReaderSharedPtr& pSession):
-        UnsteadySystem(pSession)
+        UnsteadySystem(pSession),
+        AdvectionSystem(pSession)
     {
     }
 
     void PorousMedia::v_InitObject()
     {
+        AdvectionSystem::v_InitObject();
         int i,j;
         int numfields = m_fields.num_elements();
         std::string velids[] = {"u","v","w"};
@@ -126,31 +128,27 @@ namespace Nektar
             // indeed implemented
             for(int n = 0; n < m_fields[0]->GetBndConditions().num_elements(); ++n)
             {
-                // Time Dependent Boundary Condition (if no user
-                // defined then this is empty)
-                ASSERTL0 (
-                    m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                    SpatialDomains::eNoUserDefined ||
-                    m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                    SpatialDomains::eWall_Forces ||
-                    m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                    SpatialDomains::eTimeDependent ||
-                    m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                    SpatialDomains::eRadiation ||
-                    m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                    SpatialDomains::eI ||
-                    m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                    SpatialDomains::eHighOutflow,
-                    "Unknown USERDEFINEDTYPE boundary condition");
+                std::string type =m_fields[0]->GetBndConditions()[n]->GetUserDefined();
+                if(!type.empty())
+                    // Time Dependent Boundary Condition (if no user
+                    // defined then this is empty)
+                    ASSERTL0 (boost::iequals(type,"Wall_Forces")   ||
+                              boost::iequals(type,"TimeDependent") ||
+                              boost::iequals(type,"MovingBody")    ||
+                              boost::iequals(type,"Radiation")     ||
+                              boost::iequals(type,"I")             ||
+                              boost::iequals(type,"HOutflow"),
+                              "Unknown USERDEFINEDTYPE boundary condition");
             }
             break;
-        case eNoEquationType:
-        default:
-            ASSERTL0(false,"Unknown or undefined equation type");
+            case eNoEquationType:
+            default:
+                ASSERTL0(false,"Unknown or undefined equation type");
         }
 
         // Initialise advection
-        m_advObject = GetAdvectionTermFactory().CreateInstance("NoAdvection", m_session, m_graph);
+        m_advObject = SolverUtils::GetAdvectionFactory().CreateInstance("NoAdvection", "NoAdvection");
+        m_advObject->InitObject( m_session, m_fields);
 
         // Forcing terms
         m_forcing = SolverUtils::Forcing::Load(m_session, m_fields,
@@ -186,7 +184,9 @@ namespace Nektar
             m_session,
             m_fields,
             m_pressure,
+            m_darcyEvaluation,
             m_velocity);
+
         m_extrapolation->TimeIntegrationSteps(m_intScheme->GetIntegrationMethod(), m_intScheme);
     }
 
@@ -194,11 +194,50 @@ namespace Nektar
     {
 
     }
-    
+   
+    void PorousMedia::EvaluateAdvectionTerms(const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
+                                                 Array<OneD, Array<OneD, NekDouble> > &outarray, 
+                                                 Array<OneD, NekDouble> &wk)
+    {
+        int i;
+        int nqtot      = m_fields[0]->GetTotPoints();
+        int VelDim     = m_velocity.num_elements();
+        Array<OneD, Array<OneD, NekDouble> > velocity(VelDim);
+        Array<OneD, NekDouble > Deriv;
+
+        for(i = 0; i < VelDim; ++i)
+        {
+            if(m_fields[i]->GetWaveSpace() && !m_SingleMode && !m_HalfMode)
+            {
+                velocity[i] = Array<OneD, NekDouble>(nqtot,0.0);
+                m_fields[i]->HomogeneousBwdTrans(inarray[m_velocity[i]],velocity[i]);
+            }
+            else
+            {
+                velocity[i] = inarray[m_velocity[i]];
+            }
+        }
+
+        // Set up Derivative work space; 
+        if(wk.num_elements())
+        {
+            ASSERTL0(wk.num_elements() >= nqtot*VelDim,
+                     "Workspace is not sufficient");
+            Deriv = wk;
+        }
+        else
+        {
+            Deriv = Array<OneD, NekDouble> (nqtot*VelDim);
+        }
+
+        m_advObject->Advect(m_nConvectiveFields, m_fields,
+                            velocity, inarray, outarray, m_time);
+    }
+ 
 
     // Evaluation -N(V) for all fields except pressure using m_velocity
 
-    void PorousMedia::EvaluateAdvectionTerms(const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
+    /*  void PorousMedia::EvaluateAdvectionTerms(const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
                                                  Array<OneD, Array<OneD, NekDouble> > &outarray, 
                                                  Array<OneD, NekDouble> &wk)
     {
@@ -224,7 +263,7 @@ namespace Nektar
 
         m_advObject->DoAdvection(m_fields,m_nConvectiveFields, 
                                  m_velocity,inarray,outarray,m_time,Deriv);
-    }
+                                 }*/
     
     //time dependent boundary conditions updating    
     void PorousMedia::SetBoundaryConditions(NekDouble time)
@@ -235,7 +274,7 @@ namespace Nektar
         {
             for(int n = 0; n < m_fields[i]->GetBndConditions().num_elements(); ++n)
             {	
-                if(m_fields[i]->GetBndConditions()[n]->GetUserDefined() == SpatialDomains::eTimeDependent)
+                if(m_fields[i]->GetBndConditions()[n]->IsTimeDependent())
                 {
                     m_fields[i]->EvaluateBoundaryConditions(time);
                 }

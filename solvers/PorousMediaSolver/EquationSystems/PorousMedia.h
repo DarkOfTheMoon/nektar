@@ -36,8 +36,9 @@
 #ifndef NEKTAR_SOLVERS_POROUSMEDIA_H
 #define NEKTAR_SOLVERS_POROUSMEDIA_H
 
+#include <LibUtilities/TimeIntegration/TimeIntegrationWrapper.h>
 #include <SolverUtils/UnsteadySystem.h>
-#include <IncNavierStokesSolver/AdvectionTerms/AdvectionTerm.h>
+#include <SolverUtils/AdvectionSystem.h>
 #include <LibUtilities/BasicUtils/SessionReader.h>
 #include <PorousMediaSolver/EquationSystems/DarcyTerm.h>
 #include <PorousMediaSolver/EquationSystems/Extrapolate.h>
@@ -101,7 +102,7 @@ namespace Nektar
         "Adjoint",
         "SkewSymmetric"
         "NoAdvection"
-    };
+        };
 	
     /**
      * \brief This class is the base class for Navier Stokes problems
@@ -109,7 +110,7 @@ namespace Nektar
      */
     
     //    class PorousMedia: public SolverUtils::EquationSystem
-    class PorousMedia: public SolverUtils::UnsteadySystem
+    class PorousMedia: public SolverUtils::AdvectionSystem
     {
     public:           
         // Destructor
@@ -129,7 +130,7 @@ namespace Nektar
         LibUtilities::TimeIntegrationSolutionSharedPtr  m_integrationSoln;
 
         /// Advection term
-        AdvectionTermSharedPtr m_advObject;
+        //AdvectionTermSharedPtr m_advObject;
 
         /// Forcing terms
         std::vector<SolverUtils::ForcingSharedPtr> m_forcing;

@@ -54,6 +54,7 @@ namespace Nektar
      */
     PorousMediaSplittingScheme::PorousMediaSplittingScheme(
         const LibUtilities::SessionReaderSharedPtr& pSession):
+        UnsteadySystem(pSession),
         PorousMedia(pSession)
     {
         
@@ -63,7 +64,7 @@ namespace Nektar
     {
         int n;
         
-        UnsteadySystem::v_InitObject();
+        PorousMedia::v_InitObject();
 
         // Set m_pressure to point to last field of m_fields;
         if (boost::iequals(m_session->GetVariable(m_fields.num_elements()-1), "p"))
@@ -188,8 +189,8 @@ namespace Nektar
         const NekDouble time)
     {
         // Evaluate convection terms
-        m_advObject->DoAdvection(m_fields, m_nConvectiveFields, m_velocity,
-                                 inarray, outarray, m_time);
+        //m_advObject->DoAdvection(m_fields, m_nConvectiveFields, m_velocity,
+        //inarray, outarray, m_time);
         
         // Add forcing terms
         std::vector<SolverUtils::ForcingSharedPtr>::const_iterator x;
