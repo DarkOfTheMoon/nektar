@@ -96,6 +96,56 @@ namespace Nektar
 
     };
 
+    //--------------------------
+    // Anisotropic Explicit Darcy Term class
+    // -------------------------
+    
+    class DarcyTermExplicitAnisotropic;
+    
+    typedef boost::shared_ptr<DarcyTermExplicitAnisotropic> DarcyTermExplicitAnisotropicSharedPtr;
+    
+    class DarcyTermExplicitAnisotropic : public DarcyTerm
+    {
+    public:
+
+        /// Creates an instance of this class
+        static DarcyTermSharedPtr create(
+            const LibUtilities::SessionReaderSharedPtr &pSession,
+            const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields)
+        {
+            DarcyTermSharedPtr p = MemoryManager<DarcyTermExplicitAnisotropic>::AllocateSharedPtr(pSession,pFields);
+            return p;
+        }
+
+        /// Name of class
+        static std::string className;
+
+        DarcyTermExplicitAnisotropic(
+            const LibUtilities::SessionReaderSharedPtr &pSession,
+            const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields);
+
+        virtual ~DarcyTermExplicitAnisotropic();
+        
+    protected:
+        virtual void v_EvaluateDarcyTerm(
+            const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
+            Array<OneD, Array<OneD, NekDouble> > &outarray,
+            NekDouble kinvis);
+
+        virtual void v_AddDarcyPressureTerm(
+            int nq,
+            NekDouble kinvis,
+            Array<OneD, NekDouble> &Q, 
+            Array<OneD, const NekDouble> &Vel,
+            int i);
+
+        virtual void v_SetupPermeability();
+
+        virtual void v_GetImplicitDarcyFactor(
+            Array<OneD, NekDouble> &permCoeff);
+
+    };
+
     //--------------------------------------------
     // Explicit Spatially varying Darcy term class
     // -------------------------------------------

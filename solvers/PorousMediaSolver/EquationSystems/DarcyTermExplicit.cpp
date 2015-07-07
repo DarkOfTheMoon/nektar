@@ -62,6 +62,113 @@ namespace Nektar
      */
     void DarcyTermExplicit::v_SetupPermeability()
     {
+
+        int nDim = m_fields.num_elements()-1;
+        NekDouble kTemp;
+        m_session->LoadParameter("Permeability", kTemp);
+
+        m_perm_inv = Array<OneD, NekDouble> (nDim);
+
+        // Check if permeability matrix is positive definite
+        ASSERTL0(kTemp > 0,"Permeability Matrix is not positive definite");
+            
+        for (int i = 0; i < nDim; ++i)
+        {
+            m_perm_inv[i] = 1/kTemp;
+        }
+    }
+    
+    /** 
+     * 
+     */
+    void DarcyTermExplicit::v_EvaluateDarcyTerm(
+        const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
+        Array<OneD, Array<OneD, NekDouble> > &outarray,
+        NekDouble kinvis)
+    {
+        int nqtot = m_fields[0]->GetTotPoints();
+        int nDim = m_fields.num_elements()-1;
+
+        switch(nDim)
+        {
+            case 2:
+            {
+                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[0],inarray[0],1,outarray[0],1,outarray[0],1);
+                //Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[2],inarray[0],1,outarray[1],1,outarray[1],1);
+                
+                //Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[2],inarray[1],1,outarray[0],1,outarray[0],1);
+                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[1],inarray[1],1,outarray[1],1,outarray[1],1);
+            }
+            break;
+            case 3:
+            {
+                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[0],inarray[0],1,outarray[0],1,outarray[0],1);
+                //Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[3],inarray[0],1,outarray[1],1,outarray[1],1);
+                //Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[4],inarray[0],1,outarray[2],1,outarray[2],1);
+                
+                //Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[3],inarray[1],1,outarray[0],1,outarray[0],1);
+                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[1],inarray[1],1,outarray[1],1,outarray[1],1);
+                //Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[5],inarray[1],1,outarray[2],1,outarray[2],1);
+        
+                //Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[4],inarray[2],1,outarray[0],1,outarray[0],1);
+                //Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[5],inarray[2],1,outarray[1],1,outarray[1],1);
+                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[2],inarray[2],1,outarray[2],1,outarray[2],1);
+            }
+            break;
+            default:
+                ASSERTL0(0,"Dimension not supported");
+                break;
+        }
+    }
+
+    /**
+     * Additional contribution to high order pressure boundary condition
+     * due to darcy term
+     */
+    void DarcyTermExplicit::v_AddDarcyPressureTerm(
+        int nq,
+        NekDouble kinvis,
+        Array<OneD, NekDouble> &Q, 
+        Array<OneD, const NekDouble> &Vel,
+        int i)
+    {
+    }
+
+
+    void DarcyTermExplicit::v_GetImplicitDarcyFactor(
+        Array<OneD, NekDouble> &permCoeff)
+    {
+        int nDim = m_fields.num_elements()-1;
+        for (int i=0; i<nDim; ++i)
+        {
+            permCoeff[i]=0.0;
+        }
+    }
+
+    /**
+     * Registers the class with the Factory.
+     */
+    std::string DarcyTermExplicitAnisotropic::className = GetDarcyTermFactory().RegisterCreatorFunction(
+        "ExplicitAnisotropic",
+        DarcyTermExplicitAnisotropic::create,
+        "Explicit anisotropic Darcy term");
+
+    DarcyTermExplicitAnisotropic::DarcyTermExplicitAnisotropic(
+        const LibUtilities::SessionReaderSharedPtr &pSession,
+        const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields)
+        : DarcyTerm(pSession,pFields)
+    {
+    }
+
+    DarcyTermExplicitAnisotropic::~DarcyTermExplicitAnisotropic()
+    {
+    }
+
+    /** 
+     * 
+     */
+    void DarcyTermExplicitAnisotropic::v_SetupPermeability()
+    {
         int nDim = m_fields.num_elements()-1;
         switch(nDim)
         {
@@ -143,7 +250,7 @@ namespace Nektar
     /** 
      * 
      */
-    void DarcyTermExplicit::v_EvaluateDarcyTerm(
+    void DarcyTermExplicitAnisotropic::v_EvaluateDarcyTerm(
         const Array<OneD, const Array<OneD, NekDouble> > &inarray, 
         Array<OneD, Array<OneD, NekDouble> > &outarray,
         NekDouble kinvis)
@@ -187,7 +294,7 @@ namespace Nektar
      * Additional contribution to high order pressure boundary condition
      * due to darcy term
      */
-    void DarcyTermExplicit::v_AddDarcyPressureTerm(
+    void DarcyTermExplicitAnisotropic::v_AddDarcyPressureTerm(
         int nq,
         NekDouble kinvis,
         Array<OneD, NekDouble> &Q, 
@@ -197,7 +304,7 @@ namespace Nektar
     }
 
 
-    void DarcyTermExplicit::v_GetImplicitDarcyFactor(
+    void DarcyTermExplicitAnisotropic::v_GetImplicitDarcyFactor(
         Array<OneD, NekDouble> &permCoeff)
     {
         int nDim = m_fields.num_elements()-1;

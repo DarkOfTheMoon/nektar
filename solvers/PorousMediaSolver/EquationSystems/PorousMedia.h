@@ -64,6 +64,7 @@ namespace Nektar
     enum DarcyTermMethod
     {
         eExplicit,
+        eExplicitAnisotropic,
         eExplicitSpatiallyVarying,
         eImplicitIsotropic,
         eImplicitAnisotropic,
@@ -74,6 +75,7 @@ namespace Nektar
     const std::string DarcyTermMethodStr[] = 
     {
         "Explicit",
+        "ExplicitAnisotropic",
         "ExplicitSpatiallyVarying",
         "Implicit",
         "ImplicitAnisotropic"
