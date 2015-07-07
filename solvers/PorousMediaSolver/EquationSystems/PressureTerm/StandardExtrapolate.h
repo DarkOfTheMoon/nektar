@@ -43,7 +43,8 @@
 #include <LibUtilities/BasicUtils/SharedArray.hpp>
 #include <LibUtilities/TimeIntegration/TimeIntegrationWrapper.h>
 #include <SolverUtils/AdvectionSystem.h>
-#include <IncNavierStokesSolver/EquationSystems/Extrapolate.h>
+#include <PorousMediaSolver/EquationSystems/PressureTerm/Extrapolate.h>
+#include <PorousMediaSolver/EquationSystems/DarcyTerm.h>
 
 namespace Nektar
 {
@@ -64,11 +65,11 @@ namespace Nektar
             const LibUtilities::SessionReaderSharedPtr &pSession,
             Array<OneD, MultiRegions::ExpListSharedPtr> &pFields,
             MultiRegions::ExpListSharedPtr  &pPressure,
-            const Array<OneD, int> &pVel,
-            const SolverUtils::AdvectionSharedPtr &advObject)
+            DarcyTermSharedPtr  &pDarcy,
+            const Array<OneD, int> &pVel)
         {
             ExtrapolateSharedPtr p = MemoryManager<StandardExtrapolate>
-                ::AllocateSharedPtr(pSession,pFields,pPressure,pVel,advObject);
+                ::AllocateSharedPtr(pSession,pFields,pPressure,pDarcy,pVel);
             return p;
         }
 
@@ -79,8 +80,8 @@ namespace Nektar
             const LibUtilities::SessionReaderSharedPtr pSession,
             Array<OneD, MultiRegions::ExpListSharedPtr> pFields,
             MultiRegions::ExpListSharedPtr  pPressure,
-            const Array<OneD, int> pVel,
-            const SolverUtils::AdvectionSharedPtr advObject);
+            DarcyTermSharedPtr   pDarcy,
+            const Array<OneD, int> pVel);
 
         virtual ~StandardExtrapolate();
         

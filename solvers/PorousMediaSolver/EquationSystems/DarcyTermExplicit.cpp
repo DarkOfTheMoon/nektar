@@ -190,9 +190,9 @@ namespace Nektar
     void DarcyTermExplicit::v_AddDarcyPressureTerm(
         int nq,
         NekDouble kinvis,
-        Array<OneD, Array<OneD, const NekDouble> > &Vel,
-        Array<OneD, Array<OneD, NekDouble> > &Q)
-
+        Array<OneD, NekDouble> &Q, 
+        Array<OneD, const NekDouble> &Vel,
+        int i)
     {
     }
 
@@ -309,9 +309,9 @@ namespace Nektar
     void DarcyTermExplicitSpatial::v_AddDarcyPressureTerm(
         int nq,
         NekDouble kinvis,
-        Array<OneD, Array<OneD, const NekDouble> > &Vel,
-        Array<OneD, Array<OneD, NekDouble> > &Q)
-
+        Array<OneD, NekDouble> &Q, 
+        Array<OneD, const NekDouble> &Vel,
+        int i)
     {
     }
 

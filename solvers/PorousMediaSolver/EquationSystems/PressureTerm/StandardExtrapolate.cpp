@@ -50,9 +50,9 @@ namespace Nektar
         const LibUtilities::SessionReaderSharedPtr pSession,
         Array<OneD, MultiRegions::ExpListSharedPtr> pFields,
         MultiRegions::ExpListSharedPtr pPressure,
-        const Array<OneD, int> pVel,
-        const SolverUtils::AdvectionSharedPtr advObject)
-        : Extrapolate(pSession,pFields,pPressure,pVel,advObject)
+        DarcyTermSharedPtr             pDarcy,
+        const Array<OneD, int> pVel)
+        : Extrapolate(pSession,pFields,pPressure,pDarcy,pVel)
     {
     }
 

@@ -50,9 +50,9 @@ namespace Nektar
         const LibUtilities::SessionReaderSharedPtr pSession,
         Array<OneD, MultiRegions::ExpListSharedPtr> pFields,
         MultiRegions::ExpListSharedPtr  pPressure,
-        const Array<OneD, int> pVel,
-        const SolverUtils::AdvectionSharedPtr advObject)
-        : Extrapolate(pSession,pFields,pPressure,pVel,advObject)
+        DarcyTermSharedPtr              pDarcy,
+        const Array<OneD, int> pVel)
+        : Extrapolate(pSession,pFields,pPressure,pDarcy,pVel)
     {
         m_session->LoadParameter("IO_InfoSteps", m_infosteps, 0);
         m_session->LoadParameter("CFL", m_cflSafetyFactor, 0.5);
@@ -154,7 +154,7 @@ namespace Nektar
 
         SubStepExtrapolateField(fmod(time,m_timestep), Velfields);
         
-        m_advObject->Advect(m_velocity.num_elements(), m_fields, Velfields, inarray, outarray, time);
+        //m_advObject->Advect(m_velocity.num_elements(), m_fields, Velfields, inarray, outarray, time);
         
         for(i = 0; i < nVariables; ++i)
         {

@@ -73,8 +73,9 @@ namespace Nektar
         inline void AddDarcyPressureTerm(
             int nq,
             NekDouble kinvis,
-            Array<OneD, Array<OneD, const NekDouble> > &Vel,
-            Array<OneD, Array<OneD, NekDouble> > &Q);
+            Array<OneD, NekDouble> &Q, 
+            Array<OneD, const NekDouble> &Vel,
+            int i);
 
         inline void SetupPermeability();
 
@@ -91,8 +92,9 @@ namespace Nektar
         virtual void v_AddDarcyPressureTerm(
             int nq,
             NekDouble kinvis,
-            Array<OneD, Array<OneD, const NekDouble> > &Vel,
-            Array<OneD, Array<OneD, NekDouble> > &Q)=0;
+            Array<OneD, NekDouble> &Q, 
+            Array<OneD, const NekDouble> &Vel,
+            int i)=0;
 
         virtual void v_SetupPermeability()=0;
 
@@ -127,13 +129,14 @@ namespace Nektar
     /**
      *
      */
-    inline void v_AddDarcyPressureTerm(
+    inline void DarcyTerm::AddDarcyPressureTerm(
         int nq,
         NekDouble kinvis,
-        Array<OneD, Array<OneD, const NekDouble> > &Vel,
-        Array<OneD, Array<OneD, NekDouble> > &Q)
+        Array<OneD, NekDouble> &Q, 
+        Array<OneD, const NekDouble> &Vel,
+        int i)
     {
-        v_AddDarcyPressureTerm(nq,kinvis, Vel, Q);
+        v_AddDarcyPressureTerm(nq,kinvis,Q,Vel,i);
     }
 
     /**

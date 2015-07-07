@@ -42,7 +42,7 @@ namespace Nektar
      * Registers the class with the Factory.
      */
     std::string DarcyTermImplicitIsotropic::className = GetDarcyTermFactory().RegisterCreatorFunction(
-        "ImplicitIsotropic",
+        "Implicit",
         DarcyTermImplicitIsotropic::create,
         "Implicit Term Isotropic");
 
@@ -69,37 +69,15 @@ namespace Nektar
         NekDouble kTemp;
         m_session->LoadParameter("Permeability", kTemp);
 
-        m_perm = Array<OneD, NekDouble> (6);
-        m_perm_inv = Array<OneD, NekDouble> (6);
+        m_perm_inv = Array<OneD, NekDouble> (nDim);
+
+        // Check if permeability matrix is positive definite
+        ASSERTL0(kTemp > 0,"Permeability Matrix is not positive definite");
             
         for (int i = 0; i < nDim; ++i)
         {
-            m_perm[i] = kTemp;
+            m_perm_inv[i] = 1/kTemp;
         }
-
-        for (int i = (nDim+1); i < (3*(nDim-1)); ++i)
-        {
-            m_perm[i] = 0;
-        }
-
-        NekDouble detTemp = m_perm[0]*(m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5])
-            -m_perm[3]*(m_perm[2]*m_perm[3]-m_perm[4]*m_perm[5])
-            +m_perm[4]*(m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4]);
-            
-        // Check if permeability matrix is positive definite
-        ASSERTL0(m_perm[0] > 0,"Permeability Matrix is not positive definite");
-        NekDouble pd_chk = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
-        ASSERTL0(pd_chk > 0,"Permeability Matrix is not positive definite");
-        ASSERTL0(detTemp > 0,"Permeability Matrix is not positive definite");
-            
-        m_perm_inv[0] = m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5];
-        m_perm_inv[1] = m_perm[0]*m_perm[2]-m_perm[4]*m_perm[4];
-        m_perm_inv[2] = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
-        m_perm_inv[3] = m_perm[4]*m_perm[5]-m_perm[2]*m_perm[3];
-        m_perm_inv[4] = m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4];
-        m_perm_inv[5] = m_perm[3]*m_perm[4]-m_perm[0]*m_perm[5];
-
-        Vmath::Smul(6, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
     }
     
     /** 
@@ -129,6 +107,14 @@ namespace Nektar
     void DarcyTermImplicitIsotropic::v_AddDarcyPressureTerm(
         int nq,
         NekDouble kinvis,
+        Array<OneD, NekDouble> &Q, 
+        Array<OneD, const NekDouble> &Vel,
+        int i)
+    {
+        Vmath::Svtvp(nq,-kinvis*m_perm_inv[i],Vel,1,Q,1,Q,1);
+    }
+
+/*
         Array<OneD, Array<OneD, const NekDouble> > &Vel,
         Array<OneD, Array<OneD, NekDouble> > &Q)
 
@@ -140,34 +126,27 @@ namespace Nektar
             case 2:
             {
                 Vmath::Svtvp(nq,-kinvis*m_perm_inv[0],Vel[0],1,Q[0],1,Q[0],1);
-                Vmath::Svtvp(nq,-kinvis*m_perm_inv[2],Vel[0],1,Q[1],1,Q[1],1);
+                //Vmath::Svtvp(nq,-kinvis*m_perm_inv[2],Vel[0],1,Q[1],1,Q[1],1);
 
-                Vmath::Svtvp(nq,-kinvis*m_perm_inv[2],Vel[1],1,Q[0],1,Q[0],1);
+                //Vmath::Svtvp(nq,-kinvis*m_perm_inv[2],Vel[1],1,Q[0],1,Q[0],1);
                 Vmath::Svtvp(nq,-kinvis*m_perm_inv[1],Vel[1],1,Q[1],1,Q[1],1);
-
-                //m_forces[0]->BwdTrans(m_forces[0]->GetCoeffs(),m_forces[0]->UpdatePhys());
-                //m_forces[1]->BwdTrans(m_forces[1]->GetCoeffs(),m_forces[1]->UpdatePhys());
-
-                //Vmath::Vadd(nq,Q[0],1,(m_forces[0]->GetPhys()),1,Q[0],1);
-                //Vmath::Vadd(nq,Q[1],1,(m_forces[1]->GetPhys()),1,Q[1],1);
             }
             break;
             case 3:
             {
                 Vmath::Svtvp(nq,-kinvis*m_perm_inv[0],Vel[0],1,Q[0],1,Q[0],1);
-                Vmath::Svtvp(nq,-kinvis*m_perm_inv[3],Vel[0],1,Q[1],1,Q[1],1);
-                Vmath::Svtvp(nq,-kinvis*m_perm_inv[4],Vel[0],1,Q[2],1,Q[2],1);
+                //Vmath::Svtvp(nq,-kinvis*m_perm_inv[3],Vel[0],1,Q[1],1,Q[1],1);
+                //Vmath::Svtvp(nq,-kinvis*m_perm_inv[4],Vel[0],1,Q[2],1,Q[2],1);
                 
-                Vmath::Svtvp(nq,-kinvis*m_perm_inv[3],Vel[1],1,Q[0],1,Q[0],1);
+                //Vmath::Svtvp(nq,-kinvis*m_perm_inv[3],Vel[1],1,Q[0],1,Q[0],1);
                 Vmath::Svtvp(nq,-kinvis*m_perm_inv[1],Vel[1],1,Q[1],1,Q[1],1);
-                Vmath::Svtvp(nq,-kinvis*m_perm_inv[5],Vel[1],1,Q[2],1,Q[2],1);
+                //Vmath::Svtvp(nq,-kinvis*m_perm_inv[5],Vel[1],1,Q[2],1,Q[2],1);
 
-                Vmath::Svtvp(nq,-kinvis*m_perm_inv[4],Vel[2],1,Q[0],1,Q[0],1);
-                Vmath::Svtvp(nq,-kinvis*m_perm_inv[5],Vel[2],1,Q[1],1,Q[1],1);
+                //Vmath::Svtvp(nq,-kinvis*m_perm_inv[4],Vel[2],1,Q[0],1,Q[0],1);
+                //Vmath::Svtvp(nq,-kinvis*m_perm_inv[5],Vel[2],1,Q[1],1,Q[1],1);
                 Vmath::Svtvp(nq,-kinvis*m_perm_inv[2],Vel[2],1,Q[2],1,Q[2],1);
 
-                //m_forces[0]->BwdTrans(m_forces[0]->GetCoeffs(),m_forces[0]->UpdatePhys());
-                //m_forces[1]->BwdTrans(m_forces[1]->GetCoeffs(),m_forces[1]->UpdatePhys());
+
                 //m_forces[2]->BwdTrans(m_forces[2]->GetCoeffs(),m_forces[2]->UpdatePhys());
 
                 //Vmath::Vadd(nq,Q[0],1,(m_forces[0]->GetPhys()),1,Q[0],1);
@@ -180,7 +159,7 @@ namespace Nektar
                 break;
         }
     }
-
+*/
 
     /**
      * Registers the class with the Factory.
@@ -214,22 +193,23 @@ namespace Nektar
         {
             case 2:
             {
-                m_perm = Array<OneD, NekDouble> (3);
-                m_perm_inv = Array<OneD, NekDouble> (3);
+                m_perm = Array<OneD, NekDouble> (2);
+                m_perm_inv = Array<OneD, NekDouble> (2);
 
                 std::string varCoeffs[3] = {
                     "kxx",
                     "kyy",
-                    "kxy"
                 };
-                for (int i = 0; i < 3; ++i)
+                for (int i = 0; i < 2; ++i)
                 {
-                    ASSERTL0(m_session->DefinesFunction("AnisotropicPermeability", varCoeffs[i]),
+                    ASSERTL0(m_session->DefinesFunction(
+                                 "AnisotropicPermeability", 
+                                 varCoeffs[i]),
                              "Function '" + varCoeffs[i] + "' not correctly defined.");
                     m_perm[i] = m_session->GetFunction("AnisotropicPermeability", varCoeffs[i])->Evaluate();
                 }
             
-                NekDouble detTemp = m_perm[0]*m_perm[1]-m_perm[2]*m_perm[2];
+                NekDouble detTemp = m_perm[0]*m_perm[1];
             
                 // Check if permeability matrix is positive definite
                 ASSERTL0(m_perm[0] > 0,"Permeability Matrix is not positive definite");
@@ -237,49 +217,40 @@ namespace Nektar
             
                 m_perm_inv[0] = m_perm[1];
                 m_perm_inv[1] = m_perm[0];
-                m_perm_inv[2] = -m_perm[2];
-                Vmath::Smul(3, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
+                Vmath::Smul(2, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
             }
             break;
             case 3:
             {
-                m_perm = Array<OneD, NekDouble> (6);
-                m_perm_inv = Array<OneD, NekDouble> (6);
+                m_perm = Array<OneD, NekDouble> (3);
+                m_perm_inv = Array<OneD, NekDouble> (3);
 
-                std::string varCoeffs[6] = {
+                std::string varCoeffs[3] = {
                     "kxx",
                     "kyy",
                     "kzz",
-                    "kxy",
-                    "kxz",
-                    "kyz"
                 };
                 
-                for (int i = 0; i < 6; ++i)
+                for (int i = 0; i < 3; ++i)
                 {
                     ASSERTL0(m_session->DefinesFunction("AnisotropicPermeability", varCoeffs[i]),
                              "Function '" + varCoeffs[i] + "' not correctly defined.");
                     m_perm[i] = m_session->GetFunction("AnisotropicPermeability", varCoeffs[i])->Evaluate();
                 }
             
-                NekDouble detTemp = m_perm[0]*(m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5])
-                    -m_perm[3]*(m_perm[2]*m_perm[3]-m_perm[4]*m_perm[5])
-                    +m_perm[4]*(m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4]);
+                NekDouble detTemp = m_perm[0]*(m_perm[1]*m_perm[2]);
                 
                 // Check if permeability matrix is positive definite
                 ASSERTL0(m_perm[0] > 0,"Permeability Matrix is not positive definite");
-                NekDouble pd_chk = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
+                NekDouble pd_chk = m_perm[0]*m_perm[1];
                 ASSERTL0(pd_chk > 0,"Permeability Matrix is not positive definite");
                 ASSERTL0(detTemp > 0,"Permeability Matrix is not positive definite");
 
-                m_perm_inv[0] = m_perm[1]*m_perm[2]-m_perm[5]*m_perm[5];
-                m_perm_inv[1] = m_perm[0]*m_perm[2]-m_perm[4]*m_perm[4];
-                m_perm_inv[2] = m_perm[0]*m_perm[1]-m_perm[3]*m_perm[3];
-                m_perm_inv[3] = m_perm[4]*m_perm[5]-m_perm[2]*m_perm[3];
-                m_perm_inv[4] = m_perm[3]*m_perm[5]-m_perm[1]*m_perm[4];
-                m_perm_inv[5] = m_perm[3]*m_perm[4]-m_perm[0]*m_perm[5];
+                m_perm_inv[0] = m_perm[1]*m_perm[2];
+                m_perm_inv[1] = m_perm[0]*m_perm[2];
+                m_perm_inv[2] = m_perm[0]*m_perm[1];
                 
-            Vmath::Smul(6, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
+            Vmath::Smul(3, 1/detTemp, m_perm_inv, 1, m_perm_inv, 1);
             }
             break;
             default:
@@ -305,20 +276,23 @@ namespace Nektar
     void DarcyTermImplicitAnisotropic::v_AddDarcyPressureTerm(
         int nq,
         NekDouble kinvis,
-        Array<OneD, Array<OneD, const NekDouble> > &Vel,
-        Array<OneD, Array<OneD, NekDouble> > &Q)
-
+        Array<OneD, NekDouble> &Q, 
+        Array<OneD, const NekDouble> &Vel,
+        int i)
     {
-        int nVelfields = m_fields.num_elements()-1;
+        Vmath::Svtvp(nq,-kinvis*m_perm_inv[i],Vel,1,Q,1,Q,1);
+    }
 
+/*
+        int nVelfields = m_fields.num_elements()-1;
         switch(nVelfields)
         {
             case 2:
             {
                 Vmath::Svtvp(nq,-kinvis*m_perm_inv[0],Vel[0],1,Q[0],1,Q[0],1);
-                Vmath::Svtvp(nq,-kinvis*m_perm_inv[2],Vel[0],1,Q[1],1,Q[1],1);
+                //Vmath::Svtvp(nq,-kinvis*m_perm_inv[2],Vel[0],1,Q[1],1,Q[1],1);
 
-                Vmath::Svtvp(nq,-kinvis*m_perm_inv[2],Vel[1],1,Q[0],1,Q[0],1);
+                //Vmath::Svtvp(nq,-kinvis*m_perm_inv[2],Vel[1],1,Q[0],1,Q[0],1);
                 Vmath::Svtvp(nq,-kinvis*m_perm_inv[1],Vel[1],1,Q[1],1,Q[1],1);
 
                 //m_forces[0]->BwdTrans(m_forces[0]->GetCoeffs(),m_forces[0]->UpdatePhys());
@@ -331,15 +305,15 @@ namespace Nektar
             case 3:
             {
                 Vmath::Svtvp(nq,-kinvis*m_perm_inv[0],Vel[0],1,Q[0],1,Q[0],1);
-                Vmath::Svtvp(nq,-kinvis*m_perm_inv[3],Vel[0],1,Q[1],1,Q[1],1);
-                Vmath::Svtvp(nq,-kinvis*m_perm_inv[4],Vel[0],1,Q[2],1,Q[2],1);
+                //Vmath::Svtvp(nq,-kinvis*m_perm_inv[3],Vel[0],1,Q[1],1,Q[1],1);
+                //Vmath::Svtvp(nq,-kinvis*m_perm_inv[4],Vel[0],1,Q[2],1,Q[2],1);
                 
-                Vmath::Svtvp(nq,-kinvis*m_perm_inv[3],Vel[1],1,Q[0],1,Q[0],1);
+                //Vmath::Svtvp(nq,-kinvis*m_perm_inv[3],Vel[1],1,Q[0],1,Q[0],1);
                 Vmath::Svtvp(nq,-kinvis*m_perm_inv[1],Vel[1],1,Q[1],1,Q[1],1);
-                Vmath::Svtvp(nq,-kinvis*m_perm_inv[5],Vel[1],1,Q[2],1,Q[2],1);
+                //Vmath::Svtvp(nq,-kinvis*m_perm_inv[5],Vel[1],1,Q[2],1,Q[2],1);
 
-                Vmath::Svtvp(nq,-kinvis*m_perm_inv[4],Vel[2],1,Q[0],1,Q[0],1);
-                Vmath::Svtvp(nq,-kinvis*m_perm_inv[5],Vel[2],1,Q[1],1,Q[1],1);
+                //Vmath::Svtvp(nq,-kinvis*m_perm_inv[4],Vel[2],1,Q[0],1,Q[0],1);
+                //Vmath::Svtvp(nq,-kinvis*m_perm_inv[5],Vel[2],1,Q[1],1,Q[1],1);
                 Vmath::Svtvp(nq,-kinvis*m_perm_inv[2],Vel[2],1,Q[2],1,Q[2],1);
 
                 //m_forces[0]->BwdTrans(m_forces[0]->GetCoeffs(),m_forces[0]->UpdatePhys());
@@ -356,7 +330,7 @@ namespace Nektar
                 break;
         }
     }
-
+*/
     void DarcyTermImplicitAnisotropic::v_GetImplicitDarcyFactor(
         Array<OneD, NekDouble> &permCoeff)
     {

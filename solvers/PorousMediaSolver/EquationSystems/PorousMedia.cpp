@@ -157,10 +157,10 @@ namespace Nektar
         //Kinematic viscosity
         m_session->LoadParameter("Kinvis", m_kinvis);
 
-        m_darcyEvaluation=GetDarcyTermFactory().CreateInstance(DarcyTermMethodStr[m_darcyType],m_session,m_fields);
+        m_darcy=GetDarcyTermFactory().CreateInstance(DarcyTermMethodStr[m_darcyType],m_session,m_fields);
 
         //Setup permeability matrix
-        m_darcyEvaluation->SetupPermeability();
+        m_darcy->SetupPermeability();
 
         /*     //Set Darcy factor for implicit step
         m_darcy_fac = Array<OneD, NekDouble> (3*(m_spacedim-1));

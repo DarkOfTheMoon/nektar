@@ -75,7 +75,7 @@ namespace Nektar
     {
         "Explicit",
         "ExplicitSpatiallyVarying",
-        "ImplicitIsotropic",
+        "Implicit",
         "ImplicitAnisotropic"
     };
 
@@ -191,7 +191,7 @@ namespace Nektar
             ASSERTL0(false,"This method is not defined in this class");
         }
 	
-	DarcyTermSharedPtr m_darcyEvaluation;
+	DarcyTermSharedPtr m_darcy;
 	
     private: 
     };

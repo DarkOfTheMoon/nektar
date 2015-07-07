@@ -75,13 +75,18 @@ namespace Nektar
             ASSERTL0(false,"Need to set up pressure field definition");
         }
 
+        m_darcy=GetDarcyTermFactory().CreateInstance(DarcyTermMethodStr[m_darcyType],m_session,m_fields);
+
+        //Setup permeability matrix
+        m_darcy->SetupPermeability();
+
         m_extrapolation = GetExtrapolateFactory().CreateInstance(
             "Standard",
             m_session,
             m_fields,
             m_pressure,
-            m_velocity,
-            m_advObject);
+            m_darcy,
+            m_velocity);
         
         // Integrate only the convective fields
         for (n = 0; n < m_nConvectiveFields; ++n)
@@ -204,7 +209,7 @@ namespace Nektar
             (*x)->Apply(m_fields, inarray, outarray, time);
         }
        
-        m_darcyEvaluation->EvaluateDarcyTerm(inarray,outarray,m_kinvis);
+        m_darcy->EvaluateDarcyTerm(inarray,outarray,m_kinvis);
 
         // Calculate High-Order pressure boundary conditions
         m_extrapolation->EvaluatePressureBCs(inarray,outarray,m_kinvis);
@@ -247,7 +252,7 @@ namespace Nektar
         SetUpViscousForcing(inarray, F, aii_Dt);
 
         Array< OneD, NekDouble> darcy_fac(m_nConvectiveFields);
-        m_darcyEvaluation->GetImplicitDarcyFactor(darcy_fac);
+        m_darcy->GetImplicitDarcyFactor(darcy_fac);
 
         // Solve Helmholtz system and put in Physical space
         for(i = 0; i < m_nConvectiveFields; ++i)

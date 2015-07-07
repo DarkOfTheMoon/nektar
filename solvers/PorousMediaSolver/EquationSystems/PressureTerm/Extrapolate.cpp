@@ -57,13 +57,13 @@ namespace Nektar
         const LibUtilities::SessionReaderSharedPtr pSession,
         Array<OneD, MultiRegions::ExpListSharedPtr> pFields,
         MultiRegions::ExpListSharedPtr pPressure,
-        const Array<OneD, int> pVel,
-        const SolverUtils::AdvectionSharedPtr advObject)
+        DarcyTermSharedPtr pDarcy,
+        const Array<OneD, int> pVel)
         : m_session(pSession),
           m_fields(pFields),
           m_pressure(pPressure),
-          m_velocity(pVel),
-          m_advObject(advObject)
+          m_darcy(pDarcy),
+          m_velocity(pVel)
     {      
         m_session->LoadParameter("TimeStep", m_timestep,   0.01);
         m_comm = m_session->GetComm();
@@ -239,6 +239,11 @@ namespace Nektar
             for(int i = 0; i < m_bnd_dim; i++)
             {
                 MountHOPBCs(m_HBCdata[j].m_ptsInElmt,kinvis,Q[i],Advection[i]);
+            }
+
+            for(int i = 0; i < m_bnd_dim; i++)
+            {
+                m_darcy->AddDarcyPressureTerm(m_HBCdata[j].m_ptsInElmt,kinvis,Q[i],Velocity[i],i);
             }
 
             Pvals = m_PBndExp[m_HBCdata[j].m_bndryElmtID]->UpdateCoeffs()
