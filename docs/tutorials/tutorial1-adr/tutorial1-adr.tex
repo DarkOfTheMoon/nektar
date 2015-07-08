@@ -111,7 +111,7 @@ and the name of the Nektar++-compatible mesh file that \inltt{MeshConvert} will 
 for instance \inlsh{ADR\_mesh.xml}. The command line for this step is
 %
 \begin{lstlisting}[style=BashInputStyle]
-nektar++/builds/utilities/PreProcessing/MeshConvert \
+nektar++/builds/utilities/MeshConvert \
     ADR_mesh.msh  ADR_mesh.xml
 \end{lstlisting}
 %
@@ -175,13 +175,14 @@ we can visualise the Jacobian distribution across the mesh in order to evaluate 
 This step can be done by using the following Nektar++ built-in post-processing routine:
 %
 \begin{lstlisting}[style=BashInputStyle]
-nektar++/builds/utilities/PostProcessing/XmlToVtk -j ADR_mesh.xml 
+nektar++/builds/utilities/XmlToVtk -j ADR_mesh.xml 
 \end{lstlisting}
 %
-where the optional command -j calculate the Jacobian distribution for each element of the mesh.
-This will produce a \inlsh{ADR\_mesh.vtu} file which can be directly read by the open-source 
-visualisation tool called Paraview. In Fig. \ref{f:Jac} we show the Jacobian distribution for the 
-mesh considered in this tutorial, \inlsh{ADR\_mesh.xml}.
+where the optional command -j calculate the Jacobian distribution for
+each element of the mesh.  This will produce a \inlsh{ADR\_mesh.vtu}
+file which can be directly read by the open-source visualisation tool
+called Paraview. In Fig. \ref{f:Jac} we show the Jacobian distribution
+for the mesh considered in this tutorial, \inlsh{ADR\_mesh.xml}.
 %
 \begin{figure}[h!]
 \begin{center}
@@ -200,7 +201,7 @@ refer to the \href{http://www.nektar.info/downloads/8}{User-Guide}.
 We can apply this by using the following command:
 %
 \begin{lstlisting}[style=BashInputStyle]
-nektar++/builds/utilities/PreProcessing/MeshConvert/MeshConvert \
+nektar++/builds/utilities/MeshConvert/MeshConvert \
 -m peralign:surf1=200:surf2=400:dir=x ADR_mesh.xml ADR_mesh_aligned.xml
 \end{lstlisting}
 %
@@ -465,7 +466,7 @@ the results. In order to do so, we can use the built-in post-processing routines
 In particular, we can use the following command
 %
 \begin{lstlisting}[style=BashInputStyle]
-nektar++/builds/utilities/PostProcessing/FieldConvert/FieldConvert \
+nektar++/builds/utilities/FieldConvert/FieldConvert \
     ADR_mesh_aligned.xml ADR_conditions.xml \ 
     ADR_mesh_aligned_0.chk ADR_mesh_aligned_0.vtu
 \end{lstlisting}
