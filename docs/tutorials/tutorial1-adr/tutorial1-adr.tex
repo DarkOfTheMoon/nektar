@@ -3,15 +3,19 @@
 \label{ADR}
 
 \section*{\Large Introduction}
-Welcome to the Advection Diffusion Reaction (ADR) Solver tutorial for the Nektar++ library.
-This tutorial is intended to show the main features of the ADR solver in a simple and user-friendly 
-format. If you do not have already downloaded and installed Nektar++, please do so by visiting 
-\href{http://www.nektar.info}{nektar.info}, where you can also find the 
-\href{http://www.nektar.info/downloads/8}{User-Guide} with the instructions 
-to install the library. This tutorial requires the pre- and post-processing tools and the ADR 
-solver within Nektar++ and the open-source mesh generator \href{http://geuz.org/gmsh/}{Gmsh} 
-and the visualisation tool \href{http://www.paraview.org}{Paraview}. If the links to Gmsh and Paraview 
-are broken it should be sufficient to search for them in any web search engine.  
+Welcome to the Advection Diffusion Reaction (ADR) Solver tutorial for
+the Nektar++ library.  This tutorial is intended to show the main
+features of the ADR solver in a simple and user-friendly format. If
+you do not have already downloaded and installed Nektar++, please do
+so by visiting \href{http://www.nektar.info}{nektar.info}, where you
+can also find the
+\href{http://www.nektar.info/downloads/8}{User-Guide} with the
+instructions to install the library. This tutorial requires the pre-
+and post-processing tools and the ADR solver within Nektar++ and the
+open-source mesh generator \href{http://geuz.org/gmsh/}{Gmsh} and the
+visualisation tool \href{http://www.paraview.org}{Paraview}. If the
+links to Gmsh and Paraview are broken it should be sufficient to
+search for them in any web search engine.
 
 
 \subsubsection*{Goals}
@@ -83,7 +87,7 @@ u(x_{b},y_{b} = [-1, 1];\;t) = \sin(\kappa (x - \text{V}_{x}\,t)) \cos(\kappa (y
 \end{equation}
 %
 where $x_{b}$ and $y_{b}$ represent the boundaries of the computational domain (see section \ref{adr-configuring}), 
-$\text{V}_{x} = \text{V}_{y} = 2$ and $\kappa = 2\pi$.
+$\text{V}_{x} = 2, \text{V}_{y} = 0$ and $\kappa = 2\pi$.
 
 We successively setup the other parameters of the problem, such as the time-step, the time-integration 
 scheme, the I/O configuration, etc. (see section \ref{adr-configuring}). We finally run the solver (see section 
@@ -111,7 +115,7 @@ and the name of the Nektar++-compatible mesh file that \inltt{MeshConvert} will 
 for instance \inlsh{ADR\_mesh.xml}. The command line for this step is
 %
 \begin{lstlisting}[style=BashInputStyle]
-nektar++/builds/utilities/MeshConvert \
+nektar++/builds/utilities/MeshConvert/MeshConvert \
     ADR_mesh.msh  ADR_mesh.xml
 \end{lstlisting}
 %
@@ -504,14 +508,16 @@ The user should be now familiar with the following topics:
 \begin{enumerate}
 \item Increase the polynomial order and plot the L$_{2}$ error vs. the polynomial order 
 in a semilogarithmic scale.
-\item Change the projection operator for a fixed polynomial error and look at the error.
+\item Change the projection operator for a fixed polynomial order and look at the error.
 \item Increase the time-step for a fixed polynomial order and look at the error.
 \item If the solver is compiled with the MPI option, then try running the case in parallel 
 with \inlsh{mpirun -np 2}.
 \item Change the Projection Operator to Continuous to see the same problem running 
 with a CG solver.
-\item Change the solver type to AdvectionDiffusion and CG to change the problem type. 
-Noting that solution would need to be updated to \dots $?$
+\item Change the solver type to AdvectionDiffusion and CG to change
+  the problem type.  You also need to update the AdvectionType to
+  NonConservative.  Noting that solution would need to be updated to
+  \dots $?$
 \end{enumerate}
 
 \begin{tipbox}

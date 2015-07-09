@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<NEKTAR>
+    <Metadata>
+        <Provenance>
+            <GitBranch>refs/heads/feature/tutorials</GitBranch>
+            <GitSHA1>952804d8978acec188ab5766f26db80d73cab359</GitSHA1>
+            <Hostname>dyn1137-235.insecure.ic.ac.uk</Hostname>
+            <NektarVersion>4.0.1</NektarVersion>
+            <Timestamp>06-Jul-2015 13:00:44</Timestamp>
+        </Provenance>
+        <Time>0.10000000000000007</Time>
+    </Metadata>
+    <Partition FileName="P0000000.fld">31-61,64-65,68-69,72-73,76-77,80-81,84-85</Partition>
+    <Partition FileName="P0000001.fld">0-30,62-63,66-67,70-71,74-75,78-79,82-83</Partition>
+</NEKTAR>
