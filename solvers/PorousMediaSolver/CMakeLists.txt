@@ -18,4 +18,7 @@ IF( NEKTAR_SOLVER_POROUSMEDIA )
     ADD_SOLVER_EXECUTABLE(PorousMediaSolver solvers 
 			${PorousMediaSolverSource})
 
+    SUBDIRS(Utilities)      
+
+
 ENDIF( NEKTAR_SOLVER_POROUSMEDIA )

@@ -89,35 +89,9 @@ namespace Nektar
         int nqtot = m_fields[0]->GetTotPoints();
         int nDim = m_fields.num_elements()-1;
 
-        switch(nDim)
+        for (int i=0; i<nDim; ++i)
         {
-            case 2:
-            {
-                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[0],inarray[0],1,outarray[0],1,outarray[0],1);
-                //Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[2],inarray[0],1,outarray[1],1,outarray[1],1);
-                
-                //Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[2],inarray[1],1,outarray[0],1,outarray[0],1);
-                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[1],inarray[1],1,outarray[1],1,outarray[1],1);
-            }
-            break;
-            case 3:
-            {
-                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[0],inarray[0],1,outarray[0],1,outarray[0],1);
-                //Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[3],inarray[0],1,outarray[1],1,outarray[1],1);
-                //Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[4],inarray[0],1,outarray[2],1,outarray[2],1);
-                
-                //Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[3],inarray[1],1,outarray[0],1,outarray[0],1);
-                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[1],inarray[1],1,outarray[1],1,outarray[1],1);
-                //Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[5],inarray[1],1,outarray[2],1,outarray[2],1);
-        
-                //Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[4],inarray[2],1,outarray[0],1,outarray[0],1);
-                //Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[5],inarray[2],1,outarray[1],1,outarray[1],1);
-                Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[2],inarray[2],1,outarray[2],1,outarray[2],1);
-            }
-            break;
-            default:
-                ASSERTL0(0,"Dimension not supported");
-                break;
+            Vmath::Svtvp(nqtot,-kinvis*m_perm_inv[i],inarray[i],1,outarray[i],1,outarray[i],1);
         }
     }
 
@@ -346,7 +320,6 @@ namespace Nektar
         {
             case 2:
             {
-
                 std::string varCoeffs[2] = {
                     "kxx",
                     "kyy",
@@ -364,8 +337,6 @@ namespace Nektar
             break;
             case 3:
             {
-
-                //std::string varName = "k";
                 std::string varCoeffs[3] = {
                     "kxx",
                     "kyy",
@@ -469,6 +440,44 @@ namespace Nektar
 
         m_fields[0]->BwdTrans_IterPerExp(vCoeffs, pArray);
     }
+
+    /** 
+     * 
+     */
+    /*void DarcyTermExplicitSpatial::FictitiousCircle()
+    {
+       
+        unsigned int nq = m_fields[0]->GetNpoints();
+
+        //------------------------------------------------
+        //Coordinate arrays
+        Array<OneD, NekDouble> x1(nq,0.0);
+        Array<OneD, NekDouble> y1(nq,0.0);
+        Array<OneD, NekDouble> z1(nq,0.0);
+                
+        //coordinates of quadrature points
+        m_fields[0]->GetCoords(x1,y1,z1);
+
+        NekDouble scalefac = 100.0;
+        for(int n=0; n<nq; ++n)
+        {
+            NekDouble x=x1[n];
+            NekDouble y=y1[n];
+            NekDouble z=z1[n];
+
+            NekDouble x1=0.5;
+            NekDouble y1=0.5;
+            NekDouble d=0.1-sqrt((x-x1)*(x-x1)+(y-y1)*(y-y1));
+
+            NekDouble sigma=0.01;
+            NekDouble scalefac=0.5*(1-0.98*tanh(tmp));
+            
+            m_spatialperm[0][n]=m_spatialperm[0][n]*scalefac;
+            m_spatialperm[1][n]=m_spatialperm[0][n]*scalefac;
+        }
+        }*/
+
+
 
 }
 

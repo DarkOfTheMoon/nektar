@@ -296,7 +296,6 @@ namespace Nektar
         const NekDouble aii_Dt)
     {
         NekDouble aii_dtinv = 1.0/aii_Dt;
-        cout<<"aii_dtinv"<<aii_dtinv<<endl;
         int phystot = m_fields[0]->GetTotPoints();
 
         // Grad p
