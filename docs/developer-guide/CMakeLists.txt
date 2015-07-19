@@ -21,3 +21,5 @@ ADD_CUSTOM_TARGET(developer-guide-pdf
             ${DEVGUIDESRC}/developer-guide.tex
     WORKING_DIRECTORY ${DEVGUIDESRC}
 )
+SET_TARGET_PROPERTIES(developer-guide-pdf
+    PROPERTIES FILENAME ${DEVGUIDE}/developer-guide.pdf)

@@ -53,11 +53,38 @@ function (write_bin_files PKG_INSTALL_BINS OUTPUT_FILE)
     ENDIF ()
 endfunction ()
 
+function (write_share_files PKG_INSTALL_SHARE OUTPUT_FILE)
+    # Find binary files
+    set(PKG_INSTALL_SHARE_FILES)
+    foreach(b ${PKG_INSTALL_SHARE})
+        IF(${CMAKE_MAJOR_VERSION} LESS 3)
+            get_target_property(TARGET_LOCATION ${b} LOCATION)
+        ELSE ()
+            # Unlike real targets, the PDF targets have a custom property
+            SET(TARGET_LOCATION $<TARGET_PROPERTY:${b},FILENAME>)
+        ENDIF ()
+        if (NOT TARGET_LOCATION)
+            message(FATAL_ERROR "Target '${b}' could not be found.")
+        endif ()
+        list(APPEND PKG_INSTALL_SHARE_FILES ${TARGET_LOCATION})
+    endforeach()
+
+    # Output the list of files to be installed in the package
+    IF(${CMAKE_MAJOR_VERSION} LESS 3)
+        file(WRITE "${OUTPUT_FILE}" "${PKG_INSTALL_SHARE_FILES}")
+    ELSE ()
+        file(GENERATE OUTPUT "${OUTPUT_FILE}"
+            CONTENT "${PKG_INSTALL_SHARE_FILES}")
+    ENDIF ()
+endfunction ()
+
+
 macro (add_deb_package)
     if (DPKG)
         set(options "")
         set(oneValueArgs NAME SUMMARY DESCRIPTION)
-        set(multiValueArgs INSTALL_LIBS INSTALL_BINS BREAKS CONFLICTS DEPENDS)
+        set(multiValueArgs INSTALL_LIBS INSTALL_BINS INSTALL_SHARE 
+                           BREAKS CONFLICTS DEPENDS)
         cmake_parse_arguments(PKG "${options}"
             "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
@@ -68,6 +95,8 @@ macro (add_deb_package)
                         "${BUILD_DIR}/targets/install_libs.txt")
         write_bin_files("${PKG_INSTALL_BINS}"
                         "${BUILD_DIR}/targets/install_bins.txt")
+        write_share_files("${PKG_INSTALL_SHARE}"
+                        "${BUILD_DIR}/targets/install_share.txt")
 
         # Configure project for this package
         configure_file(CMakeListsDpkg.txt.in
@@ -80,9 +109,9 @@ macro (add_deb_package)
             COMMAND ${CMAKE_CPACK_COMMAND} --config CPackConfig.cmake
             WORKING_DIRECTORY ${BUILD_DIR}
         )
-        if (PKG_INSTALL_LIBS OR PKG_INSTALL_BINS)
+        if (PKG_INSTALL_LIBS OR PKG_INSTALL_BINS OR PKG_INSTALL_SHARE)
             add_dependencies(pkg-deb-${PKG_NAME}
-                ${PKG_INSTALL_LIBS} ${PKG_INSTALL_BINS})
+                ${PKG_INSTALL_LIBS} ${PKG_INSTALL_BINS} ${PKG_INSTALL_SHARE})
         endif ()
         add_dependencies(pkg-deb pkg-deb-${PKG_NAME})
     endif ()
@@ -124,7 +153,8 @@ endmacro (add_rpm_package)
 macro (add_tgz_package)
     set(options "")
     set(oneValueArgs NAME SUMMARY DESCRIPTION)
-    set(multiValueArgs INSTALL_LIBS INSTALL_BINS BREAKS CONFLICTS DEPENDS)
+    set(multiValueArgs INSTALL_LIBS INSTALL_BINS INSTALL_SHARE
+                       BREAKS CONFLICTS DEPENDS)
     cmake_parse_arguments(PKG "${options}"
             "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
@@ -135,6 +165,8 @@ macro (add_tgz_package)
                     "${BUILD_DIR}/targets/install_libs.txt")
     write_bin_files("${PKG_INSTALL_BINS}"
                     "${BUILD_DIR}/targets/install_bins.txt")
+    write_share_files("${PKG_INSTALL_SHARE}"
+                    "${BUILD_DIR}/targets/install_share.txt")
 
     configure_file(CMakeListsTgz.txt.in
                 ${BUILD_DIR}/CMakeLists.txt @ONLY)
@@ -145,9 +177,9 @@ macro (add_tgz_package)
         COMMAND ${CMAKE_CPACK_COMMAND} --config CPackConfig.cmake
         WORKING_DIRECTORY ${BUILD_DIR}
     )
-    if (PKG_INSTALL_LIBS OR PKG_INSTALL_BINS)
+    if (PKG_INSTALL_LIBS OR PKG_INSTALL_BINS OR PKG_INSTALL_SHARE)
         add_dependencies(pkg-tgz-${PKG_NAME}
-            ${PKG_INSTALL_LIBS} ${PKG_INSTALL_BINS})
+            ${PKG_INSTALL_LIBS} ${PKG_INSTALL_BINS} ${PKG_INSTALL_SHARE})
     endif()
     add_dependencies(pkg-tgz pkg-tgz-${PKG_NAME})
 endmacro (add_tgz_package)

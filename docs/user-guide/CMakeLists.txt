@@ -26,3 +26,5 @@ ADD_CUSTOM_TARGET(user-guide-pdf
         ${USERGUIDESRC}/user-guide.tex
     WORKING_DIRECTORY ${USERGUIDESRC}
 )
+SET_TARGET_PROPERTIES(user-guide-pdf
+    PROPERTIES FILENAME ${USERGUIDE}/user-guide.pdf)

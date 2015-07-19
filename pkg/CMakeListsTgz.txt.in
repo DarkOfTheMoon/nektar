@@ -30,6 +30,7 @@ set(CPACK_PACKAGE_FILE_NAME
 # Files to go in the package
 file(READ "targets/install_libs.txt" INSTALL_LIBS_FILES)
 file(READ "targets/install_bins.txt" INSTALL_BINS_FILES)
+file(READ "targets/install_share.txt" INSTALL_SHARE_FILES)
 
 # Install any libraries in the lib directory
 if(INSTALL_LIBS_FILES)
@@ -44,6 +45,15 @@ endif()
 # Install any binaries in the bin directory
 if(INSTALL_BINS_FILES)
     install(FILES ${INSTALL_BINS_FILES} DESTINATION bin
+        PERMISSIONS
+            OWNER_READ OWNER_WRITE OWNER_EXECUTE
+            GROUP_READ GROUP_EXECUTE
+            WORLD_READ WORLD_EXECUTE
+    )
+endif()
+
+if(INSTALL_SHARE_FILES)
+    install(FILES ${INSTALL_SHARE_FILES} DESTINATION share/@PKG_NAME@
         PERMISSIONS
             OWNER_READ OWNER_WRITE OWNER_EXECUTE
             GROUP_READ GROUP_EXECUTE

@@ -25,6 +25,7 @@ list(APPEND nektar++-demos_BINS Helmholtz1D Helmholtz2D Helmholtz3D
     LocProject1D LocProject2D LocProject3D LocProject_Diff1D
     LocProject_Diff2D LocProject_Diff3D
     HDGHelmholtz1D HDGHelmholtz2D HDGHelmholtz3D HDGHelmholtz3DHomo1D)
+list(APPEND nektar++-doc_SHARE user-guide-pdf developer-guide-pdf)
 
 # Nektar++ binary archive
 list(APPEND nektar++_LIBS LibUtilities StdRegions SpatialDomains LocalRegions
@@ -35,6 +36,7 @@ list(APPEND nektar++_BINS ADRSolver IncNavierStokesSolver CardiacEPSolver
                           PulseWaveSolver
                           ${nektar++-utilities_BINS}
                           ${nektar++-demos_BINS})
+list(APPEND nektar++_SHARE ${nektar++-doc_SHARE})
 
 # add_deb_package macro used to create debian packaging project.
 # Note that the formatting of the DESCRIPTION field is VERY specific. It
@@ -183,6 +185,13 @@ if (NEKTAR_BUILD_LIBRARY)
             INSTALL_BINS "${nektar++-utilities_BINS}")
     endif (NEKTAR_BUILD_UTILITIES)
 
+    add_deb_package(
+        NAME nektar++-doc
+        SUMMARY "Nektar++ documentation"
+        DESCRIPTION "
+ Includes PDF user and developer guides."
+        INSTALL_SHARE "${nektar++-doc_SHARE}")
+
     # Top level meta package
     add_deb_package(
         NAME nektar++
@@ -322,6 +331,7 @@ if (NEKTAR_BUILD_LIBRARY)
         SUMMARY "Nektar++ libraries and solvers"
         DESCRIPTION "This is all of Nektar++"
         INSTALL_LIBS "${nektar++_LIBS}"
+        INSTALL_SHARE "${nektar++_SHARE}"
     )   
 endif (NEKTAR_BUILD_LIBRARY)
 
