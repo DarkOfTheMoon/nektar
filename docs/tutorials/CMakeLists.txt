@@ -23,6 +23,6 @@ ADD_CUSTOM_TARGET(tutorials-pdf
     COMMAND TEXMFOUTPUT=${TUTORIALS} ${BIBTEX} ${TUTORIALS}/tutorials.aux
     COMMAND TEXMFOUTPUT=${TUTORIALS} ${MAKEINDEX} ${TUTORIALS}/tutorials.idx
     COMMAND ${PDFLATEX} --output-directory ${TUTORIALS}
-        ${USERGUIDESRC}/tutorials.tex
+        ${TUTORIALSSRC}/tutorials.tex
     WORKING_DIRECTORY ${TUTORIALSSRC}
 )
