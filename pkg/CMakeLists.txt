@@ -320,6 +320,13 @@ if (NEKTAR_BUILD_LIBRARY)
     endif (NEKTAR_BUILD_UTILITIES)
 
     add_rpm_package(
+        NAME nektar++-doc
+        SUMMARY "Nektar++ documentation"
+        DESCRIPTION "
+ Includes PDF user and developer guides."
+        INSTALL_SHARE "${nektar++-doc_SHARE}")
+
+    add_rpm_package(
         NAME nektar++
         SUMMARY "Nektar++ complete meta package"
         DESCRIPTION "

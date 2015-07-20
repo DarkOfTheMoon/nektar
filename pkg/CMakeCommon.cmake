@@ -121,7 +121,8 @@ macro (add_rpm_package)
     if (RPMBUILD)
         set(options "")
         set(oneValueArgs NAME SUMMARY DESCRIPTION)
-        set(multiValueArgs INSTALL_LIBS INSTALL_BINS BREAKS CONFLICTS DEPENDS)
+        set(multiValueArgs INSTALL_LIBS INSTALL_BINS INSTALL_SHARE
+                           BREAKS CONFLICTS DEPENDS)
         cmake_parse_arguments(PKG "${options}"
             "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
@@ -132,6 +133,8 @@ macro (add_rpm_package)
                         "${BUILD_DIR}/targets/install_libs.txt")
         write_bin_files("${PKG_INSTALL_BINS}"
                         "${BUILD_DIR}/targets/install_bins.txt")
+        write_share_files("${PKG_INSTALL_SHARE}"
+                        "${BUILD_DIR}/targets/install_share.txt")
 
         configure_file(CMakeListsRpm.txt.in
                 ${BUILD_DIR}/CMakeLists.txt @ONLY)
@@ -142,9 +145,9 @@ macro (add_rpm_package)
             COMMAND ${CMAKE_CPACK_COMMAND} --config CPackConfig.cmake
             WORKING_DIRECTORY ${BUILD_DIR}
         )
-        if (PKG_INSTALL_LIBS OR PKG_INSTALL_BINS)
+        if (PKG_INSTALL_LIBS OR PKG_INSTALL_BINS OR PKG_INSTALL_SHARE)
             add_dependencies(pkg-rpm-${PKG_NAME}
-                ${PKG_INSTALL_LIBS} ${PKG_INSTALL_BINS})
+                ${PKG_INSTALL_LIBS} ${PKG_INSTALL_BINS} ${PKG_INSTALL_SHARE})
         endif ()
         add_dependencies(pkg-rpm pkg-rpm-${PKG_NAME})
     endif ()
