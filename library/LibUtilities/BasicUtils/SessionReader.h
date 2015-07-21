@@ -124,6 +124,7 @@ namespace Nektar
             public boost::enable_shared_from_this<SessionReader>
         {
         public:
+            void DoMPIWait( int n );
             /// Support creation through MemoryManager.
             friend class MemoryManager<SessionReader>;
 

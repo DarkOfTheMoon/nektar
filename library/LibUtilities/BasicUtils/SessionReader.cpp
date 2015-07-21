@@ -64,6 +64,7 @@ using namespace std;
 #ifndef NEKTAR_VERSION
 #define NEKTAR_VERSION "Unknown"
 #endif
+#include <cmath>
 
 namespace po = boost::program_options;
 namespace io = boost::iostreams;
@@ -72,6 +73,19 @@ namespace Nektar
 {
     namespace LibUtilities
     {
+
+        void SessionReader::DoMPIWait(int n)
+        {
+            int i = 0;
+            double j = 0.0;
+            while (i < n)
+            {
+                j = sqrt(i);
+                i = int(j*j +1);
+                i++;
+            }
+        }
+
         /**
          * @class SessionReader
          *
@@ -1526,7 +1540,7 @@ namespace Nektar
                 m_comm = GetCommFactory().CreateInstance(vCommModule,argc,argv);
             } 
             Nektar::Thread::GetThreadMaster().SetThreadingType("ThreadManagerBoost");
-            Nektar::Thread::GetThreadMaster().CreateInstance(Nektar::Thread::ThreadMaster::GlobalLinSysStaticCond_v_SolveJob, 1);
+            Nektar::Thread::GetThreadMaster().CreateInstance(Nektar::Thread::ThreadMaster::SessionJob, 1);
         }
 
 

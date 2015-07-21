@@ -351,7 +351,6 @@ class ThreadMaster
     public:
         enum ThreadManagerName {
                                 SessionJob,
-                                GlobalLinSysStaticCond_v_SolveJob,
                                 THREADMANAGER_MAX
                                 };
         /// Constructor

@@ -139,18 +139,6 @@ namespace Nektar
             ///
             void ConstructNextLevelCondensedSystem(
                     const boost::shared_ptr<AssemblyMap>& locToGloMap);
-
-            private:
-            friend class GlobalLinSysStaticCond_v_SolveJob;
-            void SolveInt(
-                const int nGlobHomBndDofs, const int nDirBndDofs,
-                const bool dirForcCalculated,
-                const AssemblyMapSharedPtr &pLocToGloMap,
-                NekVector<NekDouble> &V_GlobHomBnd,
-                NekVector<NekDouble> &V_LocBnd,
-                NekVector<NekDouble> &V_GlobBnd,
-                NekVector<NekDouble> &F_Int,
-                NekVector<NekDouble> &V_Int);
         };
     }
 }
