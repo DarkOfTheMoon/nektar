@@ -1242,25 +1242,33 @@ namespace Nektar
                 return -1;
             }
             std::vector<std::pair<int,NekDouble> > elmtIdDist;
+            std::vector<std::pair<int,NekDouble> > nearIdDist;
 
             // Manifold case (point may match multiple elements)
             if (GetExp(0)->GetCoordim() > GetExp(0)->GetShapeDimension())
             {
+                NekDouble distance = 0.0;
+                if (m_session->DefinesParameter("ProbeManifoldNearDistance"))
+                {
+                    distance = m_session->GetParameter("ProbeManifoldNearDistance");
+                }
+
                 SpatialDomains::PointGeomSharedPtr v;
                 SpatialDomains::PointGeom w;
                 NekDouble dist = 0.0;
 
+                w.SetX(gloCoords[0]);
+                w.SetY(gloCoords[1]);
+                w.SetZ(gloCoords[2]);
+
                 // Scan all elements and store those which may contain the point
                 for (int i = 0; i < (*m_exp).size(); ++i)
                 {
+
                     if ((*m_exp)[i]->GetGeom()->ContainsPoint(gloCoords,
                                                               locCoords,
                                                               tol, nearpt))
                     {
-                        w.SetX(gloCoords[0]);
-                        w.SetY(gloCoords[1]);
-                        w.SetZ(gloCoords[2]);
-
                         // Find closest vertex
                         for (int j = 0; j < (*m_exp)[i]->GetNverts(); ++j) {
                             v = m_graph->GetVertex(
@@ -1270,8 +1278,30 @@ namespace Nektar
                                 dist = v->dist(w);
                             }
                         }
-                        elmtIdDist.push_back(
+
+                        if (distance < NekConstants::kNekZeroTol || dist < distance)
+                        {
+                            elmtIdDist.push_back(
                                     std::pair<int, NekDouble>(i, dist));
+                        }
+                    }
+                    else if (distance > NekConstants::kNekZeroTol)
+                    {
+                        // Find closest vertex
+                        for (int j = 0; j < (*m_exp)[i]->GetNverts(); ++j) {
+                            v = m_graph->GetVertex(
+                                            (*m_exp)[i]->GetGeom()->GetVid(j));
+                            if (j == 0 || dist > v->dist(w))
+                            {
+                                dist = v->dist(w);
+                            }
+                        }
+
+                        if (dist < distance)
+                        {
+                            nearIdDist.push_back(
+                                    std::pair<int, NekDouble>(i, dist));
+                        }
                     }
                 }
 
@@ -1296,6 +1326,25 @@ namespace Nektar
                 }
                 else
                 {
+                    if (distance > NekConstants::kNekZeroTol && !nearIdDist.empty())
+                    {
+                        int         min_id = nearIdDist[0].first;
+                        NekDouble   min_d  = nearIdDist[0].second;
+
+                        for (int i = 1; i < nearIdDist.size(); ++i)
+                        {
+                            if (nearIdDist[i].second < min_d) {
+                                min_id = nearIdDist[i].first;
+                                min_d = nearIdDist[i].second;
+                            }
+                        }
+
+                        // retrieve local coordinate of point
+                        (*m_exp)[min_id]->GetGeom()->GetLocCoords(gloCoords,
+                                                              locCoords);
+                        return min_id;
+                    }
+
                     return -1;
                 }
             }
