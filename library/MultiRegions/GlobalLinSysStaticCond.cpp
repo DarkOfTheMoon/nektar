@@ -98,6 +98,55 @@ namespace Nektar
 
         }
         
+        class SolveLinearSystemJob : public Nektar::Thread::ThreadJob
+        {
+        private:
+            const int m_nGlobBndDofs;
+            const int m_nDirBndDofs;
+            const int m_nGlobHomBndDofs;
+
+                  GlobalLinSysStaticCond       & m_GLSSC;
+            const Array<OneD, const NekDouble> & m_F;
+            const AssemblyMapSharedPtr         & m_pLocToGloMap;
+                  Array<OneD, NekDouble>       & m_out;
+
+        public:
+            SolveLinearSystemJob(
+                const int p_nGlobBndDofs,
+                const int p_nDirBndDofs,
+                const int p_nGlobHomBndDofs,
+
+                      GlobalLinSysStaticCond       & p_GLSSC,
+                const Array<OneD, const NekDouble> & p_F,
+                const AssemblyMapSharedPtr         & p_pLocToGloMap,
+                      Array<OneD, NekDouble>       & p_out
+                ) : m_nGlobBndDofs(p_nGlobBndDofs),
+                    m_nDirBndDofs(p_nDirBndDofs),
+                    m_nGlobHomBndDofs(p_nGlobHomBndDofs),
+                    m_GLSSC(p_GLSSC),
+                    m_F(p_F),
+                    m_pLocToGloMap(p_pLocToGloMap),
+                    m_out(p_out)
+            {
+                // nada
+            }
+
+            void Run()
+            {
+                Array<OneD, NekDouble> pert(m_nGlobBndDofs,0.0);
+
+                // Solve for difference from initial solution given inout;
+                m_GLSSC.SolveLinearSystem(
+                    m_nGlobBndDofs, m_F, pert, m_pLocToGloMap, m_nDirBndDofs);
+
+                // Transform back to original basis
+                m_GLSSC.v_BasisInvTransform(pert);
+
+                // Add back initial conditions onto difference
+                Vmath::Vadd(m_nGlobHomBndDofs,&m_out[m_nDirBndDofs],1,
+                            &pert[m_nDirBndDofs],1,&m_out[m_nDirBndDofs],1);
+            }
+        };
         
         /**
          *
@@ -208,19 +257,35 @@ namespace Nektar
                 // solve boundary system
                 if(atLastLevel)
                 {
-                    Array<OneD, NekDouble> pert(nGlobBndDofs,0.0);
-                    NekVector<NekDouble>   Pert(nGlobBndDofs,pert,eWrapper);
+#undef THREADYSTEADYGO
+#ifdef THREADYSTEADYGO
+                    Nektar::Thread::ThreadManagerSharedPtr v_TM;
+                    v_TM = Nektar::Thread::GetThreadMaster().GetInstance(
+                            Nektar::Thread::ThreadMaster::SessionJob);
+                    v_TM->QueueJob( new SolveLinearSystemJob (
+                                    nGlobBndDofs,
+                                    nDirBndDofs,
+                                    nGlobHomBndDofs,
+                                    *this,
+                                    F,
+                                    pLocToGloMap,
+                                    out )
+                                );
+#else
+//                    Array<OneD, NekDouble> pert(nGlobBndDofs,0.0);
+//                    NekVector<NekDouble>   Pert(nGlobBndDofs,pert,eWrapper);
 
                     // Solve for difference from initial solution given inout;
                     SolveLinearSystem(
-                        nGlobBndDofs, F, pert, pLocToGloMap, nDirBndDofs);
+                        nGlobBndDofs, F, *m_thrWsp, pLocToGloMap, nDirBndDofs);
 
                     // Transform back to original basis
-                    v_BasisInvTransform(pert);
+                    v_BasisInvTransform(*m_thrWsp);
 
                     // Add back initial conditions onto difference
-                    Vmath::Vadd(nGlobHomBndDofs,&out[nDirBndDofs],1,
-                                &pert[nDirBndDofs],1,&out[nDirBndDofs],1);
+//                    Vmath::Vadd(*m_thrGlobHomBndDofs,&out[*m_thrDirBndDofs],1,
+ //                               &((*m_thrWsp)[*m_thrDirBndDofs]),1,&out[*m_thrDirBndDofs],1);
+#endif
                 }
                 else
                 {
@@ -230,7 +295,6 @@ namespace Nektar
                 }
             }
 
-            NekVector<NekDouble> V_LocBndME(nLocBndDofs,m_wsp,eCopy);
             // solve interior system
             if(nIntDofs)
             {
@@ -242,19 +306,58 @@ namespace Nektar
 
                     if(dirForcCalculated && nDirBndDofs)
                     {
-                        pLocToGloMap->GlobalToLocalBnd(V_GlobHomBnd,V_LocBndME,
+                        pLocToGloMap->GlobalToLocalBnd(V_GlobHomBnd,V_LocBnd,
                                                       nDirBndDofs);
                     }
                     else
                     {
-                        pLocToGloMap->GlobalToLocalBnd(V_GlobBnd,V_LocBndME);
+                        pLocToGloMap->GlobalToLocalBnd(V_GlobBnd,V_LocBnd);
                     }
-                    F_Int = F_Int - C*V_LocBndME;
+                    F_Int = F_Int - C*V_LocBnd;
                 }
 
                 V_Int = invD*F_Int;
             }
 
+#ifdef THREADYSTEADYGO
+            if(scLevel == 0)
+            {
+                Nektar::Thread::GetThreadMaster().GetInstance(
+                    Nektar::Thread::ThreadMaster::SessionJob)->Wait();
+
+            }
+#endif
+#ifndef THREADYSTEADYGO
+                    //Vmath::Vadd(*m_thrGlobHomBndDofs,&out[*m_thrDirBndDofs],1,
+                     //           &((*m_thrWsp)[*m_thrDirBndDofs]),1,&out[*m_thrDirBndDofs],1);
+            if(atLastLevel && nIntDofs)
+            {
+                    NekVector<NekDouble>   Pert(nGlobBndDofs, 0.0);
+                    Vmath::Vadd(*m_thrGlobHomBndDofs,&Pert[nDirBndDofs],1,
+                                &((*m_thrWsp)[*m_thrDirBndDofs]),1,&Pert[nDirBndDofs],1);
+                DNekScalBlkMat &invD  = *m_invD;
+
+                if(nGlobHomBndDofs || nDirBndDofs)
+                {
+                    DNekScalBlkMat &C     = *m_C;
+                
+                    if(dirForcCalculated && nDirBndDofs)
+                    {
+                        NekVector<NekDouble> Pert1(nGlobHomBndDofs,tmp=(*m_thrWsp)+nDirBndDofs,eWrapper);
+                        pLocToGloMap->GlobalToLocalBnd(Pert1,V_LocBnd,
+                                                      nDirBndDofs);
+                    }
+                    else
+                    {
+                        pLocToGloMap->GlobalToLocalBnd(Pert,V_LocBnd);
+                    }
+                    F_Int = C*V_LocBnd;
+                    F_Int = -F_Int;
+                }
+
+                V_Int = V_Int + invD*F_Int;
+            }
+#endif
         }
 
 
@@ -275,6 +378,14 @@ namespace Nektar
             if (pLocToGloMap->AtLastLevel())
             {
                 v_AssembleSchurComplement(pLocToGloMap);
+                int vGlobBndDofs = pLocToGloMap->GetNumGlobalBndCoeffs();
+                m_thrWsp =
+                    MemoryManager<Array<OneD, NekDouble> >::AllocateSharedPtr(
+                        vGlobBndDofs, 0.0);
+                m_thrDirBndDofs     = boost::shared_ptr<int>(new int(1));
+                *m_thrDirBndDofs     = pLocToGloMap->GetNumGlobalDirBndCoeffs();
+                m_thrGlobHomBndDofs = boost::shared_ptr<int>(new int(1));
+                *m_thrGlobHomBndDofs = vGlobBndDofs - *m_thrDirBndDofs;
             }
             else
             {
@@ -614,6 +725,9 @@ namespace Nektar
             m_recursiveSchurCompl = v_Recurse(
                 m_linSysKey, m_expList, blkMatrices[0], blkMatrices[1],
                 blkMatrices[2], blkMatrices[3], pLocToGloMap);
+            m_thrWsp = m_recursiveSchurCompl->m_thrWsp;
+            m_thrGlobHomBndDofs = m_recursiveSchurCompl->m_thrGlobHomBndDofs;
+            m_thrDirBndDofs = m_recursiveSchurCompl->m_thrDirBndDofs;
         }
     }
 }

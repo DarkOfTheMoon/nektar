@@ -54,6 +54,7 @@ namespace Nektar
         /// A global linear system.
         class GlobalLinSysStaticCond : virtual public GlobalLinSys
         {
+        friend class SolveLinearSystemJob;
         public:
             /// Constructor for full direct matrix solve.
             GlobalLinSysStaticCond(
@@ -115,6 +116,12 @@ namespace Nektar
             boost::shared_ptr<AssemblyMap>           m_locToGloMap;
             /// Workspace array for matrix multiplication
             Array<OneD, NekDouble>                   m_wsp;
+
+            /// Workspace array for threading
+            boost::shared_ptr<Array<OneD, NekDouble> > m_thrWsp;
+            /// Workspace ints for threading
+            boost::shared_ptr<int>                   m_thrGlobHomBndDofs;
+            boost::shared_ptr<int>                   m_thrDirBndDofs;
 
             /// Solve the linear system for given input and output vectors
             /// using a specified local to global map.
