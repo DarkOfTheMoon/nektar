@@ -62,6 +62,8 @@ void AdvectionWeakDG::v_InitObject(
     Array<OneD, MultiRegions::ExpListSharedPtr> pFields)
 {
     Advection::v_InitObject(pSession, pFields);
+    m_threadManager = Thread::GetThreadMaster().GetInstance(
+        Thread::ThreadMaster::AdvectionWeakDGJob);
 }
 
 void AdvectionWeakDG::GetTraceSpace(
@@ -144,10 +146,6 @@ void AdvectionWeakDG::v_Advect(
     Array<OneD, Array<OneD, Array<OneD, NekDouble> > > fluxvector(
         nConvectiveFields);
 
-    Thread::ThreadManagerSharedPtr vTM =
-        Thread::GetThreadMaster().GetInstance(
-            Thread::ThreadMaster::AdvectionWeakDGJob);
-
     // Allocate storage for flux vector F(u).
     for (i = 0; i < nConvectiveFields; ++i)
     {
@@ -161,8 +159,9 @@ void AdvectionWeakDG::v_Advect(
         numflux[i] = Array<OneD, NekDouble>(nTracePointsTot);
     }
 
-    vTM->QueueJob(new AdvectionWeakDGJob(
-                      this, nConvectiveFields, fields, inarray, numflux));
+    m_threadManager->QueueJob(
+        new AdvectionWeakDGJob(
+            this, nConvectiveFields, fields, inarray, numflux));
 
     ASSERTL1(m_riemann,
              "Riemann solver must be provided for AdvectionWeakDG.");
@@ -173,16 +172,10 @@ void AdvectionWeakDG::v_Advect(
     for(i = 0; i < nConvectiveFields; ++i)
     {
         tmp[i] = Array<OneD, NekDouble>(nCoeffs, 0.0);
-
-        for (j = 0; j < nDim; ++j)
-        {
-            fields[i]->IProductWRTDerivBase(j, fluxvector[i][j],
-                                            outarray[i]);
-            Vmath::Vadd(nCoeffs, outarray[i], 1, tmp[i], 1, tmp[i], 1);
-        }
+        fields[i]->IProductWRTDerivBase(fluxvector[i],tmp[i]);
     }
 
-    vTM->Wait();
+    m_threadManager->Wait();
 
     // Evaulate <\phi, \hat{F}\cdot n> - OutField[i]
     for(i = 0; i < nConvectiveFields; ++i)

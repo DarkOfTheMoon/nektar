@@ -40,6 +40,12 @@
 
 namespace Nektar
 {
+    namespace Thread
+    {
+        class ThreadManager;
+        typedef boost::shared_ptr<ThreadManager> ThreadManagerSharedPtr;
+    }
+
     namespace SolverUtils
     {
         class AdvectionWeakDGJob;
@@ -58,6 +64,8 @@ namespace Nektar
 
         protected:
             AdvectionWeakDG();
+
+            Thread::ThreadManagerSharedPtr m_threadManager;
 
             void GetTraceSpace(
                 const int                                          nConvective,

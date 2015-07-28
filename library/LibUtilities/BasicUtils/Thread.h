@@ -351,8 +351,8 @@ class ThreadMaster
     public:
         enum ThreadManagerName {
                                 SessionJob,
-                                THREADMANAGER_MAX
                                 AdvectionWeakDGJob,
+                                THREADMANAGER_MAX
                                 };
         /// Constructor
         ThreadMaster();
