@@ -120,10 +120,13 @@ namespace Nektar
             EvaluateFunction("p", p, "IncompressibleIC", initialtime);
 
             // rho = p / (GasConstant * Tinf)
-            Vmath::Smul(nPoints, 1.0/m_gasConstant/m_Twall, p, 1, m_fields[0]->UpdatePhys(), 1);
+            Vmath::Smul(nPoints, 1.0/m_gasConstant/m_Twall, p, 1,
+                        m_fields[0]->UpdatePhys(), 1);
 
             // E = p / (Gamma-1) + 0.5 * rho * ||u||^2
-            Vmath::Vmul(nPoints, u[0], 1, u[0], 1, m_fields[m_spacedim+1]->UpdatePhys(), 1);
+            Vmath::Vmul(nPoints, u[0], 1, u[0], 1,
+                        m_fields[m_spacedim+1]->UpdatePhys(), 1);
+
             for (int i = 1; i < m_spacedim; ++i)
             {
                 Vmath::Vvtvp(nPoints, u[i], 1, u[i], 1,
@@ -131,17 +134,21 @@ namespace Nektar
                              m_fields[m_spacedim+1]->UpdatePhys(), 1);
 
             }
+
             Vmath::Vmul(nPoints, m_fields[0]           ->GetPhys(), 1,
                                  m_fields[m_spacedim+1]->GetPhys(), 1,
                                  m_fields[m_spacedim+1]->UpdatePhys(), 1);
-            Vmath::Smul(nPoints, 1.0/(m_gamma-1.0), p, 1, m_fields[1]->UpdatePhys(), 1);
-            Vmath::Svtvp(nPoints, 0.5, m_fields[m_spacedim+1]->GetPhys(), 1, m_fields[1]->GetPhys(), 1,
+            Vmath::Smul(nPoints, 1.0/(m_gamma-1.0), p, 1,
+                        m_fields[1]->UpdatePhys(), 1);
+            Vmath::Svtvp(nPoints, 0.5, m_fields[m_spacedim+1]->GetPhys(), 1,
+                         m_fields[1]->GetPhys(), 1,
                          m_fields[m_spacedim+1]->UpdatePhys(), 1);
 
             // rhou_i = rho * u_i
             for (int i = 0; i < m_spacedim; ++i)
             {
-                Vmath::Vmul(nPoints, m_fields[0]->GetPhys(), 1, u[i], 1, m_fields[i+1]->UpdatePhys(), 1);
+                Vmath::Vmul(nPoints, m_fields[0]->GetPhys(), 1, u[i], 1,
+                            m_fields[i+1]->UpdatePhys(), 1);
             }
 
             for (int i = 0; i < m_fields.num_elements(); ++i)
