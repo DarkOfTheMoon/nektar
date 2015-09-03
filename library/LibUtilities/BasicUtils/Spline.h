@@ -70,8 +70,8 @@ namespace Nektar
 
 		  CubicSpline();
 
-  		  CubicSpline(Array<OneD,NekDouble> &x, Array<OneD,NekDouble> &y, SplineBoundaryType bcleft, SplineBoundaryType bcright,
-  				NekDouble bcvalueleft, NekDouble bcvalueright);
+  		  CubicSpline(const Array<OneD,NekDouble> &x, const Array<OneD,NekDouble> &y, const SplineBoundaryType bcleft, const SplineBoundaryType bcright,
+  				  const NekDouble bcvalueleft, const NekDouble bcvalueright);
 
   		  CubicSpline(const CubicSpline &In);
 
