@@ -43,7 +43,7 @@
 #include <SolverUtils/EquationSystem.h>
 #include <MultiRegions/ExpList2D.h>
 //#include <SpatialDomains/MeshComponents.h>
-//#include <SpatialDomains/MeshGraph.h>
+#include <SpatialDomains/MeshGraph2D.h>
 //#include <SpatialDomains/HistoryPoints.h>
 //#include <SpatialDomains/SpatialData.h>
 
@@ -59,63 +59,66 @@
 namespace Nektar
 {
 
-    class ALE: public EquationSystem
+    class ALE: public SolverUtils::EquationSystem
     {
-    	public:
+    public:
         /// Default constructor.
         ALE();
 
         /// Constructor
         ALE(LibUtilities::SessionReaderSharedPtr &pSession);
 
-		/// Destructor
-		virtual ~ALE();
+/// Destructor
+virtual ~ALE();
 
-		void SetUpFreeSurfaceSplines();
+void SetUpFreeSurfaceSplines();
 
-		/// Compute advection term
-	    void DoALE(const NekDouble aii_Dt, NekDouble time);
-	    void DeformMeshBoundary(const NekDouble aii_Dt);
-	    void DeformMesh2(const NekDouble aii_Dt);
-	    void UpdateFields();
-	    void UpdateMesh();
+/// Compute advection term
+    void DoALE(const NekDouble aii_Dt, NekDouble time);
+    void DeformMeshBoundary(const NekDouble aii_Dt);
+    void DeformMesh2(const NekDouble aii_Dt);
+    void UpdateFields();
+    void UpdateMesh();
 
-	    void CreateFreeSurfaceSpline(const NekDouble aii_Dt, NekDouble time);
+    void CreateFreeSurfaceSpline(const NekDouble aii_Dt, NekDouble time);
 
-	    void ComputeMeshVelocity(const NekDouble aii_Dt);
-	    void ComputeVelocityMinusMeshVelocity(Array<OneD, Array<OneD, NekDouble> > &velocity);
-	    void SetFreeSurfaceVelocityBC();
-	    void WriteArrayAlongFreeSurfaceToFile(string fname, int outputcount,Array<OneD, Array<OneD, NekDouble> > &inarray);
+        void SetMeshVelocityatBoundary(const NekDouble aii_Dt);
+        void ComputeNewCoordsatFreeSurfaceBoundary(Array<OneD, Array<OneD, NekDouble> > &newcoords, const NekDouble aii_Dt);
+        void UpdateMeshFreeSurfaceBoundary(const NekDouble aii_Dt);
+    void ComputeMeshVelocity(const NekDouble aii_Dt);
+    void ComputeVelocityMinusMeshVelocity(Array<OneD, Array<OneD, NekDouble> > &velocity);
+    void SetFreeSurfaceVelocityBC();
+    void WriteArrayAlongFreeSurfaceToFile(string fname, int outputcount,Array<OneD, Array<OneD, NekDouble> > &inarray);
 
-	    NekDouble LagrangeInterpolant(NekDouble x, int npts, const Array<OneD, const NekDouble>& xpts,
-	               const Array<OneD, const NekDouble>& funcvals);
-	    NekDouble LagrangePoly(NekDouble x, int pt, int npts, const Array<OneD, const NekDouble>& xpts);
-	    NekDouble LinearInterpolation(NekDouble x, NekDouble y, int npts, const Array<OneD, const NekDouble>& xfs,
-	    								const Array<OneD, const NekDouble>& yfs, const Array<OneD, const NekDouble>& vfs);
+    NekDouble LagrangeInterpolant(NekDouble x, int npts, const Array<OneD, const NekDouble>& xpts,
+               const Array<OneD, const NekDouble>& funcvals);
+    NekDouble LagrangePoly(NekDouble x, int pt, int npts, const Array<OneD, const NekDouble>& xpts);
+    NekDouble LinearInterpolation(NekDouble x, NekDouble y, int npts, const Array<OneD, const NekDouble>& xfs,
+    const Array<OneD, const NekDouble>& yfs, const Array<OneD, const NekDouble>& vfs);
 
 
-	protected:
-	    int 										m_phystot;
-	    Array<OneD, int> 							m_velocity;
-	    Array<OneD, int> 							m_meshvelocity;
-	    int 										m_intsteps;
-	/*  Array<OneD, MultiRegions::ExpListSharedPtr > m_fields;
+protected:
+    int m_phystot;
+    Array<OneD, int> m_velocity;
+    Array<OneD, int> m_meshvelocity;
+    int m_intsteps;
+/*  Array<OneD, MultiRegions::ExpListSharedPtr > m_fields;
         SpatialDomains::BoundaryConditionsSharedPtr  m_boundaryConditions;
         int m_spacedim;
        // Array<OneD, MultiRegions::ExpListSharedPtr> m_meshvelocity; */
-        Array <OneD, Array<OneD, NekDouble> >		m_meshcoords;
-        Array <OneD, Array<OneD, NekDouble> >		m_meshcoordsold;
-        MultiRegions::DisContField2DSharedPtr 		m_DisField;
-        MultiRegions::ExpList2DSharedPtr 			m_ExpField;
-        //Array <OneD, Array<OneD, NekDouble> >		m_meshvelocity;
+        Array <OneD, Array<OneD, NekDouble> >m_meshcoords;
+        Array <OneD, Array<OneD, NekDouble> >m_meshcoordsold;
+        MultiRegions::DisContField2DSharedPtr m_DisField;
+        MultiRegions::ExpList2DSharedPtr m_ExpField;
+        //Array <OneD, Array<OneD, NekDouble> >m_meshvelocity;
 
         SpatialDomains::MeshGraph2DSharedPtr         m_mesh2D;
         Array<OneD, Array<OneD, NekDouble> >         m_meshvelwx, m_meshvelwy;
         Array<OneD, LibUtilities::CubicSplineSharedPtr> m_freesurfacesplines;
 
-	};
+};
 
-	/// Pointer to an AdvectionTerm object.
+/// Pointer to an AdvectionTerm object.
     typedef boost::shared_ptr<ALE> ALESharedPtr;
 
 } //end of namespace
