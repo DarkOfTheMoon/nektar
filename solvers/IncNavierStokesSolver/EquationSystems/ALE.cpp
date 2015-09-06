@@ -301,7 +301,7 @@ namespace Nektar
                    ElExp = m_fields[m_meshvelocity[0]]->GetExp(ElmtID[cnt2]);
                    //EdgeExp->SetUpPhysNormals(ElExp,EdgeID[cnt2]);
                    EdgeExp->SetUpPhysNormals(EdgeID[cnt2]);
-                   //locnormals    =  EdgeExp->GetMetricInfo()->GetNormal();
+                   locnormals    =  EdgeExp->GetMetricInfo()->GetNormal();
                    for (int k = 0; k < 2; ++k)
                     {
                         Vmath::Vcopy(nqel, &(locnormals[k][0]), 1,
