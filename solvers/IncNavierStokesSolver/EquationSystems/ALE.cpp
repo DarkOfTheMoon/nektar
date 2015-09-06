@@ -33,6 +33,9 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+#include <LocalRegions/Expansion2D.h>
+#include <MultiRegions/ContField1D.h>
+
 #include <IncNavierStokesSolver/EquationSystems/ALE.h>
 #include <cstdio>
 #include <cstdlib>
@@ -264,14 +267,13 @@ namespace Nektar
         SpatialDomains::SegGeomSharedPtr edge;
         StdRegions::StdExpansionSharedPtr ElExp;
         Array<OneD, Array<OneD, NekDouble> > normals, locnormals,weaknormals;
-        int vertID1,vertID2;
         SpatialDomains::PointGeomSharedPtr vertex1,vertex2;
         SpatialDomains::MeshGraph2DSharedPtr mesh2D;
 
         MultiRegions::ExpList1DSharedPtr  FreeSurfaceFct;
 
         Array<OneD, int> ElmtID,EdgeID;
-        int cnt,n,el,edgeID,elmID;
+        int cnt,n,el,edgeID;
         Array<OneD, const NekDouble> Uphyselement, Vphyselement, wxel,wyel;
 
         //Fills ElmtID and EdgeID with global ids of elements id number and edges id number of the boundary expansion
@@ -299,7 +301,7 @@ namespace Nektar
                    ElExp = m_fields[m_meshvelocity[0]]->GetExp(ElmtID[cnt2]);
                    //EdgeExp->SetUpPhysNormals(ElExp,EdgeID[cnt2]);
                    EdgeExp->SetUpPhysNormals(EdgeID[cnt2]);
-                   locnormals    =  EdgeExp->GetMetricInfo()->GetNormal();
+                   //locnormals    =  EdgeExp->GetMetricInfo()->GetNormal();
                    for (int k = 0; k < 2; ++k)
                     {
                         Vmath::Vcopy(nqel, &(locnormals[k][0]), 1,
@@ -330,14 +332,13 @@ namespace Nektar
                     }
                      MultiRegions::ContField1DSharedPtr contfield =
                                                                MemoryManager<MultiRegions::ContField1D>
-                                                               ::AllocateSharedPtr(m_comm,*FreeSurfaceFct);
+                                                               ::AllocateSharedPtr(m_session,*FreeSurfaceFct);
                      contfield->FwdTrans(normals[0],contfield->UpdateCoeffs());
                      contfield->BwdTrans(contfield->GetCoeffs(),normals[0]);
                      contfield->FwdTrans(normals[1],contfield->UpdateCoeffs());
                      contfield->BwdTrans(contfield->GetCoeffs(),normals[1]);
 
                  //loop over all elements along the boundary region
-                bool first=true;
                 for(el = 0; el < BndExp[n]->GetExpSize(); ++el,cnt++)
                 {
                     Uphyselement = (m_fields[0]->GetPhys())+ m_fields[0]->GetPhys_Offset(ElmtID[cnt]);
@@ -457,26 +458,24 @@ namespace Nektar
     // number of elements
     int  nlevels = m_meshvelwx.num_elements();
     NekDouble x,y,z;
-    int eid, id, diff,el,j,nqel;
-    int vertId, edgeId;
+    int eid, el,j;
+    int edgeId;
     StdRegions::StdExpansionSharedPtr ElExp;
-    int globaledgeID;
        SpatialDomains::SegGeomSharedPtr edge;
        StdRegions::StdExpansion1DSharedPtr EdgeExp;
     Array<OneD, Array<OneD, NekDouble> > normals, locnormals,weaknormals;
     Array<OneD, const NekDouble> wxel,wyel;
-    int vertID1,vertID2;
+    int vertID1;
      SpatialDomains::PointGeomSharedPtr vertex1,vertex2;
      SpatialDomains::Geometry1DSharedPtr ElmtSegGeom;
 
      // local expansion vector
-     const StdRegions::StdExpansionVector &locExpVector = *(m_ExpField->GetExp());
+     const LocalRegions::ExpansionVector &locExpVector = *(m_ExpField->GetExp());
 
      int nel = locExpVector.size();
 
        // Loop over elemente and collect forward expansion
-    int nexp = m_fields[m_meshvelocity[0]]->GetExpSize();
-    int nquad_e,n,e,offset,phys_offset;
+    int nquad_e;
     Array<OneD,NekDouble> e_tmp;
     map<int,int> VertexDone;
 
@@ -548,7 +547,7 @@ namespace Nektar
                  SpatialDomains::MeshGraph2DSharedPtr mesh2D;
 
                 Array<OneD, int> ElmtID,EdgeID;
-                int cnt,n,el,edgeID,elmID;
+                int cnt,n,el,edgeID;
                 Array<OneD, const NekDouble> Uphyselement, Vphyselement, wxel,wyel;
 
                 //Fills ElmtID and EdgeID with global ids of elements id number and edges id number of the boundary expansion
@@ -561,7 +560,6 @@ namespace Nektar
                           if(type == "FreeSurface")
                           {
                               //loop over all elements along the boundary region
-                             bool first=true;
                              for(el = 0; el < BndExp[n]->GetExpSize(); ++el,cnt++)
                              {
                                  Uphyselement = (m_fields[0]->GetPhys())+ m_fields[0]->GetPhys_Offset(ElmtID[cnt]);
@@ -589,36 +587,34 @@ namespace Nektar
 
                                  EdgeExp->GetCoords(xedge,yedge,zedge);
 
-                                  int id1  = BndExp[n]->GetPhys_Offset(el);
-
-                                     for(int i=0;i<nquad_e;i++)
-                                     {
-                                         xedge[i]= xedge[i] + (aii_Dt)*wxedge[i];
-                                         yedge[i]= yedge[i] + (aii_Dt)*wyedge[i];
-                                     }
+                                 for(int i=0;i<nquad_e;i++)
+                                 {
+                                     xedge[i]= xedge[i] + (aii_Dt)*wxedge[i];
+                                     yedge[i]= yedge[i] + (aii_Dt)*wyedge[i];
+                                 }
 
 
-                                     edgeID= m_mesh2D->GetEidFromElmt(ElExp->DetShapeType(),
-                                                     edgeID, ElmtID[cnt]);
+                                 edgeID= m_mesh2D->GetEidFromElmt(ElExp->DetShapeType(),
+                                                 edgeID, ElmtID[cnt]);
 
-                                     edge = m_mesh2D->GetEdge(edgeID);
+                                 edge = m_mesh2D->GetEdge(edgeID);
 
 
-                                     vertID1=edge->GetVid(0);
-                                     vertID2=edge->GetVid(1);
+                                 vertID1=edge->GetVid(0);
+                                 vertID2=edge->GetVid(1);
 
-                                     // Make changes to m_graph
+                                 // Make changes to m_graph
 
-                                     vertex1 = m_graph->GetVertex(vertID1);
-                                     vertex2 = m_graph->GetVertex(vertID2);
+                                 vertex1 = m_graph->GetVertex(vertID1);
+                                 vertex2 = m_graph->GetVertex(vertID2);
 
-                                     vertex1->UpdatePosition(xedge[0],yedge[0],zedge[0]);
-                                     vertex2->UpdatePosition(xedge[nquad_e-1],yedge[nquad_e-1],zedge[nquad_e-1]);
+                                 vertex1->UpdatePosition(xedge[0],yedge[0],zedge[0]);
+                                 vertex2->UpdatePosition(xedge[nquad_e-1],yedge[nquad_e-1],zedge[nquad_e-1]);
 
-                                     // mesh->UpdateVertex(vertID1,xedge[0],yedge[0],0);
-                                     // mesh->UpdateVertex(vertID2,xedge[nquad_e-1],yedge[nquad_e-1],0);
+                                 // mesh->UpdateVertex(vertID1,xedge[0],yedge[0],0);
+                                 // mesh->UpdateVertex(vertID2,xedge[nquad_e-1],yedge[nquad_e-1],0);
 
-                                      m_graph->CreateCurvedEdge(edgeID,xedge,yedge,zedge);
+                                  m_graph->CreateCurvedEdge(edgeID,xedge,yedge,zedge);
                              }
 
                           }
@@ -659,12 +655,11 @@ namespace Nektar
         SpatialDomains::SegGeomSharedPtr edge;
         StdRegions::StdExpansionSharedPtr ElExp;
         Array<OneD, Array<OneD, NekDouble> > normals, locnormals,weaknormals;
-        int vertID1,vertID2;
          SpatialDomains::PointGeomSharedPtr vertex1,vertex2;
          SpatialDomains::MeshGraph2DSharedPtr mesh2D;
 
         Array<OneD, int> ElmtID,EdgeID;
-        int cnt,n,el,edgeID,elmID;
+        int cnt,n,el,edgeID;
         Array<OneD, const NekDouble> Uphyselement, Vphyselement, wxel,wyel;
 
         //Fills ElmtID and EdgeID with global ids of elements id number and edges id number of the boundary expansion
@@ -677,7 +672,6 @@ namespace Nektar
               if(type == "FreeSurface")
               {
                  //loop over all elements along the boundary region
-                bool first=true;
                 for(el = 0; el < BndExp[n]->GetExpSize(); ++el,cnt++)
                 {
                     Uphyselement = (m_fields[0]->GetPhys())+ m_fields[0]->GetPhys_Offset(ElmtID[cnt]);
@@ -732,7 +726,7 @@ namespace Nektar
     void ALE::UpdateMeshFreeSurfaceBoundary(const NekDouble aii_Dt)
     {
         int cnt,n,i;
-        int el,edgeID,elmID;
+        int el,edgeID;
         Array<OneD, MultiRegions::ExpListSharedPtr>  BndExp     = m_fields[m_meshvelocity[0]]->GetBndCondExpansions();
         Array<OneD, const SpatialDomains::BoundaryConditionShPtr > BndConds = m_fields[m_meshvelocity[0]]->GetBndConditions();
         Array<OneD, Array<OneD, NekDouble> > newcoords(3);
@@ -864,9 +858,7 @@ namespace Nektar
     {
         // velocities plus pressure
         int nvariables=m_fields.num_elements();
-        int i,n,cnt;
-
-        bool DeclareCoeffPhysArrays = true;
+        int i;
 
         Array<OneD, Array<OneD, NekDouble> >   fieldsphys(nvariables);
         Array<OneD, Array<OneD, NekDouble> >   boundaryphys(nvariables);
@@ -883,7 +875,6 @@ namespace Nektar
 
             field->UpdateContField2D(m_comm,*m_mesh2D,*m_boundaryConditions,
                  m_boundaryConditions->GetVariable(i),
-                                 m_solnType,
                                  false);
         }
     }
@@ -947,7 +938,6 @@ namespace Nektar
          Array<OneD, MultiRegions::ExpListSharedPtr>  BndExp, BndExpy;
          MultiRegions::ExpList1DSharedPtr  FreeSurfaceFct;
          Array<OneD, Array<OneD, NekDouble> > normals, locnormals;
-         static int outputcnt = 1;
 
          BndConds   = m_fields[m_meshvelocity[0]]->GetBndConditions();
          BndExp     = m_fields[m_meshvelocity[0]]->GetBndCondExpansions();
@@ -956,14 +946,14 @@ namespace Nektar
          StdRegions::StdExpansionSharedPtr ElExp;
          StdRegions::StdExpansion1DSharedPtr EdgeExp;
          Array<OneD, int> ElmtID,EdgeID;
-         int cnt, n,el,edgeID,elmID;
+         int cnt, n,el,edgeID;
          Array<OneD, const NekDouble> Uphyselement, Vphyselement;
 
          //Fills ElmtID and EdgeID with global ids of elements id number and edges id number of the boundary expansion
          m_fields[m_meshvelocity[0]]->GetBoundaryToElmtMap(ElmtID,EdgeID);
 
          NekDouble xmax = 0.0;
-         int j,k,l;
+         int l;
          l =0;
          // Determine xmax because its outflow value that needs to be set to value from before
         for(cnt = n = 0; n < m_fields[m_meshvelocity[0]]->GetBndConditions().num_elements(); ++n)
@@ -1065,7 +1055,6 @@ namespace Nektar
     Array<OneD, Array<OneD, NekDouble> > normals, locnormals;
     Array<OneD, NekDouble> e_outarrayu, e_outarrayv;
     Array<OneD, NekDouble> curv;
-    bool NegateNormals;
 
     BndConds   = m_fields[0]->GetBndConditions();
     BndExp     = m_fields[0]->GetBndCondExpansions();
@@ -1074,7 +1063,7 @@ namespace Nektar
     StdRegions::StdExpansionSharedPtr ElExp;
     StdRegions::StdExpansion1DSharedPtr EdgeExp,EdgeExpv;
     Array<OneD, int> ElmtID,EdgeID;
-    int cnt,n,el,edgeID,elmtid;
+    int cnt,n,el,edgeID;
     Array<OneD, const NekDouble> U,V;
     Array<OneD, NekDouble> Uvals,Vvals;
 
@@ -1110,7 +1099,6 @@ namespace Nektar
                     EdgeExp =  boost::dynamic_pointer_cast<StdRegions::StdExpansion1D> (BndExp[n]->GetExp(el));
                     EdgeExpv =  boost::dynamic_pointer_cast<StdRegions::StdExpansion1D> (BndExpv[n]->GetExp(el));
                     int nquad_e = EdgeExp->GetNumPoints(0);
-                    int id1  = BndExp[n]->GetPhys_Offset(el);
                     edgeID = EdgeID[cnt];
                     ElExp = m_fields[0]->GetExp(ElmtID[cnt]);
                     int nqel = ElExp->GetTotPoints();
@@ -1196,11 +1184,9 @@ namespace Nektar
            StdRegions::StdExpansionSharedPtr ElExp;
            StdRegions::StdExpansion1DSharedPtr EdgeExp;
            Array<OneD, int> ElmtID,EdgeID;
-           int i,cnt, n,el,edgeID,elmID;
+           int cnt, n,el,edgeID;
            int ninarray = inarray.num_elements();
            Array<OneD, Array<OneD, const NekDouble> > inarrayelement(ninarray);
-           int maxpts =0;
-           NekDouble nx,ny;
 
            for(int i=0;i<ninarray;i++)
            {
@@ -1278,7 +1264,6 @@ NekDouble ALE::LagrangeInterpolant(NekDouble x, int npts, const Array<OneD, cons
            const Array<OneD, const NekDouble>& funcvals)
 {
    NekDouble sum = 0.0;
-   int npts2 = 6;
 
    NekDouble dif=fabs(x-xpts[0]);
    NekDouble dift;
@@ -1335,7 +1320,6 @@ NekDouble ALE::LinearInterpolation(NekDouble x, NekDouble y, int npts, const Arr
                                 const Array<OneD, const NekDouble>& yfs, const Array<OneD, const NekDouble>& vfs)
 {
    NekDouble sum = 0.0;
-   int npts2 = 6;
 
    NekDouble dif=fabs(x-xfs[0]);
    NekDouble dift;
