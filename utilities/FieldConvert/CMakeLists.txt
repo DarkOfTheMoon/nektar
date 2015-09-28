@@ -12,6 +12,7 @@ SET(FieldConvertHeaders
     OutputModules/OutputXml.h
     ProcessModules/ProcessAddFld.h
     ProcessModules/ProcessBoundaryExtract.h
+    ProcessModules/ProcessChangeVariables.h
     ProcessModules/ProcessConcatenateFld.h
     ProcessModules/ProcessDeform.h
     ProcessModules/ProcessDisplacement.h
@@ -47,6 +48,7 @@ SET(FieldConvertSources
     OutputModules/OutputXml.cpp
     ProcessModules/ProcessAddFld.cpp
     ProcessModules/ProcessBoundaryExtract.cpp
+    ProcessModules/ProcessChangeVariables.cpp
     ProcessModules/ProcessConcatenateFld.cpp
     ProcessModules/ProcessDeform.cpp
     ProcessModules/ProcessDisplacement.cpp
