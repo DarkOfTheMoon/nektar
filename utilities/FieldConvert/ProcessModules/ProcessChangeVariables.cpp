@@ -98,10 +98,7 @@ void ProcessChangeVariables::Process(po::variables_map &vm)
     }
     
     vector<MultiRegions::ExpListSharedPtr> Exp(nstrips*newfields);
-    Array<OneD, NekDouble> pressure(npoints, 0.0);
     Array<OneD, NekDouble> tmp(npoints, 0.0);
-    
-    
     
     for(s = 0; s < nstrips; ++s) //homogeneous strip varient
     {
@@ -168,18 +165,25 @@ void ProcessChangeVariables::Process(po::variables_map &vm)
     }
     
     vector<string > outname;
+    if (spacedim == 1)
+    {
+        outname.push_back("u");
+        outname.push_back("p");
+    }
+
     if (spacedim == 2)
     {
         outname.push_back("u");
         outname.push_back("v");
-        outname.push_back("pressure");
+        outname.push_back("p");
     }
-    else
+    
+    if (spacedim == 3)
     {
         outname.push_back("u");
         outname.push_back("v");
         outname.push_back("w");
-        outname.push_back("pressure");
+        outname.push_back("p");
 
     }
     
@@ -187,29 +191,20 @@ void ProcessChangeVariables::Process(po::variables_map &vm)
     = m_f->m_exp[0]->GetFieldDefinitions();
     std::vector<std::vector<NekDouble> > FieldData(FieldDef.size());
     
+    
     for(s = 0; s < nstrips; ++s) //homogeneous strip varient
     {
-        for (j = 0; j < nfields + newfields; ++j)
+        for (j = 0; j <  newfields; ++j)
         {
             for (i = 0; i < FieldDef.size()/nstrips; ++i)
             {
                 int n = s * FieldDef.size()/nstrips + i;
-                
-                if (j >= nfields)
-                {
-                    FieldDef[n]->m_fields.push_back(outname[j-nfields]);
-                    
-                }
-                else
-                {
-                    FieldDef[n]->m_fields.push_back(m_f->m_fielddef[0]->m_fields[j]);
-                    
-                }
-                m_f->m_exp[s*(nfields + newfields)+j]->AppendFieldData(FieldDef[n], FieldData[n]);
+                FieldDef[n]->m_fields.push_back(outname[j]);
+                m_f->m_exp[s*(nfields + newfields)+ nfields + j]->AppendFieldData(FieldDef[n], FieldData[n]);
             }
         }
     }
-    
+
     m_f->m_fielddef = FieldDef;
     m_f->m_data     = FieldData;
 }
