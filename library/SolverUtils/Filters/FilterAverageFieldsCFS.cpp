@@ -32,18 +32,17 @@
 // Description: Average solution fields during time-stepping.
 //
 ///////////////////////////////////////////////////////////////////////////////
-
-#include <SolverUtils/Filters/FilterAverageFields.h>
+#include <SolverUtils/Filters/FilterAverageFieldsCFS.h>
 
 namespace Nektar
 {
 namespace SolverUtils
 {
-std::string FilterAverageFields::className =
+std::string FilterAverageFieldsCFS::className =
         GetFilterFactory().RegisterCreatorFunction(
-                "AverageFields", FilterAverageFields::create);
+                "AverageFieldsCFS", FilterAverageFieldsCFS::create);
 
-FilterAverageFields::FilterAverageFields(
+FilterAverageFieldsCFS::FilterAverageFieldsCFS(
     const LibUtilities::SessionReaderSharedPtr &pSession,
     const ParamMap &pParams) :
     Filter(pSession)
@@ -91,21 +90,24 @@ FilterAverageFields::FilterAverageFields(
     m_outputIndex = 0;
     m_fld = MemoryManager<LibUtilities::FieldIO>
                 ::AllocateSharedPtr(pSession->GetComm());
+    
+    m_session->LoadParameter("Gamma", m_gamma, 1.4);
 
 }
 
-FilterAverageFields::~FilterAverageFields()
+FilterAverageFieldsCFS::~FilterAverageFieldsCFS()
 {
 }
 
-void FilterAverageFields::v_Initialise(
+void FilterAverageFieldsCFS::v_Initialise(
         const Array<OneD, const MultiRegions::ExpListSharedPtr> &pFields,
         const NekDouble &time)
 {
     int nfield = pFields.num_elements();
     int ncoeff = pFields[0]->GetNcoeffs();
     m_avgFields = Array<OneD, Array<OneD, NekDouble> >(nfield);
-    for(int n =0; n < nfield; ++n)
+    
+    for(int n = 0; n < nfield; ++n)
     {
         m_avgFields[n] = Array<OneD, NekDouble>(ncoeff, 0.0);
     }
@@ -113,22 +115,93 @@ void FilterAverageFields::v_Initialise(
                        = boost::lexical_cast<std::string>(time);
 }
 
-void FilterAverageFields::v_Update(
+void FilterAverageFieldsCFS::v_Update(
         const Array<OneD, const MultiRegions::ExpListSharedPtr> &pFields,
         const NekDouble &time)
 {
+    int nfield = pFields.num_elements();
+    Array<OneD, Array<OneD, NekDouble> > velocity(nfield - 2);
+    int ncoeff = pFields[0]->GetNcoeffs();
+    
+    for(int n = 0; n < nfield - 2; ++n)
+    {
+        velocity[n] = Array<OneD, NekDouble>(ncoeff, 0.0);
+    }
+    
     m_index++;
     if (m_index % m_sampleFrequency > 0)
     {
         return;
     }
-
-    for(int n = 0; n < pFields.num_elements(); ++n)
+    
+    /**************************************************************************/
+    //Change for Compressible Flow Solver
+    //Rho calculation
+    Vmath::Vadd(ncoeff,
+                pFields[0]->GetCoeffs(),1,
+                m_avgFields[0],1,
+                m_avgFields[0],1);
+    
+    //Velocity components calculation
+    for(int n = 0; n < nfield - 2; ++n)
     {
-        Vmath::Vadd(m_avgFields[n].num_elements(),
-                    pFields[n]->GetCoeffs(),1,m_avgFields[n],1,
-                    m_avgFields[n],1);
+        Vmath::Vdiv(ncoeff,
+                    pFields[n+1]->GetCoeffs(),1,
+                    pFields[0]->GetCoeffs(),1,
+                    velocity[n],1);
+        
+        Vmath::Vadd(ncoeff,
+                     velocity[n], 1,
+                     m_avgFields[n+1], 1,
+                     m_avgFields[n+1], 1);
     }
+    
+    Array<OneD, NekDouble> tmp(ncoeff, 0.0);
+    Array<OneD, NekDouble> pressure(ncoeff, 0.0);
+    
+    //Calculate pressure
+    for (int n = 0; n < nfield - 2; n++)
+    {
+        Vmath::Vmul(ncoeff,
+                    velocity[n], 1,
+                    velocity[n], 1,
+                    tmp,1);
+        
+        
+        Vmath::Smul(ncoeff, 0.5,
+                    tmp, 1,
+                    tmp, 1);
+        
+        Vmath::Vadd(ncoeff,
+                    pressure, 1,
+                    tmp, 1,
+                    pressure, 1);
+    }
+    
+    Vmath::Vmul(ncoeff,
+                pressure, 1,
+                pFields[0]->GetCoeffs(), 1,
+                pressure,1);
+    
+    Vmath::Vsub(ncoeff,
+                pFields[nfield - 1]->GetCoeffs(), 1,
+                pressure, 1,
+                pressure,1);
+    
+    NekDouble gammaMinusOne    = m_gamma - 1.0;
+    
+    Vmath::Smul(ncoeff, gammaMinusOne,
+                pressure, 1,
+                pressure, 1);
+    
+    Vmath::Vadd(ncoeff,
+                pressure, 1,
+                m_avgFields[nfield - 1], 1,
+                m_avgFields[nfield - 1], 1);
+    
+    
+    /**************************************************************************/
+
     m_numAverages += 1;
 
     // update FinalTime here since this is when last field will be added.
@@ -138,18 +211,19 @@ void FilterAverageFields::v_Update(
     if (m_index % m_outputFrequency == 0)
     {
         OutputAvgField(pFields,++m_outputIndex);
+        
     }
-
+    
 }
 
-void FilterAverageFields::v_Finalise(
+void FilterAverageFieldsCFS::v_Finalise(
         const Array<OneD, const MultiRegions::ExpListSharedPtr> &pFields,
         const NekDouble &time)
 {
     OutputAvgField(pFields);
 }
 
-void FilterAverageFields::OutputAvgField(
+void FilterAverageFieldsCFS::OutputAvgField(
         const Array<OneD, const MultiRegions::ExpListSharedPtr> &pFields,
         int dump)
 {
@@ -166,6 +240,32 @@ void FilterAverageFields::OutputAvgField(
 
     Array<OneD, NekDouble>  fieldcoeffs;
     int ncoeffs = pFields[0]->GetNcoeffs();
+    
+    vector<string > newname;
+    if (m_avgFields.num_elements() == 3)
+    {
+        newname.push_back("rho");
+        newname.push_back("u");
+        newname.push_back("p");
+    }
+    
+    if (m_avgFields.num_elements() == 4)
+    {
+        newname.push_back("rho");
+        newname.push_back("u");
+        newname.push_back("v");
+        newname.push_back("p");
+    }
+    
+    if (m_avgFields.num_elements() == 5)
+    {
+        newname.push_back("rho");
+        newname.push_back("u");
+        newname.push_back("v");
+        newname.push_back("w");
+        newname.push_back("p");
+        
+    }
 
     // copy Data into FieldData and set variable
     for(int j = 0; j < pFields.num_elements(); ++j)
@@ -186,7 +286,7 @@ void FilterAverageFields::OutputAvgField(
         for(int i = 0; i < FieldDef.size(); ++i)
         {
             // Could do a search here to find correct variable
-            FieldDef[i]->m_fields.push_back(m_session->GetVariable(j));
+            FieldDef[i]->m_fields.push_back(newname[j]);
             pFields[0]->AppendFieldData(FieldDef[i],
                                         FieldData[i],
                                         fieldcoeffs);
@@ -220,7 +320,7 @@ void FilterAverageFields::OutputAvgField(
     }
 }
 
-bool FilterAverageFields::v_IsTimeDependent()
+bool FilterAverageFieldsCFS::v_IsTimeDependent()
 {
     return true;
 }
