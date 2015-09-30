@@ -96,7 +96,9 @@ void ProcessWSS::Process(po::variables_map &vm)
 
 
     NekDouble m_kinvis;
+    NekDouble m_lambda;
     m_kinvis = m_f->m_session->GetParameter("Kinvis");
+    m_f->m_session->LoadParameter("lambda", m_lambda, 0.0);
 
     int i, j;
     int spacedim  = m_f->m_graph->GetSpaceDimension();
@@ -247,14 +249,36 @@ void ProcessWSS::Process(po::variables_map &vm)
                         elmt->PhysDeriv(velocity[0],grad[0],grad[1],grad[2]);
                         elmt->PhysDeriv(velocity[1],grad[3],grad[4],grad[5]);
                         elmt->PhysDeriv(velocity[2],grad[6],grad[7],grad[8]);
+                        
+                        Array<OneD, NekDouble>  divergence(nq,0.0);
+                        if(m_lambda != 0)
+                        {
+                            // lambda.div(velocity) = Ux + Vy + Wz
+                            Array<OneD, NekDouble>  divergence(nq);
+                            Vmath::Vadd (nq,grad[1],1,grad[4],1,divergence,1);
+                            Vmath::Vadd (nq,divergence,1,grad[8],1,divergence,1);
+                            Vmath::Smul (nq,m_lambda,divergence,1,divergence,1);
+                        }
 
                          //Compute stress component terms
                         // t_xx = 2.mu.Ux
                         Vmath::Smul (nq,(2*m_kinvis),grad[0],1,stress[0],1);
+                        if(m_lambda != 0)
+                        {
+                            Vmath::Vadd (nq,stress[0],1,divergence,1,stress[0],1);
+                        }
                         // tyy = 2.mu.Vy
                         Vmath::Smul (nq,(2*m_kinvis),grad[4],1,stress[1],1);
+                        if(m_lambda != 0)
+                        {
+                            Vmath::Vadd (nq,stress[1],1,divergence,1,stress[1],1);
+                        }
                         // tzz = 2.mu.Wz
                         Vmath::Smul (nq,(2*m_kinvis),grad[8],1,stress[2],1);
+                        if(m_lambda != 0)
+                        {
+                            Vmath::Vadd (nq,stress[2],1,divergence,1,stress[2],1);
+                        }
                         // txy = mu.(Uy+Vx)
                         Vmath::Vadd (nq,grad[1],1,grad[3],1,stress[3],1);
                         Vmath::Smul (nq,m_kinvis,stress[3],1,stress[3],1);
