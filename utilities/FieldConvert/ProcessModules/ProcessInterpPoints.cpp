@@ -162,9 +162,9 @@ void ProcessInterpPoints::Process(po::variables_map &vm)
                              m_config["plane"].as<string>().c_str(),values),
                      "Failed to interpret plane string");
 
-            ASSERTL0(values.size() > 3,
+            ASSERTL0(values.size() > 10,
                      "plane string should contain 4Dim+2 values "
-                     "N1,N2,x0,y0,z0,x1,y1,z1,x2,y2,z2,x3,y3,z3");
+                     "N1,N2,x0,y0,x1,y1,x2,y2,x3,y3");
 
 
             int dim = (values.size()-2)/4;
@@ -186,22 +186,20 @@ void ProcessInterpPoints::Process(po::variables_map &vm)
                     pts[0][i+j*npts1] =
                         (values[2] + i/((NekDouble)(npts1-1))*(values[dim+2] - values[2]))*(1.0-j/((NekDouble)(npts2-1))) +
                         (values[3*dim+2] + i/((NekDouble)(npts1-1))*(values[2*dim+2] - values[3*dim+2]))*(j/((NekDouble)(npts2-1)));
-                    if(dim > 1)
+                   
+                    pts[1][i+j*npts1] =
+                        (values[3] + i/((NekDouble)(npts1-1))*(values[dim+3] - values[3]))*(1.0-j/((NekDouble)(npts2-1))) +
+                        (values[3*dim+3] + i/((NekDouble)(npts1-1))*(values[2*dim+3] - values[3*dim+3]))*(j/((NekDouble)(npts2-1)));
+                    
+                    if(dim > 2)
                     {
-                        pts[1][i+j*npts1] =
-                            (values[3] + i/((NekDouble)(npts1-1))*(values[dim+3] - values[3]))*(1.0-j/((NekDouble)(npts2-1))) +
-                            (values[3*dim+3] + i/((NekDouble)(npts1-1))*(values[2*dim+3] - values[3*dim+3]))*(j/((NekDouble)(npts2-1)));
-
-                        if(dim > 2)
-                        {
-                            pts[2][i+j*npts1] =
-                                (values[4] + i/((NekDouble)(npts1-1))*(values[dim+4] - values[4]))*(1.0-j/((NekDouble)(npts2-1))) +
-                                (values[3*dim+4] + i/((NekDouble)(npts1-1))*(values[2*dim+4] - values[3*dim+4]))*(j/((NekDouble)(npts2-1)));
-                        }
+                        pts[2][i+j*npts1] =
+                            (values[4] + i/((NekDouble)(npts1-1))*(values[dim+4] - values[4]))*(1.0-j/((NekDouble)(npts2-1))) +
+                            (values[3*dim+4] + i/((NekDouble)(npts1-1))*(values[2*dim+4] - values[3*dim+4]))*(j/((NekDouble)(npts2-1)));
                     }
                 }
             }
-
+            
             vector<int> ppe;
             ppe.push_back(npts1);
             ppe.push_back(npts2);
@@ -337,7 +335,7 @@ void ProcessInterpPoints::InterpolateFieldToPts(
                          NekDouble                              clamp_up,
                          NekDouble                              def_value)
 {
-    int expdim = field0[0]->GetCoordim(0);
+    int expdim = pts.num_elements();
 
     Array<OneD, NekDouble> coords(expdim), Lcoords(expdim);
     int nq1 = pts[0].num_elements();
