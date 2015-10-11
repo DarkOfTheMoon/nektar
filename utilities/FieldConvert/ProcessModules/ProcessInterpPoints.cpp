@@ -150,9 +150,9 @@ void ProcessInterpPoints::Process(po::variables_map &vm)
             vector<int> ppe;
             ppe.push_back(npts);
             m_f->m_fieldPts = MemoryManager<LibUtilities::PtsField>::AllocateSharedPtr(dim, pts);
-            m_f->m_fieldPts->SetPointsPerEdge(ppe);
             m_f->m_fieldPts->SetPtsType(LibUtilities::ePtsLine);
-
+            m_f->m_fieldPts->SetPointsPerEdge(ppe);
+   
         }
         else if(m_config["plane"].as<string>().compare("NotSet") != 0)
         {
@@ -163,11 +163,11 @@ void ProcessInterpPoints::Process(po::variables_map &vm)
                      "Failed to interpret plane string");
 
             ASSERTL0(values.size() > 3,
-                     "line string should contain 2Dim+1 values "
-                     "N,x0,y0,z0,x1,y1,z1");
+                     "plane string should contain 4Dim+2 values "
+                     "N1,N2,x0,y0,z0,x1,y1,z1,x2,y2,z2,x3,y3,z3");
 
 
-            int dim = (values.size()-1)/4;
+            int dim = (values.size()-2)/4;
 
             int npts1 = values[0];
             int npts2 = values[1];
@@ -206,9 +206,9 @@ void ProcessInterpPoints::Process(po::variables_map &vm)
             ppe.push_back(npts1);
             ppe.push_back(npts2);
             m_f->m_fieldPts = MemoryManager<LibUtilities::PtsField>::AllocateSharedPtr(dim, pts);
-            m_f->m_fieldPts->SetPointsPerEdge(ppe);
             m_f->m_fieldPts->SetPtsType(LibUtilities::ePtsPlane);
-
+            m_f->m_fieldPts->SetPointsPerEdge(ppe);
+   
         }
     }
 
@@ -270,10 +270,10 @@ void ProcessInterpPoints::Process(po::variables_map &vm)
 
     string fromfld = m_config["fromfld"].as<string>();
     fromField->m_fld->Import(fromfld,fromField->m_fielddef,
-                  fromField->m_data,
-                  LibUtilities::NullFieldMetaDataMap,
-                               ElementGIDs);
-
+                             fromField->m_data,
+                             LibUtilities::NullFieldMetaDataMap,
+                             ElementGIDs);
+  
     int NumHomogeneousDir = fromField->m_fielddef[0]->m_numHomogeneousDir;
 
     //----------------------------------------------
