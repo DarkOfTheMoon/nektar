@@ -83,6 +83,7 @@ class FilterHistoryPoints : public Filter
          /// plane to take history point from if using a homogeneous1D expansion
         unsigned int                            m_outputPlane;
         bool                                    m_isHomogeneous1D;
+        bool                                    m_isPhysicalSpace;
         std::string                             m_outputFile;
         std::ofstream                           m_outputStream;
         std::stringstream                       m_historyPointStream;
