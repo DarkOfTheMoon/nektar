@@ -108,11 +108,12 @@ int main(int argc, char *argv[])
     std::vector<LibUtilities::FieldDefinitionsSharedPtr> FieldDef
         = Exp->GetFieldDefinitions();
     std::vector<std::vector<NekDouble> > FieldData(FieldDef.size());
-    for(i = 0; i < FieldDef.size(); ++i)
+    for (i = 0; i < FieldDef.size(); ++i)
     {
         FieldDef[i]->m_fields.push_back("u");
         Exp->AppendFieldData(FieldDef[i], FieldData[i]);
     }
+    
     fld->Write(out, FieldDef, FieldData);
     //----------------------------------------------
 
@@ -120,9 +121,9 @@ int main(int argc, char *argv[])
     // See if there is an exact solution, if so
     // evaluate and plot errors
     LibUtilities::EquationSharedPtr ex_sol =
-                                    vSession->GetFunction("ExactSolution", 0);
+        vSession->GetFunction("ExactSolution", 0);
 
-    if(ex_sol)
+    if (ex_sol)
     {
         //----------------------------------------------
         // evaluate exact solution

@@ -510,12 +510,12 @@ namespace Nektar
 
 
       void ContField3D::v_HelmSolve(
-                                    const Array<OneD, const NekDouble> &inarray,
-                                    Array<OneD,       NekDouble> &outarray,
-                                    const FlagList &flags,
-                                    const StdRegions::ConstFactorMap &factors,
-                                    const StdRegions::VarCoeffMap &varcoeff,
-                                    const Array<OneD, const NekDouble> &dirForcing)
+            const Array<OneD, const NekDouble> &inarray,
+                  Array<OneD,       NekDouble> &outarray,
+            const FlagList &flags,
+            const StdRegions::ConstFactorMap &factors,
+            const StdRegions::VarCoeffMap &varcoeff,
+            const Array<OneD, const NekDouble> &dirForcing)
       {
           // Inner product of forcing
           int contNcoeffs = m_locToGloMap->GetNumGlobalCoeffs();

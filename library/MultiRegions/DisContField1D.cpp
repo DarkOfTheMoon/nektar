@@ -1193,24 +1193,24 @@ namespace Nektar
             const StdRegions::VarCoeffMap &varcoeff,
             const Array<OneD, const NekDouble> &dirForcing)
         {
-            int i,n,cnt,nbndry;
+            int i, n, cnt, nbndry;
             int nexp = GetExpSize();
             Array<OneD,NekDouble> f(m_ncoeffs);
-            DNekVec F(m_ncoeffs,f,eWrapper);
-            Array<OneD,NekDouble> e_f, e_l;
+            DNekVec F(m_ncoeffs, f, eWrapper);
+            Array<OneD, NekDouble> e_f, e_l;
 
             //----------------------------------
             // Setup RHS Inner product
             //----------------------------------
-            IProductWRTBase(inarray,f);
-            Vmath::Neg(m_ncoeffs,f,1);
+            IProductWRTBase(inarray, f);
+            Vmath::Neg(m_ncoeffs, f, 1);
 
             //----------------------------------
             // Solve continuous Boundary System
             //----------------------------------
             int GloBndDofs = m_traceMap->GetNumGlobalBndCoeffs();
             int NumDirBCs  = m_traceMap->GetNumLocalDirBndCoeffs();
-            int e_ncoeffs,id;
+            int e_ncoeffs, id;
 
             GlobalMatrixKey HDGLamToUKey(
                 StdRegions::eHybridDGLamToU,

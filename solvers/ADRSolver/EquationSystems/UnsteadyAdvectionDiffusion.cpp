@@ -34,8 +34,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include <iostream>
-
 #include <ADRSolver/EquationSystems/UnsteadyAdvectionDiffusion.h>
+
+
 
 namespace Nektar
 {
@@ -45,7 +46,7 @@ namespace Nektar
                 UnsteadyAdvectionDiffusion::create);
     
     UnsteadyAdvectionDiffusion::UnsteadyAdvectionDiffusion(
-            const LibUtilities::SessionReaderSharedPtr& pSession)
+        const LibUtilities::SessionReaderSharedPtr& pSession)
         : UnsteadySystem(pSession),
           AdvectionSystem(pSession)
     {
@@ -78,8 +79,8 @@ namespace Nektar
         
         if(m_useSpecVanVisc)
         {
-            m_session->LoadParameter("SVVCutoffRatio",m_sVVCutoffRatio,0.75);
-            m_session->LoadParameter("SVVDiffCoeff",m_sVVDiffCoeff,0.1);
+            m_session->LoadParameter("SVVCutoffRatio", m_sVVCutoffRatio, 0.75);
+            m_session->LoadParameter("SVVDiffCoeff",   m_sVVDiffCoeff,   0.1);
         }        
 
         // Type of advection and diffusion classes to be used
@@ -95,26 +96,47 @@ namespace Nektar
                 string advName;
                 string riemName; 
                 m_session->LoadSolverInfo("AdvectionType", advName, "WeakDG");
+                
                 m_advObject = SolverUtils::GetAdvectionFactory().
                     CreateInstance(advName, advName);
+                
                 m_advObject->SetFluxVector(&UnsteadyAdvectionDiffusion::
                                            GetFluxVectorAdv, this);
+                
                 m_session->LoadSolverInfo("UpwindType", riemName, "Upwind");
+                
                 m_riemannSolver = SolverUtils::GetRiemannSolverFactory().
                     CreateInstance(riemName);
+                
                 m_riemannSolver->SetScalar("Vn", &UnsteadyAdvectionDiffusion::
                                            GetNormalVelocity, this);
+                
                 m_advObject->SetRiemannSolver(m_riemannSolver);
+                
                 m_advObject->InitObject      (m_session, m_fields);
                 
+                
+                
                 // Diffusion term
-                std::string diffName;
-                m_session->LoadSolverInfo("DiffusionType", diffName, "LDG");
-                m_diffusion = SolverUtils::GetDiffusionFactory().
+                // In case of Galerkin explicit diffusion gives an error
+                if (m_explicitDiffusion)
+                {
+                    std::string diffName;
+                    
+                    m_session->LoadSolverInfo("DiffusionType", diffName, "LDG");
+                    
+                    m_diffusion = SolverUtils::GetDiffusionFactory().
                     CreateInstance(diffName, diffName);
-                m_diffusion->SetFluxVector(&UnsteadyAdvectionDiffusion::
-                                           GetFluxVectorDiff, this);
-                m_diffusion->InitObject(m_session, m_fields);
+                    
+                    m_diffusion->SetFluxVector(&UnsteadyAdvectionDiffusion::
+                                               GetFluxVectorDiff, this);
+                    
+                    m_diffusion->InitObject(m_session, m_fields);
+                }
+                else
+                {
+                    
+                }
                 break;
             }
             // Continuous field 
@@ -123,10 +145,13 @@ namespace Nektar
             {
                 // Advection term
                 std::string advName;
-                m_session->LoadSolverInfo("AdvectionType", advName, 
+                
+                m_session->LoadSolverInfo("AdvectionType", advName,
                                           "NonConservative");
+                
                 m_advObject = SolverUtils::GetAdvectionFactory().
                     CreateInstance(advName, advName);
+                
                 m_advObject->SetFluxVector(&UnsteadyAdvectionDiffusion::
                                            GetFluxVectorAdv, this);
                 
@@ -145,13 +170,16 @@ namespace Nektar
             }
         }
         
-        m_ode.DefineImplicitSolve (&UnsteadyAdvectionDiffusion::DoImplicitSolve, this);
-        m_ode.DefineOdeRhs        (&UnsteadyAdvectionDiffusion::DoOdeRhs,        this);
+        m_ode.DefineImplicitSolve (
+            &UnsteadyAdvectionDiffusion::DoImplicitSolve, this);
+        m_ode.DefineOdeRhs        (
+            &UnsteadyAdvectionDiffusion::DoOdeRhs,        this);
         
         if (m_projectionType == MultiRegions::eDiscontinuous &&
             m_explicitDiffusion == 1)
         {    
-            m_ode.DefineProjection(&UnsteadyAdvectionDiffusion::DoOdeProjection, this);
+            m_ode.DefineProjection(
+                &UnsteadyAdvectionDiffusion::DoOdeProjection, this);
         }
     }
 	
@@ -230,7 +258,8 @@ namespace Nektar
         }
         
         // No explicit diffusion for CG
-        if (m_projectionType == MultiRegions::eDiscontinuous)
+        if (m_projectionType == MultiRegions::eDiscontinuous
+            && m_explicitDiffusion == 1)
         {
             m_diffusion->Diffuse(nVariables, m_fields, inarray, outarrayDiff);
 
@@ -259,7 +288,7 @@ namespace Nektar
         int i;
         int nvariables = inarray.num_elements();
         SetBoundaryConditions(time);
-        switch(m_projectionType)
+        switch (m_projectionType)
         {
             case MultiRegions::eDiscontinuous:
             {
@@ -277,7 +306,7 @@ namespace Nektar
             {
                 Array<OneD, NekDouble> coeffs(m_fields[0]->GetNcoeffs());
                 
-                for(i = 0; i < nvariables; ++i)
+                for (i = 0; i < nvariables; ++i)
                 {
                     m_fields[i]->FwdTrans(inarray[i], coeffs);
                     m_fields[i]->BwdTrans_IterPerExp(coeffs, outarray[i]);
@@ -315,7 +344,8 @@ namespace Nektar
         if(m_useSpecVanVisc)
         {
             factors[StdRegions::eFactorSVVCutoffRatio] = m_sVVCutoffRatio;
-            factors[StdRegions::eFactorSVVDiffCoeff]   = m_sVVDiffCoeff/m_epsilon;
+            factors[StdRegions::eFactorSVVDiffCoeff]   =
+                                                m_sVVDiffCoeff / m_epsilon;
         }
 
         Array<OneD, Array< OneD, NekDouble> > F(nvariables);
@@ -345,6 +375,10 @@ namespace Nektar
             // Solve a system of equations with Helmholtz solver
             m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateCoeffs(), 
                                    NullFlagList, factors);
+            
+            Vmath::Vcopy(outarray[i].num_elements(),
+                         m_fields[i]->GetCoeffs(), 1,
+                         outarray[i], 1);
             
             m_fields[i]->BwdTrans(m_fields[i]->GetCoeffs(), outarray[i]);
         }

@@ -181,7 +181,7 @@ namespace Nektar
         {
             // Set up boundary conditions for this variable.
             // Do not set up BCs if default variable
-            if(variable.compare("DefaultVar") != 0)
+            if (variable.compare("DefaultVar") != 0)
             {
                 SpatialDomains::BoundaryConditions bcs(m_session, graph2D);
                 GenerateBoundaryConditionExpansion(graph2D, bcs, variable);
@@ -1873,7 +1873,7 @@ namespace Nektar
             Vmath::Zero(m_ncoeffs,outarray,1);
 
             // get local trace solution from BndSol
-            m_traceMap->GlobalToLocalBnd(BndSol,loc_lambda);
+            m_traceMap->GlobalToLocalBnd(BndSol, loc_lambda);
 
             //  out =  u_f + u_lam = (*InvHDGHelm)*f + (LamtoU)*Lam
             out = (*InvHDGHelm)*F + (*HDGLamToU)*LocLambda;
