@@ -55,6 +55,7 @@ namespace Nektar
         protected:
             DiffusionLDGNS();
             
+            bool                                 m_explicitDiffusion;
             Array<OneD, Array<OneD, NekDouble> > m_traceVel;
             Array<OneD, Array<OneD, NekDouble> > m_traceNormals;
             LibUtilities::SessionReaderSharedPtr m_session;

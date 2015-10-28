@@ -964,6 +964,7 @@ namespace Nektar
          */
         void EquationSystem::SetBoundaryConditions(NekDouble time)
         {
+            cout << "EquationSystem.cpp - SetBoundaryConditions" << endl;
             std::string varName;
             int nvariables = m_fields.num_elements();
             for (int i = 0; i < nvariables; ++i)

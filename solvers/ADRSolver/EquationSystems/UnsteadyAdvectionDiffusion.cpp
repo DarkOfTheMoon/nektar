@@ -285,6 +285,7 @@ namespace Nektar
               Array<OneD,       Array<OneD, NekDouble> > &outarray,
         const NekDouble time)
     {
+        cout << "DoOdeProjection UAD" << endl;
         int i;
         int nvariables = inarray.num_elements();
         SetBoundaryConditions(time);
@@ -335,6 +336,7 @@ namespace Nektar
         const NekDouble time,
         const NekDouble lambda)
     {
+        cout << "DoImplicitSolve UAD" << endl;
         int nvariables = inarray.num_elements();
         int nq = m_fields[0]->GetNpoints();
 		

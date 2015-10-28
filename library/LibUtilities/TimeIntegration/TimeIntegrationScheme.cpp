@@ -288,6 +288,8 @@ namespace Nektar
                     m_timeLevelOffset = Array<OneD,unsigned int>(m_numsteps);
                     m_timeLevelOffset[0] = 0;
                     m_timeLevelOffset[1] = 0;
+                    
+                    cout << "IMEXOrder1 - Initialization" << endl;
                 }
                 break;
             case eIMEXOrder2:
@@ -1044,12 +1046,12 @@ namespace Nektar
         }
 
 
-        bool TimeIntegrationScheme::
-        VerifyIntegrationSchemeType(TimeIntegrationSchemeType type,
-                                    const Array<OneD, const Array<TwoD, NekDouble> >& A,
-                                    const Array<OneD, const Array<TwoD, NekDouble> >& B,
-                                    const Array<TwoD, const NekDouble>& U,
-                                    const Array<TwoD, const NekDouble>& V) const
+        bool TimeIntegrationScheme::VerifyIntegrationSchemeType(
+            TimeIntegrationSchemeType type,
+            const Array<OneD, const Array<TwoD, NekDouble> >& A,
+            const Array<OneD, const Array<TwoD, NekDouble> >& B,
+            const Array<TwoD, const NekDouble>& U,
+            const Array<TwoD, const NekDouble>& V) const
         {
             int i;
             int j;
@@ -1057,26 +1059,28 @@ namespace Nektar
             int  IMEXdim = A.num_elements();
             int  dim     = A[0].GetRows();
 
-            Array<OneD, TimeIntegrationSchemeType> vertype(IMEXdim,eExplicit);
+            Array<OneD, TimeIntegrationSchemeType> vertype(IMEXdim, eExplicit);
 
-            for(m = 0; m < IMEXdim; m++)
+            for (m = 0; m < IMEXdim; m++)
             {
-                for(i = 0; i < dim; i++)
+                for (i = 0; i < dim; i++)
                 {
-                    if( fabs(A[m][i][i]) > NekConstants::kNekZeroTol )
+                    if (fabs(A[m][i][i]) > NekConstants::kNekZeroTol)
                     {
                         vertype[m] = eDiagonallyImplicit;
                     }
                 }
                 
-                for(i = 0; i < dim; i++)
+                for (i = 0; i < dim; i++)
                 {
-                    for(j = i+1; j < dim; j++)
+                    for (j = i+1; j < dim; j++)
                     {
-                        if( fabs(A[m][i][j]) > NekConstants::kNekZeroTol )
+                        if (fabs(A[m][i][j]) > NekConstants::kNekZeroTol)
                         {
                             vertype[m] = eImplicit;
-                            ASSERTL1(false,"Fully Impplicit schemes cannnot be handled by the TimeIntegrationScheme class");
+                            ASSERTL1(false, "Fully Impplicit schemes cannnot "
+                                     "be handled by the TimeIntegrationScheme "
+                                     "class");
                         }
                     }
                 }
@@ -1099,41 +1103,59 @@ namespace Nektar
             return (vertype[0] == type);
         }
 
-        TimeIntegrationSolutionSharedPtr 
-        TimeIntegrationScheme::InitializeScheme(const NekDouble   timestep,
-                                                ConstDoubleArray  &y_0    ,
-                                                const NekDouble   time    ,
-                                                const TimeIntegrationSchemeOperators &op)
+        
+        
+        
+        TimeIntegrationSolutionSharedPtr
+        TimeIntegrationScheme::InitializeScheme(
+            const NekDouble                       timestep,
+            ConstDoubleArray                     &y_0,
+            const NekDouble                       time,
+            const TimeIntegrationSchemeOperators &op)
         {
             // create a TimeIntegrationSolution object based upon the
             // initial value. Initialise all other multi-step values
             // and derivatives to zero
             TimeIntegrationSolutionSharedPtr y_out = 
-                MemoryManager<TimeIntegrationSolution>::AllocateSharedPtr(m_schemeKey,y_0,time,timestep); 
+                MemoryManager<TimeIntegrationSolution>::
+                    AllocateSharedPtr(m_schemeKey, y_0, time, timestep);
 
             // calculate the initial derivative, if is part of the
             // solution vector of the current scheme
-            if(m_numMultiStepDerivs)
+            if (m_numMultiStepDerivs)
             {
-                if(m_timeLevelOffset[m_numMultiStepValues] == 0)
+                if (m_timeLevelOffset[m_numMultiStepValues] == 0)
                 {
                     int i;
                     int nvar    = y_0.num_elements();
                     int npoints = y_0[0].num_elements();
                     DoubleArray f_y_0(nvar);
-                    for(i = 0; i < nvar; i++)
+                    
+                    for (i = 0; i < nvar; i++)
                     {
-                        f_y_0[i] = Array<OneD,NekDouble>(npoints);
+                        f_y_0[i] = Array<OneD, NekDouble>(npoints);
                     }
-                    // calculate the derivative of the initial value
-                    op.DoOdeRhs(y_0,f_y_0,time);
+                    
+                    cout << "HELLO 1" << endl;
+                    
+                    for (int j = 0; j < y_0.num_elements(); ++j)
+                    {
+                        for (int m = 0; m < y_0[0].num_elements(); ++m)
+                        {
+                            cout << "y = " << y_0[j][m] << endl;
+                        }
+                    }
+                    // Calculate the derivative of the initial value
+                    op.DoOdeRhs(y_0, f_y_0, time);
+                    cout << "HELLO 2" << endl;
                     
                     // multiply by the step size
-                    for(i = 0; i < nvar; i++)
+                    for (i = 0; i < nvar; i++)
                     {
-                        Blas::Dscal(npoints,timestep,f_y_0[i].get(),1);
+                        Blas::Dscal(npoints, timestep, f_y_0[i].get(), 1);
                     }
-                    y_out->SetDerivative(0,f_y_0,timestep);
+                    
+                    y_out->SetDerivative(0, f_y_0, timestep);
                 }
             }
            
@@ -1141,9 +1163,10 @@ namespace Nektar
         }
         
         TimeIntegrationScheme::ConstDoubleArray& 
-        TimeIntegrationScheme::TimeIntegrate(const NekDouble    timestep, 
-                                             TimeIntegrationSolutionSharedPtr &solvector,
-                                             const TimeIntegrationSchemeOperators   &op)
+        TimeIntegrationScheme::TimeIntegrate(
+            const NekDouble                         timestep,
+            TimeIntegrationSolutionSharedPtr       &solvector,
+            const TimeIntegrationSchemeOperators   &op)
         {
             ASSERTL1(!(GetIntegrationSchemeType() == eImplicit),
                      "Fully Implicit integration scheme cannot be handled by this routine.");

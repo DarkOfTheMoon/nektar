@@ -58,43 +58,50 @@ namespace Nektar
    **/
   class NavierStokesCFE : public CompressibleFlowSystem
   {
-  public:
-      friend class MemoryManager<NavierStokesCFE>;
+  public : friend class MemoryManager<NavierStokesCFE>;
 
-    // Creates an instance of this class
-    static SolverUtils::EquationSystemSharedPtr create(
-            const LibUtilities::SessionReaderSharedPtr& pSession)
-    {
-      SolverUtils::EquationSystemSharedPtr p =
+      // Creates an instance of this class
+      static SolverUtils::EquationSystemSharedPtr create(
+        const LibUtilities::SessionReaderSharedPtr& pSession)
+      {
+          SolverUtils::EquationSystemSharedPtr p =
             MemoryManager<NavierStokesCFE>::AllocateSharedPtr(pSession);
-      p->InitObject();
-      return p;
-    }
-    // Name of class
-    static std::string className;
+          
+          p->InitObject();
+          
+          return p;
+      }
+      
+      // Name of class
+      static std::string className;
 
-    virtual ~NavierStokesCFE();
+      virtual ~NavierStokesCFE();
 
-    // Problem type selector
-    ProblemType m_problemType;
+      // Problem type selector
+      ProblemType m_problemType;
 
   protected:
-    NavierStokesCFE(const LibUtilities::SessionReaderSharedPtr& pSession);
+      NavierStokesCFE(const LibUtilities::SessionReaderSharedPtr& pSession);
 
-    virtual void v_InitObject();
-    virtual void v_GenerateSummary(SolverUtils::SummaryList& s);
-    void DoOdeRhs(
+      virtual void v_InitObject();
+      virtual void v_GenerateSummary(SolverUtils::SummaryList& s);
+      void DoOdeRhs(
         const Array<OneD, const Array<OneD, NekDouble> > &inarray,
               Array<OneD,       Array<OneD, NekDouble> > &outarray,
         const NekDouble                                   time);
-    void DoOdeProjection(
+      void DoOdeProjection(
         const Array<OneD, const Array<OneD, NekDouble> > &inarray,
               Array<OneD,       Array<OneD, NekDouble> > &outarray,
         const NekDouble                                   time);
-    virtual void v_SetInitialConditions(
-        NekDouble                               initialtime = 0.0,
+      virtual void DoImplicitSolve(
+        const Array<OneD, const Array<OneD, NekDouble> > &inarray,
+              Array<OneD,       Array<OneD, NekDouble> > &outarray,
+        NekDouble                                         time,
+        NekDouble                                         dt);
+      virtual void v_SetInitialConditions(
+        NekDouble                               initialtime           = 0.0,
         bool                                    dumpInitialConditions = true,
-        const int domain = 0);
+        const int                               domain                = 0);
 
   private:
       void SetBoundaryConditions(

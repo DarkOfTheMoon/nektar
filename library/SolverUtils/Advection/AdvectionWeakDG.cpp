@@ -127,8 +127,10 @@ namespace Nektar
                 fields[i]->GetFwdBwdTracePhys(inarray[i], Fwd[i], Bwd[i]);
             }
 
+            cout << "Before Riemann" << endl;
             m_riemann->Solve(m_spaceDim, Fwd, Bwd, numflux);
-
+            cout << "After Riemann" << endl;
+            
             // Evaulate <\phi, \hat{F}\cdot n> - OutField[i]
             for(i = 0; i < nConvectiveFields; ++i)
             {

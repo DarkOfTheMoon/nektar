@@ -1823,54 +1823,60 @@ namespace Nektar
             }
 
             // Assemble local \lambda_e into global \Lambda
-            m_traceMap->AssembleBnd(loc_lambda,BndRhs);
+            m_traceMap->AssembleBnd(loc_lambda, BndRhs);
 
             // Copy Dirichlet boundary conditions and weak forcing into trace
             // space
             cnt = 0;
-            for(i = 0; i < m_bndCondExpansions.num_elements(); ++i)
+            for (i = 0; i < m_bndCondExpansions.num_elements(); ++i)
             {
-                if(m_bndConditions[i]->GetBoundaryConditionType() == 
-                       SpatialDomains::eDirichlet)
+                if (m_bndConditions[i]->GetBoundaryConditionType()
+                    == SpatialDomains::eDirichlet)
                 {
-                    for(j = 0; j < (m_bndCondExpansions[i])->GetNcoeffs(); ++j)
+                    for (j = 0; j < (m_bndCondExpansions[i])->GetNcoeffs(); ++j)
                     {
-                        id = m_traceMap->GetBndCondCoeffsToGlobalCoeffsMap(cnt++);
+                        id = m_traceMap->GetBndCondCoeffsToGlobalCoeffsMap(
+                                                                        cnt++);
+                        
                         BndSol[id] = m_bndCondExpansions[i]->GetCoeffs()[j];
                     }
                 }
                 else
                 {
-                    //Add weak boundary condition to trace forcing
-                    for(j = 0; j < (m_bndCondExpansions[i])->GetNcoeffs(); ++j)
+                    // Add weak boundary condition to trace forcing
+                    for (j = 0; j < (m_bndCondExpansions[i])->GetNcoeffs(); ++j)
                     {
-                        id = m_traceMap->GetBndCondCoeffsToGlobalCoeffsMap(cnt++);
+                        id = m_traceMap->GetBndCondCoeffsToGlobalCoeffsMap(
+                                                                        cnt++);
+                        
                         BndRhs[id] += m_bndCondExpansions[i]->GetCoeffs()[j];
                     }
                 }
             }
 
-            //----------------------------------
+            //-----------------------------------------
             // Solve trace problem: \Lambda = K^{-1} F
             // K is the HybridDGHelmBndLam matrix.
-            //----------------------------------
-            if(GloBndDofs - NumDirichlet > 0)
+            //-----------------------------------------
+            if (GloBndDofs - NumDirichlet > 0)
             {
                 GlobalLinSysKey       key(StdRegions::eHybridDGHelmBndLam,
                                           m_traceMap,factors,varcoeff);
+                
                 GlobalLinSysSharedPtr LinSys = GetGlobalBndLinSys(key);
-                LinSys->Solve(BndRhs,BndSol,m_traceMap);
+                
+                LinSys->Solve(BndRhs, BndSol, m_traceMap);
             }
 
             //----------------------------------
             // Internal element solves
             //----------------------------------
             GlobalMatrixKey invHDGhelmkey(StdRegions::eInvHybridDGHelmholtz,
-                NullAssemblyMapSharedPtr,factors,varcoeff);
+                NullAssemblyMapSharedPtr, factors, varcoeff);
             const DNekScalBlkMatSharedPtr& InvHDGHelm = GetBlockMatrix(
-                invHDGhelmkey);
-            DNekVec out(m_ncoeffs,outarray,eWrapper);
-            Vmath::Zero(m_ncoeffs,outarray,1);
+                                                            invHDGhelmkey);
+            DNekVec out(m_ncoeffs, outarray, eWrapper);
+            Vmath::Zero(m_ncoeffs, outarray, 1);
 
             // get local trace solution from BndSol
             m_traceMap->GlobalToLocalBnd(BndSol, loc_lambda);

@@ -55,10 +55,11 @@ namespace Nektar
         if(m_session->DefinesSolverInfo("PROBLEMTYPE"))
         {
 
-            std::string ProblemTypeStr = m_session->GetSolverInfo("PROBLEMTYPE");
+            std::string ProblemTypeStr = m_session->
+                                         GetSolverInfo("PROBLEMTYPE");
             for(int i = 0; i < (int) SIZE_ProblemType; ++i)
             {
-                if(NoCaseStringCompare(ProblemTypeMap[i],ProblemTypeStr) == 0)
+                if (NoCaseStringCompare(ProblemTypeMap[i], ProblemTypeStr) == 0)
                 {
                     m_problemType = (ProblemType)i;
                     break;
@@ -70,14 +71,21 @@ namespace Nektar
             m_problemType = (ProblemType)0;
         }
 
-        if (m_explicitAdvection)
+        if ((m_explicitAdvection == true) && (m_explicitDiffusion == true))
         {
             m_ode.DefineOdeRhs     (&NavierStokesCFE::DoOdeRhs,        this);
             m_ode.DefineProjection (&NavierStokesCFE::DoOdeProjection, this);
         }
+        else if ((m_explicitAdvection == true) &&
+                 (m_explicitDiffusion == false))
+        {
+            m_ode.DefineImplicitSolve(&NavierStokesCFE::DoImplicitSolve, this);
+            m_ode.DefineOdeRhs       (&NavierStokesCFE::DoOdeRhs,        this);
+        }
         else
         {
-            ASSERTL0(false, "Implicit CFE not set up.");
+            ASSERTL0(false, "Fully implicit compressible Navier-Stokes "
+                     "equations not implemented.");
         }
     }
 
@@ -135,68 +143,96 @@ namespace Nektar
               Array<OneD,       Array<OneD, NekDouble> > &outarray,
         const NekDouble                                   time)
     {
+        cout << "DoOdeRhs" << endl;
+
         int i;
         int nvariables = inarray.num_elements();
         int npoints    = GetNpoints();
 
 
         Array<OneD, Array<OneD, NekDouble> > advVel(m_spacedim);
+        
         Array<OneD, Array<OneD, NekDouble> > outarrayAdv(nvariables);
         Array<OneD, Array<OneD, NekDouble> > outarrayDiff(nvariables);
-
-        Array<OneD, Array<OneD, NekDouble> > inarrayTemp(nvariables-1);
-        Array<OneD, Array<OneD, NekDouble> > inarrayDiff(nvariables-1);
-
         for (i = 0; i < nvariables; ++i)
         {
             outarrayAdv[i] = Array<OneD, NekDouble>(npoints, 0.0);
             outarrayDiff[i] = Array<OneD, NekDouble>(npoints, 0.0);
         }
 
-        for (i = 0; i < nvariables-1; ++i)
-        {
-            inarrayTemp[i] = Array<OneD, NekDouble>(npoints, 0.0);
-            inarrayDiff[i] = Array<OneD, NekDouble>(npoints, 0.0);
-        }
-
         // Advection term in physical rhs form
         m_advection->Advect(nvariables, m_fields, advVel, inarray,
                             outarrayAdv, time);
-
+        
         // Extract pressure and temperature
         Array<OneD, NekDouble > pressure   (npoints, 0.0);
         Array<OneD, NekDouble > temperature(npoints, 0.0);
         GetPressure(inarray, pressure);
         GetTemperature(inarray, pressure, temperature);
 
-        // Extract velocities
-        for (i = 1; i < nvariables-1; ++i)
+        if (m_explicitDiffusion == true)
         {
-            Vmath::Vdiv(npoints,
-                        inarray[i], 1,
-                        inarray[0], 1,
-                        inarrayTemp[i-1], 1);
-        }
+            cout << "m_explicitDiffusion=true 1 in NavierStokesCFE.cpp" << endl;
+            Array<OneD, Array<OneD, NekDouble> > inarrayDiff(nvariables-1);
+            for (i = 0; i < nvariables-1; ++i)
+            {
+                inarrayDiff[i] = Array<OneD, NekDouble>(npoints, 0.0);
+            }
+            
+            // Extract and copy velocities
+            for (i = 1; i < nvariables-1; ++i)
+            {
+                Vmath::Vdiv(npoints, inarray[i], 1, inarray[0], 1,
+                            inarrayDiff[i-1], 1);
+            }
 
-        // Copy velocities into new inarrayDiff
-        for (i = 0; i < nvariables-2; ++i)
+            // Copy temperature
+            Vmath::Vcopy(npoints, temperature, 1, inarrayDiff[nvariables-2], 1);
+
+            cout << "m_explicitDiffusion=true 2 in NavierStokesCFE.cpp" << endl;
+            
+            // Diffusion term in physical RHS form
+            m_diffusion->Diffuse(nvariables, m_fields, inarrayDiff,
+                                 outarrayDiff);
+            
+            cout << "m_explicitDiffusion=true 3 in NavierStokesCFE.cpp" << endl;
+
+        }
+        else if (m_explicitDiffusion == false)
         {
-            Vmath::Vcopy(npoints, inarrayTemp[i], 1, inarrayDiff[i], 1);
+            cout << "m_explicitDiffusion=false 1 in NavierStokesCFE.cpp" << endl;
+            Array<OneD, Array<OneD, NekDouble> > inarrayDiff(nvariables);
+            for (i = 0; i < nvariables-1; ++i)
+            {
+                inarrayDiff[i] = Array<OneD, NekDouble>(npoints, 0.0);
+            }
+            
+            // Extract and copy velocities
+            for (i = 1; i < nvariables-1; ++i)
+            {
+                Vmath::Vdiv(npoints, inarray[i], 1, inarray[0], 1,
+                            inarrayDiff[i-1], 1);
+            }
+            
+            // Copy temperature
+            Vmath::Vcopy(npoints, temperature, 1, inarrayDiff[nvariables-2], 1);
+            
+            // Copy density
+            Vmath::Vcopy(npoints, inarray[0], 1, inarrayDiff[nvariables-1], 1);
+
+            cout << "m_explicitDiffusion=false 2 in NavierStokesCFE.cpp" << endl;
+            // Diffusion term in physical RHS form
+            m_diffusion->Diffuse(nvariables, m_fields, inarrayDiff,
+                                 outarrayDiff);
+            
+            cout << "m_explicitDiffusion=false 3 in NavierStokesCFE.cpp" << endl;
+
         }
-
-        // Copy temperature into new inarrayDiffusion
-        Vmath::Vcopy(npoints,
-                     temperature, 1,
-                     inarrayDiff[nvariables-2], 1);
-
-        // Diffusion term in physical rhs form
-        m_diffusion->Diffuse(nvariables, m_fields, inarrayDiff, outarrayDiff);
-
+        
+        // Calculate the overall RHS
         for (i = 0; i < nvariables; ++i)
         {
-            Vmath::Vsub(npoints,
-                        outarrayDiff[i], 1,
-                        outarrayAdv[i], 1,
+            Vmath::Vsub(npoints, outarrayDiff[i], 1, outarrayAdv[i], 1,
                         outarray[i], 1);
         }
 
@@ -213,6 +249,7 @@ namespace Nektar
               Array<OneD,       Array<OneD, NekDouble> > &outarray,
         const NekDouble                                   time)
     {
+        cout << "DoOdeProjection" << endl;
         int i;
         int nvariables = inarray.num_elements();
 
@@ -227,6 +264,7 @@ namespace Nektar
                 {
                     Vmath::Vcopy(npoints, inarray[i], 1, outarray[i], 1);
                 }
+                
                 SetBoundaryConditions(outarray, time);
                 break;
             }
@@ -242,19 +280,116 @@ namespace Nektar
                 break;
         }
     }
+    
+    
+    /* @brief Compute the diffusion term implicitly.
+     *
+     * @param inarray    Given fields.
+     * @param outarray   Calculated solution.
+     * @param time       Time.
+     * @param lambda     Diffusion coefficient.
+     */
+    void NavierStokesCFE::DoImplicitSolve(
+        const Array<OneD, const Array<OneD, NekDouble> >&inarray,
+              Array<OneD,       Array<OneD, NekDouble> >&outarray,
+        const NekDouble time,
+        const NekDouble dt)
+    {
+        cout << "DoImplicitSolve" << endl;
+        int nq = m_fields[0]->GetNpoints();
+        int nvariables = inarray.num_elements();
+        StdRegions::ConstFactorMap factors;
+        
+        // Forcing term for the Helmholtz problem (previous time-level)
+        Array<OneD, Array< OneD, NekDouble> > F(nvariables);
+        F[0] = Array<OneD, NekDouble> (nq*nvariables);
+        for (int n = 1; n < nvariables; ++n)
+        {
+            F[n] = F[n-1] + nq;
+        }
+        
+        // ---------------------------------------------------------------------
+        // Correct spatially varying coefficients - need to comment them out
+        // because HelmSolve call accepts only Stdregions::ConstFactorMap input
+        // ---------------------------------------------------------------------
+        /*
+        Array<OneD, NekDouble> factorLambdaMomentum(nq, 0.0);
+        Array<OneD, NekDouble> factorLambdaEnergy(nq, 0.0);
+        Vmath::Smul(nq, -1.0 / (dt * m_mu),
+                    inarray[0], 1, factorLambdaMomentum, 1);
+        Vmath::Smul(nq, (m_gamma / m_Prandtl),
+                    factorLambdaMomentum, 1,
+                    factorLambdaEnergy, 1);
+        
+        // Defining forcing term as the previous time-level solution scaled
+        // by nabla operator coefficient and timestep (see chapter 5 of
+        // Karnidakis and Sherwin book)
+        for (int i = 1; i < nvariables-1; ++i)
+        {
+            Vmath::Vmul(nq, factorLambdaMomentum, 1, inarray[i], 1, F[i], 1);
+        }
+        Vmath::Vmul(nq, factorLambdaEnergy, 1, inarray[nvariables-1], 1,
+                    F[nvariables-1], 1);
+        */
+        // ---------------------------------------------------------------------
+        
+        // Setting boundary conditions
+        SetBoundaryConditions(outarray, time);
+        
+        // Defining the scalar factors needed by the HelmSolve call
+        factors[StdRegions::eFactorLambda] = m_rhoInf / (dt * m_mu);
+        
+        // Solve the momentum equations with Helmholtz solver
+        for (int i = 1; i < nvariables-2; ++i)
+        {
+            m_fields[i]->HelmSolve(F[i], m_fields[i]->UpdateCoeffs(),
+                                   NullFlagList, factors);
+            
+            Vmath::Vcopy(outarray[i].num_elements(),
+                         m_fields[i]->GetCoeffs(), 1,
+                         outarray[i], 1);
+            
+            m_fields[i]->BwdTrans(m_fields[i]->GetCoeffs(), outarray[i]);
+        }
+        
+        // Defining the scalar factors needed by the HelmSolve call
+        factors[StdRegions::eFactorLambda] = (m_Prandtl * m_rhoInf) /
+                                                (m_gamma * dt * m_mu);
+        
+        // Solve the energy equation with Helmholtsz solver
+        m_fields[nvariables-1]->HelmSolve(
+            F[nvariables-1],
+            m_fields[nvariables-1]->UpdateCoeffs(),
+            NullFlagList, factors);
+        
+        Vmath::Vcopy(outarray[nvariables-1].num_elements(),
+                     m_fields[nvariables-1]->GetCoeffs(), 1,
+                     outarray[nvariables-1], 1);
+        
+        m_fields[nvariables-1]->BwdTrans(m_fields[nvariables-1]->GetCoeffs(),
+                                         outarray[nvariables-1]);
+    }
 
+    
+    
+    /* @brief Set the boundary conditions.
+     *
+     * @param inarray    Given fields.
+     * @param time       Time.
+     */
     void NavierStokesCFE::SetBoundaryConditions(
         Array<OneD, Array<OneD, NekDouble> > &inarray,
         NekDouble                             time)
     {
+        int cnt = 0;
         std::string varName;
-        int cnt        = 0;
 
-        // loop over Boundary Regions
+        // Loop over Boundary Regions
         for (int n = 0; n < m_fields[0]->GetBndConditions().num_elements(); ++n)
         {
-            std::string type = m_fields[0]->GetBndConditions()[n]->GetUserDefined();
-            SetCommonBC(type,n,time,cnt,inarray);
+            std::string type = m_fields[0]->
+            GetBndConditions()[n]->GetUserDefined();
+            SetCommonBC(type, n, time, cnt, inarray);
         }
     }
 }

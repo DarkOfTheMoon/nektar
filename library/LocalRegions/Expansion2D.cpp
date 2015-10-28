@@ -881,7 +881,7 @@ namespace Nektar
                     }
                 }
                 break;
-                        // Matrix K (P23)
+            // Matrix K (P23)
             case StdRegions::eHybridDGHelmBndLam:
                 {
                     int i,j,e,cnt;

@@ -79,7 +79,7 @@ namespace Nektar
 
             // Load SolverInfo parameters
             m_session->MatchSolverInfo("DIFFUSIONADVANCEMENT","Explicit",
-                                       m_explicitDiffusion,true);
+                                       m_explicitDiffusion, true);
             m_session->MatchSolverInfo("ADVECTIONADVANCEMENT","Explicit",
                                        m_explicitAdvection,true);
             m_session->MatchSolverInfo("REACTIONADVANCEMENT", "Explicit",
@@ -448,6 +448,7 @@ namespace Nektar
          */
         void UnsteadySystem::v_DoInitialise()
         {
+            cout << "DoInitialise" << endl;
             CheckForRestartTime(m_time);
             SetBoundaryConditions(m_time);
             SetInitialConditions(m_time);
