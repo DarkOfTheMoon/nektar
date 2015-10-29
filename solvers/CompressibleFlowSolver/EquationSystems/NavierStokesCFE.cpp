@@ -143,8 +143,6 @@ namespace Nektar
               Array<OneD,       Array<OneD, NekDouble> > &outarray,
         const NekDouble                                   time)
     {
-        cout << "DoOdeRhs" << endl;
-
         int i;
         int nvariables = inarray.num_elements();
         int npoints    = GetNpoints();
@@ -172,7 +170,6 @@ namespace Nektar
 
         if (m_explicitDiffusion == true)
         {
-            cout << "m_explicitDiffusion=true 1 in NavierStokesCFE.cpp" << endl;
             Array<OneD, Array<OneD, NekDouble> > inarrayDiff(nvariables-1);
             for (i = 0; i < nvariables-1; ++i)
             {
@@ -188,21 +185,15 @@ namespace Nektar
 
             // Copy temperature
             Vmath::Vcopy(npoints, temperature, 1, inarrayDiff[nvariables-2], 1);
-
-            cout << "m_explicitDiffusion=true 2 in NavierStokesCFE.cpp" << endl;
             
             // Diffusion term in physical RHS form
             m_diffusion->Diffuse(nvariables, m_fields, inarrayDiff,
                                  outarrayDiff);
-            
-            cout << "m_explicitDiffusion=true 3 in NavierStokesCFE.cpp" << endl;
-
         }
         else if (m_explicitDiffusion == false)
         {
-            cout << "m_explicitDiffusion=false 1 in NavierStokesCFE.cpp" << endl;
             Array<OneD, Array<OneD, NekDouble> > inarrayDiff(nvariables);
-            for (i = 0; i < nvariables-1; ++i)
+            for (i = 0; i < nvariables; ++i)
             {
                 inarrayDiff[i] = Array<OneD, NekDouble>(npoints, 0.0);
             }
@@ -220,13 +211,9 @@ namespace Nektar
             // Copy density
             Vmath::Vcopy(npoints, inarray[0], 1, inarrayDiff[nvariables-1], 1);
 
-            cout << "m_explicitDiffusion=false 2 in NavierStokesCFE.cpp" << endl;
             // Diffusion term in physical RHS form
             m_diffusion->Diffuse(nvariables, m_fields, inarrayDiff,
                                  outarrayDiff);
-            
-            cout << "m_explicitDiffusion=false 3 in NavierStokesCFE.cpp" << endl;
-
         }
         
         // Calculate the overall RHS
@@ -249,7 +236,6 @@ namespace Nektar
               Array<OneD,       Array<OneD, NekDouble> > &outarray,
         const NekDouble                                   time)
     {
-        cout << "DoOdeProjection" << endl;
         int i;
         int nvariables = inarray.num_elements();
 
@@ -295,7 +281,6 @@ namespace Nektar
         const NekDouble time,
         const NekDouble dt)
     {
-        cout << "DoImplicitSolve" << endl;
         int nq = m_fields[0]->GetNpoints();
         int nvariables = inarray.num_elements();
         StdRegions::ConstFactorMap factors;

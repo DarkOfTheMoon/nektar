@@ -130,57 +130,30 @@ namespace Nektar
             Array<OneD, Array<OneD, NekDouble> > tmp2(nConvectiveFields);
             
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > 
-                                                    numericalFluxO1(m_spaceDim);
+                                                 numericalFluxO1(m_spaceDim);
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > 
-                                                    derivativesO1(m_spaceDim);
+                                                 derivativesO1(m_spaceDim);
             
             Array<OneD, Array<OneD, NekDouble> > fluxvector(m_spaceDim);
             
-            cout << "LDGNS Hello 0" << endl;
-            cout << "nScalars = " << nScalars << endl;
             for (j = 0; j < m_spaceDim; ++j)
             {
-                cout << "LDGNS Hello j = " << j << endl;
-                
                 derivativesO1[j] = Array<OneD, Array<OneD, NekDouble> >(
                                                                 nScalars);
-                
-                cout << "LDGNS Hello first j = " << j << endl;
-
-                cout << "LDGNS Hello second j = " << j << endl;
-                
-                for (i = 0; i < nScalars; ++i)
-                {
-                    cout << "LDGNS Hello i = " << i << endl;
-
-                    derivativesO1[j][i]   = Array<OneD, NekDouble>(nPts, 0.0);
-                }
-            }
-
-            for (j = 0; j < m_spaceDim; ++j)
-            {
-                cout << "LDGNS Hello j = " << j << endl;
-                
                 numericalFluxO1[j] = Array<OneD, Array<OneD, NekDouble> >(
                                                                 nScalars);
                 
-                cout << "LDGNS Hello second j = " << j << endl;
-                
                 for (i = 0; i < nScalars; ++i)
                 {
-                    cout << "LDGNS Hello i = " << i << endl;
-                    
+                    derivativesO1[j][i]   = Array<OneD, NekDouble>(
+                                                                nPts, 0.0);
                     numericalFluxO1[j][i] = Array<OneD, NekDouble>(
                                                                 nTracePts, 0.0);
                 }
             }
             
-            cout << "LDGNS Hello 1" << endl;
-            
             // Compute the numerical fluxes for the first order derivatives
             v_NumericalFluxO1(fields, inarray, numericalFluxO1);
-
-            cout << "LDGNS Hello 2" << endl;
             
             for (j = 0; j < nDim; ++j)
             {
@@ -213,8 +186,8 @@ namespace Nektar
             for (j = 0; j < m_spaceDim; ++j)
             {
                 m_viscTensor[j] = Array<OneD, Array<OneD, NekDouble> >(
-                                                                    nScalars+1);
-                for (i = 0; i < nScalars+1; ++i)
+                                                            nConvectiveFields);
+                for (i = 0; i < nConvectiveFields; ++i)
                 {
                     m_viscTensor[j][i] = Array<OneD, NekDouble>(nPts, 0.0);
                 }
@@ -274,15 +247,10 @@ namespace Nektar
                              Vn, 1, Vn, 1);
             }
             
-            cout << "NumericalFluxO1 - 1" << endl;
             // Store forwards/backwards space along trace space
             Array<OneD, Array<OneD, NekDouble> > Fwd    (nScalars);
-            
             Array<OneD, Array<OneD, NekDouble> > Bwd    (nScalars);
-            
             Array<OneD, Array<OneD, NekDouble> > numflux(nScalars);
-            
-            cout << "NumericalFluxO1 - 2" << endl;
             
             for (i = 0; i < nScalars; ++i)
             {
@@ -293,14 +261,12 @@ namespace Nektar
                 fields[0]->GetTrace()->Upwind(Vn, Fwd[i], Bwd[i], numflux[i]);
             }
             
-            cout << "NumericalFluxO1 - 3" << endl;
             // Modify the values in case of boundary interfaces
             if (fields[0]->GetBndCondExpansions().num_elements())
             {
                 v_WeakPenaltyO1(fields, inarray, numflux);
             }
             
-            cout << "NumericalFluxO1 - 4" << endl;
             // Splitting the numerical flux into the dimensions
             for (j = 0; j < m_spaceDim; ++j)
             {
@@ -310,8 +276,6 @@ namespace Nektar
                                 numflux[i], 1, numericalFluxO1[j][i], 1);
                 }
             }
-            
-            cout << "NumericalFluxO1 - 5" << endl;
         }        
         
         /**
@@ -405,7 +369,7 @@ namespace Nektar
                                         &scalarVariables[i][id2], 1);
                         }
                         
-                        // For Dirichlet boundary condition: uflux = u_bcs
+                        // Dirichlet boundary condition: uflux = u_bcs
                         if (fields[i]->GetBndConditions()[j]->
                             GetBoundaryConditionType() == 
                             SpatialDomains::eDirichlet)
@@ -414,7 +378,7 @@ namespace Nektar
                                          &scalarVariables[i][id2], 1, 
                                          &penaltyfluxO1[i][id2], 1);
                         }
-                        // For Neumann boundary condition: uflux = u_+
+                        // Neumann boundary condition: uflux = u_+
                         else if ((fields[i]->GetBndConditions()[j])->
                                  GetBoundaryConditionType() == 
                                  SpatialDomains::eNeumann)
@@ -444,7 +408,6 @@ namespace Nektar
             
             // Compute boundary conditions for temperature
             cnt = 0;
-            cout << "nScalars = " << nScalars << endl;
             nBndRegions = fields[nScalars]->
             GetBndCondExpansions().num_elements();
             for (j = 0; j < nBndRegions; ++j)
@@ -498,7 +461,7 @@ namespace Nektar
                                     &scalarVariables[nScalars-1][id2], 1);
                     }
 
-                    // For Dirichlet boundary condition: uflux = u_bcs
+                    // Dirichlet boundary condition: uflux = u_bcs
                     if (fields[nScalars]->GetBndConditions()[j]->
                         GetBoundaryConditionType() ==
                         SpatialDomains::eDirichlet &&
@@ -676,8 +639,7 @@ namespace Nektar
                                     &qtemp[id2], 1, 
                                     &penaltyflux[id2], 1);
                     }
-                    // 3.4) In case of Neumann bcs: 
-                    // uflux = u+
+                    // In case of Neumann bcs: uflux = u+
                     else if((fields[var]->GetBndConditions()[i])->
                         GetBoundaryConditionType() == SpatialDomains::eNeumann)
                     {
