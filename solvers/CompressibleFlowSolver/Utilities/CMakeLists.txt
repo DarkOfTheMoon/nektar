@@ -1,3 +1,5 @@
+SET(blProfilesExtraction blProfilesExtraction.cpp)
+ADD_SOLVER_EXECUTABLE(blProfilesExtraction solvers ${blProfilesExtraction})
 SET(ExtractSurface2DCFSSources ExtractSurface2DCFS.cpp)
 ADD_SOLVER_EXECUTABLE(ExtractSurface2DCFS solvers ${ExtractSurface2DCFSSources})
 SET(ExtractSurface3DCFSSources ExtractSurface3DCFS.cpp)
