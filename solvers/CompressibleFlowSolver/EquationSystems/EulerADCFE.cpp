@@ -133,7 +133,6 @@ namespace Nektar
         int nvariables = inarray.num_elements();
         int npoints    = GetNpoints();
 
-
         if (m_shockCaptureType == "NonSmooth")
         {
             
@@ -165,6 +164,7 @@ namespace Nektar
                             outarray[i], 1);
             }
         }
+        
         if(m_shockCaptureType == "Smooth")
         {
             Array<OneD, Array<OneD, NekDouble> > advVel;
@@ -177,17 +177,17 @@ namespace Nektar
                 outarrayDiff[i] = Array<OneD, NekDouble>(npoints, 0.0);
             }
             
-            m_advection->Advect(nvariables, m_fields, advVel, inarray,
-                                outarrayAdv, m_time);
+            //m_advection->Advect(nvariables, m_fields, advVel, inarray,
+            //                    outarrayAdv, m_time);
             
             for (i = 0; i < nvariables; ++i)
             {
                 Vmath::Neg(npoints, outarrayAdv[i], 1);
             }
             
-            const Array<OneD, int> ExpOrder = GetNumExpModesPerExp();
+            /*const Array<OneD, int> ExpOrder = GetNumExpModesPerExp();
 
-            NekDouble pOrder = Vmath::Vmax(ExpOrder.num_elements(), ExpOrder, 1);
+            NekDouble pOrder = ExpOrder[0];
 
             Array <OneD, NekDouble > a_vel  (npoints, 0.0);
             Array <OneD, NekDouble > u_abs  (npoints, 0.0);
@@ -200,9 +200,7 @@ namespace Nektar
 
             Vmath::Vadd(npoints, a_vel, 1, u_abs, 1, wave_sp, 1);
 
-            NekDouble max_wave_sp = Vmath::Vmax(npoints, wave_sp, 1);
-            
-            
+            NekDouble max_wave_sp = Vmath::Vmax(npoints, wave_sp, 1);*/
 
             /*Vmath::Smul(npoints,
                         max_wave_sp,
@@ -212,8 +210,8 @@ namespace Nektar
             Vmath::Smul(npoints,
                         pOrder,
                         outarrayDiff[nvariables-1], 1,
-                        outarrayDiff[nvariables-1], 1);*/
-            
+                        outarrayDiff[nvariables-1], 1);
+            */
             m_diffusion->Diffuse(nvariables, m_fields, inarray, outarrayDiff);
             
             
@@ -221,6 +219,7 @@ namespace Nektar
                         m_C2,
                         outarrayDiff[nvariables-1], 1,
                         outarrayDiff[nvariables-1], 1);
+            
             
             for (i = 0; i < nvariables; ++i)
             {
@@ -297,88 +296,27 @@ namespace Nektar
         NekDouble                             time)
     {
         std::string varName;
-        int nvariables = m_fields.num_elements();
         int cnt        = 0;
 
         // loop over Boundary Regions
         for (int n = 0; n < m_fields[0]->GetBndConditions().num_elements(); ++n)
         {
+            std::string type = m_fields[0]->GetBndConditions()[n]->GetUserDefined();
             // Wall Boundary Condition
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                SpatialDomains::eWall)
+            if (boost::iequals(type,"WallViscous"))
             {
-                WallBC(n, cnt, inarray);
-            }
-
-            // Wall Boundary Condition
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                SpatialDomains::eWallViscous)
-            {
+                // Wall Boundary Condition
                 ASSERTL0(false, "WallViscous is a wrong bc for the "
-                "Euler equations");
+                         "Euler equations");
             }
-
-            // Symmetric Boundary Condition
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                SpatialDomains::eSymmetry)
+            else
             {
-                SymmetryBC(n, cnt, inarray);
+                SetCommonBC(type,n,time, cnt,inarray);
             }
 
-            // Riemann invariant characteristic Boundary Condition (CBC)
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                SpatialDomains::eRiemannInvariant)
-            {
-                RiemannInvariantBC(n, cnt, inarray);
-            }
-
-            // Pressure outflow non-reflective Boundary Condition
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                SpatialDomains::ePressureOutflowNonReflective)
-            {
-                PressureOutflowNonReflectiveBC(n, cnt, inarray);
-            }
-
-            // Pressure outflow Boundary Condition
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                SpatialDomains::ePressureOutflow)
-            {
-                PressureOutflowBC(n, cnt, inarray);
-            }
-
-            // Pressure outflow Boundary Condition from file
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                SpatialDomains::ePressureOutflowFile)
-            {
-                PressureOutflowFileBC(n, cnt, inarray);
-            }
-
-            // Pressure inflow Boundary Condition from file
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                SpatialDomains::ePressureInflowFile)
-            {
-                PressureInflowFileBC(n, cnt, inarray);
-            }
-
-            // Extrapolation of the data at the boundaries
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                SpatialDomains::eExtrapOrder0)
-            {
-                ExtrapOrder0BC(n, cnt, inarray);
-            }
-
-            // Time Dependent Boundary Condition (specified in meshfile)
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined()
-                == SpatialDomains::eTimeDependent)
-            {
-                for (int i = 0; i < nvariables; ++i)
-                {
-                    varName = m_session->GetVariable(i);
-                    m_fields[i]->EvaluateBoundaryConditions(time, varName);
-                }
-            }
-
-            cnt += m_fields[0]->GetBndCondExpansions()[n]->GetExpSize();
+            // no User Defined conditions provided so skip cnt 
+            // this line is left in case solver specific condition is added. 
+            cnt += m_fields[0]->GetBndCondExpansions()[n]->GetExpSize(); 
         }
     }
 }

@@ -109,6 +109,9 @@ namespace Nektar
         NekDouble                           m_Prandtl;
         NekDouble                           m_amplitude;
         NekDouble                           m_omega;
+        NekDouble                           m_sd;
+        NekDouble                           m_sm;
+        NekDouble                           m_fl;
 
         // L2 error file
         std::ofstream m_errFile;
@@ -160,6 +163,13 @@ namespace Nektar
             const Array<OneD, Array<OneD, NekDouble> >         &physfield,
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &derivatives,
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &viscousTensor);
+
+        void SetCommonBC(const std::string &userDefStr,
+                         const int n,
+                         const NekDouble time,
+                         int &cnt,
+                         Array<OneD, Array<OneD, NekDouble> > &inarray);
+        
         void WallBC(
             int                                                 bcRegion,
             int                                                 cnt,
@@ -227,6 +237,9 @@ namespace Nektar
             const Array<OneD, const             NekDouble>   &pressure,
             const Array<OneD, const             NekDouble>   &temperature,
                   Array<OneD,                   NekDouble>   &entropy);
+        void GetEntropyError(
+            const Array<OneD, const Array<OneD, NekDouble> > &physfield,
+            const Array<OneD, const             NekDouble>   &pressure);
         void GetSmoothArtificialViscosity(
             const Array<OneD, Array<OneD, NekDouble> > &physfield,
                   Array<OneD,             NekDouble  > &eps_bar);
@@ -239,13 +252,14 @@ namespace Nektar
 
         virtual bool v_PostIntegrate(int step);
         bool CalcSteadyState(bool output);
-
+        
+        void GetJacobians(Array<OneD, NekDouble>   &jacobians);
+        
         void GetSensor(
             const Array<OneD, const Array<OneD, NekDouble> > &physarray,
                   Array<OneD,                   NekDouble>   &Sensor,
                   Array<OneD,                   NekDouble>   &SensorKappa);
         void GetElementDimensions(
-                  Array<OneD,       Array<OneD, NekDouble> > &outarray,
                   Array<OneD,                   NekDouble >  &hmin);
         void GetAbsoluteVelocity(
             const Array<OneD, const Array<OneD, NekDouble> > &inarray,

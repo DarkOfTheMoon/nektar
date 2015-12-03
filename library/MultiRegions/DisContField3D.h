@@ -162,6 +162,9 @@ namespace Nektar
             virtual void v_AddTraceIntegral(
                 const Array<OneD, const NekDouble> &Fn,
                       Array<OneD,       NekDouble> &outarray);
+            virtual void v_AverageTracePhys(
+                                            const Array<OneD, const NekDouble> &inarray,
+                                            Array<OneD,       NekDouble> &outarray);
             virtual void v_AddFwdBwdTraceIntegral(
                 const Array<OneD, const NekDouble> &Fwd, 
                 const Array<OneD, const NekDouble> &Bwd, 
@@ -181,6 +184,7 @@ namespace Nektar
             virtual void v_GetBoundaryToElmtMap(
                 Array<OneD, int> &ElmtID,
                 Array<OneD, int> &FaceID);
+            virtual void v_Reset();
 
             /*
              * @brief Obtain a copy of the periodic edges and vertices for this

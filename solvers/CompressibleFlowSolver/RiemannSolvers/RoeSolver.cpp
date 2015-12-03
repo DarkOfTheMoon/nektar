@@ -174,12 +174,12 @@ namespace Nektar
         }
     }
     void RoeSolver::v_PointAdjointSolve(
-        double  rhoL, double  rhouL, double  rhovL, double  rhowL, double  EL,
-        double  rhoR, double  rhouR, double  rhovR, double  rhowR, double  ER,
-        double  rhoLdir, double  rhouLdir, double  rhovLdir, double  rhowLdir, double  ELdir,
-        double  rhoRdir, double  rhouRdir, double  rhovRdir, double  rhowRdir, double  ERdir,
-        double &rhof, double &rhouf, double &rhovf, double &rhowf, double &Ef)
-    {        
+                                        double  rhoL, double  rhouL, double  rhovL, double  rhowL, double  EL,
+                                        double  rhoR, double  rhouR, double  rhovR, double  rhowR, double  ER,
+                                        double  rhoLdir, double  rhouLdir, double  rhovLdir, double  rhowLdir, double  ELdir,
+                                        double  rhoRdir, double  rhouRdir, double  rhovRdir, double  rhowRdir, double  ERdir,
+                                        double &rhof, double &rhouf, double &rhovf, double &rhowf, double &Ef)
+    {
         static NekDouble gamma = m_params["gamma"]();
         
         // Left and right velocities
@@ -213,13 +213,13 @@ namespace Nektar
         NekDouble URoe   = (uRoe * uRoe + vRoe * vRoe + wRoe * wRoe);
         NekDouble cRoe   = sqrt((gamma - 1.0)*(hRoe - 0.5 * URoe));
         
-         NekDouble k[5][5] = {
-             {0.5*URoe + (cRoe*uRoe)/(gamma-1.0), -uRoe-cRoe/(gamma-1.0), -vRoe, -wRoe, 1},
-             {uRoe*uRoe-hRoe, -uRoe, 0, 0, 1},
-             {-vRoe, 0, 1, 0, 0},
-             {-wRoe, 0, 0, 1, 0},
-             {0.5*URoe - (cRoe*uRoe)/(gamma-1.0), -uRoe+cRoe/(gamma-1.0), -vRoe, -wRoe, 1},
-         };
+        NekDouble k[5][5] = {
+            {0.5*URoe + (cRoe*uRoe)/(gamma-1.0), -uRoe-cRoe/(gamma-1.0), -vRoe, -wRoe, 1},
+            {uRoe*uRoe-hRoe, -uRoe, 0, 0, 1},
+            {-vRoe, 0, 1, 0, 0},
+            {-wRoe, 0, 0, 1, 0},
+            {0.5*URoe - (cRoe*uRoe)/(gamma-1.0), -uRoe+cRoe/(gamma-1.0), -vRoe, -wRoe, 1},
+        };
         
         // Calculate jumps \Delta u_i (defined preceding equation 11.67).
         NekDouble jump[5] = {
@@ -232,44 +232,44 @@ namespace Nektar
         
         // wave strength
         NekDouble alpha[5];
-    
+        
         // =====================================================================
         alpha[0] = ((gamma - 1)/(2*(cRoe*cRoe)))*jump[0]
-                    + (-((cRoe - uRoe)*(gamma - 1))/(2*(cRoe*cRoe)))*jump[1]
-                    + ((vRoe*(gamma - 1))/(2*(cRoe*cRoe)))*jump[2]
-                    + ((wRoe*(gamma - 1))/(2*(cRoe*cRoe)))*jump[3]
-                    + (((gamma - 1)*(hRoe - cRoe*uRoe))/(2*(cRoe*cRoe)))*jump[4];
+        + (-((cRoe - uRoe)*(gamma - 1))/(2*(cRoe*cRoe)))*jump[1]
+        + ((vRoe*(gamma - 1))/(2*(cRoe*cRoe)))*jump[2]
+        + ((wRoe*(gamma - 1))/(2*(cRoe*cRoe)))*jump[3]
+        + (((gamma - 1)*(hRoe - cRoe*uRoe))/(2*(cRoe*cRoe)))*jump[4];
         
         alpha[1] = (-(gamma - 1)/(cRoe*cRoe))*jump[0]
-                    + (-(uRoe*(gamma - 1))/(cRoe*cRoe))*jump[1]
-                    + (-(vRoe*(gamma - 1))/(cRoe*cRoe))*jump[2]
-                    + (-(wRoe*(gamma - 1))/(cRoe*cRoe))*jump[3]
-                    + (-(URoe*(gamma - 1))/(2*(cRoe*cRoe)))*jump[4];
+        + (-(uRoe*(gamma - 1))/(cRoe*cRoe))*jump[1]
+        + (-(vRoe*(gamma - 1))/(cRoe*cRoe))*jump[2]
+        + (-(wRoe*(gamma - 1))/(cRoe*cRoe))*jump[3]
+        + (-(URoe*(gamma - 1))/(2*(cRoe*cRoe)))*jump[4];
         
         alpha[2] = ((vRoe*(gamma - 1))/(cRoe*cRoe))*jump[0]
-                    + ((uRoe*vRoe*(gamma - 1))/(cRoe*cRoe))*jump[1]
-                    + (((vRoe*vRoe)*(gamma - 1))/((cRoe*cRoe)) + 1)*jump[2]
-                    + ((vRoe*wRoe*(gamma - 1))/(cRoe*cRoe))*jump[3]
-                    + ((hRoe*vRoe*(gamma - 1))/(cRoe*cRoe))*jump[4];
+        + ((uRoe*vRoe*(gamma - 1))/(cRoe*cRoe))*jump[1]
+        + (((vRoe*vRoe)*(gamma - 1))/((cRoe*cRoe)) + 1)*jump[2]
+        + ((vRoe*wRoe*(gamma - 1))/(cRoe*cRoe))*jump[3]
+        + ((hRoe*vRoe*(gamma - 1))/(cRoe*cRoe))*jump[4];
         
         alpha[3] = ((wRoe*(gamma - 1))/(cRoe*cRoe))*jump[0]
-                    + ((uRoe*wRoe*(gamma - 1))/(cRoe*cRoe))*jump[1]
-                    + ((vRoe*wRoe*(gamma - 1))/(cRoe*cRoe))*jump[2]
-                    + (((wRoe*wRoe)*(gamma - 1))/((cRoe*cRoe)) + 1)*jump[3]
-                    + ((hRoe*wRoe*(gamma - 1))/(cRoe*cRoe))*jump[4];
+        + ((uRoe*wRoe*(gamma - 1))/(cRoe*cRoe))*jump[1]
+        + ((vRoe*wRoe*(gamma - 1))/(cRoe*cRoe))*jump[2]
+        + (((wRoe*wRoe)*(gamma - 1))/((cRoe*cRoe)) + 1)*jump[3]
+        + ((hRoe*wRoe*(gamma - 1))/(cRoe*cRoe))*jump[4];
         
         alpha[4] = ((gamma - 1)/(2*(cRoe*cRoe)))*jump[0]
-                    + (((cRoe + uRoe)*(gamma - 1))/(2*(cRoe*cRoe)))*jump[1]
-                    + ((vRoe*(gamma - 1))/(2*(cRoe*cRoe)))*jump[2]
-                    + ((wRoe*(gamma - 1))/(2*(cRoe*cRoe)))*jump[3]
-                    + (((gamma - 1)*(hRoe + cRoe*uRoe))/(2*(cRoe*cRoe)))*jump[4];
-       //======================================================================
+        + (((cRoe + uRoe)*(gamma - 1))/(2*(cRoe*cRoe)))*jump[1]
+        + ((vRoe*(gamma - 1))/(2*(cRoe*cRoe)))*jump[2]
+        + ((wRoe*(gamma - 1))/(2*(cRoe*cRoe)))*jump[3]
+        + (((gamma - 1)*(hRoe + cRoe*uRoe))/(2*(cRoe*cRoe)))*jump[4];
+        //======================================================================
         
         NekDouble   zrhoL_flux  = 0.0, zrhoR_flux  = 0.0,
-                    zrhouL_flux = 0.0, zrhouR_flux = 0.0,
-                    zrhovL_flux = 0.0, zrhovR_flux = 0.0,
-                    zrhowL_flux = 0.0, zrhowR_flux = 0.0,
-                    zEL_flux    = 0.0, zER_flux    = 0.0;
+        zrhouL_flux = 0.0, zrhouR_flux = 0.0,
+        zrhovL_flux = 0.0, zrhovR_flux = 0.0,
+        zrhowL_flux = 0.0, zrhowR_flux = 0.0,
+        zEL_flux    = 0.0, zER_flux    = 0.0;
         
         NekDouble vsqLdir = pow(uLdir,2)+pow(vLdir,2)+pow(wLdir,2);
         NekDouble vsqRdir = pow(uRdir,2)+pow(vRdir,2)+pow(wRdir,2);
@@ -277,48 +277,48 @@ namespace Nektar
         // HLLC Riemann fluxes (positive case)
         
         zrhoL_flux =     (0.5*(gamma-1)*vsqLdir-uLdir*uLdir)*rhouL
-                        -uLdir*vLdir*rhovL
-                        -uLdir*wLdir*rhowL
-                        -uLdir*(hLdir - vsqLdir*0.5*(gamma-1))*EL;
+        -uLdir*vLdir*rhovL
+        -uLdir*wLdir*rhowL
+        -uLdir*(hLdir - vsqLdir*0.5*(gamma-1))*EL;
         
         zrhouL_flux =   rhoL
-                        -(uLdir*(gamma-3.0))*rhouL
-                        +vLdir*rhovL
-                        +wLdir*rhowL
-                        +(hLdir+uLdir*uLdir*(1.0-gamma))*EL;
+        -(uLdir*(gamma-3))*rhouL
+        +vLdir*rhovL
+        +wLdir*rhowL
+        +(hLdir+uLdir*uLdir*(1-gamma))*EL;
         
-        zrhovL_flux =   -(vLdir*(gamma-1.0))*rhouL
-                        +uLdir*rhovL
-                        -uLdir*vLdir*(gamma-1.0)*EL;
+        zrhovL_flux =   -(vLdir*(gamma-1))*rhouL
+        +uLdir*rhovL
+        -uLdir*vLdir*(gamma-1)*EL;
         
-        zrhowL_flux =   -(wLdir*(gamma-1.0))*rhouL
-                        +uLdir*rhowL
-                        -uLdir*wLdir*(gamma-1.0)*EL;
+        zrhowL_flux =    -(wLdir*(gamma-1))*rhouL
+        +uLdir*rhowL
+        -uLdir*wLdir*(gamma-1)*EL;
         
-        zEL_flux    =   (gamma-1)*rhouL + (gamma*uLdir)*EL;
+        zEL_flux    =    (gamma-1)*rhouL + (gamma*uLdir)*EL;
         
         //==================================
         
-        zrhoR_flux =     (0.5*(gamma-1.0)*vsqRdir-pow(uRdir,2.0))*rhouR
-                        -uRdir*vRdir*rhovR
-                        -uRdir*wRdir*rhowR
-                        -uRdir*(hRdir - vsqRdir*0.5*(gamma-1.0))*ER;
+        zrhoR_flux =     (0.5*(gamma-1)*vsqRdir-pow(uRdir,2))*rhouR
+        -uRdir*vRdir*rhovR
+        -uRdir*wRdir*rhowR
+        -uRdir*(hRdir - vsqRdir*0.5*(gamma-1))*ER;
         
         zrhouR_flux =    rhoR
-                        -(uRdir*(gamma-3.0))*rhouR
-                        +vRdir*rhovR
-                        +wRdir*rhowR
-                        +(hRdir+pow(uRdir,2.0)*(1.0-gamma))*ER;
+        -(uRdir*(gamma-3))*rhouR
+        +vRdir*rhovR
+        +wRdir*rhowR
+        +(hRdir+pow(uRdir,2)*(1-gamma))*ER;
         
         zrhovR_flux =   -(vRdir*(gamma-1))*rhouR
-                        +uRdir*rhovR
-                        -uRdir*vRdir*(gamma-1.0)*ER;
+        +uRdir*rhovR
+        -uRdir*vRdir*(gamma-1)*ER;
         
-        zrhowR_flux =   -(wRdir*(gamma-1.0))*rhouR
-                        +uRdir*rhowR
-                        -uRdir*wRdir*(gamma-1.0)*ER;
+        zrhowR_flux =   -(wRdir*(gamma-1))*rhouR
+        +uRdir*rhowR
+        -uRdir*wRdir*(gamma-1)*ER;
         
-        zER_flux    =    (gamma-1.0)*rhouR + (gamma*uRdir)*ER;
+        zER_flux    =    (gamma-1)*rhouR + (gamma*uRdir)*ER;
         
         //======================================================================
         
@@ -331,11 +331,11 @@ namespace Nektar
         // Compute eigenvalues \lambda_i (equation 11.58).
         NekDouble uRoeAbs = fabs(uRoe);
         NekDouble lambda[5] = {
-            fabs(uRoe + cRoe),
+            fabs(-uRoe - cRoe),
             uRoeAbs,
             uRoeAbs,
             uRoeAbs,
-            fabs(uRoe - cRoe)
+            fabs(uRoe + cRoe)
         };
         
         // Finally perform summation (11.29).
@@ -364,10 +364,11 @@ namespace Nektar
         double &rhof, double &rhouf, double &rhovf, double &rhowf, double &Ef)
     {
         static NekDouble gamma = m_params["gamma"]();
-        
-        static NekDouble R  = 287.05;
+        static NekDouble mu = m_params["mu"]();
+
+        std::cout << mu << std::endl;
+        static NekDouble R  = 287.058;
         static NekDouble k  = 0.0257;
-        static NekDouble mu = 0.415274;
         
         NekDouble FadjL = 0.0;
         NekDouble FadjR = 0.0;

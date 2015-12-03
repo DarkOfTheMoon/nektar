@@ -279,21 +279,21 @@ void AdjointAdvectionWeakDG::v_Advect(
         FluxVector[i] =
         Array<OneD, Array<OneD, NekDouble> >(m_spaceDim);
         
-        //JacDivVector[i] =
-        //Array<OneD, Array<OneD, NekDouble> >(m_spaceDim);
+        JacDivVector[i] =
+        Array<OneD, Array<OneD, NekDouble> >(m_spaceDim);
         
         for (j = 0; j < m_spaceDim; ++j)
         {
             FluxVector[i][j] =
             Array<OneD, NekDouble>(nPointsTot, 0.0);
-            //JacDivVector[i][j] =
-            //Array<OneD, NekDouble>(nPointsTot, 0.0);
+            JacDivVector[i][j] =
+            Array<OneD, NekDouble>(nPointsTot, 0.0);
         }
     }
 
     m_AdjointFluxVector(inarray, FluxVector);
     
-    //m_JacTransposeDivVector(inarray, JacDivVector);
+    m_JacTransposeDivVector(inarray, JacDivVector);
 
     // Get the advection part (without numerical flux)
     for(i = 0; i < nConvectiveFields; ++i)
@@ -313,16 +313,16 @@ void AdjointAdvectionWeakDG::v_Advect(
             // conservative form, an additional term where the derivatives
             // of the transposed jacobians are multiplied with the basis hence,
             
-            //fields[i]->IProductWRTBase(JacDivVector[i][j],
-            //                           outarray_tmp[i]);
-            
-            /*Vmath::Vadd(nCoeffs,
-                        outarray[i], 1,
-                        outarray_tmp[i], 1,
-                        outarray_tmp2[i], 1);*/
+            fields[i]->IProductWRTBase(JacDivVector[i][j],
+                                       outarray_tmp[i]);
             
             Vmath::Vadd(nCoeffs,
                         outarray[i], 1,
+                        outarray_tmp[i], 1,
+                        outarray_tmp2[i], 1);
+            
+            Vmath::Vadd(nCoeffs,
+                        outarray_tmp2[i], 1,
                         tmp[i], 1,
                         tmp[i], 1);
         }

@@ -326,9 +326,9 @@ namespace Nektar
                                        GetBndCondTraceToGlobalTraceMap(cnt++));
                         
                         // Reinforcing bcs for velocity in case of Wall bcs
-                        if (fields[i]->GetBndConditions()[j]->
-                            GetUserDefined() ==
-                            SpatialDomains::eWallViscous)
+
+                        if (boost::iequals(fields[i]->GetBndConditions()[j]->
+                            GetUserDefined(),"WallViscous"))
                         {
                             Vmath::Zero(nBndEdgePts,
                                         &scalarVariables[i][id2], 1);
@@ -406,12 +406,11 @@ namespace Nektar
                                    GetBndCondTraceToGlobalTraceMap(cnt++));
                     
                     // Imposing Temperature Twall at the wall
-                    if (fields[i]->GetBndConditions()[j]->
-                        GetUserDefined() ==
-                        SpatialDomains::eWallViscous)
-                    {
-                        Vmath::Vcopy(nBndEdgePts,
-                                     &Tw[0], 1,
+                    if (boost::iequals(fields[i]->GetBndConditions()[j]->
+                        GetUserDefined(),"WallViscous"))
+                    {                        
+                        Vmath::Vcopy(nBndEdgePts, 
+                                     &Tw[0], 1, 
                                      &scalarVariables[nScalars-1][id2], 1);
                     }
                     // Imposing Temperature through condition on the Energy

@@ -118,6 +118,10 @@ namespace Nektar
         NekDouble                           m_Skappa;
         NekDouble                           m_Kappa;
         NekDouble                           m_mu0;
+        NekDouble                           m_muMAX;
+        NekDouble                           m_muMAXLIM;
+        NekDouble                           m_muMIN;
+        NekDouble                           m_muMINLIM;
         NekDouble                           m_Lref;
         NekDouble                           m_alpha;
         int                                 m_numCheck;
@@ -233,6 +237,10 @@ namespace Nektar
         void GetAdjointFluxVector(
             const Array<OneD, Array<OneD, NekDouble> > &inarray,
                   Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
+        void GetAdjointFluxVectorAlternative(
+            const Array<OneD, Array<OneD, NekDouble> > &inarray,
+                  Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
+
         void GetFwdBwdBaseFlow(
                   Array<OneD, Array<OneD, NekDouble> > &FwdDir,
                   Array<OneD, Array<OneD, NekDouble> > &BwdDir);
@@ -278,6 +286,29 @@ namespace Nektar
         const Array<OneD, const Array<OneD, NekDouble> > &inarray,
               Array<OneD,                   NekDouble>   &Vtot);
         
+        void GetJacobianConvFluxPrimitiveVar(
+                                             Array<OneD, Array<OneD, Array<OneD, Array<OneD, NekDouble> > > > &Jac);
+        
+        void GetDerivJacVectorFromPrimitiveVar(
+                                               const Array<OneD, Array<OneD, NekDouble> > &inarray,
+                                               Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &outarray);
+        
+        void GetConservToPrimVariableInvMatDiv(
+                                               Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &dUdVInv,
+                                               Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &dUdVInvdX,
+                                               Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &dUdVInvdY);
+        
+        void GetElementDimensions(
+                                  Array<OneD,                   NekDouble >  &hmin);
+        
+  
+        
+        void SetCommonBC(const std::string &userDefStr,
+                         const int n,
+                         const NekDouble time,
+                         int &cnt,
+                         Array<OneD, Array<OneD, NekDouble> > &inarray);
+        
         virtual bool v_PostIntegrate(int step);
         bool CalcSteadyState(bool output);
 
@@ -307,6 +338,15 @@ namespace Nektar
         
         const Array<OneD, const Array<OneD, NekDouble> > &GetNormals()
         {
+            
+            /*int nDim = m_traceNormals.num_elements();
+            int nTracePts = m_traceNormals[0].num_elements();
+            
+            for (int i = 0; i < nDim; ++i)
+            {
+                Vmath::Neg(nTracePts, m_traceNormals[i], 1);
+            }*/
+            
             return m_traceNormals;
         }
         

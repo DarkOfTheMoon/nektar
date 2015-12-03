@@ -57,6 +57,9 @@ namespace Nektar
             m_session->LoadSolverInfo("ShockCaptureType",
                                       m_shockCaptureType,    "Off");
             
+            m_session->LoadParameter ("Fx",          m_Fx, 0.0);
+            m_session->LoadParameter ("Fy",          m_Fy, 0.0);
+            
             m_session->LoadParameter ("ViscBCFactor",  m_viscFac,       1.0);
 
             
@@ -65,9 +68,12 @@ namespace Nektar
             int nDim = pFields[0]->GetCoordim(0);
             int nTracePts = pFields[0]->GetTrace()->GetTotPoints();
             
+            m_traceVel = Array<OneD, Array<OneD, NekDouble> >(nDim);
+
             m_traceNormals = Array<OneD, Array<OneD, NekDouble> >(nDim);
             for(i = 0; i < nDim; ++i)
             {
+                m_traceVel[i] = Array<OneD, NekDouble> (nTracePts, 0.0);
                 m_traceNormals[i] = Array<OneD, NekDouble> (nTracePts);
             }
             pFields[0]->GetTrace()->GetNormals(m_traceNormals);
@@ -239,8 +245,12 @@ namespace Nektar
             // Get the normal velocity Vn
             for(i = 0; i < nDim; ++i)
             {
-                Vmath::Svtvp(nTracePts, 1.0, m_traceNormals[i], 1,
-                             Vn, 1, Vn, 1);
+                fields[0]->AverageTracePhys(ufield[1+i], m_traceVel[i]);
+                Vmath::Vvtvp(nTracePts, m_traceNormals[i], 1,
+                             m_traceVel[i], 1, Vn, 1, Vn, 1);
+                
+                /*Vmath::Svtvp(nTracePts, 1.0, m_traceNormals[i], 1,
+                             Vn, 1, Vn, 1);*/
             }
             
             // Get the sign of (v \cdot n), v = an arbitrary vector
@@ -306,7 +316,7 @@ namespace Nektar
             Array<OneD,       NekDouble>                &penaltyflux)
         {
             int i, e, id1, id2;
-            
+            int nDim = fields[0]->GetCoordim(0);
             // Number of boundary regions
             int nvar = fields.num_elements();
             int nBndEdgePts, nBndEdges;
@@ -314,7 +324,8 @@ namespace Nektar
             int nBndRegions = fields[var]->GetBndCondExpansions().num_elements();
             int nTracePts   = fields[0]->GetTrace()->GetTotPoints();
             Array<OneD, NekDouble > uplus(nTracePts);
-            
+            const Array<OneD, const int> &traceBndMap
+            = fields[0]->GetTraceBndMap();
             fields[var]->ExtractTracePhys(ufield, uplus);
             
             for (i = 0; i < nBndRegions; ++i)
@@ -332,9 +343,11 @@ namespace Nektar
                     id1 = fields[var]->
                     GetBndCondExpansions()[i]->GetPhys_Offset(e);
                     
-                    id2 = fields[0]->GetTrace()->
+                    /*id2 = fields[0]->GetTrace()->
                     GetPhys_Offset(fields[0]->GetTraceMap()->
-                                   GetBndCondTraceToGlobalTraceMap(cnt++));
+                                   GetBndCondTraceToGlobalTraceMap(cnt+e));*/
+                    
+                    id2 = fields[0]->GetTrace()->GetPhys_Offset(traceBndMap[cnt+e]);
                     
                     // For Dirichlet boundary condition: uflux = g_D
                     if (fields[var]->GetBndConditions()[i]->
@@ -345,13 +358,50 @@ namespace Nektar
                                        GetBndCondExpansions()[i]->
                                        GetPhys())[id1], 1,
                                        &penaltyflux[id2], 1);
-                        
                     }
                     
+                    if (boost::iequals(fields[i]->GetBndConditions()[i]->
+                                       GetUserDefined(),"AdjointWall"))
+                    {
+                        
+                        Array<OneD, NekDouble>zeros(nBndEdgePts, 0.0);
+                        
+                        Array<OneD, Array<OneD, NekDouble> > Force(nDim);
+                        Force[0] = Array<OneD, NekDouble> (nBndEdgePts, m_Fx);
+                        Force[1] = Array<OneD, NekDouble> (nBndEdgePts, m_Fy);
+
+                        
+                        if (var == 0 || var == (nDim+1))
+                        {
+                            Vmath::Vcopy(nBndEdgePts,
+                                         &zeros[0], 1,
+                                           &penaltyflux[id2], 1);
+                        }
+                        
+                        else if (var == 1)
+                        {
+                            Vmath::Vcopy(nBndEdgePts,
+                                         &Force[0][0], 1,
+                                         &penaltyflux[id2], 1);
+                            
+                            /*cout << "LDG u = " << Vmath::Vmax(nBndEdgePts,
+                                        &penaltyflux[id2], 1) << endl;*/
+                        }
+                        
+                        else if (var == 2)
+                        {
+                            Vmath::Vcopy(nBndEdgePts,
+                                         &Force[1][0], 1,
+                                         &penaltyflux[id2], 1);
+                            
+                            /*cout << "LDG v = " << Vmath::Vmax(nBndEdgePts,
+                                &penaltyflux[id2], 1) << endl;*/
+                        }
+                    }
+                
                     // Reinforcing bcs for velocity in case of Wall bcs
-                    if (fields[var]->GetBndConditions()[i]->
-                        GetUserDefined() ==
-                        SpatialDomains::eWall && var == (nvar-1))
+                    if (boost::iequals(fields[var]->GetBndConditions()[i]->
+                        GetUserDefined(),"Wall") && var == (nvar-1))
                     {
                         Vmath::Vcopy(nBndEdgePts,
                                      &(fields[var]->
@@ -375,6 +425,8 @@ namespace Nektar
                                      &penaltyflux[id2], 1);
                     }
                 }
+                
+                cnt += fields[0]->GetBndCondExpansions()[i]->GetExpSize();
             }
         }
         
@@ -415,8 +467,11 @@ namespace Nektar
             // Get the normal velocity Vn
             for(i = 0; i < nDim; ++i)
             {
-                Vmath::Svtvp(nTracePts, 1.0, m_traceNormals[i], 1,
-                             Vn, 1, Vn, 1);
+                fields[0]->AverageTracePhys(ufield[1+i], m_traceVel[i]);
+                Vmath::Vvtvp(nTracePts, m_traceNormals[i], 1,
+                             m_traceVel[i], 1, Vn, 1, Vn, 1);
+                /*Vmath::Svtvp(nTracePts, 1.0, m_traceNormals[i], 1,
+                             Vn, 1, Vn, 1);*/
             }
             
             // Evaulate upwind flux:
@@ -552,9 +607,8 @@ namespace Nektar
                                     &penaltyflux[id2], 1);
                     }
                     
-                    else if(fields[var]->GetBndConditions()[i]->
-                                GetUserDefined() ==
-                                SpatialDomains::eWall && var == (nvar-1))
+                    else if(boost::iequals(fields[var]->GetBndConditions()[i]->
+                                           GetUserDefined(),"Wall") && var == (nvar-1))
                     {
                         Vmath::Vmul(nBndEdgePts,
                                     &m_traceNormals[dir][id2], 1,

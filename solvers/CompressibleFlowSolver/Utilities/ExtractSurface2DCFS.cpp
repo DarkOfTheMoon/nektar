@@ -632,7 +632,7 @@ int main(int argc, char *argv[])
     pFields[0]->ExtractTracePhys(Sgg[1], traceFieldsAdded[15]);
     pFields[0]->ExtractTracePhys(Sxy,    traceFieldsAdded[16]);
 
-    /*** Evaluation of the shear stress in tangent direction *******************
+    /*** Evaluat direction *******************
      * tau_t -> traceFieldsAdded[17]
      ***************************************************************************/
     Array<OneD, NekDouble > sigma_diff   (nTracePts, 0.0);
@@ -727,11 +727,11 @@ int main(int argc, char *argv[])
                                    GetBndCondTraceToGlobalTraceMap(cnt++));
 
                 if (pFields[0]->GetBndConditions()[b]->
-                    GetUserDefined() == SpatialDomains::eWallViscous ||
+                    GetUserDefined() == "WallViscous" ||
                     pFields[0]->GetBndConditions()[b]->
-                    GetUserDefined() == SpatialDomains::eWall ||
+                    GetUserDefined() == "Wall" ||
                     pFields[0]->GetBndConditions()[b]->
-                    GetUserDefined() == SpatialDomains::eAdjointWall)
+                    GetUserDefined() == "AdjointWall")
                 {
                     Vmath::Vcopy(nBndEdgePts, &traceX[id2], 1,
                                  &surfaceX[id1], 1);
@@ -768,12 +768,12 @@ int main(int argc, char *argv[])
                         GetPhys_Offset(pFields[j]->GetTraceMap()->
                                        GetBndCondTraceToGlobalTraceMap(cnt++));
 
-                    if (pFields[j]->GetBndConditions()[b]->
-                        GetUserDefined() == SpatialDomains::eWallViscous ||
-                        pFields[j]->GetBndConditions()[b]->
-                        GetUserDefined() == SpatialDomains::eWall ||
+                    if (pFields[0]->GetBndConditions()[b]->
+                        GetUserDefined() == "WallViscous" ||
                         pFields[0]->GetBndConditions()[b]->
-                        GetUserDefined() == SpatialDomains::eAdjointWall)
+                        GetUserDefined() == "Wall" ||
+                        pFields[0]->GetBndConditions()[b]->
+                        GetUserDefined() == "AdjointWall")
                     {
                         Vmath::Vcopy(nBndEdgePts, &traceFields[j][id2], 1,
                                      &surfaceFields[j][id1], 1);
@@ -806,11 +806,11 @@ int main(int argc, char *argv[])
                                        GetBndCondTraceToGlobalTraceMap(cnt++));
 
                     if (pFields[0]->GetBndConditions()[b]->
-                        GetUserDefined() == SpatialDomains::eWallViscous ||
+                        GetUserDefined() == "WallViscous" ||
                         pFields[0]->GetBndConditions()[b]->
-                        GetUserDefined() == SpatialDomains::eWall ||
+                        GetUserDefined() == "Wall" ||
                         pFields[0]->GetBndConditions()[b]->
-                        GetUserDefined() == SpatialDomains::eAdjointWall)
+                        GetUserDefined() == "AdjointWall")
                     {
                         Vmath::Vcopy(nBndEdgePts, &traceFieldsAdded[j][id2], 1,
                                      &surfaceFieldsAdded[j][id1], 1);
@@ -915,7 +915,7 @@ int main(int argc, char *argv[])
 
     }
 
-    cout << "\n Sref = " << Sref << endl;
+    /*cout << "\n Sref = " << Sref << endl;
     Fxp = Fxp/Sref;
     Fyp = Fyp/Sref;
     Fxv = Fxv/Sref;
@@ -925,7 +925,27 @@ int main(int argc, char *argv[])
     cout << " Viscous drag (Fxv) = " << Fxv << endl;
     cout << " Viscous lift (Fyv) = " << Fyv << endl;
     cout << "\n ==> Total drag = " << Fxp+Fxv << endl;
+    cout << " ==> Total lift = " << Fyp+Fyv << "\n" << endl;*/
+    
+    Sref = 1.0;
+    cout << "\n Sref = " << Sref << endl;
+    Fxp = Fxp/Sref;
+    Fyp = Fyp/Sref;
+    Fxv = Fxv/Sref;
+    Fyv = Fyv/Sref;
+    
+    NekDouble dypres = 0.5*m_rhoInf*(m_uInf*m_uInf + m_vInf*m_vInf);
+    cout << dypres << endl;
+    cout << " Pressure drag (Fxp) = " << Fxp << endl;
+    cout << " Pressure lift (Fyp) = " << Fyp << endl;
+    cout << " Viscous drag (Fxv) = " << Fxv << endl;
+    cout << " Viscous lift (Fyv) = " << Fyv << endl;
+    cout << " Drag coefficient (Cd) = " << (Fxp+Fxv)/dypres << endl;
+    cout << " Lift coefficient (Cl) = " << (Fyp+Fyv)/dypres << endl;
+    cout << " # Solution points     = " << nSolutionPts << endl;
+    cout << "\n ==> Total drag = " << Fxp+Fxv << endl;
     cout << " ==> Total lift = " << Fyp+Fyv << "\n" << endl;
+
 
     //===================================================================================================
     //===================================================================================================

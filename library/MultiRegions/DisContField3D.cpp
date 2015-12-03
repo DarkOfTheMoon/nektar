@@ -1850,6 +1850,58 @@
                 }
             }
         }
+         
+         void DisContField3D::v_AverageTracePhys(
+                        const Array<OneD, const NekDouble> &inarray,
+                        Array<OneD,       NekDouble> &outarray)
+         {
+             // Loop over elemente and collect forward expansion
+             int nexp = GetExpSize();
+             int n, e, offset, phys_offset;
+             Array<OneD,NekDouble> e_tmp;
+             Array<OneD, Array<OneD, LocalRegions::ExpansionSharedPtr> >
+             &elmtToTrace = m_traceMap->GetElmtToTrace();
+             
+             ASSERTL1(outarray.num_elements() >= m_trace->GetNpoints(),
+                      "input array is of insufficient length");
+             
+             Vmath::Zero(m_trace->GetNpoints(), outarray, 1);
+             
+             // use m_trace tmp space in element to fill values
+             for(n  = 0; n < nexp; ++n)
+             {
+                 phys_offset = GetPhys_Offset(n);
+                 
+                 for(e = 0; e < (*m_exp)[n]->GetNfaces(); ++e)
+                 {
+                     int nPts = (*m_exp)[n]->GetFaceNumPoints(e);
+                     Array<OneD, NekDouble> tmp((*m_exp)[n]->GetFaceNumPoints(e));
+                     offset = m_trace->GetPhys_Offset(
+                                            elmtToTrace[n][e]->GetElmtId());
+                     (*m_exp)[n]->GetFacePhysVals(e,  elmtToTrace[n][e],
+                                                  inarray + phys_offset,
+                                                  e_tmp = tmp);
+                     
+                     LocalRegions::Expansion2DSharedPtr traceEl =
+                     elmtToTrace[n][e]->as<LocalRegions::Expansion2D>();
+                     
+                     if (traceEl->GetRightAdjacentElementFace() == -1)
+                     {
+                         Vmath::Vcopy(nPts, tmp, 1, e_tmp = outarray + offset, 1);
+                     }
+                     else
+                     {
+                         Vmath::Svtvp(nPts, 0.5, tmp, 1, outarray + offset, 1, e_tmp = outarray + offset, 1);
+                     }
+                 }
+             }
+             
+             // Calculate parallel valency
+             Array<OneD, NekDouble> valency(m_trace->GetNpoints(), 1.0);
+             m_traceMap->UniversalTraceAssemble(valency);
+             m_traceMap->UniversalTraceAssemble(outarray);
+             Vmath::Vdiv(m_trace->GetNpoints(), outarray, 1, valency, 1, outarray, 1);
+         }
         
         /**
          * @brief Add trace contributions into elemental coefficient spaces.
@@ -2008,6 +2060,20 @@
                                               m_Element->GetGlobalID()];
                     FaceID[cnt] = (*tmp)[0]->m_FaceIndx;
                 }
+            }
+        }
+
+        /**
+         * @brief Reset this field, so that geometry information can be updated.
+         */
+        void DisContField3D::v_Reset()
+        {
+            ExpList::v_Reset();
+
+            // Reset boundary condition expansions.
+            for (int n = 0; n < m_bndCondExpansions.num_elements(); ++n)
+            {
+                m_bndCondExpansions[n]->Reset();
             }
         }
 
@@ -2424,8 +2490,7 @@
 
             for (i = 0; i < nbnd; ++i)
             {
-                if (time == 0.0 || m_bndConditions[i]->GetUserDefined() == 
-                    SpatialDomains::eTimeDependent)
+                if (time == 0.0 || m_bndConditions[i]->IsTimeDependent())
                 {
                     locExpList = m_bndCondExpansions[i];
                     npoints    = locExpList->GetNpoints();

@@ -330,9 +330,8 @@ namespace Nektar
                 if (fields[0]->GetBndConditions()[n]->
                     GetBoundaryConditionType() ==
                     SpatialDomains::eDirichlet &&
-                    fields[0]->GetBndConditions()[n]->
-                    GetUserDefined() ==
-                    SpatialDomains::eAdjointWall)
+                    boost::iequals(fields[0]->GetBndConditions()[n]->
+                    GetUserDefined(), "AdjointWall"))
                 {
                     for (e = 0; e < eMax; ++e)
                     {
@@ -398,13 +397,7 @@ namespace Nektar
                     
                     cnt += fields[0]->GetBndCondExpansions()[n]->GetExpSize();
                 }
-                
-                if (fields[0]->GetBndConditions()[n]->
-                    GetBoundaryConditionType() ==
-                    SpatialDomains::eDirichlet &&
-                    fields[0]->GetBndConditions()[n]->
-                    GetUserDefined() !=
-                    SpatialDomains::eAdjointWall)
+                else
                 {
                     for (e = 0; e < eMax; ++e)
                     {

@@ -323,42 +323,18 @@ namespace Nektar
     }
     
     void AdjointNavierStokesCFE::SetBoundaryConditions(
-        Array<OneD, Array<OneD, NekDouble> > &inarray,
-        NekDouble                             time)
+                            Array<OneD, Array<OneD, NekDouble> > &inarray,
+                            NekDouble                             time)
     {
         std::string varName;
-        int nvariables = m_fields.num_elements();
         int cnt        = 0;
         
         // loop over Boundary Regions
         for (int n = 0; n < m_fields[0]->GetBndConditions().num_elements(); ++n)
         {
-            // Symmetric Boundary Condition
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() == 
-                SpatialDomains::eSymmetry)
-            {
-                SymmetryBC(n, cnt, inarray);
-            }
+            std::string type = m_fields[0]->GetBndConditions()[n]->GetUserDefined();
+            SetCommonBC(type,n,time,cnt,inarray);
             
-            // Adjoint wall Condition
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() ==
-                SpatialDomains::eAdjointWall)
-            {
-                AdjointWallBC(n, cnt, inarray);
-            }
-            
-            // Time Dependent Boundary Condition (specified in meshfile)
-            if (m_fields[0]->GetBndConditions()[n]->GetUserDefined() 
-                == SpatialDomains::eTimeDependent)
-            {
-                for (int i = 0; i < nvariables; ++i)
-                {
-                    varName = m_session->GetVariable(i);
-                    m_fields[i]->EvaluateBoundaryConditions(time, varName);
-                }
-            }
-    
-            cnt += m_fields[0]->GetBndCondExpansions()[n]->GetExpSize();
         }
     }
 }
