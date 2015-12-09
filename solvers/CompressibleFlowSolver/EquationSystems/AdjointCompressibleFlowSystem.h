@@ -301,6 +301,9 @@ namespace Nektar
         void GetElementDimensions(
                                   Array<OneD,                   NekDouble >  &hmin);
         
+        void v_ExtraFldOutput(
+                std::vector<Array<OneD, NekDouble> > &fieldcoeffs,
+                              std::vector<std::string>             &variables);
   
         
         void SetCommonBC(const std::string &userDefStr,

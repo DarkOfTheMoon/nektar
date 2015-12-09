@@ -213,6 +213,8 @@ namespace Nektar
         NekDouble URoe   = (uRoe * uRoe + vRoe * vRoe + wRoe * wRoe);
         NekDouble cRoe   = sqrt((gamma - 1.0)*(hRoe - 0.5 * URoe));
         
+            
+        
         NekDouble k[5][5] = {
             {0.5*URoe + (cRoe*uRoe)/(gamma-1.0), -uRoe-cRoe/(gamma-1.0), -vRoe, -wRoe, 1},
             {uRoe*uRoe-hRoe, -uRoe, 0, 0, 1},

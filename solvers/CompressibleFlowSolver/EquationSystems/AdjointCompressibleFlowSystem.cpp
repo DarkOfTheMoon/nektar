@@ -583,7 +583,13 @@ namespace Nektar
 
                 m_advection->SetJacTransposeDivVector(
                 &AdjointCompressibleFlowSystem::GetAdjointDerivJacVector, this);
-		
+                
+                if (m_shockCaptureType=="NonSmooth")
+                {
+                    m_diffusion->SetArtificialDiffusionVector(
+                    &AdjointCompressibleFlowSystem::GetArtificialDynamicViscosity, this);
+                }
+                
                 /*m_advection->SetJacTransposeDivVector(
                    &AdjointCompressibleFlowSystem::GetDerivJacVectorFromPrimitiveVar, this);*/
             }
@@ -879,18 +885,19 @@ namespace Nektar
             m_fields[i]->ExtractTracePhys(physarray[i], Fwd[i]);
             m_fields[i]->ExtractTracePhys(physarray[i], Fwdnew[i]);
 	
-	    FwdBase[i] = Array<OneD, NekDouble>(nTracePts);
+            FwdBase[i] = Array<OneD, NekDouble>(nTracePts);
             BwdBase[i] = Array<OneD, NekDouble>(nTracePts);
 	
-	    m_fields[i]->ExtractTracePhys(m_baseflow[i], FwdBase[i]);
+            m_fields[i]->ExtractTracePhys(m_baseflow[i], FwdBase[i]);
         }
-	Array<OneD, NekDouble> Mach(m_baseflow[0].num_elements());
-	//GetMach(Mach);
-	Array<OneD, NekDouble> MachTrace(nTracePts);
+        
+        Array<OneD, NekDouble> Mach(m_baseflow[0].num_elements());
+        //GetMach(Mach);
+        Array<OneD, NekDouble> MachTrace(nTracePts);
 
-	m_fields[0]->ExtractTracePhys(Mach, MachTrace);
+        m_fields[0]->ExtractTracePhys(Mach, MachTrace);
 	
-	//GetFwdBwdBaseFlow(FwdBase, BwdBase);
+        //GetFwdBwdBaseFlow(FwdBase, BwdBase);
         /*
          NekDouble Cinf = 0.5 * m_rhoInfPrimal
          * (m_uInfPrimal*m_uInfPrimal+m_vInfPrimal*m_vInfPrimal) * m_Lref;
@@ -935,11 +942,31 @@ namespace Nektar
 
                     NekDouble MachEl = Vmath::Vmin(nBCEdgePts, &MachTrace[id2], 1);
 
-                    Vmath::Neg(nBCEdgePts, &Fwd[1][id2], 1);
-                    Vmath::Neg(nBCEdgePts, &Fwd[2][id2], 1);
+                    //Vmath::Neg(nBCEdgePts, &Fwd[1][id2], 1);
+                    //Vmath::Neg(nBCEdgePts, &Fwd[2][id2], 1);
                     
                     //Vmath::Neg(nBCEdgePts, &Fwd[0][id2], 1);
                     //Vmath::Neg(nBCEdgePts, &Fwd[3][id2], 1);
+                    
+                    for (i = 0; i < m_spacedim; ++i)
+                    {
+                        Vmath::Vvtvp(nBCEdgePts,
+                                     &Fwd[1+i][id2], 1,
+                                     &m_traceNormals[i][id2], 1,
+                                     &tmp[0], 1,
+                                     &tmp[0], 1);
+                    }
+                    
+                    Vmath::Smul(nBCEdgePts, -2.0, &tmp[0], 1, &tmp[0], 1);
+                    
+                    for (i = 0; i < m_spacedim; ++i)
+                    {
+                        Vmath::Vvtvp(nBCEdgePts,
+                                     &tmp[0], 1,
+                                     &m_traceNormals[i][id2], 1,
+                                     &Fwd[1+i][id2], 1,
+                                     &Fwd[1+i][id2], 1);
+                    }
                     
                     for (i = 0; i < m_spacedim; ++i)
                     {
@@ -965,32 +992,6 @@ namespace Nektar
                                      &m_traceNormals[i][id2], 1,
                                      &Normal[i][0],1);
                     }
-
-                    //Vmath::Neg(nBCEdgePts, &Normal[0][0], 1);
-                    
-                    // Calculate (v.n)
-                    for (i = 0; i < m_spacedim; ++i)
-                    {
-                        Vmath::Vvtvp(nBCEdgePts,
-                                     &FwdBase[1+i][id2], 1,
-                                     &m_traceNormals[i][id2], 1,
-                                     &tmp[0], 1,
-                                     &tmp[0], 1);
-                    }
-                    
-                    // Calculate 2.0(v.n)
-                    Vmath::Smul(nBCEdgePts, -2.0, &tmp[0], 1, &tmp[0], 1);
-                    
-                    // Calculate v* = v - 2.0(v.n)n
-                    for (i = 0; i < m_spacedim; ++i)
-                    {
-                        Vmath::Vvtvp(nBCEdgePts,
-                                     &tmp[0], 1,
-                                     &m_traceNormals[i][id2], 1,
-                                     &BwdBase[1+i][id2], 1,
-                                     &BwdBase[1+i][id2], 1);
-                    }
-                    
                     
                     // Calculate Bwd = -Fwd+2(theta.n)n
                     for (i = 0; i < m_spacedim; ++i)
@@ -5855,11 +5856,15 @@ namespace Nektar
         Array<OneD, int> pOrderElmt = GetNumExpModesPerExp();
         Array<OneD, NekDouble> Lambda(nTotQuadPoints, 1.0);
         //Vmath::Vadd(nTotQuadPoints, absVelocity, 1, soundspeed, 1, Lambda, 1);
-         Vmath::Vcopy(nTotQuadPoints, absVelocity, 1, Lambda, 1);         
-	Array<OneD, NekDouble> h_avg (nElements, 0.0);
-        GetElementDimensions(h_avg);
-        NekDouble hmax = Vmath::Vmax(nElements, h_avg, 1);
-        m_comm->AllReduce(hmax, LibUtilities::ReduceMax);
+        Vmath::Vcopy(nTotQuadPoints, absVelocity, 1, Lambda, 1);
+        //Array<OneD, NekDouble> h_avg (nElements, 0.0);
+        //GetElementDimensions(h_avg);
+        //NekDouble hmax = Vmath::Vmax(nElements, h_avg, 1);
+        //m_comm->AllReduce(hmax, LibUtilities::ReduceMax);
+            
+        //Vmath::Vcopy(nTotQuadPoints, SensorKappa, 1, mu_var, 1);
+            
+            //cout << Vmath::Vmax(nTotQuadPoints, mu_var, 1) << endl;
    
         for (int e = 0; e < nElements; e++)
         {
@@ -5875,10 +5880,6 @@ namespace Nektar
             int nQuadPointsElement = m_fields[0]->GetExp(e)->GetTotPoints();
             Array <OneD, NekDouble> one2D(nQuadPointsElement, 1.0);
             NekDouble LambdaEl = Vmath::Vsum(nQuadPointsElement, &Lambda[PointCount], 1);
-
-	    SpatialDomains::TriGeomSharedPtr ElTriGeom =
-                        boost::dynamic_pointer_cast<SpatialDomains::TriGeom>(
-                                                m_fields[0]->GetExp(e)->GetGeom());
 
             for (int n = 0; n < nQuadPointsElement; n++)
             {
@@ -5898,33 +5899,13 @@ namespace Nektar
                 {
                     mu_var[n+PointCount] = mu_0;
                 }
-	        /*
-		NekDouble idout = m_fields[0]->GetExp(e)->GetGeom()->GetGlobalID();
-            	SpatialDomains::TriGeomSharedPtr ElTriGeom = boost::dynamic_pointer_cast<SpatialDomains::TriGeom>(m_fields[0]->GetExp(e)->GetGeom());
-         	
-        	NekDouble nedges = m_fields[0]->GetExp(e)->GetNedges();
-        
-           	 NekDouble x0 = 0.0;
-           	 NekDouble y0 = 0.0;
-           	 NekDouble z0 = 0.0;
-           	 NekDouble x1 = 0.0;
-           	 NekDouble y1 = 0.0;
-           	 NekDouble z1 = 0.0;
-
-           	 for (int j = 0; j < nedges; ++j)
-           	 {
-                	 ElTriGeom->GetEdge(j)->GetVertex(0)->GetCoords(x0, y0, z0);
-                	 ElTriGeom->GetEdge(j)->GetVertex(1)->GetCoords(x1, y1, z1);
-            	 }
-
-            	if (x0 < 0.4 || x0 > 0.85)
-            	{
-                 	mu_var[n+PointCount] = 0.0;
-            	}*/	
+                
             }
 
             PointCount += nQuadPointsElement;
-        }	
+        }
+                //cout << Vmath::Vmax(nTotQuadPoints, mu_var, 1) << endl;
+                
     }
 	
         void AdjointCompressibleFlowSystem::GetElementDimensions(
@@ -6158,7 +6139,7 @@ namespace Nektar
         }
     }
     
-    /*void AdjointCompressibleFlowSystem::v_ExtraFldOutput(
+    void AdjointCompressibleFlowSystem::v_ExtraFldOutput(
         std::vector<Array<OneD, NekDouble> > &fieldcoeffs,
         std::vector<std::string>             &variables)
     {
@@ -6170,7 +6151,7 @@ namespace Nektar
         {
             tmp[i] = m_fields[i]->GetPhys();
         }
-           
+        
         Array<OneD, NekDouble> sensor(nPhys), SensorKappa(nPhys), ArtVisc(nPhys);
     
         GetSensor    (tmp, sensor, SensorKappa);
@@ -6178,7 +6159,7 @@ namespace Nektar
      
         Array<OneD, NekDouble> sensKappaFwd(nCoeffs);
         Array<OneD, NekDouble> sensFwd(nCoeffs);
-	Array<OneD, NekDouble> artViscFwd(nCoeffs);
+	    Array<OneD, NekDouble> artViscFwd(nCoeffs);
         
         m_fields[0]->FwdTrans(sensor,     sensFwd);
         m_fields[0]->FwdTrans(SensorKappa,     sensKappaFwd);
@@ -6193,5 +6174,5 @@ namespace Nektar
 	fieldcoeffs.push_back(artViscFwd);
     
         
-    }*/
+    }
 }
