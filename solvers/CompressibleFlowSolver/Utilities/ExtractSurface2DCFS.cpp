@@ -729,6 +729,8 @@ int main(int argc, char *argv[])
                 if (pFields[0]->GetBndConditions()[b]->
                     GetUserDefined() == "WallViscous" ||
                     pFields[0]->GetBndConditions()[b]->
+                    GetUserDefined() == "WallAdiabatic" ||
+                    pFields[0]->GetBndConditions()[b]->
                     GetUserDefined() == "Wall" ||
                     pFields[0]->GetBndConditions()[b]->
                     GetUserDefined() == "AdjointWall")
@@ -768,12 +770,16 @@ int main(int argc, char *argv[])
                         GetPhys_Offset(pFields[j]->GetTraceMap()->
                                        GetBndCondTraceToGlobalTraceMap(cnt++));
 
-                    if (pFields[0]->GetBndConditions()[b]->
+                    if (pFields[j]->GetBndConditions()[b]->
                         GetUserDefined() == "WallViscous" ||
-                        pFields[0]->GetBndConditions()[b]->
+                        pFields[j]->GetBndConditions()[b]->
                         GetUserDefined() == "Wall" ||
-                        pFields[0]->GetBndConditions()[b]->
-                        GetUserDefined() == "AdjointWall")
+                        pFields[j]->GetBndConditions()[b]->
+                        GetUserDefined() == "AdjointWall" ||
+                        pFields[j]->GetBndConditions()[b]->
+                        GetUserDefined() == "WallAdiabatic" ||
+                        pFields[j]->GetBndConditions()[b]->
+                        GetUserDefined() == "Wall")
                     {
                         Vmath::Vcopy(nBndEdgePts, &traceFields[j][id2], 1,
                                      &surfaceFields[j][id1], 1);
@@ -810,7 +816,9 @@ int main(int argc, char *argv[])
                         pFields[0]->GetBndConditions()[b]->
                         GetUserDefined() == "Wall" ||
                         pFields[0]->GetBndConditions()[b]->
-                        GetUserDefined() == "AdjointWall")
+                        GetUserDefined() == "AdjointWall" ||
+                        pFields[0]->GetBndConditions()[b]->
+                        GetUserDefined() == "WallAdiabatic")
                     {
                         Vmath::Vcopy(nBndEdgePts, &traceFieldsAdded[j][id2], 1,
                                      &surfaceFieldsAdded[j][id1], 1);

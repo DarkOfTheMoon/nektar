@@ -612,7 +612,10 @@ namespace Nektar
                 PlanesIDs.push_back(m_transposition->GetPlaneID(i));
             }
             
-            m_planes[0]->GeneralGetFieldDefinitions(returnval, 1, HomoBasis, HomoLen, PlanesIDs);
+            int NumHomoStrip;
+            m_session->LoadParameter("Strip_Z",NumHomoStrip,1);
+ 
+            m_planes[0]->GeneralGetFieldDefinitions(returnval, 1, NumHomoStrip, HomoBasis, HomoLen, PlanesIDs);
             
             return returnval;
         }
@@ -632,8 +635,11 @@ namespace Nektar
                 PlanesIDs.push_back(m_transposition->GetPlaneID(i));
             }
             
+            int NumHomoStrip;
+            m_session->LoadParameter("Strip_Z",NumHomoStrip,1);
+
             // enforce NumHomoDir == 1 by direct call
-            m_planes[0]->GeneralGetFieldDefinitions(fielddef,1, HomoBasis,HomoLen,PlanesIDs);
+            m_planes[0]->GeneralGetFieldDefinitions(fielddef, 1, NumHomoStrip, HomoBasis,HomoLen,PlanesIDs);
         }
 
 
@@ -766,6 +772,8 @@ namespace Nektar
                     {
                         // increase offset for correct FieldData access
                         offset += datalen*nzmodes;
+                        modes_offset += (*m_exp)[0]->GetNumBases() +
+                                        fielddef->m_numHomogeneousDir;
                         continue;
                     }
                     
@@ -793,7 +801,7 @@ namespace Nektar
                             (*m_exp)[eid]->ExtractDataToCoeffs(&fielddata[offset], fielddef->m_numModes,modes_offset,&coeffs[m_coeff_offset[eid] + planes_offset*ncoeffs_per_plane]);
                         }
                     }
-                    modes_offset += (*m_exp)[0]->GetNumBases();
+                    modes_offset += (*m_exp)[0]->GetNumBases() + fielddef->m_numHomogeneousDir;
                 }
             }
         }

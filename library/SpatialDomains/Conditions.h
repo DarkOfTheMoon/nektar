@@ -116,17 +116,19 @@ namespace Nektar
         {
             
             DirichletBoundaryCondition(
-                                       const LibUtilities::SessionReaderSharedPtr &pSession,
-                                       const std::string& eqn,
-                                       const std::string& userDefined = std::string("NoUserDefined"),
-                                       const std::string& filename=std::string("")):
-            BoundaryConditionBase(eDirichlet, userDefined),
-            m_dirichletCondition(pSession, eqn),
-            m_filename(filename)
+                const LibUtilities::SessionReaderSharedPtr &pSession,
+                const std::string& eqn,
+                const std::string& userDefined = std::string("NoUserDefined"),
+                const std::string& filename=std::string("")):
+                    BoundaryConditionBase(eDirichlet, userDefined),
+                    m_dirichletCondition(pSession, eqn),
+                    m_expr(eqn),
+                    m_filename(filename)
             {
             }
             
             LibUtilities::Equation m_dirichletCondition;
+            std::string m_expr;
             std::string m_filename;
         };
         

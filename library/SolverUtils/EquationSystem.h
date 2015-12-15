@@ -151,6 +151,7 @@ namespace Nektar
                 std::vector<std::string> pFieldNames,
                 Array<OneD, Array<OneD, NekDouble> > &pFields,
                 const std::string& pName,
+                const NekDouble& pTime = 0.0,
                 const int domain = 0);
             
             /// Populate given fields with the function from session.
@@ -158,6 +159,7 @@ namespace Nektar
                 std::vector<std::string> pFieldNames,
                 Array<OneD, MultiRegions::ExpListSharedPtr> &pFields,
                 const std::string& pName,
+                const NekDouble& pTime = 0.0,
                 const int domain = 0);
             
             // Populate an array with a function variable from session.
@@ -411,6 +413,9 @@ namespace Nektar
             SOLVER_UTILS_EXPORT int NoCaseStringCompare(
                 const string & s1, const string& s2) ;
                 
+            /// Virtual function to identify if operator is negated in DoSolve
+            SOLVER_UTILS_EXPORT virtual bool v_NegatedOp();
+
         protected:
             /// Communicator
             LibUtilities::CommSharedPtr                 m_comm;
@@ -444,6 +449,8 @@ namespace Nektar
             NekDouble                                   m_timestep;
             /// Lambda constant in real system if one required.
             NekDouble                                   m_lambda;
+
+            std::set<std::string>                       m_loadedFields;
             /// Time between checkpoints.
             NekDouble                                   m_checktime;
             /// Number of steps to take.
@@ -455,11 +462,11 @@ namespace Nektar
             /// Expansion dimension.
             int                                         m_expdim;
             /// Flag to determine if single homogeneous mode is used.
-            bool                                        m_SingleMode;
+            bool                                        m_singleMode;
             /// Flag to determine if half homogeneous mode is used.
-            bool                                        m_HalfMode;
+            bool                                        m_halfMode;
             /// Flag to determine if use multiple homogenenous modes are used.
-            bool                                        m_MultipleModes;
+            bool                                        m_multipleModes;
             /// Flag to determine if FFT is used for homogeneous transform.
             bool                                        m_useFFT;
             /**
@@ -534,6 +541,7 @@ namespace Nektar
             
             /// Virtual function for solve implementation.
             SOLVER_UTILS_EXPORT virtual void v_DoSolve();
+            
             
             /// Virtual function for the L_inf error computation between fields and a given exact solution.
             SOLVER_UTILS_EXPORT virtual NekDouble v_LinfError(
