@@ -3278,13 +3278,13 @@ namespace Nektar
 
         CoeffsCount = 0.0;
         
-        Array<OneD, NekDouble> h_avg (nElements, 0.0);
-        GetElementDimensions(h_avg);
-        NekDouble hmax = Vmath::Vmax(nElements, h_avg, 1);
-        NekDouble Smin = Vmath::Vmin(Sensor.num_elements(), Sensor, 1);
+        //Array<OneD, NekDouble> h_avg (nElements, 0.0);
+        //GetElementDimensions(h_avg);
+        //NekDouble hmax = Vmath::Vmax(nElements, h_avg, 1);
+        //NekDouble Smin = Vmath::Vmin(Sensor.num_elements(), Sensor, 1);
         for (e = 0; e < nElements; e++)
         {
-            NekDouble scale = h_avg[e]/hmax;
+            //NekDouble scale = h_avg[e]/hmax;
             NumModesElement    = ExpOrderElement[e];
             
             NekDouble Phi0     = m_Skappa;
@@ -3378,7 +3378,7 @@ namespace Nektar
     }
 
     void CompressibleFlowSystem::GetElementDimensions(
-                                                      Array<OneD,                   NekDouble >  &hmin)
+                 Array<OneD,                   NekDouble >  &hmin)
     {
         // So far, this function is only implemented for quads
         const int nElements = m_fields[0]->GetExpSize();
@@ -3442,6 +3442,7 @@ namespace Nektar
         }
         else if(m_spacedim == 3)
         {
+            /*
             for (int e = 0; e < nElements; e++)
             {
                 LocalRegions::Expansion3DSharedPtr exp3d =
@@ -3501,7 +3502,7 @@ namespace Nektar
                 //NekDouble hAVG = Vmath::Vsum(nedges, L1, 1);
                 
                 //hmin[e] = hAVG/nedges;
-            }
+            }*/
         }
     }
 
@@ -3641,9 +3642,9 @@ namespace Nektar
         Array<OneD, NekDouble> Lambda(nTotQuadPoints, 1.0);
         Vmath::Vadd(nTotQuadPoints, absVelocity, 1, soundspeed, 1, Lambda, 1);
         
-        GetElementDimensions(h_avg);
+        //GetElementDimensions(h_avg);
         
-        NekDouble hmax = Vmath::Vmax(nElements, h_avg, 1);
+        //NekDouble hmax = Vmath::Vmax(nElements, h_avg, 1);
         
         for (int e = 0; e < nElements; e++)
         {
