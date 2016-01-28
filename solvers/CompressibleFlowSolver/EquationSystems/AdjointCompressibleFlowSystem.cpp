@@ -126,10 +126,10 @@ namespace Nektar
         m_session->LoadParameter ("Kappa",          m_Kappa,                0.0);
         m_session->LoadParameter ("mu0",            m_mu0,                  1.0);
         /*m_session->LoadParameter ("muMax",          m_muMAX,             1.0e10);
-	m_session->LoadParameter ("muMaxLim",       m_muMAXLIM,             0.0);
-	m_session->LoadParameter ("muMin",          m_muMIN,           -1.0e-10);
+         m_session->LoadParameter ("muMaxLim",       m_muMAXLIM,             0.0);
+         m_session->LoadParameter ("muMin",          m_muMIN,           -1.0e-10);
         m_session->LoadParameter ("muMinLim",       m_muMINLIM,             0.0);*/
-	m_session->LoadParameter ("Lref",           m_Lref,                1.0);
+        m_session->LoadParameter ("Lref",           m_Lref,                1.0);
         m_session->LoadParameter ("numCheck",       m_numCheck,              0);
         m_session->LoadParameter ("finalCheck",     m_finalCheck,            0);
         m_session->LoadParameter ("thermalConductivity",
@@ -264,11 +264,16 @@ namespace Nektar
                     // Get d(J^c_v)/dxi = d(dFcdV)/dxi
                     GetDerivJacobian(m_JacCons, m_JacDivCons);
                 
-                    m_advection->SetAdjointFluxVector(
-                    &AdjointCompressibleFlowSystem::GetAdjointFluxVectorAlternative, this);
                     
-                    m_advection->SetJacTransposeDivVector(
-                    &AdjointCompressibleFlowSystem::GetAdjointDerivJacVector, this);
+                     m_advection->SetAdjointFluxVector(
+                     &AdjointCompressibleFlowSystem::GetAdjointFluxVectorAlternative, this);
+                     
+                     m_advection->SetJacTransposeDivVector(
+                     &AdjointCompressibleFlowSystem::GetAdjointDerivJacVector, this);
+                     
+                    
+                    //m_advection->SetAdjointFluxVector(
+                    //&AdjointCompressibleFlowSystem::GetAdjointFluxVector, this);
 		    
                     /*m_advection->SetJacTransposeDivVector(
                       &AdjointCompressibleFlowSystem::GetDerivJacVectorFromPrimitiveVar, this);*/
@@ -578,11 +583,16 @@ namespace Nektar
                 GetJacobianConvFlux(m_JacCons);
                 GetDerivJacobian(m_JacCons, m_JacDivCons);
  
+                /*
                 m_advection->SetAdjointFluxVector(
                 &AdjointCompressibleFlowSystem::GetAdjointFluxVectorAlternative, this);
 
                 m_advection->SetJacTransposeDivVector(
                 &AdjointCompressibleFlowSystem::GetAdjointDerivJacVector, this);
+                */
+                
+                m_advection->SetAdjointFluxVector(
+                  &AdjointCompressibleFlowSystem::GetAdjointFluxVector, this);
                 
                 if (m_shockCaptureType=="NonSmooth")
                 {
@@ -605,10 +615,16 @@ namespace Nektar
                 GetDerivJacobian(m_JacCons, m_JacDivCons);
                 
                 m_advection->SetAdjointFluxVector(
-                &AdjointCompressibleFlowSystem::GetAdjointFluxVector, this);
+                    &AdjointCompressibleFlowSystem::GetAdjointFluxVectorAlternative, this);
                 
                 m_advection->SetJacTransposeDivVector(
-                &AdjointCompressibleFlowSystem::GetDerivJacVectorFromPrimitiveVar, this);
+                    &AdjointCompressibleFlowSystem::GetAdjointDerivJacVector, this);
+                
+                //m_advection->SetAdjointFluxVector(
+                //&AdjointCompressibleFlowSystem::GetAdjointFluxVector, this);
+                
+                //m_advection->SetJacTransposeDivVector(
+                //&AdjointCompressibleFlowSystem::GetDerivJacVectorFromPrimitiveVar, this);
 
                 m_dVdUdXi = Array<OneD, Array<OneD, Array<OneD,
                 Array<OneD, NekDouble> > > > (m_spacedim);
@@ -1000,10 +1016,8 @@ namespace Nektar
                                 	   &Normal[i][0], 1,
                                 	   &Fwd[i+1][id2],1,
                                        &Fwd[i+1][id2], 1);
-                        
                     }
 			
-                    
                     Vmath::Vcopy(nBCEdgePts, &Fwd[0][id2], 1,
                                  &(m_fields[0]->GetBndCondExpansions()[bcRegion]->
                                    UpdatePhys())[id1], 1);
@@ -1025,10 +1039,10 @@ namespace Nektar
                 else if (m_EqTypeStr == "AdjointNavierStokesCFE")
                 {
 		
-                    Vmath::Neg(nBCEdgePts,&Fwdnew[0][id2], 1);
+                    //Vmath::Neg(nBCEdgePts,&Fwdnew[0][id2], 1);
                     Vmath::Neg(nBCEdgePts,&Fwdnew[1][id2], 1);
                     Vmath::Neg(nBCEdgePts,&Fwdnew[2][id2], 1);
-                    Vmath::Neg(nBCEdgePts,&Fwdnew[3][id2], 1);
+                    //Vmath::Neg(nBCEdgePts,&Fwdnew[3][id2], 1);
 
                     Vmath::Vadd(nBCEdgePts,
                                 &Force[0][0], 1,
@@ -1040,24 +1054,23 @@ namespace Nektar
                                 &Fwdnew[2][id2], 1,
                                 &Fwdnew[2][id2], 1);
 
-
-		                    Vmath::Vcopy(nBCEdgePts, &Fwdnew[0][id2], 1,
+                    Vmath::Vcopy(nBCEdgePts, &Fwdnew[0][id2], 1,
                              &(m_fields[0]->GetBndCondExpansions()[bcRegion]->
                                UpdatePhys())[id1], 1);
 
-                      Vmath::Vcopy(nBCEdgePts, &Fwdnew[1][id2], 1,
+                    Vmath::Vcopy(nBCEdgePts, &Fwdnew[1][id2], 1,
                              &(m_fields[1]->GetBndCondExpansions()[bcRegion]->
                                UpdatePhys())[id1], 1);
 
-                Vmath::Vcopy(nBCEdgePts, &Fwdnew[2][id2], 1,
+                    Vmath::Vcopy(nBCEdgePts, &Fwdnew[2][id2], 1,
                              &(m_fields[2]->GetBndCondExpansions()[bcRegion]->
                                UpdatePhys())[id1], 1);
 
-                Vmath::Vcopy(nBCEdgePts, &Fwdnew[3][id2], 1,
+                    Vmath::Vcopy(nBCEdgePts, &Fwdnew[3][id2], 1,
                              &(m_fields[3]->GetBndCondExpansions()[bcRegion]->
                                UpdatePhys())[id1], 1);
                 }
-             }
+            }
         }
         
         if (m_spacedim == 3)
@@ -1081,28 +1094,149 @@ namespace Nektar
                 Force[0] = Array<OneD, NekDouble> (nBCEdgePts, m_Fx);
                 Force[1] = Array<OneD, NekDouble> (nBCEdgePts, m_Fy);
                 Force[2] = Array<OneD, NekDouble> (nBCEdgePts, m_Fz);
-        
-                Array<OneD, NekDouble> zeros(nBCEdgePts, 0.0);
                 
-                Vmath::Vcopy(nBCEdgePts, &zeros[0], 1,
-                             &(m_fields[0]->GetBndCondExpansions()[bcRegion]->
-                               UpdatePhys())[id1], 1);
+                Array<OneD, Array<OneD, NekDouble> > Normal(m_spacedim);
+                Normal[0] = Array<OneD, NekDouble> (nBCEdgePts, 0.0);
+                Normal[1] = Array<OneD, NekDouble> (nBCEdgePts, 0.0);
+                Normal[2] = Array<OneD, NekDouble> (nBCEdgePts, 0.0);
                 
-                Vmath::Vcopy(nBCEdgePts, &Force[0][0], 1,
-                             &(m_fields[1]->GetBndCondExpansions()[bcRegion]->
-                               UpdatePhys())[id1], 1);
-                
-                Vmath::Vcopy(nBCEdgePts, &Force[1][0], 1,
-                             &(m_fields[2]->GetBndCondExpansions()[bcRegion]->
-                               UpdatePhys())[id1], 1);
-                
-                Vmath::Vcopy(nBCEdgePts, &Force[2][0], 1,
-                             &(m_fields[3]->GetBndCondExpansions()[bcRegion]->
-                               UpdatePhys())[id1], 1);
-                
-                Vmath::Vcopy(nBCEdgePts, &zeros[0], 1,
-                             &(m_fields[4]->GetBndCondExpansions()[bcRegion]->
-                               UpdatePhys())[id1], 1);
+                if (m_EqTypeStr == "AdjointEulerCFE"|| m_EqTypeStr == "AdjointEulerADCFE")
+                {
+                    Array<OneD, NekDouble> zeros(nBCEdgePts, 0.0);
+                    Array<OneD, NekDouble> tmp(nBCEdgePts, 0.0);
+                    Array<OneD, NekDouble> tmp_force(nBCEdgePts, 0.0);
+                    Array<OneD, NekDouble> tmp_force2(nBCEdgePts, 0.0);
+                    Array<OneD, NekDouble> tmp_force3(nBCEdgePts, 0.0);
+                    
+                    //Vmath::Neg(nBCEdgePts, &Fwd[1][id2], 1);
+                    //Vmath::Neg(nBCEdgePts, &Fwd[2][id2], 1);
+                    
+                    //Vmath::Neg(nBCEdgePts, &Fwd[0][id2], 1);
+                    //Vmath::Neg(nBCEdgePts, &Fwd[3][id2], 1);
+                    
+                    for (i = 0; i < m_spacedim; ++i)
+                    {
+                        Vmath::Vvtvp(nBCEdgePts,
+                                     &Fwd[1+i][id2], 1,
+                                     &m_traceNormals[i][id2], 1,
+                                     &tmp[0], 1,
+                                     &tmp[0], 1);
+                    }
+                    
+                    Vmath::Smul(nBCEdgePts, -2.0, &tmp[0], 1, &tmp[0], 1);
+                    
+                    for (i = 0; i < m_spacedim; ++i)
+                    {
+                        Vmath::Vvtvp(nBCEdgePts,
+                                     &tmp[0], 1,
+                                     &m_traceNormals[i][id2], 1,
+                                     &Fwd[1+i][id2], 1,
+                                     &Fwd[1+i][id2], 1);
+                    }
+                    
+                    for (i = 0; i < m_spacedim; ++i)
+                    {
+                        
+                        Vmath::Vvtvp(nBCEdgePts,
+                                     &Force[i][0], 1,
+                                     &m_traceNormals[i][id2], 1,
+                                     &tmp_force[0], 1,
+                                     &tmp_force[0],1);
+                        
+                    }
+                    
+                    Vmath::Smul(nBCEdgePts, 2.0,
+                                &tmp_force[0], 1,
+                                &tmp_force[0], 1);
+                    
+                    // Calculate 2(theta.n)n
+                    
+                    for (i = 0; i < m_spacedim; ++i)
+                    {
+                        Vmath::Vmul(nBCEdgePts,
+                                    &tmp_force[0], 1,
+                                    &m_traceNormals[i][id2], 1,
+                                    &Normal[i][0],1);
+                    }
+                    
+                    // Calculate Bwd = -Fwd+2(theta.n)n
+                    for (i = 0; i < m_spacedim; ++i)
+                    {
+                        Vmath::Vadd(nBCEdgePts,
+                                	   &Normal[i][0], 1,
+                                	   &Fwd[i+1][id2],1,
+                                    &Fwd[i+1][id2], 1);
+                        
+                    }
+                    
+                    
+                    Vmath::Vcopy(nBCEdgePts, &Fwd[0][id2], 1,
+                                 &(m_fields[0]->GetBndCondExpansions()[bcRegion]->
+                                   UpdatePhys())[id1], 1);
+                    
+                    Vmath::Vcopy(nBCEdgePts, &Fwd[1][id2], 1,
+                                 &(m_fields[1]->GetBndCondExpansions()[bcRegion]->
+                                   UpdatePhys())[id1], 1);
+                    
+                    Vmath::Vcopy(nBCEdgePts, &Fwd[2][id2], 1,
+                                 &(m_fields[2]->GetBndCondExpansions()[bcRegion]->
+                                   UpdatePhys())[id1], 1);
+                    
+                    Vmath::Vcopy(nBCEdgePts, &Fwd[3][id2], 1,
+                                 &(m_fields[3]->GetBndCondExpansions()[bcRegion]->
+                                   UpdatePhys())[id1], 1);
+                    
+                    Vmath::Vcopy(nBCEdgePts, &Fwd[4][id2], 1,
+                                 &(m_fields[4]->GetBndCondExpansions()[bcRegion]->
+                                   UpdatePhys())[id1], 1);
+                    
+                    
+                }
+                else if (m_EqTypeStr == "AdjointNavierStokesCFE")
+                {
+                    
+                    Vmath::Neg(nBCEdgePts,&Fwdnew[0][id2], 1);
+                    Vmath::Neg(nBCEdgePts,&Fwdnew[1][id2], 1);
+                    Vmath::Neg(nBCEdgePts,&Fwdnew[2][id2], 1);
+                    Vmath::Neg(nBCEdgePts,&Fwdnew[3][id2], 1);
+                    Vmath::Neg(nBCEdgePts,&Fwdnew[4][id2], 1);
+                    
+                    Vmath::Vadd(nBCEdgePts,
+                                &Force[0][0], 1,
+                                &Fwdnew[1][id2], 1,
+                                &Fwdnew[1][id2], 1);
+                    
+                    Vmath::Vadd(nBCEdgePts,
+                                &Force[1][0], 1,
+                                &Fwdnew[2][id2], 1,
+                                &Fwdnew[2][id2], 1);
+                    
+                    Vmath::Vadd(nBCEdgePts,
+                                &Force[2][0], 1,
+                                &Fwdnew[3][id2], 1,
+                                &Fwdnew[3][id2], 1);
+                    
+                    
+                    Vmath::Vcopy(nBCEdgePts, &Fwdnew[0][id2], 1,
+                                 &(m_fields[0]->GetBndCondExpansions()[bcRegion]->
+                                   UpdatePhys())[id1], 1);
+                    
+                    Vmath::Vcopy(nBCEdgePts, &Fwdnew[1][id2], 1,
+                                 &(m_fields[1]->GetBndCondExpansions()[bcRegion]->
+                                   UpdatePhys())[id1], 1);
+                    
+                    Vmath::Vcopy(nBCEdgePts, &Fwdnew[2][id2], 1,
+                                 &(m_fields[2]->GetBndCondExpansions()[bcRegion]->
+                                   UpdatePhys())[id1], 1);
+                    
+                    Vmath::Vcopy(nBCEdgePts, &Fwdnew[3][id2], 1,
+                                 &(m_fields[3]->GetBndCondExpansions()[bcRegion]->
+                                   UpdatePhys())[id1], 1);
+                    
+                    Vmath::Vcopy(nBCEdgePts, &Fwdnew[4][id2], 1,
+                                 &(m_fields[4]->GetBndCondExpansions()[bcRegion]->
+                                   UpdatePhys())[id1], 1);
+                }
             }
         }
         // Copy boundary adjusted values into the boundary expansion
@@ -2902,21 +3036,21 @@ namespace Nektar
 		    
 		    // Correct?
 		    for (i = 0; i < nvar; ++i)
-		    {
-			for (j = 0; j < nvar; ++j)
-			{
-			    Vmath::Vvtvp(nq,
-					 &m_dVdU[i][j][0], 1,
-					 &tmpnewx[j][0], 1,
-					 &outarray[0][i][0], 1,
-					 &outarray[0][i][0], 1);
+            {
+                for (j = 0; j < nvar; ++j)
+                {
+                    Vmath::Vvtvp(nq,
+                                 &m_dVdU[i][j][0], 1,
+                                 &tmpnewx[j][0], 1,
+                                 &outarray[0][i][0], 1,
+                                 &outarray[0][i][0], 1);
 			    
-			    Vmath::Vvtvp(nq,
-					 &m_dVdU[i][j][0], 1,
-					 &tmpnewy[j][0], 1,
-					 &outarray[1][i][0], 1,
-					 &outarray[1][i][0], 1);
-			}
+                    Vmath::Vvtvp(nq,
+                                 &m_dVdU[i][j][0], 1,
+                                 &tmpnewy[j][0], 1,
+                                 &outarray[1][i][0], 1,
+                                 &outarray[1][i][0], 1);
+                }
 		    }
 		}
 		
@@ -3952,6 +4086,7 @@ namespace Nektar
             // (gam-1)*(u^2 + v^2)-u^2
             Vmath::Vcopy(nq, &velsq[0], 1, &Jac[0][0][1][0], 1);
             Vmath::Smul(nq, GammaMinOne, &Jac[0][0][1][0], 1, &Jac[0][0][1][0], 1);
+            Vmath::Smul(nq, 0.5, &Jac[0][0][1][0], 1, &Jac[0][0][1][0], 1);
             Vmath::Vmul(nq, vel[0], 1, vel[0], 1, tmp, 1);
             Vmath::Vsub(nq, &Jac[0][0][1][0], 1, &tmp[0], 1, &Jac[0][0][1][0], 1);
             // u * v
@@ -3971,6 +4106,7 @@ namespace Nektar
             Vmath::Vcopy(nq, &ones[0], 1, &Jac[0][1][0][0], 1);
             // -u*(gam-3)
             Vmath::Smul(nq, GammaMinThree, &vel[0][0], 1, &Jac[0][1][1][0], 1);
+            Vmath::Neg(nq, &Jac[0][1][1][0], 1);
             // v
             Vmath::Vcopy(nq, &vel[1][0], 1, &Jac[0][1][2][0], 1);
             // w
@@ -3985,11 +4121,11 @@ namespace Nektar
             Vmath::Vcopy(nq, &zeros[0], 1, &Jac[0][2][0][0], 1);
             // -v*(gam-1)
             Vmath::Smul(nq, -GammaMinOne, &vel[1][0], 1, &Jac[0][2][1][0], 1);
-            // v
+            // u
             Vmath::Vcopy(nq, &vel[0][0], 1, &Jac[0][2][2][0], 1);
             // 0
             Vmath::Vcopy(nq, &zeros[0], 1, &Jac[0][2][3][0], 1);
-            // u*v
+            // -u*v(gam-1)
             Vmath::Vmul(nq, &vel[0][0], 1, &vel[1][0], 1, &Jac[0][2][4][0], 1);
             Vmath::Smul(nq, -GammaMinOne, &Jac[0][2][4][0], 1, &Jac[0][2][4][0], 1);
             
@@ -4010,7 +4146,7 @@ namespace Nektar
             // 0
             Vmath::Vcopy(nq, &zeros[0], 1, &Jac[0][4][0][0], 1);
             // (gam-1)
-            Vmath::Smul(nq, -GammaMinOne, &ones[0], 1, &Jac[0][4][1][0], 1);
+            Vmath::Smul(nq, GammaMinOne, &ones[0], 1, &Jac[0][4][1][0], 1);
             // 0
             Vmath::Vcopy(nq, &zeros[0], 1, &Jac[0][4][2][0], 1);
             // 0
@@ -4027,15 +4163,16 @@ namespace Nektar
             // row one
             // 0
             Vmath::Vcopy(nq, &zeros[0], 1, &Jac[1][0][0][0], 1);
-            // u * v
+            // -u * v
             Vmath::Vmul(nq, &vel[0][0], 1, &vel[1][0], 1, &Jac[1][0][1][0], 1);
             Vmath::Neg(nq, &Jac[1][0][1][0], 1);
-            // (gam-1)*(u^2 + v^2)-u^2
+            // (gam-1)*(u^2 + v^2)-v^2
             Vmath::Vcopy(nq, &velsq[0], 1, &Jac[1][0][2][0], 1);
             Vmath::Smul(nq, GammaMinOne, &Jac[1][0][2][0], 1, &Jac[1][0][2][0], 1);
+            Vmath::Smul(nq, 0.5, &Jac[1][0][2][0], 1, &Jac[1][0][2][0], 1);
             Vmath::Vmul(nq, vel[1], 1, vel[1], 1, tmp, 1);
             Vmath::Vsub(nq, &Jac[1][0][2][0], 1, &tmp[0], 1, &Jac[1][0][2][0], 1);
-            // u * w
+            // -u * w
             Vmath::Vmul(nq, &vel[0][0], 1, &vel[2][0], 1, &Jac[1][0][3][0], 1);
             Vmath::Neg(nq, &Jac[1][0][3][0], 1);
             // v * (1/2*(gam-1)*velsq - H)
@@ -4048,7 +4185,7 @@ namespace Nektar
             // 0
             Vmath::Vcopy(nq, &zeros[0], 1, &Jac[1][1][0][0], 1);
             // v
-            Vmath::Vcopy(nq, &vel[0][0], 1, &Jac[1][1][1][0], 1);
+            Vmath::Vcopy(nq, &vel[1][0], 1, &Jac[1][1][1][0], 1);
             // -u*(gam-1)
             Vmath::Smul(nq, -GammaMinOne, &vel[0][0], 1, &Jac[1][1][2][0], 1);
             // 0
@@ -4064,6 +4201,7 @@ namespace Nektar
             Vmath::Vcopy(nq, &vel[0][0], 1, &Jac[1][2][1][0], 1);
             // -v*(gam-3)
             Vmath::Smul(nq, GammaMinThree, &vel[1][0], 1, &Jac[1][2][2][0], 1);
+            Vmath::Neg(nq, &Jac[1][2][2][0], 1);
             // w
             Vmath::Vcopy(nq, &vel[2][0], 1, &Jac[1][2][3][0], 1);
             // H - (gam-1)*v^2
@@ -4090,7 +4228,7 @@ namespace Nektar
             // 0
             Vmath::Vcopy(nq, &zeros[0], 1, &Jac[1][4][1][0], 1);
             // (gam-1)
-            Vmath::Smul(nq, -GammaMinOne, &ones[0], 1, &Jac[1][4][2][0], 1);
+            Vmath::Smul(nq, GammaMinOne, &ones[0], 1, &Jac[1][4][2][0], 1);
             // 0
             Vmath::Vcopy(nq, &zeros[0], 1, &Jac[1][4][3][0], 1);
             // gam*v
@@ -4113,9 +4251,10 @@ namespace Nektar
             // (gam-1)*(u^2 + v^2)-w^2
             Vmath::Vcopy(nq, &velsq[0], 1, &Jac[2][0][3][0], 1);
             Vmath::Smul(nq, GammaMinOne, &Jac[2][0][3][0], 1, &Jac[2][0][3][0], 1);
+            Vmath::Smul(nq, 0.5, &Jac[2][0][3][0], 1, &Jac[2][0][3][0], 1);
             Vmath::Vmul(nq, vel[2], 1, vel[2], 1, tmp, 1);
             Vmath::Vsub(nq, &Jac[2][0][3][0], 1, &tmp[0], 1, &Jac[2][0][3][0], 1);
-            // v * (1/2*(gam-1)*velsq - H)
+            // w * (1/2*(gam-1)*velsq - H)
             Vmath::Smul(nq, GammaMinOne, &velsq[0], 1, &Jac[2][0][4][0], 1);
             Vmath::Smul(nq, 0.5, &Jac[2][0][4][0], 1, &Jac[2][0][4][0], 1);
             Vmath::Vsub(nq, &Jac[2][0][4][0], 1, &H[0], 1, &Jac[2][0][4][0], 1);
@@ -4142,7 +4281,7 @@ namespace Nektar
             // w
             Vmath::Vcopy(nq, &vel[2][0], 1, &Jac[2][2][2][0], 1);
             // -v*(gam-1)
-            Vmath::Smul(nq, -GammaMinOne, &vel[0][0], 1, &Jac[2][1][3][0], 1);
+            Vmath::Smul(nq, -GammaMinOne, &vel[1][0], 1, &Jac[2][1][3][0], 1);
             // -v*w*(gam-1)
             Vmath::Vmul(nq, &vel[1][0], 1, &vel[2][0], 1, &Jac[2][1][4][0], 1);
             Vmath::Smul(nq, -GammaMinOne, &Jac[2][1][4][0], 1, &Jac[2][1][4][0], 1);
@@ -4153,9 +4292,10 @@ namespace Nektar
             // u
             Vmath::Vcopy(nq, &vel[0][0], 1, &Jac[2][3][1][0], 1);
             // v
-            Vmath::Vcopy(nq, &vel[0][0], 1, &Jac[2][3][2][0], 1);
+            Vmath::Vcopy(nq, &vel[1][0], 1, &Jac[2][3][2][0], 1);
             // -w*(gam-3)
             Vmath::Smul(nq, GammaMinThree, &vel[2][0], 1, &Jac[2][3][3][0], 1);
+            Vmath::Neg(nq, &Jac[2][3][3][0], 1);
             // H - (gam-1)*w^2
             Vmath::Vmul(nq, &vel[2][0], 1, &vel[2][0], 1, &Jac[2][3][4][0], 1);
             Vmath::Smul(nq, -GammaMinOne, &Jac[2][3][4][0], 1, &Jac[2][3][4][0], 1);
@@ -4169,9 +4309,20 @@ namespace Nektar
             // 0
             Vmath::Vcopy(nq, &zeros[0], 1, &Jac[2][4][2][0], 1);
             // (gam-1)
-            Vmath::Smul(nq, -GammaMinOne, &ones[0], 1, &Jac[2][4][3][0], 1);
+            Vmath::Smul(nq, GammaMinOne, &ones[0], 1, &Jac[2][4][3][0], 1);
             // gam*w
             Vmath::Smul(nq, m_gamma, &vel[2][0], 1, &Jac[2][4][4][0], 1);
+            
+            for(int p = 0; p < m_spacedim;++p)
+            {
+                for(int q = 0; q < nvar;++q)
+                {
+                    for(int r = 0; r < nvar;++r)
+                    {
+                        Vmath::Neg(nq, &Jac[p][q][r][0], 1);
+                    }
+                }
+            }
         }
     }
     

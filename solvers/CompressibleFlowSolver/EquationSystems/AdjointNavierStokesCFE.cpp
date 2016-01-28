@@ -273,6 +273,11 @@ namespace Nektar
                             inarray,
                             outarrayAdv,
                             time);
+        
+        for (i = 0; i < nvariables; ++i)
+        {
+            Vmath::Neg(npoints, outarrayAdv[i], 1);
+        }
             
         // Diffusion term in physical rhs form
         //

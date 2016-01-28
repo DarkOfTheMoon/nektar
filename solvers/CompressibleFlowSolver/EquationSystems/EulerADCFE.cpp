@@ -125,37 +125,36 @@ namespace Nektar
     }
 
     void EulerADCFE::DoOdeRhs(
-        const Array<OneD, const Array<OneD, NekDouble> > &inarray,
-        Array<OneD,       Array<OneD, NekDouble> > &outarray,
-        const NekDouble                                   time)
+                              const Array<OneD, const Array<OneD, NekDouble> > &inarray,
+                              Array<OneD,       Array<OneD, NekDouble> > &outarray,
+                              const NekDouble                                   time)
     {
         int i;
         int nvariables = inarray.num_elements();
         int npoints    = GetNpoints();
-
+        
+        Array<OneD, Array<OneD, NekDouble> > advVel;
+        Array<OneD, Array<OneD, NekDouble> > outarrayAdv(nvariables);
+        Array<OneD, Array<OneD, NekDouble> > outarrayDiff(nvariables);
+        
+        for (i = 0; i < nvariables; ++i)
+        {
+            outarrayAdv[i] = Array<OneD, NekDouble>(npoints, 0.0);
+            outarrayDiff[i] = Array<OneD, NekDouble>(npoints, 0.0);
+        }
+        
+        m_advection->Advect(nvariables, m_fields, advVel, inarray,
+                            outarrayAdv, m_time);
+        
+        for (i = 0; i < nvariables; ++i)
+        {
+            Vmath::Neg(npoints, outarrayAdv[i], 1);
+        }
+        
+        m_diffusion->Diffuse(nvariables, m_fields, inarray, outarrayDiff);
+        
         if (m_shockCaptureType == "NonSmooth")
         {
-            
-            Array<OneD, Array<OneD, NekDouble> > advVel;
-            Array<OneD, Array<OneD, NekDouble> > outarrayAdv(nvariables);
-            Array<OneD, Array<OneD, NekDouble> > outarrayDiff(nvariables);
-            
-            for (i = 0; i < nvariables; ++i)
-            {
-                outarrayAdv[i] = Array<OneD, NekDouble>(npoints, 0.0);
-                outarrayDiff[i] = Array<OneD, NekDouble>(npoints, 0.0);
-            }
-            
-            m_advection->Advect(nvariables, m_fields, advVel, inarray,
-                                outarrayAdv, m_time);
-            
-            for (i = 0; i < nvariables; ++i)
-            {
-                Vmath::Neg(npoints, outarrayAdv[i], 1);
-            }
-            
-            m_diffusion->Diffuse(nvariables, m_fields, inarray, outarrayDiff);
-
             for (i = 0; i < nvariables; ++i)
             {
                 Vmath::Vadd(npoints,
@@ -164,63 +163,41 @@ namespace Nektar
                             outarray[i], 1);
             }
         }
-        
         if(m_shockCaptureType == "Smooth")
         {
-            Array<OneD, Array<OneD, NekDouble> > advVel;
-            Array<OneD, Array<OneD, NekDouble> > outarrayAdv(nvariables);
-            Array<OneD, Array<OneD, NekDouble> > outarrayDiff(nvariables);
+            const Array<OneD, int> ExpOrder = GetNumExpModesPerExp();
             
-            for (i = 0; i < nvariables; ++i)
-            {
-                outarrayAdv[i] = Array<OneD, NekDouble>(npoints, 0.0);
-                outarrayDiff[i] = Array<OneD, NekDouble>(npoints, 0.0);
-            }
+            NekDouble pOrder = Vmath::Vmax(ExpOrder.num_elements(), ExpOrder, 1);
             
-            //m_advection->Advect(nvariables, m_fields, advVel, inarray,
-            //                    outarrayAdv, m_time);
-            
-            for (i = 0; i < nvariables; ++i)
-            {
-                Vmath::Neg(npoints, outarrayAdv[i], 1);
-            }
-            
-            /*const Array<OneD, int> ExpOrder = GetNumExpModesPerExp();
-
-            NekDouble pOrder = ExpOrder[0];
-
             Array <OneD, NekDouble > a_vel  (npoints, 0.0);
             Array <OneD, NekDouble > u_abs  (npoints, 0.0);
             Array <OneD, NekDouble > pres   (npoints, 0.0);
             Array <OneD, NekDouble > wave_sp(npoints, 0.0);
-
+            /*
             GetPressure(inarray, pres);
             GetSoundSpeed(inarray, pres, a_vel);
             GetAbsoluteVelocity(inarray, u_abs);
-
-            Vmath::Vadd(npoints, a_vel, 1, u_abs, 1, wave_sp, 1);
-
-            NekDouble max_wave_sp = Vmath::Vmax(npoints, wave_sp, 1);*/
-
-            /*Vmath::Smul(npoints,
-                        max_wave_sp,
-                        outarrayDiff[nvariables-1], 1,
-                        outarrayDiff[nvariables-1], 1);
-
-            Vmath::Smul(npoints,
-                        pOrder,
-                        outarrayDiff[nvariables-1], 1,
-                        outarrayDiff[nvariables-1], 1);
-            */
-            m_diffusion->Diffuse(nvariables, m_fields, inarray, outarrayDiff);
             
+            Vmath::Vadd(npoints, a_vel, 1, u_abs, 1, wave_sp, 1);
+            
+            NekDouble max_wave_sp = Vmath::Vmax(npoints, wave_sp, 1);
+            */
             
             Vmath::Smul(npoints,
                         m_C2,
                         outarrayDiff[nvariables-1], 1,
                         outarrayDiff[nvariables-1], 1);
             
+            /*Vmath::Smul(npoints,
+                        max_wave_sp,
+                        outarrayDiff[nvariables-1], 1,
+                        outarrayDiff[nvariables-1], 1);
             
+            Vmath::Smul(npoints,
+                        pOrder,
+                        outarrayDiff[nvariables-1], 1,
+                        outarrayDiff[nvariables-1], 1);
+            */
             for (i = 0; i < nvariables; ++i)
             {
                 Vmath::Vadd(npoints,
@@ -229,16 +206,15 @@ namespace Nektar
                             outarray[i], 1);
             }
             
-
             Array<OneD, Array<OneD, NekDouble> > outarrayForcing(nvariables);
-
+            
             for (i = 0; i < nvariables; ++i)
             {
                 outarrayForcing[i] = Array<OneD, NekDouble>(npoints, 0.0);
             }
-
+            
             GetForcingTerm(inarray, outarrayForcing);
-
+            
             for (i = 0; i < nvariables; ++i)
             {
                 // Add Forcing Term
@@ -248,7 +224,7 @@ namespace Nektar
                             outarray[i], 1);
             }
         }
-
+        
         // Add sponge layer if defined in the session file
         std::vector<SolverUtils::ForcingSharedPtr>::const_iterator x;
         for (x = m_forcing.begin(); x != m_forcing.end(); ++x)

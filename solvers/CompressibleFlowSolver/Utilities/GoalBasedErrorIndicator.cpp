@@ -94,6 +94,22 @@ int main(int argc, char *argv[])
     NekDouble                           m_mu0;
     NekDouble                           m_Twall;
     NekDouble                           m_mu;
+    NekDouble                           m_tol1;
+    NekDouble                           m_tol2;
+    NekDouble                           m_tol3;
+    NekDouble                           m_tol4;
+    NekDouble                           m_tol5;
+    NekDouble                           m_tol6;
+    NekDouble                           m_tol7;
+    NekDouble                           m_tol8;
+    NekDouble                           m_P1;
+    NekDouble                           m_P2;
+    NekDouble                           m_P3;
+    NekDouble                           m_P4;
+    NekDouble                           m_P5;
+    NekDouble                           m_P6;
+    NekDouble                           m_P7;
+    NekDouble                           m_P8;
     NekDouble                           m_thermalConductivity;
     
     ASSERTL0(vSession->DefinesParameter("Gamma"),
@@ -139,6 +155,24 @@ int main(int argc, char *argv[])
     vSession->LoadParameter ("Twall",         m_Twall,         300.15);
     vSession->LoadSolverInfo("ViscosityType", m_ViscosityType, "Constant");
     vSession->LoadParameter ("mu",            m_mu,            1.78e-05);
+    vSession->LoadParameter ("TOL1",          m_tol1,            0.0);
+    vSession->LoadParameter ("TOL2",          m_tol2,            0.0);
+    vSession->LoadParameter ("TOL3",          m_tol3,            0.0);
+    vSession->LoadParameter ("TOL4",          m_tol4,            0.0);
+    vSession->LoadParameter ("TOL5",          m_tol5,            0.0);
+    vSession->LoadParameter ("TOL6",          m_tol6,            0.0);
+    vSession->LoadParameter ("TOL7",          m_tol7,            0.0);
+    vSession->LoadParameter ("TOL8",          m_tol8,            0.0);
+    vSession->LoadParameter ("P1",          m_P1,            0.0);
+    vSession->LoadParameter ("P2",          m_P2,            0.0);
+    vSession->LoadParameter ("P3",          m_P3,            0.0);
+    vSession->LoadParameter ("P4",          m_P4,            0.0);
+    vSession->LoadParameter ("P5",          m_P5,            0.0);
+    vSession->LoadParameter ("P6",          m_P6,            0.0);
+    vSession->LoadParameter ("P7",          m_P7,            0.0);
+    vSession->LoadParameter ("P8",          m_P8,            0.0);
+
+
     vSession->LoadParameter ("thermalConductivity",
                              m_thermalConductivity, 0.0257);
     
@@ -385,8 +419,8 @@ int main(int argc, char *argv[])
             
             //bwd plane 1
             fieldsAdjoint[j]->GetPlane(1)->BwdTrans_IterPerExp(
-                                                               fieldsAdjoint[j]->GetPlane(1)->GetCoeffs(),
-                                                               fieldsAdjoint[j]->GetPlane(1)->UpdatePhys());
+                                    fieldsAdjoint[j]->GetPlane(1)->GetCoeffs(),
+                                    fieldsAdjoint[j]->GetPlane(1)->UpdatePhys());
         }
     }
     else
@@ -399,7 +433,7 @@ int main(int argc, char *argv[])
                 fieldsAdjoint[j]->ExtractDataToCoeffs(fielddefAdjoint[i],
                                                       fielddataAdjoint[i],
                                                       fielddefAdjoint[i]->m_fields[j],
-                                                      fieldsAdjoint[j]->UpdateCoeffs());
+                                                       fieldsAdjoint[j]->UpdateCoeffs());
             }
             fieldsAdjoint[j]->BwdTrans_IterPerExp(fieldsAdjoint[j]->GetCoeffs(),
                                                   fieldsAdjoint[j]->UpdatePhys());
@@ -431,7 +465,9 @@ int main(int argc, char *argv[])
                     fieldsPlowOnPhigh[j]->GetPhys(), 1,
                     fieldsResiduals[j]->UpdatePhys(), 1);
         
-        Vmath::Vabs(nq, fieldsResiduals[j]->GetPhys(), 1, fieldsResiduals[j]->UpdatePhys(), 1);
+        Vmath::Vabs(nq,
+                    fieldsResiduals[j]->GetPhys(), 1,
+                    fieldsResiduals[j]->UpdatePhys(), 1);
     }
     
     NekDouble WeightedRes = 0.0;
@@ -439,7 +475,9 @@ int main(int argc, char *argv[])
     for (int j = 0; j < nfields; ++j)
     {
         
-        Vmath::Vabs(nq, fieldsAdjoint[j]->GetPhys(), 1, fieldsAdjoint[j]->UpdatePhys(), 1);
+        Vmath::Vabs(nq,
+                    fieldsAdjoint[j]->GetPhys(), 1,
+                    fieldsAdjoint[j]->UpdatePhys(), 1);
         
         Vmath::Vmul(nq,
                     fieldsResiduals[j]->GetPhys(), 1,
@@ -452,14 +490,6 @@ int main(int argc, char *argv[])
     
     int nElements       = fieldsOutPut[0]->GetExpSize();
     int offset          = 0;
-    
-    NekDouble tol1 = 35;
-    NekDouble tol2 = 30;
-    NekDouble tol3 = 25;
-    /*NekDouble tol4 = 20;
-     NekDouble tol5 = 15;
-     NekDouble tol6 = 10;
-     NekDouble tol7 = 5;*/
     
     int print = 0;
     std::ofstream m_file( "VariablePComposites.txt", std::ios_base::app);
@@ -483,7 +513,7 @@ int main(int argc, char *argv[])
         NekDouble sum3 = Vmath::Vsum(nqel, &fieldsOutPut[3]->GetPhys()[offset], 1);
         
         NekDouble sum = abs(sum0)+abs(sum1)+abs(sum2)+abs(sum3);
-        
+        //sum = abs(sum0)+abs(sum1)+abs(sum2)+abs(sum3);
         Array<OneD, NekDouble> error_sum(nqel, sum);
         
         //cout << Vmath::Vmax(nqel, &fieldsOutPut[0]->UpdatePhys()[offset], 1) << endl;
@@ -494,10 +524,11 @@ int main(int argc, char *argv[])
         
         //cout << abs(sum) << endl;
         
-        print = 4;
+        print = 3;
         
-        /*if (abs(sum) >= tol7 && abs(sum) < tol6)
-         {
+        /*
+        if (abs(sum) >= tol7 && abs(sum) < tol6)
+        {
          print = 4;
          }
          if (abs(sum) >= tol6 && abs(sum) < tol5)
@@ -511,23 +542,45 @@ int main(int argc, char *argv[])
          if (abs(sum) >= tol4 && abs(sum) < tol3)
          {
          print = 7;
-         }*/
-        if (abs(sum) >= tol3 && abs(sum) < tol2)
+        }*/
+        //cout << m_tol1 << " " << m_tol2 << " "  << m_tol3 << " "  << m_tol4 << endl;
+        /*if (abs(sum) >= m_tol8 && abs(sum) < m_tol7)
         {
-            print = 4;
+            print = m_P8;
         }
-        if (abs(sum) >= tol2 && abs(sum) < tol1)
+        if (abs(sum) >= m_tol7 && abs(sum) < m_tol6)
         {
-            print = 5;
+            print = m_P7;
         }
-        if (abs(sum) > tol1)
+        if (abs(sum) >= m_tol6 && abs(sum) < m_tol5)
         {
-            print = 6;
+            print = m_P6;
         }
-        if (Sensor[offset] > m_Skappa)
+        if (abs(sum) >= m_tol5 && abs(sum) < m_tol4)
         {
-            print = 4;
+            print = m_P5;
         }
+        if (abs(sum) >= m_tol4 && abs(sum) < m_tol3)
+        {
+            print = m_P4;
+        }*/
+        print = 3;
+        /*if (abs(sum) >= m_tol3 && abs(sum) < m_tol2)
+        {
+            print = m_P3;
+        }*/
+        if (abs(sum) >= m_tol2 && abs(sum) <= m_tol1)
+        {
+            print = m_P2;
+        }
+        if (abs(sum) > m_tol1)
+        {
+            print = m_P1;
+        }
+        //if (Sensor[offset] > m_Skappa)
+        //{
+        //    print = 4;
+        //}
         
         Array<OneD, NekDouble> p_order(nqel, print-1);
         
@@ -825,8 +878,8 @@ void GetSensor(
             else if(abs(Sensor[CoeffsCount+i]-Phi0) < DeltaPhi)
             {
                 SensorKappa[CoeffsCount+i] = ThetaS/2*(1+sin(M_PI*
-                                                             (Sensor[CoeffsCount+i]-Phi0)
-                                                             /(2*DeltaPhi)));
+                                        (Sensor[CoeffsCount+i]-Phi0)
+                                        /(2*DeltaPhi)));
             }
         }
         

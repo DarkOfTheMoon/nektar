@@ -242,13 +242,16 @@ namespace Nektar
             for(i = 0; i < nDim; ++i)
             {
                 
-                fields[0]->AverageTracePhys(inarray[i], m_traceVel[i]);
+                /*fields[0]->AverageTracePhys(inarray[i], m_traceVel[i]);
                 Vmath::Vvtvp(nTracePts, m_traceNormals[i], 1,
                              m_traceVel[i], 1, Vn, 1, Vn, 1);
                 
-                //fields[0]->ExtractTracePhys(inarray[i], m_traceVel[i]);
-                //Vmath::Vvtvp(nTracePts, m_traceNormals[i], 1,
-                //             m_traceVel[i], 1, Vn, 1, Vn, 1);
+                fields[0]->ExtractTracePhys(inarray[i], m_traceVel[i]);
+                Vmath::Vvtvp(nTracePts, m_traceNormals[i], 1,
+                             m_traceVel[i], 1, Vn, 1, Vn, 1);*/
+                
+                Vmath::Svtvp(nTracePts, 1.0, m_traceNormals[i], 1,
+                             Vn, 1, Vn, 1);
             }
             
             // Store forwards/backwards space along trace space
@@ -296,8 +299,7 @@ namespace Nektar
             int id1, id2;
             int eMax;
             
-            int nBCEdgePts, nBndEdges, nBndRegions;
-            
+            int nBndEdgePts, nBndEdges, nBndRegions;
             int nTracePts = fields[0]->GetTrace()->GetTotPoints();
             int nScalars  = inarray.num_elements();
             const Array<OneD, const int> &traceBndMap
@@ -307,123 +309,95 @@ namespace Nektar
             Array<OneD, NekDouble> tmp2(nTracePts, 0.0);
             
             Array< OneD, Array<OneD, NekDouble > > scalarVariables(nScalars);
-            Array< OneD, Array<OneD, NekDouble > > Fwd(nScalars);
-            Array< OneD, Array<OneD, NekDouble > > Fwdnew(nScalars);
+            Array< OneD, Array<OneD, NekDouble > > uplus(nScalars);
             // Extract internal values of the scalar variables for Neumann bcs
             for (i = 0; i < nScalars; ++i)
             {
                 scalarVariables[i] = Array<OneD, NekDouble>(nTracePts, 0.0);
                 
-                Fwd[i] = Array<OneD, NekDouble>(nTracePts, 0.0);
-                Fwdnew[i] = Array<OneD, NekDouble>(nTracePts);
-                fields[i]->ExtractTracePhys(inarray[i], Fwd[i]);
-                fields[i]->ExtractTracePhys(inarray[i], Fwdnew[i]);
+                uplus[i] = Array<OneD, NekDouble>(nTracePts, 0.0);
+                fields[i]->ExtractTracePhys(inarray[i], uplus[i]);
             }
             
-            nBndRegions = fields[0]->
-            GetBndCondExpansions().num_elements();
-            
-            for (int n = 0; n < nBndRegions; ++n)
+            for (i = 0; i < nScalars; ++i)
             {
-                eMax = fields[0]->GetBndCondExpansions()[n]->GetExpSize();
-                
-                if (fields[0]->GetBndConditions()[n]->
-                    GetBoundaryConditionType() ==
-                    SpatialDomains::eDirichlet &&
-                    boost::iequals(fields[0]->GetBndConditions()[n]->
-                    GetUserDefined(), "AdjointWall"))
+                // Note that cnt has to loop on nBndRegions and nBndEdges
+                // and has to be reset to zero per each equation
+                cnt = 0;
+                nBndRegions = fields[i]->
+                GetBndCondExpansions().num_elements();
+                for (j = 0; j < nBndRegions; ++j)
                 {
-                    for (e = 0; e < eMax; ++e)
+                    nBndEdges = fields[i]->
+                    GetBndCondExpansions()[j]->GetExpSize();
+                    for (e = 0; e < nBndEdges; ++e)
                     {
-                        nBCEdgePts = fields[0]->GetBndCondExpansions()[n]->
-                        GetExp(e)->GetTotPoints();
-                        id1 = fields[0]->GetBndCondExpansions()[n]->
-                        GetPhys_Offset(e);
-                        id2 = fields[0]->GetTrace()->GetPhys_Offset(traceBndMap[cnt+e]);
+                        nBndEdgePts = fields[i]->
+                        GetBndCondExpansions()[j]->GetExp(e)->GetTotPoints();
                         
+                        id1 = fields[i]->
+                        GetBndCondExpansions()[j]->GetPhys_Offset(e);
                         
-                        if (m_spaceDim == 2)
+                        id2 = fields[0]->GetTrace()->
+                        GetPhys_Offset(fields[0]->GetTraceMap()->
+                                       GetBndCondTraceToGlobalTraceMap(cnt++));
+                        
+                        // Reinforcing bcs for velocity in case of Wall bcs
+                        
+                        if (boost::iequals(fields[i]->GetBndConditions()[j]->
+                                           GetUserDefined(),"AdjointWall"))
                         {
                             Array<OneD, Array<OneD, NekDouble> > Force(m_spaceDim);
-                            Force[0] = Array<OneD, NekDouble> (nBCEdgePts, m_Fx);
-                            Force[1] = Array<OneD, NekDouble> (nBCEdgePts, m_Fy);
-                            Array<OneD, NekDouble> zeros(nBCEdgePts, 0.0);
-                            Vmath::Vcopy(nBCEdgePts,
-                                         &zeros[0], 1,
-                                         &penaltyfluxO1[0][id2], 1);
+                            Force[0] = Array<OneD, NekDouble> (nBndEdgePts, m_Fx);
+                            Force[1] = Array<OneD, NekDouble> (nBndEdgePts, m_Fy);
+                                                               
+                            if (i == 0 || i == 3)
+                            {
+                                Vmath::Vcopy(nBndEdgePts,
+                                             &uplus[i][id2], 1,
+                                             &penaltyfluxO1[i][id2], 1);
+                            }
+                            else if(i == 1)
+                            {
+                                Vmath::Vcopy(nBndEdgePts,
+                                             &uplus[i][id2], 1,
+                                             &penaltyfluxO1[i][id2], 1);
+                            }
+                            else if(i == 2)
+                            {
+                                Vmath::Vcopy(nBndEdgePts,
+                                             &uplus[i][id2], 1,
+                                             &penaltyfluxO1[i][id2], 1);
+                            }
                             
-                            Vmath::Vcopy(nBCEdgePts,
-                                         &Force[0][0], 1,
-                                         &penaltyfluxO1[1][id2], 1);
                             
-                            Vmath::Vcopy(nBCEdgePts,
-                                         &Force[1][0], 1,
-                                         &penaltyfluxO1[2][id2], 1);
-                            
-                            Vmath::Vcopy(nBCEdgePts,
-                                         &zeros[0], 1,
-                                         &penaltyfluxO1[m_spaceDim+1][id2], 1);
                         }
                         
-                        if (m_spaceDim == 3)
+                        // Imposing velocity bcs if not Wall
+                        else if (fields[i]->GetBndConditions()[j]->
+                                 GetBoundaryConditionType() ==
+                                 SpatialDomains::eDirichlet)
                         {
-                            Array<OneD, Array<OneD, NekDouble> > Force(m_spaceDim);
-                            Force[0] = Array<OneD, NekDouble> (nBCEdgePts, m_Fx);
-                            Force[1] = Array<OneD, NekDouble> (nBCEdgePts, m_Fy);
-                            Force[2] = Array<OneD, NekDouble> (nBCEdgePts, m_Fz);
-                            Array<OneD, NekDouble> zeros(nBCEdgePts, 0.0);
-
-                            Vmath::Vcopy(nBCEdgePts,
+                            Array<OneD, NekDouble> zeros(nBndEdgePts, 0.0);
+                            
+                            Vmath::Vcopy(nBndEdgePts,
                                          &zeros[0], 1,
-                                         &penaltyfluxO1[0][id2], 1);
-                            
-                            Vmath::Vcopy(nBCEdgePts,
-                                         &Force[0][0], 1,
-                                         &penaltyfluxO1[1][id2], 1);
-                            
-                            Vmath::Vcopy(nBCEdgePts,
-                                         &Force[1][0], 1,
-                                         &penaltyfluxO1[2][id2], 1);
-                            
-                            Vmath::Vcopy(nBCEdgePts,
-                                         &Force[2][0], 1,
-                                         &penaltyfluxO1[2][id2], 1);
-                            
-                            Vmath::Vcopy(nBCEdgePts,
-                                         &zeros[0], 1,
-                                         &penaltyfluxO1[m_spaceDim+1][id2], 1);
+                                         &penaltyfluxO1[i][id2], 1);
                         }
-                    }
-                    
-                    cnt += fields[0]->GetBndCondExpansions()[n]->GetExpSize();
-                }
-                else
-                {
-                    for (e = 0; e < eMax; ++e)
-                    {
                         
-                        nBCEdgePts = fields[0]->GetBndCondExpansions()[n]->
-                        GetExp(e)->GetTotPoints();
-                        id1 = fields[0]->GetBndCondExpansions()[n]->
-                        GetPhys_Offset(e);
-                        id2 = fields[0]->GetTrace()->GetPhys_Offset(traceBndMap[cnt+e]);
                         
-                        // Standard value 0 for farfield BCs
-                        Array<OneD, NekDouble> zeros(nBCEdgePts, 0.0);
-                        
-                        for (i = 0;i < nScalars; ++i)
+                        // For Neumann boundary condition: uflux = u_+
+                        else if ((fields[i]->GetBndConditions()[j])->
+                                 GetBoundaryConditionType() ==
+                                 SpatialDomains::eNeumann)
                         {
-                            Vmath::Vcopy(nBCEdgePts,
-                                         &(fields[i]->GetBndCondExpansions()[n]->
-                                           UpdatePhys())[id1], 1,
+                            Vmath::Vcopy(nBndEdgePts,
+                                         &uplus[i][id2], 1,
                                          &penaltyfluxO1[i][id2], 1);
                         }
                         
                     }
-                    
-                    cnt += fields[0]->GetBndCondExpansions()[n]->GetExpSize();
                 }
-                
             }
         }
         /**
@@ -452,13 +426,16 @@ namespace Nektar
             // Get the normal velocity Vn
             for(i = 0; i < nDim; ++i)
             {
-                fields[0]->AverageTracePhys(ufield[i], m_traceVel[i]);
+                /*fields[0]->AverageTracePhys(ufield[i], m_traceVel[i]);
                 Vmath::Vvtvp(nTracePts, m_traceNormals[i], 1,
                              m_traceVel[i], 1, Vn, 1, Vn, 1);
                 
-                //fields[0]->ExtractTracePhys(ufield[i], m_traceVel[i]);
-                //Vmath::Vvtvp(nTracePts, m_traceNormals[i], 1,
-                //             m_traceVel[i], 1, Vn, 1, Vn, 1);
+                fields[0]->ExtractTracePhys(ufield[i], m_traceVel[i]);
+                Vmath::Vvtvp(nTracePts, m_traceNormals[i], 1,
+                             m_traceVel[i], 1, Vn, 1, Vn, 1);*/
+                
+                Vmath::Svtvp(nTracePts, 1.0, m_traceNormals[i], 1,
+                             Vn, 1, Vn, 1);
             }
             
             // Evaulate Riemann flux
@@ -534,6 +511,17 @@ namespace Nektar
                     GetPhys_Offset(fields[0]->GetTraceMap()->
                                    GetBndCondTraceToGlobalTraceMap(cnt++));
                     
+                    
+                    if(fields[var]->GetBndConditions()[i]->
+                       GetBoundaryConditionType() == SpatialDomains::eDirichlet
+                       && !boost::iequals(fields[var]->GetBndConditions()[i]->
+                                          GetUserDefined(), "AdjointWall"))
+                    {
+                        Vmath::Vmul(nBndEdgePts,
+                                    &m_traceNormals[dir][id2], 1,
+                                    &qtemp[id2], 1,
+                                    &penaltyflux[id2], 1);
+                    }
                     // In case of Dirichlet bcs:
                     // uflux = gD
                     if(fields[var]->GetBndConditions()[i]->
@@ -562,6 +550,7 @@ namespace Nektar
                          */
                     }
                 }
+                //cnt += fields[var]->GetBndCondExpansions()[i]->GetExpSize();
             }
         }
     }//end of namespace SolverUtils

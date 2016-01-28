@@ -74,10 +74,10 @@ namespace Nektar
         }
         
         void DiffusionLDG::v_Diffuse(
-                                     const int                                         nConvectiveFields,
-                                     const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
-                                     const Array<OneD, Array<OneD, NekDouble> >        &inarray,
-                                     Array<OneD, Array<OneD, NekDouble> >        &outarray)
+        const int                                         nConvectiveFields,
+        const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
+        const Array<OneD, Array<OneD, NekDouble> >        &inarray,
+              Array<OneD, Array<OneD, NekDouble> >        &outarray)
         {
             int nBndEdgePts, i, j, k, e;
             int nDim      = fields[0]->GetCoordim(0);
@@ -466,10 +466,10 @@ namespace Nektar
         
         
         void DiffusionLDG::v_NumFluxforVector(
-                                              const Array<OneD, MultiRegions::ExpListSharedPtr>        &fields,
-                                              const Array<OneD, Array<OneD, NekDouble> >               &ufield,
-                                              Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &qfield,
-                                              Array<OneD, Array<OneD, NekDouble> >               &qflux)
+            const Array<OneD, MultiRegions::ExpListSharedPtr>        &fields,
+            const Array<OneD, Array<OneD, NekDouble> >               &ufield,
+            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &qfield,
+            Array<OneD, Array<OneD, NekDouble> >               &qflux)
         {
             int i, j;
             int nTracePts  = fields[0]->GetTrace()->GetTotPoints();
@@ -579,12 +579,12 @@ namespace Nektar
          *  uflux = u_Fwd  on Neumann boundary condition
          */
         void DiffusionLDG::v_WeakPenaltyforVector(
-                                                  const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
-                                                  const int                                          var,
-                                                  const int                                          dir,
-                                                  const Array<OneD, const NekDouble>                &qfield,
-                                                  Array<OneD,       NekDouble>                &penaltyflux,
-                                                  NekDouble                                          C11)
+              const Array<OneD, MultiRegions::ExpListSharedPtr> &fields,
+              const int                                          var,
+              const int                                          dir,
+              const Array<OneD, const NekDouble>                &qfield,
+                    Array<OneD,       NekDouble>                &penaltyflux,
+                    NekDouble                                          C11)
         {
             int i, e, id1, id2;
             int nBndEdges, nBndEdgePts;

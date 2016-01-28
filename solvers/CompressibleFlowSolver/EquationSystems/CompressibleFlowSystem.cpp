@@ -243,7 +243,7 @@ namespace Nektar
                                                GetFluxVector, this);
 
                     m_diffusion->SetArtificialDiffusionVector(
-                        &CompressibleFlowSystem::GetArtificialDynamicViscosity, this);
+                        &CompressibleFlowSystem::GetSmoothArtificialViscosity, this);
                 }
                 if (m_shockCaptureType=="NonSmooth" && m_EqTypeStr=="EulerADCFE")
                 {
@@ -726,6 +726,7 @@ namespace Nektar
             Vmath::Vmul(nTracePts, tmp1, 1, tmp1, 1, tmp1, 1);
             Vmath::Vadd(nTracePts, tmp1, 1, absVel, 1, absVel, 1);
         }
+        
         Vmath::Vsqrt(nTracePts, absVel, 1, absVel, 1);
 
         // Get speed of sound
@@ -845,6 +846,13 @@ namespace Nektar
                     }
                     (m_fields[nDimensions+1]->GetBndCondExpansions()[bcRegion]->
                      UpdatePhys())[id1+i] = EBC;
+                    
+                    if (nVariables > (nDimensions+2))
+                    {
+                        (m_fields[nDimensions+2]->GetBndCondExpansions()[bcRegion]->
+                         UpdatePhys())[id1+i] = 0.0;
+                    }
+                    
 
                 }
                 else // Impose outflow Riemann invariant
@@ -907,6 +915,12 @@ namespace Nektar
                     }
                     (m_fields[nDimensions+1]->GetBndCondExpansions()[bcRegion]->
                      UpdatePhys())[id1+i] = EBC;
+                    
+                    if (nVariables > (nDimensions+2))
+                    {
+                        (m_fields[nDimensions+2]->GetBndCondExpansions()[bcRegion]->
+                         UpdatePhys())[id1+i] = 0.0;
+                    }
                 }
             }
         }
@@ -2858,49 +2872,7 @@ namespace Nektar
         m_file.close();
     }
     
-    void CompressibleFlowSystem::GetEntropyError(
-            const Array<OneD, const Array<OneD, NekDouble> > &physfield,
-            const Array<OneD, const NekDouble>               &pressure)
-    {
-        
-        const int npts = m_fields[0]->GetTotPoints();
-        
-        NekDouble ent_inf = m_pInf / (pow(m_rhoInf, m_gamma));
-        
-        Array<OneD, NekDouble> Entropy_error(npts, 0.0);
-        Array<OneD, NekDouble> Entropy_inf(npts, ent_inf);
-        
-        
-        for (int i = 0; i < npts; ++i)
-        {
-            Entropy_error[i] = pressure[i] / (pow(physfield[0][i], m_gamma));
-        }
-        
-        Vmath::Vsub(npts, Entropy_error, 1, Entropy_inf, 1, Entropy_error, 1);
-        Vmath::Vdiv(npts, Entropy_error, 1, Entropy_inf, 1, Entropy_error, 1);
-        Vmath::Vmul(npts, Entropy_error, 1, Entropy_error, 1, Entropy_error, 1);
-        
-        NekDouble int_entropy = m_fields[0]->Integral(Entropy_error);
-        
-        Array<OneD, NekDouble> one2D(npts, 1.0);
-        NekDouble area = m_fields[0]->Integral(one2D);
-        
-        NekDouble Error = sqrt(int_entropy/area);
-        
-        if (m_comm->GetRank() == 0)
-        {
-            
-            cout << "Error = " << Error << endl;
-            
-            std::ofstream m_file( "EntropyError.txt", std::ios_base::app);
-            
-            m_file << setprecision(16) << scientific << Error << endl;
-            //m_file << Vmath::Vmax(entropy.num_elements(),entropy,1) << endl;
-            
-            m_file.close();
-        }
-        
-    }
+
 
     /**
      * @brief Calculate the maximum timestep subject to CFL restrictions.
@@ -3322,7 +3294,7 @@ namespace Nektar
         const int nPts = m_fields[0]->GetTotPoints();
         const int nvariables = m_fields.num_elements();
         const int nElements = m_fields[0]->GetExpSize();
-
+        
         Array<OneD,  NekDouble>  Sensor(nPts, 0.0);
         Array<OneD,  NekDouble>  SensorKappa(nPts, 0.0);
         Array <OneD, NekDouble > Lambda(nPts, 0.0);
@@ -3333,45 +3305,44 @@ namespace Nektar
         Array <OneD, NekDouble > absVelocity(nPts, 0.0);
         Array <OneD, NekDouble > hel(nPts, 0.0);
         Array <OneD, NekDouble > h_minmin(m_spacedim, 0.0);
-
+        
         Array<OneD,int> pOrderElmt = GetNumExpModesPerExp();
         Array<OneD, NekDouble> pOrder (nPts, 0.0);
-
+        
         // Thermodynamic related quantities
         GetPressure(inarray, pressure);
         GetTemperature(inarray, pressure, temperature);
         GetSoundSpeed(inarray, pressure, soundspeed);
         GetAbsoluteVelocity(inarray, absVelocity);
         GetSensor(inarray, Sensor, SensorKappa);
-
+        
         // Determine the maximum wavespeed
         Vmath::Vadd(nPts, absVelocity, 1, soundspeed, 1, Lambda, 1);
-
+        
         NekDouble LambdaMax = Vmath::Vmax(nPts, Lambda, 1);
-
+        
         int PointCount = 0;
-
+        
         for (int e = 0; e < nElements; e++)
         {
             int nQuadPointsElement = m_fields[0]->GetExp(e)->GetTotPoints();
-
+            
             for (int n = 0; n < nQuadPointsElement; n++)
             {
                 pOrder[n + PointCount] = pOrderElmt[e];
-
+                
                 // order 1.0e-06
                 /*Tau[n + PointCount] =
-                    1.0 / (m_C1*pOrder[n + PointCount]*LambdaMax);
-
-                outarrayForcing[nvariables-1][n + PointCount] =
-                    1 / Tau[n + PointCount] * (LambdaMax /
-                                        pOrder[n + PointCount] *
-                                        SensorKappa[n + PointCount] -
-                                        inarray[nvariables-1][n + PointCount]);*/
+                1.0 / (m_C1*pOrder[n + PointCount]*LambdaMax);
                 
                 outarrayForcing[nvariables-1][n + PointCount] =
-                m_C1*SensorKappa[n + PointCount] - inarray[nvariables-1][n + PointCount];
+                1 / Tau[n + PointCount] * (m_hFactor * LambdaMax /
+                                           pOrder[n + PointCount] *
+                                           SensorKappa[n + PointCount] -
+                                           inarray[nvariables-1][n + PointCount]);*/
                 
+                outarrayForcing[nvariables-1][n + PointCount] =
+                (m_C1*SensorKappa[n + PointCount]-inarray[nvariables-1][n + PointCount]);
             }
             PointCount += nQuadPointsElement;
         }
@@ -3568,50 +3539,37 @@ namespace Nektar
         // Determine hbar = hx_i/h
         Array<OneD,int> pOrderElmt = GetNumExpModesPerExp();
         
+        NekDouble ThetaH = m_FacH;
+        NekDouble ThetaL = m_FacL;
+        
+        NekDouble Phi0     = (ThetaH+ThetaL)/2;
+        NekDouble DeltaPhi = ThetaH-Phi0;
+        
+        //Vmath::Zero(eps_bar.num_elements(), eps_bar, 1);
+        
         Vmath::Vcopy(eps_bar.num_elements(),
-                     &SensorKappa[0], 1,
-                     &eps_bar[0], 1);
-
-        /*int nvariables = physfield.num_elements();
-        int nPts       = m_fields[0]->GetTotPoints();
+                     physfield[nvariables-1], 1,
+                     eps_bar, 1);
+        /*Vmath::Smul(eps_bar.num_elements(),
+         m_eps_max,
+         &physfield[nvariables-1][0], 1,
+         &eps_bar[0], 1);
         
-        NekDouble eps_max = Vmath::Vmax(nPts, &physfield[nvariables-1][0], 1);
-        
-        // taking care of the fact the initial artificial viscosity is zero and this prevents deving by zero.
-        if (eps_max != 0)
+        for (int e = 0; e < eps_bar.num_elements(); e++)
         {
-            Vmath::Vcopy(nPts,
-                         &physfield[nvariables-1][0], 1,
-                         &eps_bar[0], 1);
-            
-            NekDouble eps_min = Vmath::Vmin(nPts, &eps_bar[0], 1);
-            
-            Vmath::Smul(nPts,
-                        1/eps_min,
-                        &eps_bar[0], 1,
-                        &eps_bar[0], 1);
-            
-            NekDouble eps_max_f = Vmath::Vmax(nPts, &eps_bar[0], 1);
-            
-            m_comm->AllReduce(eps_max_f, LibUtilities::ReduceMax);
-
-            Array<OneD, NekDouble> eps_max_vec(nPts, eps_max_f);
-            
-            Vmath::Vsub(nPts, &eps_bar[0], 1, &eps_max_vec[0], 1, &eps_bar[0], 1);
-            
-            Vmath::Neg(nPts, &eps_bar[0], 1);
-            
-            NekDouble eps_max = Vmath::Vmax(nPts, &eps_bar[0], 1);
-            
-            m_comm->AllReduce(eps_max, LibUtilities::ReduceMax);
-
-            Vmath::Smul(nPts, m_mu0/eps_max, &eps_bar[0], 1 , &eps_bar[0], 1);
-        }
-        else
-        {
-            Vmath::Vcopy(nPts,
-                         &physfield[nvariables-1][0], 1,
-                         &eps_bar[0], 1);
+            if (physfield[nvariables-1][e] <= (Phi0 - DeltaPhi))
+            {
+                eps_bar[e] = 0;
+            }
+            else if(physfield[nvariables-1][e] >= (Phi0 + DeltaPhi))
+            {
+                eps_bar[e] = m_mu0;
+            }
+            else if(abs(physfield[nvariables-1][e]-Phi0) < DeltaPhi)
+            {
+                eps_bar[e] = m_mu0/2*(1+sin(M_PI*
+                        (physfield[nvariables-1][e]-Phi0)/(2*DeltaPhi)));
+            }
         }*/
     }
 
@@ -3687,6 +3645,50 @@ namespace Nektar
 
             PointCount += nQuadPointsElement;
         }
+    }
+    
+    void CompressibleFlowSystem::GetEntropyError(
+                const Array<OneD, const Array<OneD, NekDouble> > &physfield,
+                const Array<OneD, const NekDouble>               &pressure)
+    {
+        
+        const int npts = m_fields[0]->GetTotPoints();
+        
+        NekDouble ent_inf = m_pInf / (pow(m_rhoInf, m_gamma));
+        
+        Array<OneD, NekDouble> Entropy_error(npts, 0.0);
+        Array<OneD, NekDouble> Entropy_inf(npts, ent_inf);
+        
+        
+        for (int i = 0; i < npts; ++i)
+        {
+            Entropy_error[i] = pressure[i] / (pow(physfield[0][i], m_gamma));
+        }
+        
+        Vmath::Vsub(npts, Entropy_error, 1, Entropy_inf, 1, Entropy_error, 1);
+        Vmath::Vdiv(npts, Entropy_error, 1, Entropy_inf, 1, Entropy_error, 1);
+        Vmath::Vmul(npts, Entropy_error, 1, Entropy_error, 1, Entropy_error, 1);
+        
+        NekDouble int_entropy = m_fields[0]->Integral(Entropy_error);
+        
+        Array<OneD, NekDouble> one2D(npts, 1.0);
+        NekDouble area = m_fields[0]->Integral(one2D);
+        
+        NekDouble Error = sqrt(int_entropy/area);
+        
+        if (m_comm->GetRank() == 0)
+        {
+            
+            cout << "Error = " << Error << " Number of points = " << npts <<  endl;
+            
+            std::ofstream m_file( "EntropyError.txt", std::ios_base::app);
+            
+            m_file << setprecision(16) << scientific << Error << endl;
+            //m_file << Vmath::Vmax(entropy.num_elements(),entropy,1) << endl;
+            
+            m_file.close();
+        }
+        
     }
 
     void CompressibleFlowSystem::SetVarPOrderElmt(
@@ -3800,6 +3802,7 @@ namespace Nektar
         GetEntropyError(tmp, pressure);
         GetJacobians(jacobians);
         
+        
         Array<OneD, NekDouble> pFwd(nCoeffs), sFwd(nCoeffs), mFwd(nCoeffs), sensFwd(nCoeffs), smoothFwd(nCoeffs), VarPFwd(nCoeffs), JacFwd(nCoeffs);
         
         //======================================================================
@@ -3808,13 +3811,13 @@ namespace Nektar
         m_fields[0]->FwdTrans(SensorKappa,   m_fields[1]->UpdateCoeffs());
         m_fields[0]->FwdTrans(SensorKappa,   m_fields[2]->UpdateCoeffs());
         m_fields[0]->FwdTrans(SensorKappa,   m_fields[3]->UpdateCoeffs());
-         */
-        /*
+        */
+        
         m_fields[0]->FwdTrans(m_fields[nvariables-1]->GetPhys(),   m_fields[0]->UpdateCoeffs());
-        m_fields[0]->FwdTrans(m_fields[nvariables-1]->GetPhys(),   m_fields[1]->UpdateCoeffs());
-        m_fields[0]->FwdTrans(m_fields[nvariables-1]->GetPhys(),   m_fields[2]->UpdateCoeffs());
-        m_fields[0]->FwdTrans(m_fields[nvariables-1]->GetPhys(),   m_fields[3]->UpdateCoeffs());
-       */
+        m_fields[1]->FwdTrans(m_fields[nvariables-1]->GetPhys(),   m_fields[1]->UpdateCoeffs());
+        m_fields[2]->FwdTrans(m_fields[nvariables-1]->GetPhys(),   m_fields[2]->UpdateCoeffs());
+        m_fields[3]->FwdTrans(m_fields[nvariables-1]->GetPhys(),   m_fields[3]->UpdateCoeffs());
+        
         //======================================================================
         
         m_fields[0]->FwdTrans(pressure,   pFwd);
@@ -3828,7 +3831,7 @@ namespace Nektar
         variables.push_back  ("a");
         variables.push_back  ("Mach");
         variables.push_back  ("Sensor");
-        variables.push_back  ("eps");
+        variables.push_back  ("SensorKappa");
         variables.push_back  ("VarP");
         variables.push_back  ("Jac");
         fieldcoeffs.push_back(pFwd);

@@ -51,6 +51,10 @@
 #include <LocalRegions/Expansion3D.h>
 #include <LocalRegions/Expansion.h>
 
+#include <LocalRegions/Expansion1D.h>
+#include <LocalRegions/Expansion2D.h>
+#include <LocalRegions/Expansion3D.h>
+
 #include <LibUtilities/BasicUtils/FieldIO.h>
 #include <LibUtilities/BasicUtils/NekFactory.hpp>
 #include <LibUtilities/BasicUtils/SessionReader.h>
@@ -203,16 +207,18 @@ int main(int argc, char *argv[])
 
     //--------------------------------------------------------------------------
     // Define Expansion
-    int nfields = fieldDef[0]->m_fields.size();
+    int nfields = 5.0;//fieldDef[0]->m_fields.size();
     Array<OneD, MultiRegions::ExpListSharedPtr> Exp(nfields);
     Array<OneD, MultiRegions::ExpListSharedPtr> pFields(nfields);
 
     for(i = 0; i < pFields.num_elements(); i++)
     {
         pFields[i] = MemoryManager<MultiRegions
-                                   ::DisContField3D>::AllocateSharedPtr(vSession, graphShPt,
-                                                                        vSession->GetVariable(i));
+                ::DisContField3D>::AllocateSharedPtr(vSession, graphShPt,
+                            vSession->GetVariable(i));
     }
+    
+    cout << pFields[0]->GetNpoints() << endl;
 
     MultiRegions::ExpList3DSharedPtr Exp3D;
     Exp3D = MemoryManager<MultiRegions::ExpList3D>
@@ -862,8 +868,6 @@ int main(int argc, char *argv[])
     // Syz = mu * (du/dy + dv/dx)
     Vmath::Vmul(nSolutionPts, &mu[0], 1, &Syz[0], 1, &Syz[0], 1);
 
-
-
     pFields[0]->ExtractTracePhys(Sgg[0], traceFieldsAdded[26]);
     pFields[0]->ExtractTracePhys(Sgg[1], traceFieldsAdded[27]);
     pFields[0]->ExtractTracePhys(Sgg[2], traceFieldsAdded[28]);
@@ -906,9 +910,7 @@ int main(int argc, char *argv[])
     Vmath::Vdiv(nSolutionPts,  mach, 1, soundspeed, 1, mach, 1);
 
     pFields[0]->ExtractTracePhys(mach, traceFieldsAdded[33]);
-
-
-
+    
     /**************************************************************************/
     // Extract coordinates
 
@@ -1030,7 +1032,117 @@ int main(int argc, char *argv[])
             }
         }
     }
+    
+    std::string vEquation = vSession->GetSolverInfo("EQType");
+    
+    Array<OneD, MultiRegions::ExpListSharedPtr>  BndExp;
+    BndExp = pFields[0]->GetBndCondExpansions();
+    LocalRegions::Expansion2DSharedPtr bc;
+    
+    NekDouble Fxp(0.0);
+    NekDouble Fyp(0.0);
+    NekDouble Fzp(0.0);
+    NekDouble Fxv(0.0);
+    NekDouble Fyv(0.0);
+    NekDouble Fzv(0.0);
+    NekDouble Sref(0.0);
+    
+    int GlobalIndex(0);
+    
+    for(int i = 0; i <  BndExp[0]->GetExpSize(); ++i)
+    {
+        bc =  BndExp[0]->GetExp(i)->as<LocalRegions::Expansion2D> ();
+        
+        int nbc = bc->GetTotPoints();
+        
+        Array<OneD, NekDouble>  nxOnBnd(nbc,0.0);
+        Array<OneD, NekDouble>  nyOnBnd(nbc,0.0);
+        Array<OneD, NekDouble>  nzOnBnd(nbc,0.0);
+        Array<OneD, NekDouble>  txOnBnd(nbc,0.0);
+        Array<OneD, NekDouble>  tyOnBnd(nbc,0.0);
+        Array<OneD, NekDouble>  tzOnBnd(nbc,0.0);
+        
+        Array<OneD, NekDouble>  drag_p(nbc,0.0);
+        Array<OneD, NekDouble>  lift_p(nbc,0.0);
+        Array<OneD, NekDouble>  side_p(nbc,0.0);
+        Array<OneD, NekDouble>  PressurOnBnd(nbc,0.0);
+        
+        Array<OneD, NekDouble>  drag_v(nbc,0.0);
+        Array<OneD, NekDouble>  lift_v(nbc,0.0);
+        Array<OneD, NekDouble>  side_v(nbc,0.0);
+        Array<OneD, NekDouble>  ShearStressOnBnd(nbc,0.0);
+        
+        Array<OneD, NekDouble>  Unity(nbc,1.0);
+        
+        for(int j = 0; j <  nbc; ++j)
+        {
+            nxOnBnd[j] = surfaceFieldsAdded[0][GlobalIndex];
+            nyOnBnd[j] = surfaceFieldsAdded[1][GlobalIndex];
+            nzOnBnd[j] = surfaceFieldsAdded[2][GlobalIndex];
+            txOnBnd[j] = surfaceFieldsAdded[3][GlobalIndex];
+            tyOnBnd[j] = surfaceFieldsAdded[4][GlobalIndex];
+            tzOnBnd[j] = surfaceFieldsAdded[5][GlobalIndex];
+            
+            PressurOnBnd[j] = surfaceFieldsAdded[9][GlobalIndex];
+            
+            if (vEquation ==  "NavierStokesCFE")
+            {
+                ShearStressOnBnd[j] = surfaceFieldsAdded[17][GlobalIndex];
+            }
+            
+            //                  CoeffAero[j] = surfaceFields[0][GlobalIndex];
+            //                  tmp[j] = surfaceFields[1][GlobalIndex]*surfaceFields[1][GlobalIndex];
+            //                  tmp[j] = tmp[j] + surfaceFields[2][GlobalIndex]*surfaceFields[2][GlobalIndex];
+            //                  tmp[j] = sqrt(tmp[j]);
+            //                  CoeffAero[j] = CoeffAero[j]*tmp[j];
+            //                  CoeffAero[j] = 1.0/CoeffAero[j];
+            //
+            //                  PressurOnBnd[j] = CoeffAero[j]*surfaceFieldsAdded[4][GlobalIndex];
+            //
+            //                  cout << "CoeffAero = " << CoeffAero[j] << endl;
+            
+            GlobalIndex++;
+        }
+        
+        Vmath::Vmul(nbc,PressurOnBnd,1,nxOnBnd,1, drag_p,1);
+        Vmath::Vmul(nbc,PressurOnBnd,1,nyOnBnd,1, lift_p,1);
+        Vmath::Vmul(nbc,PressurOnBnd,1,nzOnBnd,1, side_p,1);
+        
+        //              Vmath::Vmul(nbc,drag_p,1,CoeffAero,1, drag_p,1);
+        //              Vmath::Vmul(nbc,lift_p,1,CoeffAero,1, lift_p,1);
+        
+        Fxp += bc->Expansion::Integral(drag_p);
+        Fyp += bc->Expansion::Integral(lift_p);
+        Fzp += bc->Expansion::Integral(side_p);
+        
+        if (vEquation ==  "NavierStokesCFE")
+        {
+            Vmath::Vmul(nbc,ShearStressOnBnd,1,txOnBnd,1, drag_v,1);
+            Vmath::Vmul(nbc,ShearStressOnBnd,1,tyOnBnd,1, lift_v,1);
+            Vmath::Vmul(nbc,ShearStressOnBnd,1,tzOnBnd,1, side_v,1);
+            
+            //                  Vmath::Vdiv(nbc,drag_v,1,CoeffAero,1, drag_v,1);
+            //                  Vmath::Vdiv(nbc,lift_v,1,CoeffAero,1, lift_v,1);
+            
+            Fxv += bc->Expansion::Integral(drag_v);
+            Fyv += bc->Expansion::Integral(lift_v);
+            Fzv += bc->Expansion::Integral(side_v);
+        }
+        
+        Sref += bc->Expansion::Integral(Unity);
+        
+    }
+    
 
+    NekDouble Fx = Fxp + Fxv;
+    NekDouble Fy = Fyp + Fyv;
+    NekDouble Fz = Fzp + Fzv;
+    
+    cout << " # Solution points     = " << nSolutionPts << endl;
+    cout << "Fxp = " << Fxp << " Fxv = " << Fxv  << " Fx = " << Fx << endl;
+    cout << "Fyp = " << Fyp << " Fyv = " << Fxv  << " Fy = " << Fy << endl;
+    cout << "Fzp = " << Fzp << " Fzv = " << Fxv  << " Fz = " << Fz << endl;
+    cout << Sref << endl;
     //==========================================================================
     //==========================================================================
     //==========================================================================
@@ -1041,45 +1153,45 @@ int main(int argc, char *argv[])
     outfile <<  "%  x[m] " << " \t"
             << "y[m] " << " \t"
             << "z[m] " << " \t"
-            << "nx[]  " << " \t"
-            << "ny[]  " << " \t"
-            << "nz[]  " << " \t"
-            << "bx[]  " << " \t"
-            << "by[]  " << " \t"
-            << "bz[]  " << " \t"
-            << "tx[]  " << " \t"
-            << "ty[]  " << " \t"
-            << "tz[]  " << " \t"
+            //<< "nx[]  " << " \t"
+            //<< "ny[]  " << " \t"
+            //<< "nz[]  " << " \t"
+            //<< "bx[]  " << " \t"
+            //<< "by[]  " << " \t"
+            //<< "bz[]  " << " \t"
+            //<< "tx[]  " << " \t"
+            //<< "ty[]  " << " \t"
+            //<< "tz[]  " << " \t"
             << "rho[kg/m^3] " << " \t"
             << "rhou[kg/(m^2 s)] " << " \t"
             << "rhov[kg/(m^2 s)] " << " \t"
             << "rhow[kg/(m^2 s)] " << " \t"
             << "E[Pa] " << " \t"
-            << "p[Pa] " << " \t"
-            << "T[k]  " << " \t"
-            << "dT/dn[k/m]  "  << " \t"
-            << "dp/dT[Pa/m]  " << " \t"
-            << "dp/dB[Pa/m]  " << " \t"
-            << "dp/dx[Pa/m]  " << " \t"
-            << "dp/dy[Pa/m]  " << " \t"
-            << "dp/dz[Pa/m]  " << " \t"
-            << "du/dx[s^-1]  " << " \t"
-            << "du/dy[s^-1]  " << " \t"
-            << "du/dz[s^-1]  " << " \t"
-            << "dv/dx[s^-1]  " << " \t"
-            << "dv/dy[s^-1]  " << " \t"
-            << "dv/dz[s^-1]  " << " \t"
-            << "dw/dx[s^-1]  " << " \t"
-            << "dw/dy[s^-1]  " << " \t"
-            << "dw/dz[s^-1]  " << " \t"
-            << "tau_xx[Pa]   " << " \t"
-            << "tau_yy[Pa]   " << " \t"
-            << "tau_zz[Pa]   " << " \t"
-            << "tau_xy[Pa]   " << " \t"
-            << "tau_xz[Pa]   " << " \t"
-            << "tau_yz[Pa]   " << " \t"
-            << "mu[Pa s]     " << " \t"
-            << "M[] " << " \t"
+            //<< "p[Pa] " << " \t"
+            //<< "T[k]  " << " \t"
+            //<< "dT/dn[k/m]  "  << " \t"
+            //<< "dp/dT[Pa/m]  " << " \t"
+            //<< "dp/dB[Pa/m]  " << " \t"
+            //<< "dp/dx[Pa/m]  " << " \t"
+            //<< "dp/dy[Pa/m]  " << " \t"
+            //<< "dp/dz[Pa/m]  " << " \t"
+            //<< "du/dx[s^-1]  " << " \t"
+            //<< "du/dy[s^-1]  " << " \t"
+            //<< "du/dz[s^-1]  " << " \t"
+            //<< "dv/dx[s^-1]  " << " \t"
+            //<< "dv/dy[s^-1]  " << " \t"
+            //<< "dv/dz[s^-1]  " << " \t"
+            //<< "dw/dx[s^-1]  " << " \t"
+            //<< "dw/dy[s^-1]  " << " \t"
+            //<< "dw/dz[s^-1]  " << " \t"
+            //<< "tau_xx[Pa]   " << " \t"
+            //<< "tau_yy[Pa]   " << " \t"
+            //<< "tau_zz[Pa]   " << " \t"
+            //<< "tau_xy[Pa]   " << " \t"
+            //<< "tau_xz[Pa]   " << " \t"
+            //<< "tau_yz[Pa]   " << " \t"
+            //<< "mu[Pa s]     " << " \t"
+            //<< "M[] " << " \t"
             << endl;
     for (i = 0; i < nSurfacePts; ++i)
     {
@@ -1089,7 +1201,7 @@ int main(int argc, char *argv[])
                 << surfaceX[i] << " \t "
                 << surfaceY[i] << " \t "
                 << surfaceZ[i] << " \t "
-                << surfaceFieldsAdded[0][i] << " \t "
+                /*<< surfaceFieldsAdded[0][i] << " \t "
                 << surfaceFieldsAdded[1][i] << " \t "
                 << surfaceFieldsAdded[2][i] << " \t "
                 << surfaceFieldsAdded[3][i] << " \t "
@@ -1097,13 +1209,13 @@ int main(int argc, char *argv[])
                 << surfaceFieldsAdded[5][i] << " \t "
                 << surfaceFieldsAdded[6][i] << " \t "
                 << surfaceFieldsAdded[7][i] << " \t "
-                << surfaceFieldsAdded[8][i] << " \t "
+                << surfaceFieldsAdded[8][i] << " \t "*/
                 << surfaceFields[0][i] << " \t "
                 << surfaceFields[1][i] << " \t "
                 << surfaceFields[2][i] << " \t "
                 << surfaceFields[3][i] << " \t "
                 << surfaceFields[4][i] << " \t "
-                << surfaceFieldsAdded[9][i] << " \t "
+                /*<< surfaceFieldsAdded[9][i] << " \t "
                 << surfaceFieldsAdded[10][i] << " \t "
                 << surfaceFieldsAdded[11][i] << " \t "
                 << surfaceFieldsAdded[12][i] << " \t "
@@ -1127,7 +1239,7 @@ int main(int argc, char *argv[])
                 << surfaceFieldsAdded[30][i] << " \t "
                 << surfaceFieldsAdded[31][i] << " \t "
                 << surfaceFieldsAdded[32][i] << " \t "
-                << surfaceFieldsAdded[33][i] << " \t "
+                << surfaceFieldsAdded[33][i] << " \t "*/
                 << endl;
     }
     outfile << endl << endl;
