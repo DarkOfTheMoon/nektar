@@ -133,7 +133,7 @@ namespace Nektar
                 const SpatialDomains::MeshGraphSharedPtr &graph2D,
                 const bool DeclareCoeffPhysArrays,
                 const std::string &var):
-            ExpList(pSession,graph2D)
+            ExpList(pSession,graph2D,var)
         {
             SetExpType(e2D);
 
@@ -492,7 +492,7 @@ namespace Nektar
             const PeriodicMap &periodicFaces,
             const bool DeclareCoeffPhysArrays, 
             const std::string variable):
-            ExpList(pSession, graph3D)
+            ExpList(pSession, graph3D, variable)
         {
             SetExpType(e2D);
 
@@ -803,7 +803,7 @@ namespace Nektar
             const LibUtilities::SessionReaderSharedPtr &pSession,
             const SpatialDomains::CompositeMap &domain,
             const SpatialDomains::MeshGraphSharedPtr &graph3D,
-            const std::string variable):ExpList(pSession, graph3D)
+            const std::string variable):ExpList(pSession, graph3D,variable)
          {
 
              SetExpType(e2D);

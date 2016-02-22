@@ -285,7 +285,7 @@ namespace Nektar
                              const bool DeclareCoeffPhysArrays,
                              const std::string var,
                              bool SetToOneSpaceDimension):
-            ExpList(pSession,graph1D)
+            ExpList(pSession,graph1D,var)
         {
             int j,id=0;
             LocalRegions::SegExpSharedPtr seg;
@@ -388,7 +388,7 @@ namespace Nektar
                              const SpatialDomains::MeshGraphSharedPtr &graph2D,
                              const bool DeclareCoeffPhysArrays,
                              const std::string variable):
-            ExpList(pSession,graph2D)
+            ExpList(pSession,graph2D,variable)
         {
             SetExpType(e1D);
 
@@ -473,7 +473,7 @@ namespace Nektar
             const PeriodicMap &periodicEdges,
             const bool DeclareCoeffPhysArrays,
             const std::string variable):
-            ExpList(pSession,graph2D)
+            ExpList(pSession,graph2D,variable)
         {
             int i, j, id, elmtid = 0;
             set<int> edgesDone;

@@ -111,7 +111,8 @@ namespace Nektar
             /// The default constructor.
             MULTI_REGIONS_EXPORT ExpList(
                     const LibUtilities::SessionReaderSharedPtr &pSession,
-                    const SpatialDomains::MeshGraphSharedPtr &pGraph);
+                    const SpatialDomains::MeshGraphSharedPtr &pGraph,
+                    const std::string  &variable = "DefaultVar");
             
             /// Constructor copying only elements defined in eIds.
             MULTI_REGIONS_EXPORT ExpList(
@@ -892,6 +893,16 @@ namespace Nektar
                     Collections::ImplementationType ImpType
                                                     = Collections::eNoImpType);
 
+            inline std::string GetVarName() const
+            {
+                return m_varName;
+            }
+
+            inline void SetVarName(std::string name)
+            {
+                m_varName = name;
+            }
+
         protected:
             boost::shared_ptr<DNekMat> GenGlobalMatrixFull(
                 const GlobalLinSysKey &mkey,
@@ -905,6 +916,9 @@ namespace Nektar
 
             /// Mesh associated with this expansion list.
             SpatialDomains::MeshGraphSharedPtr m_graph;
+
+            /// Name of the variable held by this ExpList
+            std::string m_varName;
 
             /// The total number of local degrees of freedom. #m_ncoeffs
             /// \f$=N_{\mathrm{eof}}=\sum_{e=1}^{{N_{\mathrm{el}}}}N^{e}_l\f$

@@ -186,7 +186,7 @@ namespace Nektar
         ExpList3D::ExpList3D(const LibUtilities::SessionReaderSharedPtr &pSession,
                              const SpatialDomains::MeshGraphSharedPtr &graph3D,
                              const std::string  &variable) :
-            ExpList(pSession,graph3D)
+            ExpList(pSession,graph3D,variable)
         {
             SetExpType(e3D);
 

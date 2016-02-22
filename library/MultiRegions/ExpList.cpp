@@ -94,6 +94,7 @@ namespace Nektar
             m_comm(),
             m_session(),
             m_graph(),
+            m_varName("DefaultVar"),
             m_ncoeffs(0),
             m_npoints(0),
             m_coeffs(),
@@ -121,6 +122,7 @@ namespace Nektar
             m_comm(pSession->GetComm()),
             m_session(pSession),
             m_graph(),
+            m_varName("DefaultVar"),
             m_ncoeffs(0),
             m_npoints(0),
             m_coeffs(),
@@ -145,10 +147,12 @@ namespace Nektar
          */
         ExpList::ExpList(
                 const LibUtilities::SessionReaderSharedPtr &pSession,
-                const SpatialDomains::MeshGraphSharedPtr &pGraph):
+                const SpatialDomains::MeshGraphSharedPtr &pGraph,
+                const std::string  &variable):
             m_comm(pSession->GetComm()),
             m_session(pSession),
             m_graph(pGraph),
+            m_varName(variable),
             m_ncoeffs(0),
             m_npoints(0),
             m_coeffs(),
@@ -214,6 +218,7 @@ namespace Nektar
             m_comm(in.m_comm),
             m_session(in.m_session),
             m_graph(in.m_graph),
+            m_varName(in.GetVarName()),
             m_ncoeffs(in.m_ncoeffs),
             m_npoints(in.m_npoints),
             m_physState(false),

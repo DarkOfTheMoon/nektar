@@ -652,6 +652,12 @@ namespace Nektar
                 m_fields[0]->GetTrace()->GetNormals(m_traceNormals);
             }
 
+            for (int i = 0; i < GetNvariables(); ++i)
+            {
+                ASSERTL1(m_fields[i]->GetVarName() != "DefaultVar",
+                         "VarName not set");
+            }
+
             // Set Default Parameter
             m_session->LoadParameter("Time",          m_time,       0.0);
             m_session->LoadParameter("TimeStep",      m_timestep,   0.01);
@@ -694,11 +700,9 @@ namespace Nektar
             ASSERTL0(m_session->DefinesFunction(pFunctionName),
                      "Function '" + pFunctionName + "' does not exist.");
 
-            std::vector<std::string> vFieldNames = m_session->GetVariables();
-
-            for(int i = 0 ; i < vFieldNames.size(); i++)
+            for(int i = 0 ; i < m_fields.num_elements(); i++)
             {
-                EvaluateFunction(vFieldNames[i], pArray[i], pFunctionName,
+                EvaluateFunction(m_fields[i]->GetVarName(), pArray[i], pFunctionName,
                                  pTime, domain);
             }
         }
@@ -978,12 +982,10 @@ namespace Nektar
          */
         void EquationSystem::SetBoundaryConditions(NekDouble time)
         {
-            std::string varName;
             int nvariables = m_fields.num_elements();
             for (int i = 0; i < nvariables; ++i)
             {
-                varName = m_session->GetVariable(i); 
-                m_fields[i]->EvaluateBoundaryConditions(time, varName);
+                m_fields[i]->EvaluateBoundaryConditions(time, m_fields[i]->GetVarName());
             }
         }
 
@@ -1194,7 +1196,7 @@ namespace Nektar
                     
                     for (int i = 0; i < m_fields.num_elements(); ++i)
                     {
-                        std::string varName = m_session->GetVariable(i);
+                        std::string varName = m_fields[i]->GetVarName();
                         cout << "  - Field " << varName << ": "
                              << DescribeFunction(varName, "InitialConditions",domain)
                              << endl;
@@ -1212,7 +1214,7 @@ namespace Nektar
                                 m_fields[i]->UpdateCoeffs(), 1);
                     if (m_session->GetComm()->GetRank() == 0)
                     {
-                        cout << "  - Field "    << m_session->GetVariable(i)
+                        cout << "  - Field "    << m_fields[i]->GetVarName()
                              << ": 0 (default)" << endl;
                     }
                 }
@@ -2035,7 +2037,7 @@ namespace Nektar
                                                        m_fields[i]->GetCoeffs(),
                                                        fieldcoeffs[i]);
                 }
-                variables[i] = m_boundaryConditions->GetVariable(i);
+                variables[i] = m_fields[i]->GetVarName();
             }
 
             v_ExtraFldOutput(fieldcoeffs, variables);
@@ -2154,7 +2156,7 @@ namespace Nektar
                     
                     for(int n = 0; n < FieldDef.size(); ++n)
                     {
-                        ASSERTL1(FieldDef[n]->m_fields[i] == m_session->GetVariable(i),
+                        ASSERTL1(FieldDef[n]->m_fields[i] == m_fields[i]->GetVarName(),
                                  std::string("Order of ") + infile
                                  + std::string(" data and that defined in "
                                                "m_boundaryconditions differs"));
