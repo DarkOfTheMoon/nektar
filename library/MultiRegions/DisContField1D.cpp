@@ -78,16 +78,20 @@ namespace Nektar
             const SpatialDomains::MeshGraphSharedPtr &graph1D,
             const std::string &variable,
             const bool         SetUpJustDG)
-            : ExpList1D(pSession,graph1D),
+            : ExpList1D(pSession,graph1D,variable),
               m_bndCondExpansions(),
               m_bndConditions()
         {
-            SpatialDomains::BoundaryConditions bcs(m_session, graph1D);
 
-            GenerateBoundaryConditionExpansion(graph1D,bcs,variable);
-            EvaluateBoundaryConditions(0.0, variable);
-            ApplyGeomInfo();
-            FindPeriodicVertices(bcs,variable);
+             if(variable.compare("DefaultVar") != 0) // do not set up BCs if default variable
+            {
+                SpatialDomains::BoundaryConditions bcs(m_session, graph1D);
+
+                GenerateBoundaryConditionExpansion(graph1D,bcs,variable);
+                EvaluateBoundaryConditions(0.0, variable);
+                ApplyGeomInfo();
+                FindPeriodicVertices(bcs,variable);
+            }
 
             if(SetUpJustDG)
             {

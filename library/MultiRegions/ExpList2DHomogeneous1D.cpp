@@ -100,7 +100,7 @@ namespace Nektar
 
             // note that nzplanes can be larger than nzmodes
             m_planes[0] = plane_zero = MemoryManager<ExpList1D>::
-                AllocateSharedPtr(m_session, graph1D, false);
+                AllocateSharedPtr(m_session, graph1D, "DefaultVar", false);
 
             m_exp = MemoryManager<LocalRegions::ExpansionVector>::AllocateSharedPtr();
 

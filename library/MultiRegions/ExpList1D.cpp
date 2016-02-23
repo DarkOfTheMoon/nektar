@@ -196,10 +196,12 @@ namespace Nektar
          * @param   UseGenSegExp If true, create general segment expansions
          *                      instead of just normal segment expansions.
          */
-        ExpList1D::ExpList1D(const LibUtilities::SessionReaderSharedPtr &pSession,
+        ExpList1D::ExpList1D(
+                const LibUtilities::SessionReaderSharedPtr &pSession,
                 const SpatialDomains::MeshGraphSharedPtr &graph1D,
+                const std::string var,
                 const bool DeclareCoeffPhysArrays):
-            ExpList(pSession,graph1D)
+            ExpList(pSession,graph1D,var)
         {
             SetExpType(e1D);
 

@@ -78,8 +78,8 @@ namespace Nektar
             ExpList1DSharedPtr line_zero;
 
             //
-            m_lines[0] = line_zero = MemoryManager<ExpList1D>::AllocateSharedPtr(m_session,graph1D,
-                                                                      False);
+            m_lines[0] = line_zero = MemoryManager<ExpList1D>::
+                    AllocateSharedPtr(m_session,graph1D,"DefaultVar",false);
 
             m_exp = MemoryManager<LocalRegions::ExpansionVector>::AllocateSharedPtr();
             nel = m_lines[0]->GetExpSize();
