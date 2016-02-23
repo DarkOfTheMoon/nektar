@@ -2091,46 +2091,6 @@ namespace Nektar
          * also perform a \a BwdTrans to ensure data is in both the physical and
          * coefficient storage.
          * @param   infile  Filename to read.
-         */
-        void EquationSystem::ImportFld(
-            const std::string &infile, 
-            Array<OneD, MultiRegions::ExpListSharedPtr> &pFields)
-        {
-            std::vector<LibUtilities::FieldDefinitionsSharedPtr> FieldDef;
-            std::vector<std::vector<NekDouble> > FieldData;
-
-            m_fld->Import(infile,FieldDef,FieldData);
-
-            // Copy FieldData into m_fields
-            for(int j = 0; j < pFields.num_elements(); ++j)
-            {
-                Vmath::Zero(pFields[j]->GetNcoeffs(),
-                            pFields[j]->UpdateCoeffs(),1);
-                
-                for(int i = 0; i < FieldDef.size(); ++i)
-                {
-                    ASSERTL1(FieldDef[i]->m_fields[j] ==
-                             m_fields[j]->GetVarName(),
-                             std::string("Order of ") + infile
-                             + std::string(" data and that defined in "
-                                           "m_boundaryconditions differs"));
-
-                    pFields[j]->ExtractDataToCoeffs(FieldDef[i], FieldData[i],
-                                                    FieldDef[i]->m_fields[j],
-                                                    pFields[j]->UpdateCoeffs());
-                }
-                pFields[j]->BwdTrans(pFields[j]->GetCoeffs(),
-                                     pFields[j]->UpdatePhys());
-            }
-        }
-
-
-
-        /**
-         * Import field from infile and load into \a m_fields. This routine will
-         * also perform a \a BwdTrans to ensure data is in both the physical and
-         * coefficient storage.
-         * @param   infile  Filename to read.
          * If optionan \a ndomains is specified it assumes we loop over nodmains for each nvariables. 
          */
         void EquationSystem::ImportFldToMultiDomains(
@@ -2171,75 +2131,6 @@ namespace Nektar
             }
         }
 
-        /**
-         * Import field from infile and load into \a pField. This routine will
-         * also perform a \a BwdTrans to ensure data is in both the physical and
-         * coefficient storage.
-         */
-        void EquationSystem::ImportFld(
-            const std::string &infile, 
-            MultiRegions::ExpListSharedPtr &pField, 
-            std::string &pFieldName)
-        {
-            std::vector<LibUtilities::FieldDefinitionsSharedPtr> FieldDef;
-            std::vector<std::vector<NekDouble> > FieldData;
-
-            m_fld->Import(infile,FieldDef,FieldData);
-            int idx = -1;
-
-            Vmath::Zero(pField->GetNcoeffs(),pField->UpdateCoeffs(),1);
-
-            for(int i = 0; i < FieldDef.size(); ++i)
-            {
-                // find the index of the required field in the file.
-                for(int j = 0; j < FieldData.size(); ++j)
-                {
-                    if (FieldDef[i]->m_fields[j] == pFieldName)
-                    {
-                        idx = j;
-                    }
-                }
-                ASSERTL1(idx >= 0, "Field " + pFieldName + " not found.");
-
-                pField->ExtractDataToCoeffs(FieldDef[i], FieldData[i],
-                                            FieldDef[i]->m_fields[idx],
-                                            pField->UpdateCoeffs());
-            }
-            pField->BwdTrans(pField->GetCoeffs(), pField->UpdatePhys());
-        }
-
-        /**
-         * Import field from infile and load into the array \a coeffs. 
-         *
-         * @param infile Filename to read.
-         * @param fieldStr an array of string identifying fields to be imported
-         * @param coeffs and array of array of coefficients to store imported data
-         */
-        void EquationSystem::ImportFld(
-            const std::string &infile, 
-            std::vector< std::string> &fieldStr, 
-            Array<OneD, Array<OneD, NekDouble> > &coeffs)
-        {
-
-            ASSERTL0(fieldStr.size() <= coeffs.num_elements(),
-                     "length of fieldstr should be the same as pFields");
-        
-            std::vector<LibUtilities::FieldDefinitionsSharedPtr> FieldDef;
-            std::vector<std::vector<NekDouble> > FieldData;
-        
-            m_fld->Import(infile,FieldDef,FieldData);
-
-            // Copy FieldData into m_fields
-            for(int j = 0; j < fieldStr.size(); ++j)
-            {
-                Vmath::Zero(coeffs[j].num_elements(),coeffs[j],1);
-                for(int i = 0; i < FieldDef.size(); ++i)
-                {
-                    m_fields[0]->ExtractDataToCoeffs(FieldDef[i], FieldData[i],
-                                                     fieldStr[j], coeffs[j]);
-                }
-            }
-        }
 
         /**
          * Write out a summary of the session data.

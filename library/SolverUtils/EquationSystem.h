@@ -272,30 +272,11 @@ namespace Nektar
                 std::vector<Array<OneD, NekDouble> > &fieldcoeffs,
                 std::vector<std::string> &variables);
             
-            /// Input field data from the given file.
-            SOLVER_UTILS_EXPORT void ImportFld(
-                const std::string &infile,
-                Array<OneD, MultiRegions::ExpListSharedPtr> &pFields);
-            
             /// Input field data from the given file to multiple domains
             SOLVER_UTILS_EXPORT void ImportFldToMultiDomains(
                                       const std::string &infile, 
                                       Array<OneD, MultiRegions::ExpListSharedPtr> &pFields,
                                       const int ndomains);
-            
-            /// Output a field.
-            /// Input field data into array from the given file.
-            SOLVER_UTILS_EXPORT void ImportFld(
-                const std::string &infile, 
-                std::vector<std::string> &fieldStr, 
-                Array<OneD, Array<OneD, NekDouble> > &coeffs);
-            
-            /// Output a field.
-            /// Input field data into ExpList from the given file.
-            SOLVER_UTILS_EXPORT void ImportFld(
-                const std::string &infile, 
-                MultiRegions::ExpListSharedPtr &pField, 
-                std::string &pFieldName);
             
             /// Builds map of which element holds each history point.
             SOLVER_UTILS_EXPORT void ScanForHistoryPoints();
