@@ -837,7 +837,7 @@ namespace Nektar
         
         inline const std::string EquationSystem::GetVariable(unsigned int i)
         {
-            return m_session->GetVariable(i);
+            return m_fields[i]->GetVarName();
         }
         
         inline int EquationSystem::GetTraceTotPoints(void)
