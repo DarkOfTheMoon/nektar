@@ -60,7 +60,8 @@ namespace Nektar
                 const LibUtilities::BasisKey &HomoBasis,
                 const NekDouble lhom,
                 const bool useFFT,
-                const bool dealiasing);
+                const bool dealiasing,
+                const std::string &variable = "DefaultVar");
 
             MULTI_REGIONS_EXPORT DisContField3DHomogeneous1D(
                 const LibUtilities::SessionReaderSharedPtr &pSession,

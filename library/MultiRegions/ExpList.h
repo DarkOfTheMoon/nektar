@@ -106,7 +106,8 @@ namespace Nektar
             
             /// The default constructor.
             MULTI_REGIONS_EXPORT ExpList(
-                    const LibUtilities::SessionReaderSharedPtr &pSession);
+                    const LibUtilities::SessionReaderSharedPtr &pSession,
+                    const std::string  &variable = "DefaultVar");
 
             /// The default constructor.
             MULTI_REGIONS_EXPORT ExpList(

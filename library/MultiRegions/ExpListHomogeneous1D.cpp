@@ -53,9 +53,14 @@ namespace Nektar
         {
         }
 
-        ExpListHomogeneous1D::ExpListHomogeneous1D(const LibUtilities::SessionReaderSharedPtr
-                &pSession,const LibUtilities::BasisKey &HomoBasis, const NekDouble lhom, const bool useFFT, const bool dealiasing):
-            ExpList(pSession),
+        ExpListHomogeneous1D::ExpListHomogeneous1D(
+            const LibUtilities::SessionReaderSharedPtr &pSession,
+            const LibUtilities::BasisKey &HomoBasis,
+            const NekDouble lhom,
+            const bool useFFT,
+            const bool dealiasing,
+            const std::string &variable):
+            ExpList(pSession, variable),
             m_useFFT(useFFT),
             m_lhom(lhom),
             m_homogeneous1DBlockMat(MemoryManager<Homo1DBlockMatrixMap>::AllocateSharedPtr()),

@@ -56,8 +56,9 @@ namespace Nektar
             const LibUtilities::BasisKey               &HomoBasis,
             const NekDouble                             lhom,
             const bool                                  useFFT,
-            const bool                                  dealiasing)
-            : ExpList3DHomogeneous1D(pSession,HomoBasis,lhom,useFFT,dealiasing),
+            const bool                                  dealiasing,
+            const std::string                           &variable)
+            : ExpList3DHomogeneous1D(pSession,HomoBasis,lhom,useFFT,dealiasing,variable),
               m_bndCondExpansions(),
               m_bndConditions()
         {
@@ -95,7 +96,7 @@ namespace Nektar
             const SpatialDomains::MeshGraphSharedPtr   &graph2D,
             const std::string                          &variable)
             : ExpList3DHomogeneous1D(pSession, HomoBasis, lhom, useFFT,
-                                     dealiasing),
+                                     dealiasing,variable),
               m_bndCondExpansions(),
               m_bndConditions()
         {

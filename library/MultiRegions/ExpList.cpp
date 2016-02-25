@@ -118,11 +118,12 @@ namespace Nektar
          * MultiRegions#ExpList2D or MultiRegions#ExpList3D).
          */
         ExpList::ExpList(
-                const LibUtilities::SessionReaderSharedPtr &pSession):
+                const LibUtilities::SessionReaderSharedPtr &pSession,
+                const std::string  &variable):
             m_comm(pSession->GetComm()),
             m_session(pSession),
             m_graph(),
-            m_varName("DefaultVar"),
+            m_varName(variable),
             m_ncoeffs(0),
             m_npoints(0),
             m_coeffs(),

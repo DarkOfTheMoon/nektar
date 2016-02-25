@@ -69,7 +69,8 @@ namespace Nektar
                                    const LibUtilities::BasisKey &HomoBasis,
                                    const NekDouble lhom,
                                    const bool useFFT,
-								   const bool dealiasing);
+								   const bool dealiasing,
+                                   const std::string &variable = "DefaultVar");
 
             /// Sets up a list of local expansions based on an input mesh.
             MULTI_REGIONS_EXPORT ExpList3DHomogeneous1D(

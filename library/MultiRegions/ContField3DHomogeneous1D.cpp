@@ -78,7 +78,7 @@ namespace Nektar
                             const SpatialDomains::MeshGraphSharedPtr &graph2D,
                             const std::string &variable,
                             const bool CheckIfSingularSystem):
-            DisContField3DHomogeneous1D(pSession,HomoBasis,lhom,useFFT,dealiasing)
+            DisContField3DHomogeneous1D(pSession,HomoBasis,lhom,useFFT,dealiasing,variable)
         {
             int i,n,nel;
             ContField2DSharedPtr plane_zero;

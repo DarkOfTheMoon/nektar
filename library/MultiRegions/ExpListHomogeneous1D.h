@@ -80,7 +80,14 @@ namespace Nektar
             /// Default constructor.
             MULTI_REGIONS_EXPORT ExpListHomogeneous1D();
 
-            MULTI_REGIONS_EXPORT ExpListHomogeneous1D(const LibUtilities::SessionReaderSharedPtr &pSession,const LibUtilities::BasisKey &HomoBasis, const NekDouble lz, const bool useFFT, const bool dealiasing);
+            MULTI_REGIONS_EXPORT ExpListHomogeneous1D(
+                const LibUtilities::SessionReaderSharedPtr
+                &pSession,const LibUtilities::BasisKey
+                &HomoBasis,
+                const NekDouble lz,
+                const bool useFFT,
+                const bool dealiasing,
+                const std::string &variable = "DefaultVar");
 
             /// Copy constructor.
             MULTI_REGIONS_EXPORT ExpListHomogeneous1D(const ExpListHomogeneous1D &In);
