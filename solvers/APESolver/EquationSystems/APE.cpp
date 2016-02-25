@@ -292,7 +292,7 @@ void APE::SetBoundaryConditions(Array<OneD, Array<OneD, NekDouble> > &inarray,
         {
             for (int i = 0; i < nvariables; ++i)
             {
-                varName = m_session->GetVariable(i);
+                varName = m_fields[i]->GetVarName();
                 m_fields[i]->EvaluateBoundaryConditions(time, varName);
             }
         }

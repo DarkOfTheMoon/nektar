@@ -93,7 +93,7 @@ void ForcingWavyness::v_InitObject(
     ASSERTL0(m_session->DefinesFunction(funcName),
             "Function '" + funcName + "' not defined.");
 
-    std::string s_FieldStr = m_session->GetVariable(0);
+    std::string s_FieldStr = pFields[0]->GetVarName();
     ASSERTL0(m_session->DefinesFunction(funcName, s_FieldStr),
             "Variable '" + s_FieldStr + "' not defined.");
 

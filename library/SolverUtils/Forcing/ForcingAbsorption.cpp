@@ -74,7 +74,7 @@ namespace SolverUtils
         m_Forcing = Array<OneD, Array<OneD, NekDouble> > (m_NumVariable);
         for (int i = 0; i < m_NumVariable; ++i)
         {
-            s_FieldStr = m_session->GetVariable(i);
+            s_FieldStr = pFields[i]->GetVarName();
             ASSERTL0(m_session->DefinesFunction(funcName, s_FieldStr),
                      "Variable '" + s_FieldStr + "' not defined.");
             m_Absorption[i]  = Array<OneD, NekDouble> (npts, 0.0);
@@ -93,7 +93,7 @@ namespace SolverUtils
             m_Refflow = Array<OneD, Array<OneD, NekDouble> > (m_NumVariable);
             for (int i = 0; i < m_NumVariable; ++i)
             {
-                s_FieldStr = m_session->GetVariable(i);
+                s_FieldStr = pFields[i]->GetVarName();
                 ASSERTL0(m_session->DefinesFunction(funcName, s_FieldStr),
                          "Variable '" + s_FieldStr + "' not defined.");
                 m_Refflow[i] = Array<OneD, NekDouble> (npts, 0.0);
@@ -131,7 +131,7 @@ namespace SolverUtils
                 RefflowScaled[i] = Array<OneD, NekDouble> (nq);
                 if (m_hasRefFlowTime)
                 {
-                    s_FieldStr = m_session->GetVariable(i);
+                    s_FieldStr = fields[i]->GetVarName();
                     EvaluateTimeFunction(m_session, s_FieldStr, TimeScale, m_funcNameTime, time);
                     Vmath::Smul(nq, TimeScale[0], m_Refflow[i],1,RefflowScaled[i],1);
                 }
