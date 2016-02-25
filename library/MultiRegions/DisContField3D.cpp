@@ -138,6 +138,8 @@
              : ExpList3D(In), 
                m_trace(NullExpListSharedPtr)
          {
+             m_varName = variable;
+
              SpatialDomains::BoundaryConditions bcs(m_session, graph3D);
 
              GenerateBoundaryConditionExpansion(graph3D,bcs,variable);

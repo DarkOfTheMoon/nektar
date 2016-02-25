@@ -179,6 +179,8 @@ namespace Nektar
             : ExpList2D(In,DeclareCoeffPhysArrays),
               m_trace(NullExpListSharedPtr)
         {
+            m_varName = variable;
+
             // Set up boundary conditions for this variable.
             // Do not set up BCs if default variable
             if(variable.compare("DefaultVar") != 0)

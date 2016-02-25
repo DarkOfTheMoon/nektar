@@ -63,7 +63,7 @@ namespace Nektar
             MULTI_REGIONS_EXPORT DisContField2D(
                 const DisContField2D                     &In,
                 const SpatialDomains::MeshGraphSharedPtr &graph2D,
-                const std::string                        &variable,
+                const std::string                        &variable  = "DefaultVar",
                 const bool SetUpJustDG            = false,
                 const bool DeclareCoeffPhysArrays = true);
             
