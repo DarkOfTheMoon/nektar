@@ -90,7 +90,8 @@ namespace Nektar
                                                       const NekDouble ly,
                                                       const NekDouble lz,
                                                       const bool useFFT,
-                                                      const bool dealiasing);
+                                                      const bool dealiasing,
+                                                      const std::string &variable = "DefaultVar");
             
             /// Copy constructor.
             MULTI_REGIONS_EXPORT ExpListHomogeneous2D(const ExpListHomogeneous2D &In);

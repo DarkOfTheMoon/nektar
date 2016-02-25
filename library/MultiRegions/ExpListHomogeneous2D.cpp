@@ -60,8 +60,9 @@ namespace Nektar
                                                    const NekDouble lhom_y,
                                                    const NekDouble lhom_z,
                                                    const bool useFFT,
-                                                   const bool dealiasing):
-            ExpList(pSession),
+                                                   const bool dealiasing,
+                                                   const std::string &variable):
+            ExpList(pSession,variable),
             m_useFFT(useFFT),
             m_lhom_y(lhom_y),
             m_lhom_z(lhom_z),

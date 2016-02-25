@@ -55,7 +55,8 @@ namespace Nektar
 															 const NekDouble lhom_y,
 															 const NekDouble lhom_z,
 															 const bool useFFT,
-															 const bool dealiasing);
+															 const bool dealiasing,
+                                                             const std::string &variable = "DefaultVar");
 
             MULTI_REGIONS_EXPORT DisContField3DHomogeneous2D(const LibUtilities::SessionReaderSharedPtr &pSession,
                                                              const LibUtilities::BasisKey &HomoBasis_y,
@@ -65,7 +66,7 @@ namespace Nektar
 															 const bool useFFT,
 															 const bool dealiasing,
 															 const SpatialDomains::MeshGraphSharedPtr &graph1D,
-															 const std::string &variable);
+															 const std::string &variable = "DefaultVar");
 
             /// Copy constructor.
             MULTI_REGIONS_EXPORT DisContField3DHomogeneous2D(const DisContField3DHomogeneous2D &In,
