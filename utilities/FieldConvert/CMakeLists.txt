@@ -34,6 +34,7 @@ SET(FieldConvertHeaders
     ProcessModules/ProcessWSS.h
     ProcessModules/ProcessC0Projection.h
     ProcessModules/ProcessQCriterion.h
+    ProcessModules/ProcessGrabData.h
 )
 
 SET(FieldConvertSources
@@ -72,6 +73,7 @@ SET(FieldConvertSources
     ProcessModules/ProcessWSS.cpp
     ProcessModules/ProcessC0Projection.cpp
     ProcessModules/ProcessQCriterion.cpp
+    ProcessModules/ProcessGrabData.cpp
 )
 
 ADD_UTILITIES_EXECUTABLE(FieldConvert util ${FieldConvertSources} ${FieldConvertHeaders})
