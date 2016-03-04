@@ -56,7 +56,8 @@ ModuleKey ProcessGrabData::className =
 ProcessGrabData::ProcessGrabData(FieldSharedPtr f) :
     ProcessModule(f)
 {
-
+ m_config["totxt"]            = ConfigOption(false, "NotSet",
+                                    "Txt file to write to");
 }
 
 ProcessGrabData::~ProcessGrabData()
@@ -83,7 +84,8 @@ void ProcessGrabData::Process(po::variables_map &vm)
     m_f->m_exp[0]->GetCoords(x,y,z);
 
     ofstream file;
-    file.open("data.txt");
+    string totxt = m_config["totxt"].as<string>();
+    file.open(totxt.c_str());
 
     for(int i = 0; i < fields[0].num_elements(); i++)
     {
