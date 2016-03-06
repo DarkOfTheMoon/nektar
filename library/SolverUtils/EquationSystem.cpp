@@ -121,7 +121,9 @@ namespace Nektar
 
             // Instantiate a field reader/writer
             m_fld = MemoryManager<LibUtilities::FieldIO>
-                ::AllocateSharedPtr(m_session->GetComm());
+                ::AllocateSharedPtr(
+                    m_session->GetComm(),
+                    m_session->DefinesCmdLineArgument("shared-filesystem"));
 
             // Read the geometry and the expansion information
             m_graph = SpatialDomains::MeshGraph::Read(m_session);
@@ -883,9 +885,9 @@ namespace Nektar
                 }
                 else
                 {
-
                     LibUtilities::PtsFieldSharedPtr ptsField;
-                    LibUtilities::Import(filename, ptsField);
+                    LibUtilities::PtsIO ptsIO(m_session->GetComm());
+                    ptsIO.Import(filename, ptsField);
 
                     Array <OneD,  Array<OneD,  NekDouble> > coords(3);
                     coords[0] = Array<OneD, NekDouble>(nq);
