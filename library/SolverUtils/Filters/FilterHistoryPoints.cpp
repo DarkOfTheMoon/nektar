@@ -139,32 +139,25 @@ void FilterHistoryPoints::v_Initialise(
 
     // Read history points
     Array<OneD, NekDouble> gloCoord(3, 0.0);
-    int dim      = pFields[0]->GetGraph()->GetSpaceDimension();
-    int i        = 0;
-    int npointsZ = 1;
+    int dim = pFields[0]->GetGraph()->GetSpaceDimension();
+    int i = 0;
+    int npointsZ = m_isPhysicalSpace ? m_session->GetParameter("HomModesZ") : 1;
     if (m_isHomogeneous1D)
     {
         ++dim;
     }
-    if (m_isPhysicalSpace)
-    {
-        npointsZ = m_session->GetParameter("HomModesZ");
-    }
+
     while (!m_historyPointStream.fail())
     {
         m_historyPointStream >> gloCoord[0] >> gloCoord[1] >> gloCoord[2];
         if (m_isHomogeneous1D) // overwrite with plane z
         {
-
             if (!m_historyPointStream.fail())
             {
-                for (int temp_outputlane = 0; temp_outputlane < npointsZ;
-                     temp_outputlane++)
+                for (int p = 0; p < npointsZ; p++)
                 {
-                    NekDouble Z = (pFields[0]
-                                       ->GetHomogeneousBasis()
-                                       ->GetZ())[temp_outputlane];
-                    gloCoord[2] = Z;
+                    gloCoord[2] =
+                        (pFields[0]->GetHomogeneousBasis()->GetZ())[p];
                     SpatialDomains::PointGeomSharedPtr vert =
                         MemoryManager<SpatialDomains::PointGeom>::
                             AllocateSharedPtr(
@@ -179,7 +172,7 @@ void FilterHistoryPoints::v_Initialise(
     // Determine the unique process responsible for each history point
     // For points on a partition boundary, must select a single process
     LibUtilities::CommSharedPtr vComm = pFields[0]->GetComm();
-    int vRank                         = vComm->GetRank();
+    int vRank = vComm->GetRank();
     int vHP = m_historyPoints.size();
     Array<OneD, int> procList(vHP, -1);
     Array<OneD, int> idList(vHP, -1);
@@ -232,7 +225,7 @@ void FilterHistoryPoints::v_Initialise(
     // rank.
     for (i = 0; i < vHP; ++i)
     {
-        int temp_outputPlane = i % npointsZ;
+        int outPlane = i % npointsZ;
         if (dist_loc[i] == dist[i])
         {
             // Set element id to Vid of m_history point for later use
@@ -262,8 +255,8 @@ void FilterHistoryPoints::v_Initialise(
 
                 if (j != IDs.num_elements())
                 {
-                    temp_outputPlane = j;
-                    procList[i]      = vRank;
+                    outPlane = j;
+                    procList[i] = vRank;
                 }
             }
             else
@@ -388,10 +381,10 @@ void FilterHistoryPoints::v_Update(
         return;
     }
 
-    int j                             = 0;
-    int k                             = 0;
-    int numPoints                     = m_historyPoints.size();
-    int numFields                     = pFields.num_elements();
+    int j = 0;
+    int k = 0;
+    int numPoints = m_historyPoints.size();
+    int numFields = pFields.num_elements();
     LibUtilities::CommSharedPtr vComm = pFields[0]->GetComm();
     Array<OneD, NekDouble> data(numPoints * numFields, 0.0);
     Array<OneD, NekDouble> temp_data(numPoints * numFields, 0.0);
@@ -417,7 +410,7 @@ void FilterHistoryPoints::v_Update(
                     m_outputPlane = k % npointsZ;
                 }
                 locCoord = (*x).second;
-                expId    = (*x).first->GetVid();
+                expId = (*x).first->GetVid();
 
                 physvals = pFields[j]->GetPlane(m_outputPlane)->UpdatePhys() +
                            pFields[j]->GetPhys_Offset(expId);
@@ -446,7 +439,7 @@ void FilterHistoryPoints::v_Update(
                  ++x, ++k)
             {
                 locCoord = (*x).second;
-                expId    = (*x).first->GetVid();
+                expId = (*x).first->GetVid();
 
                 physvals = pFields[j]->UpdatePhys() +
                            pFields[j]->GetPhys_Offset(expId);
@@ -472,8 +465,8 @@ void FilterHistoryPoints::v_Update(
     NekDouble phase;
     int n;
     int i;
-    int npointsZ  = m_session->GetParameter("HomModesZ");
-    int vHP       = m_historyPoints.size();
+    int npointsZ = m_session->GetParameter("HomModesZ");
+    int vHP = m_historyPoints.size();
     int npointsXY = vHP / npointsZ;
     if (m_isPhysicalSpace)
     {
@@ -490,6 +483,7 @@ void FilterHistoryPoints::v_Update(
                              1,
                              &temp_data[(k + i * npointsZ) * numFields],
                              1);
+
                 for (n = 2; n < npointsZ; n += 2)
                 {
                     phase = (n >> 1) * BetaZ;
@@ -514,6 +508,7 @@ void FilterHistoryPoints::v_Update(
         }
         Vmath::Vcopy(numPoints * numFields, &temp_data[0], 1, &data[0], 1);
     }
+
     // Exchange history data
     // This could be improved to reduce communication but works for now
     vComm->AllReduce(data, LibUtilities::ReduceSum);
@@ -528,8 +523,8 @@ void FilterHistoryPoints::v_Update(
             m_outputStream << boost::format("%25e") % time;
             for (int j = 0; j < numFields; ++j)
             {
-                m_outputStream << " "
-                               << boost::format("%25e") % data[k*numFields+j];
+                m_outputStream
+                    << " " << boost::format("%25e") % data[k * numFields + j];
             }
             m_outputStream << endl;
         }
