@@ -247,7 +247,7 @@ void FilterHistoryPoints::v_Initialise(
                 Array<OneD, const unsigned int> IDs = pFields[0]->GetZIDs();
                 for (j = 0; j < IDs.num_elements(); ++j)
                 {
-                    if (IDs[j] == temp_outputPlane)
+                    if (IDs[j] == outPlane)
                     {
                         break;
                     }
