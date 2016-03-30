@@ -61,13 +61,8 @@ ModuleKey OutputNekpp::className =
                                                OutputNekpp::create,
                                                "Writes a Nektar++ xml file.");
 
-OutputNekpp::OutputNekpp(MeshSharedPtr m) : OutputModule(m)
+OutputNekpp::OutputNekpp(MeshSharedPtr m) : OutputXmlBase(m)
 {
-    m_config["z"] = ConfigOption(
-        true, "0", "Compress output file and append a .gz extension.");
-    m_config["test"] = ConfigOption(
-        true, "0", "Attempt to load resulting mesh and create meshgraph.");
-    m_config["uncompress"] = ConfigOption(true, "0", "Uncompress xml sections");
 }
 
 OutputNekpp::~OutputNekpp()

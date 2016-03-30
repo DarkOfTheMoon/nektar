@@ -36,7 +36,7 @@
 #ifndef UTILITIES_PREPROCESSING_NEKMESH_OUTPUTXMLBASE
 #define UTILITIES_PREPROCESSING_NEKMESH_OUTPUTXMLBASE
 
-#include "Module.h">
+#include "../Module.h"
 #include <tinyxml.h>
 
 namespace Nektar

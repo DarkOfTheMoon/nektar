@@ -38,7 +38,7 @@
 
 #include <tinyxml.h>
 
-#include "../Module.h"
+#include "OutputXmlBase.h"
 
 namespace Nektar
 {
@@ -46,7 +46,7 @@ namespace Utilities
 {
 
 /// Converter for Gmsh files.
-class OutputNekpp : public OutputModule
+class OutputNekpp : public OutputXmlBase
 {
 public:
     /// Creates an instance of this class
@@ -71,16 +71,6 @@ private:
     void WriteXmlFaces(TiXmlElement *pRoot);
     /// Writes the <ELEMENTS> section of the XML file.
     void WriteXmlElements(TiXmlElement *pRoot);
-    /// Writes the <CURVES> section of the XML file if needed.
-    void WriteXmlCurves(TiXmlElement *pRoot);
-    /// Writes the <COMPOSITES> section of the XML file.
-    void WriteXmlComposites(TiXmlElement *pRoot);
-    /// Writes the <DOMAIN> section of the XML file.
-    void WriteXmlDomain(TiXmlElement *pRoot);
-    /// Writes the <EXPANSIONS> section of the XML file.
-    void WriteXmlExpansions(TiXmlElement *pRoot);
-    /// Writes the <CONDITIONS> section of the XML file.
-    void WriteXmlConditions(TiXmlElement *pRoot);
 };
 }
 }

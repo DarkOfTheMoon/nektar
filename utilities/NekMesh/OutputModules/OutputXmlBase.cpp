@@ -56,6 +56,11 @@ namespace Utilities
 
 OutputXmlBase::OutputXmlBase(MeshSharedPtr m) : OutputModule(m)
 {
+    m_config["z"] = ConfigOption(
+        true, "0", "Compress output file and append a .gz extension.");
+    m_config["test"] = ConfigOption(
+        true, "0", "Attempt to load resulting mesh and create meshgraph.");
+    m_config["uncompress"] = ConfigOption(true, "0", "Uncompress xml sections");
 }
 
 OutputXmlBase::~OutputXmlBase()
@@ -467,138 +472,6 @@ void OutputXmlBase::WriteXmlDomain(TiXmlElement *pRoot)
     pRoot->LinkEndChild(domain);
 }
 
-void OutputXmlBase::WriteXmlExpansions(TiXmlElement *pRoot)
-{
-    // Write a default <EXPANSIONS> section.
-    TiXmlElement *expansions = new TiXmlElement("EXPANSIONS");
-    CompositeMap::iterator it;
-
-    for (it = m_mesh->m_composite.begin(); it != m_mesh->m_composite.end();
-         ++it)
-    {
-        if (it->second->m_items[0]->GetDim() == m_mesh->m_expDim)
-        {
-            TiXmlElement *exp = new TiXmlElement("E");
-            exp->SetAttribute(
-                "COMPOSITE",
-                "C[" + boost::lexical_cast<std::string>(it->second->m_id) +
-                    "]");
-            exp->SetAttribute("NUMMODES", 4);
-            exp->SetAttribute("TYPE", "MODIFIED");
-
-            if (m_mesh->m_fields.size() == 0)
-            {
-                exp->SetAttribute("FIELDS", "u");
-            }
-            else
-            {
-                string fstr;
-                for (int i = 0; i < m_mesh->m_fields.size(); ++i)
-                {
-                    fstr += m_mesh->m_fields[i] + ",";
-                }
-                fstr = fstr.substr(0, fstr.length() - 1);
-                exp->SetAttribute("FIELDS", fstr);
-            }
-
-            expansions->LinkEndChild(exp);
-        }
-    }
-    pRoot->LinkEndChild(expansions);
-}
-
-void OutputXmlBase::WriteXmlConditions(TiXmlElement *pRoot)
-{
-    TiXmlElement *conditions         = new TiXmlElement("CONDITIONS");
-    TiXmlElement *boundaryregions    = new TiXmlElement("BOUNDARYREGIONS");
-    TiXmlElement *boundaryconditions = new TiXmlElement("BOUNDARYCONDITIONS");
-    TiXmlElement *variables          = new TiXmlElement("VARIABLES");
-    ConditionMap::iterator it;
-
-    for (it = m_mesh->m_condition.begin(); it != m_mesh->m_condition.end();
-         ++it)
-    {
-        ConditionSharedPtr c = it->second;
-        string tmp;
-
-        // First set up boundary regions.
-        TiXmlElement *b = new TiXmlElement("B");
-        b->SetAttribute("ID", boost::lexical_cast<string>(it->first));
-
-        for (int i = 0; i < c->m_composite.size(); ++i)
-        {
-            tmp += boost::lexical_cast<string>(c->m_composite[i]) + ",";
-        }
-
-        tmp = tmp.substr(0, tmp.length() - 1);
-
-        TiXmlText *t0 = new TiXmlText("C[" + tmp + "]");
-        b->LinkEndChild(t0);
-        boundaryregions->LinkEndChild(b);
-
-        TiXmlElement *region = new TiXmlElement("REGION");
-        region->SetAttribute("REF", boost::lexical_cast<string>(it->first));
-
-        for (int i = 0; i < c->type.size(); ++i)
-        {
-            string tagId;
-
-            switch (c->type[i])
-            {
-                case eDirichlet:
-                    tagId = "D";
-                    break;
-                case eNeumann:
-                    tagId = "N";
-                    break;
-                case ePeriodic:
-                    tagId = "P";
-                    break;
-                case eHOPCondition:
-                    tagId = "N";
-                    break;
-                default:
-                    break;
-            }
-
-            TiXmlElement *tag = new TiXmlElement(tagId);
-            tag->SetAttribute("VAR", c->field[i]);
-            tag->SetAttribute("VALUE", c->value[i]);
-
-            if (c->type[i] == eHOPCondition)
-            {
-                tag->SetAttribute("USERDEFINEDTYPE", "H");
-            }
-
-            region->LinkEndChild(tag);
-        }
-
-        boundaryconditions->LinkEndChild(region);
-    }
-
-    for (int i = 0; i < m_mesh->m_fields.size(); ++i)
-    {
-        TiXmlElement *v = new TiXmlElement("V");
-        v->SetAttribute("ID", boost::lexical_cast<std::string>(i));
-        TiXmlText *t0 = new TiXmlText(m_mesh->m_fields[i]);
-        v->LinkEndChild(t0);
-        variables->LinkEndChild(v);
-    }
-
-    if (m_mesh->m_fields.size() > 0)
-    {
-        conditions->LinkEndChild(variables);
-    }
-
-    if (m_mesh->m_condition.size() > 0)
-    {
-        conditions->LinkEndChild(boundaryregions);
-        conditions->LinkEndChild(boundaryconditions);
-    }
-
-    pRoot->LinkEndChild(conditions);
-}
-
 void OutputXmlBase::WriteXmlComposites(TiXmlElement *pRoot)
 {
     TiXmlElement *verTag = new TiXmlElement("COMPOSITE");
@@ -655,29 +528,6 @@ void OutputXmlBase::WriteXmlComposites(TiXmlElement *pRoot)
     }
 
     pRoot->LinkEndChild(verTag);
-}
-
-void OutputXmlBase::WriteXmlDomain(TiXmlElement *pRoot)
-{
-    // Write the <DOMAIN> subsection.
-    TiXmlElement *domain = new TiXmlElement("DOMAIN");
-    std::string list;
-    CompositeMap::iterator it;
-
-    for (it = m_mesh->m_composite.begin(); it != m_mesh->m_composite.end();
-         ++it)
-    {
-        if (it->second->m_items[0]->GetDim() == m_mesh->m_expDim)
-        {
-            if (list.length() > 0)
-            {
-                list += ",";
-            }
-            list += boost::lexical_cast<std::string>(it->second->m_id);
-        }
-    }
-    domain->LinkEndChild(new TiXmlText(" C[" + list + "] "));
-    pRoot->LinkEndChild(domain);
 }
 
 void OutputXmlBase::WriteXmlExpansions(TiXmlElement *pRoot)

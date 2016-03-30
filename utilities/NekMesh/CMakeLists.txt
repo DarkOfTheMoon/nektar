@@ -52,9 +52,9 @@ SET(NekMeshSources
 )
 
 IF (NEKTAR_USE_PETSC)
-    SET(MeshConvertHeaders ${MeshConvertHeaders}
+    SET(NekMeshHeaders ${NekMeshHeaders}
         OutputModules/OutputDmplex.h OutputModules/PetscEnv.h)
-    SET(MeshConvertSources ${MeshConvertSources}
+    SET(NekMeshSources ${NekMeshSources}
         OutputModules/OutputDmplex.cpp OutputModules/PetscEnv.cpp)
 ENDIF ()
 
@@ -80,7 +80,7 @@ SET_COMMON_PROPERTIES(NekMesh)
 TARGET_LINK_LIBRARIES(NekMesh NekMeshUtils LocalRegions)
 
 IF (NEKTAR_USE_PETSC)
-  TARGET_LINK_LIBRARIES(MeshConvert petsc)
+  TARGET_LINK_LIBRARIES(NekMesh petsc)
 ENDIF ()
 
 SET_PROPERTY(TARGET NekMesh PROPERTY FOLDER util)

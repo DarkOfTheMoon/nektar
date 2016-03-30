@@ -40,68 +40,67 @@
 
 namespace Nektar
 {
-    namespace Utilities
+namespace Utilities
+{
+
+PetscEnv::PetscEnv(int *argc, char ***argv) : doesOwnPetsc(false)
+{
+    if (!Initialized())
     {
-
-        PetscEnv::PetscEnv(int* argc, char*** argv) :
-                doesOwnPetsc(false)
-        {
-            if (!Initialized())
-            {
-                PetscErrorCode ierr = PetscInitialize(argc, argv, NULL, NULL);
-                if (ierr)
-                    std::cerr << "Error in PetscInitialize. Code = " << ierr << std::endl;
-                doesOwnPetsc = true;
-            }
-        }
-
-        PetscEnv::~PetscEnv()
-        {
-            if (doesOwnPetsc)
-            {
-                PetscFinalize();
-            }
-        }
-
-        bool PetscEnv::Initialized()
-        {
-            PetscBool flag = PETSC_FALSE;
-            PetscInitialized(&flag);
-            return flag == PETSC_TRUE;
-        }
-
-        bool PetscEnv::Finalized()
-        {
-            PetscBool flag = PETSC_FALSE;
-            PetscFinalized(&flag);
-            return flag == PETSC_TRUE;
-        }
+        PetscErrorCode ierr = PetscInitialize(argc, argv, NULL, NULL);
+        if (ierr)
+            std::cerr << "Error in PetscInitialize. Code = " << ierr
+                      << std::endl;
+        doesOwnPetsc = true;
     }
+}
+
+PetscEnv::~PetscEnv()
+{
+    if (doesOwnPetsc)
+    {
+        PetscFinalize();
+    }
+}
+
+bool PetscEnv::Initialized()
+{
+    PetscBool flag = PETSC_FALSE;
+    PetscInitialized(&flag);
+    return flag == PETSC_TRUE;
+}
+
+bool PetscEnv::Finalized()
+{
+    PetscBool flag = PETSC_FALSE;
+    PetscFinalized(&flag);
+    return flag == PETSC_TRUE;
+}
+}
 }
 #else
 namespace Nektar
 {
-    namespace Utilities
-    {
+namespace Utilities
+{
 
-        PetscEnv::PetscEnv(int* argc, char*** argv) :
-                doesOwnPetsc(false)
-        {
-        }
+PetscEnv::PetscEnv(int *argc, char ***argv) : doesOwnPetsc(false)
+{
+}
 
-        PetscEnv::~PetscEnv()
-        {
-        }
+PetscEnv::~PetscEnv()
+{
+}
 
-        bool PetscEnv::Initialized()
-        {
-            return false;
-        }
+bool PetscEnv::Initialized()
+{
+    return false;
+}
 
-        bool PetscEnv::Finalized()
-        {
-            return false;
-        }
-    }
+bool PetscEnv::Finalized()
+{
+    return false;
+}
+}
 }
 #endif

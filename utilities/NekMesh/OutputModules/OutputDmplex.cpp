@@ -37,8 +37,8 @@
 #include "LibUtilities/Communication/CommMpi.h"
 #include "PetscEnv.h"
 
-#include "petscdmplex.h"
-#include "petscviewerhdf5.h"
+#include <petscdmplex.h>
+#include <petscviewerhdf5.h>
 #include <tinyxml.h>
 
 using Nektar::LibUtilities::GetCommFactory;
@@ -110,7 +110,7 @@ void OutputDmplex::Process()
 
         DM plex;
         PCALL(DMPlexCreate, (mpi->GetComm(), &plex));
-        PCALL(DMPlexSetDimension, (plex, m_mesh->m_spaceDim));
+        PCALL(DMSetDimension, (plex, m_mesh->m_spaceDim));
 
         // Now we need to know the size of the "chart", which is the set of
         // all vertices, edges, faces, and cells.
@@ -283,20 +283,17 @@ void OutputDmplex::Process()
             // Extract the output filename and extension
             string filename = m_config["outfile"].as<string>();
             size_t iDot     = filename.rfind('.');
-            filename.replace(iDot + 1, 3, "dmp");
+            filename.replace(iDot + 1, 3, "h5");
 
             // In PETSc-ese a viewer deals with IO
             PetscViewer viewer;
-            // Create an HDF5 one
-            //                     PCALL(PetscViewerBinaryOpen,
-            //                            (mpi->GetComm(),
-            //                            m_config["outfile"].as<string>().c_str(),
-            //                            FILE_MODE_WRITE, &viewer));
-            // HDF issues - try text
-            PCALL(PetscViewerASCIIOpen,
-                  (mpi->GetComm(), filename.c_str(), &viewer));
+            // Create an HDF5 viewer
+            PCALL(PetscViewerHDF5Open,
+                  (mpi->GetComm(), filename.c_str(), FILE_MODE_WRITE, &viewer));
+            PCALL(PetscViewerPushFormat, (viewer, PETSC_VIEWER_NATIVE));
             // Write the plex out
-            PCALL(PetscObjectView, ((PetscObject)plex, viewer));
+            PCALL(DMView, (plex, viewer));
+            PCALL(PetscViewerPopFormat, (viewer));
             // Close the file
             PCALL(PetscViewerDestroy, (&viewer));
         }
