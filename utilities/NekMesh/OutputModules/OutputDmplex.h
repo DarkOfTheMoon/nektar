@@ -33,43 +33,33 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef UTILITIES_PREPROCESSING_MESHCONVERT_OUTPUTDMPLEX
-#define UTILITIES_PREPROCESSING_MESHCONVERT_OUTPUTDMPLEX
+#ifndef UTILITIES_PREPROCESSING_NEKMESH_OUTPUTDMPLEX
+#define UTILITIES_PREPROCESSING_NEKMESH_OUTPUTDMPLEX
 
-#include "OutputNekpp.h"
+#include "OutputXmlBase.h"
 
 namespace Nektar
 {
-    namespace Utilities
+namespace Utilities
+{
+/// Converter for Gmsh files.
+class OutputDmplex : public OutputXmlBase
+{
+public:
+    /// Creates an instance of this class
+    static boost::shared_ptr<Module> create(MeshSharedPtr m)
     {
-        /// Converter for Gmsh files.
-        class OutputDmplex : public OutputXmlBase
-        {
-            public:
-                /// Creates an instance of this class
-                static boost::shared_ptr<Module> create(MeshSharedPtr m)
-                {
-                    return MemoryManager<OutputDmplex>::AllocateSharedPtr(m);
-                }
-                static ModuleKey className;
-
-                OutputDmplex(MeshSharedPtr m);
-                virtual ~OutputDmplex();
-
-                /// Write mesh to output file.
-                virtual void Process();
-            protected:
-                /// Writes the <NODES> section of the XML file.
-                void WriteXmlNodes(TiXmlElement * pRoot);
-                /// Writes the <EDGES> section of the XML file.
-                void WriteXmlEdges(TiXmlElement * pRoot);
-                /// Writes the <FACES> section of the XML file if needed.
-                void WriteXmlFaces(TiXmlElement * pRoot);
-                /// Writes the <ELEMENTS> section of the XML file.
-                void WriteXmlElements(TiXmlElement * pRoot);
-                /// Writes the <CURVES> section of the XML file if needed.
-        };
+        return MemoryManager<OutputDmplex>::AllocateSharedPtr(m);
     }
+    static ModuleKey className;
+
+    OutputDmplex(MeshSharedPtr m);
+    virtual ~OutputDmplex();
+
+    /// Write mesh to output file.
+    virtual void Process();
+};
+}
 }
 
 #endif

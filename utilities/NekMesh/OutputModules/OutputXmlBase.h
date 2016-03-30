@@ -33,36 +33,36 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef UTILITIES_PREPROCESSING_MESHCONVERT_OUTPUTXMLBASE
-#define UTILITIES_PREPROCESSING_MESHCONVERT_OUTPUTXMLBASE
+#ifndef UTILITIES_PREPROCESSING_NEKMESH_OUTPUTXMLBASE
+#define UTILITIES_PREPROCESSING_NEKMESH_OUTPUTXMLBASE
 
+#include "Module.h">
 #include <tinyxml.h>
-#include "Module.h"
 
 namespace Nektar
 {
-    namespace Utilities
-    {
-        class OutputXmlBase: public OutputModule
-        {
-        public:
-            OutputXmlBase(MeshSharedPtr m);
-            virtual ~OutputXmlBase();
-            virtual void Process() = 0;
+namespace Utilities
+{
+class OutputXmlBase : public OutputModule
+{
+public:
+    OutputXmlBase(MeshSharedPtr m);
+    virtual ~OutputXmlBase();
+    virtual void Process() = 0;
 
-        protected:
-            /// Writes the <CURVES> section of the XML file if needed.
-            void WriteXmlCurves(TiXmlElement * pRoot);
-            /// Writes the <COMPOSITES> section of the XML file.
-            void WriteXmlComposites(TiXmlElement * pRoot);
-            /// Writes the <DOMAIN> section of the XML file.
-            void WriteXmlDomain(TiXmlElement * pRoot);
-            /// Writes the <EXPANSIONS> section of the XML file.
-            void WriteXmlExpansions(TiXmlElement * pRoot);
-            /// Writes the <CONDITIONS> section of the XML file.
-            void WriteXmlConditions(TiXmlElement * pRoot);
-        };
-    }
+protected:
+    /// Writes the <CURVES> section of the XML file if needed.
+    void WriteXmlCurves(TiXmlElement *pRoot);
+    /// Writes the <COMPOSITES> section of the XML file.
+    void WriteXmlComposites(TiXmlElement *pRoot);
+    /// Writes the <DOMAIN> section of the XML file.
+    void WriteXmlDomain(TiXmlElement *pRoot);
+    /// Writes the <EXPANSIONS> section of the XML file.
+    void WriteXmlExpansions(TiXmlElement *pRoot);
+    /// Writes the <CONDITIONS> section of the XML file.
+    void WriteXmlConditions(TiXmlElement *pRoot);
+};
+}
 }
 
 #endif

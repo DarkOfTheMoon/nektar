@@ -9,6 +9,7 @@ SET(NekMeshHeaders
     Module.h
     OutputModules/OutputGmsh.h
     OutputModules/OutputNekpp.h
+    OutputModules/OutputXmlBase.h
     ProcessModules/ProcessBL.h
     ProcessModules/ProcessCyl.h
     ProcessModules/ProcessDetectSurf.h
@@ -35,6 +36,7 @@ SET(NekMeshSources
     Module.cpp
     OutputModules/OutputGmsh.cpp
     OutputModules/OutputNekpp.cpp
+    OutputModules/OutputXmlBase.cpp
     ProcessModules/ProcessBL.cpp
     ProcessModules/ProcessCyl.cpp
     ProcessModules/ProcessDetectSurf.cpp
@@ -48,6 +50,13 @@ SET(NekMeshSources
     ProcessModules/ProcessTetSplit.cpp
     ProcessModules/ProcessOptiExtract.cpp
 )
+
+IF (NEKTAR_USE_PETSC)
+    SET(MeshConvertHeaders ${MeshConvertHeaders}
+        OutputModules/OutputDmplex.h OutputModules/PetscEnv.h)
+    SET(MeshConvertSources ${MeshConvertSources}
+        OutputModules/OutputDmplex.cpp OutputModules/PetscEnv.cpp)
+ENDIF ()
 
 IF (NEKTAR_USE_CCM)
     SET(NekMeshHeaders ${NekMeshHeaders} InputModules/InputStar.h)
@@ -69,6 +78,11 @@ ENDIF (NEKTAR_USE_MESHGEN)
 ADD_EXECUTABLE(NekMesh ${NekMeshSources})
 SET_COMMON_PROPERTIES(NekMesh)
 TARGET_LINK_LIBRARIES(NekMesh NekMeshUtils LocalRegions)
+
+IF (NEKTAR_USE_PETSC)
+  TARGET_LINK_LIBRARIES(MeshConvert petsc)
+ENDIF ()
+
 SET_PROPERTY(TARGET NekMesh PROPERTY FOLDER util)
 INSTALL(TARGETS NekMesh
     RUNTIME DESTINATION ${NEKTAR_BIN_DIR} COMPONENT util)
