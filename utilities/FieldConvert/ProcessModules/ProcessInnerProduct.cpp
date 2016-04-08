@@ -83,7 +83,7 @@ void ProcessInnerProduct::Process(po::variables_map &vm)
     }
 
     ASSERTL0(m_f->m_exp.size() != 0, "input xml file needs to be specified");
-    ASSERTL0(m_f->m_data.size() != 0, "No input data has been defined");
+    ASSERTL0(m_f->m_data.size() != 0, "No input fld data has been defined. Have you specified the output out.stdout?");
 
     string fromfld           = m_config["fromfld"].as<string>();
     FieldSharedPtr fromField = boost::shared_ptr<Field>(new Field());
@@ -167,7 +167,7 @@ void ProcessInnerProduct::Process(po::variables_map &vm)
             if (m_f->m_comm->GetRank() == 0)
             {
                 cout << "Inner Product WRT " << fromfiles[f] << " : "
-                     << totiprod << endl;
+                     <<  setprecision(16) << scientific << totiprod << endl;
             }
         }
     }
