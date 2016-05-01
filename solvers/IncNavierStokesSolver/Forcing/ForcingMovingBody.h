@@ -93,26 +93,29 @@ class ForcingMovingBody : public SolverUtils::Forcing
         void CheckIsFromFile(const TiXmlElement* pForce);
 
         void InitialiseCableModel(
-            const LibUtilities::SessionReaderSharedPtr& pSession,
             const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields);
 
         void InitialiseFilter(
-            const LibUtilities::SessionReaderSharedPtr& pSession,
             const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields,
             const TiXmlElement* pForce);
 
-        void Newmark_betaSolver(
-            const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields,
-                  Array<OneD, NekDouble> &FcePhysinArray,
-                  Array<OneD, NekDouble> &MotPhysinArray);
+        void ModalDecompositionMethod(
+            const Array<OneD, NekDouble> &Forces,
+                  Array<OneD, Array<OneD, NekDouble> > &vib);
 
-        void EvaluateStructDynModel(
+        void FiniteElementMethod(
+                  Array<OneD, NekDouble> &Forces,
+                  Array<OneD, Array<OneD, NekDouble> > &vibs,
+                  Array<OneD, Array<OneD, NekDouble> > &rots);
+
+        void StructDynModel(
             const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields,
-                  Array<OneD, NekDouble> &Hydroforces,
+                  Array<OneD, Array<OneD, NekDouble> > &HydroForces,
                   NekDouble time );
 
-        void SetDynEqCoeffMatrix(
-            const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields);
+        void SetDynEqCoeffMatrix();
+
+        void SetStiffnessMatrix();
 
         void RollOver(Array<OneD, Array<OneD, NekDouble> > &input);
 
@@ -122,25 +125,30 @@ class ForcingMovingBody : public SolverUtils::Forcing
 
         NekDouble m_structrho;     ///< mass of the cable per unit length
         NekDouble m_structdamp;    ///< damping ratio of the cable
-        NekDouble m_lhom;          ///< length ratio of the cable
-        NekDouble m_kinvis;        ///< fluid viscous
+        NekDouble m_length;        ///< length ratio of the cable
         NekDouble m_timestep;      ///< time step
         ///
         LibUtilities::NektarFFTSharedPtr m_FFT;
         ///
         FilterMovingBodySharedPtr m_MovBodyfilter;
-        /// storage for the cable's force(x,y) variables
-        Array<OneD, NekDouble> m_Aeroforces;
-        /// storage for the cable's motion(x,y) variables
-        Array<OneD, Array<OneD, NekDouble> >m_MotionVars;
+        /// storage the loading on the cable
+        Array<OneD, Array<OneD, NekDouble> > m_q;
+        /// storage for the cable's motion(x,y) variables:vibrations
+        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_vib;
+        /// storage for the cable's motion(x,y) variables:rotations
+        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_rot;
+
         /// fictitious velocity storage
         Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_fV;
         /// fictitious acceleration storage
         Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_fA;
-        /// matrices in Newmart-beta method
+        /// matrices in Modal Decompostion method
         Array<OneD, DNekMatSharedPtr> m_CoeffMat_A;
-        /// matrices in Newmart-beta method
         Array<OneD, DNekMatSharedPtr> m_CoeffMat_B;
+        /// matrices in Finite Element method
+        DNekMatSharedPtr m_CoeffMat_K;
+		DNekMatSharedPtr m_CoeffMat_M;
+		DNekMatSharedPtr m_CoeffMat_D;
         /// [0] is displacements, [1] is velocities, [2] is accelerations
         Array<OneD, std::string> m_funcName;
         /// motion direction: [0] is 'x' and [1] is 'y'
@@ -151,11 +159,6 @@ class ForcingMovingBody : public SolverUtils::Forcing
         Array<OneD, Array< OneD, NekDouble> > m_zta;
         /// Store the derivatives of motion variables in y-direction
         Array<OneD, Array< OneD, NekDouble> > m_eta;
-        ///
-        unsigned int                    m_outputFrequency;
-        Array<OneD, std::ofstream>      m_outputStream;
-        std::string                     m_outputFile_fce;
-        std::string                     m_outputFile_mot;
 };
 
 }
