@@ -77,6 +77,7 @@ void OutputTecplot::Process(po::variables_map &vm)
     LibUtilities::PtsFieldSharedPtr fPts = m_f->m_fieldPts;
 
     m_doError = (vm.count("error") == 1)?  true: false;
+    m_doublePrecision = (vm.count("double-precision-output") == 1)?  true: false;
 
     // Do nothing if no expansion defined
     if (fPts == LibUtilities::NullPtsField && !m_f->m_exp.size())
@@ -88,7 +89,6 @@ void OutputTecplot::Process(po::variables_map &vm)
     {
         cout << "OutputTecplot: Writing file..." << endl;
     }
-
 
     // Extract the output filename and extension
     string filename = m_config["outfile"].as<string>();
@@ -306,7 +306,8 @@ void OutputTecplot::Process(po::variables_map &vm)
             {
                 for(i = 0; i < fPts->GetNpoints(); ++i)
                 {
-                    outfile <<  fPts->GetPointVal(j, i) << " ";
+                    outfile << std::setw(12)
+                            << fPts->GetPointVal(j, i) << " ";
                     if((!(i % 1000))&&i)
                     {
                         outfile << std::endl;
@@ -535,6 +536,11 @@ void OutputTecplot::WriteTecplotZone(std::ofstream &outfile)
                 break;
             }
 
+            if(m_doublePrecision)
+            {
+                outfile.precision(16);
+            }
+            
             // write out coordinates in block format
             for(j = 0; j < coordim; ++j)
             {
@@ -630,6 +636,11 @@ void OutputTecplot::WriteTecplotField(const int field,
         }
         else
         {
+            if(m_doublePrecision)
+            {
+                outfile.precision(16);
+            }
+            
             for(int i = 0; i < totpoints; ++i)
             {
                 outfile << m_f->m_exp[field]->GetPhys()[i] << " ";

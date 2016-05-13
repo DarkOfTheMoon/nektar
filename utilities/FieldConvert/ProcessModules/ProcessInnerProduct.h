@@ -64,6 +64,8 @@ public:
     virtual void Process(po::variables_map &vm);
 
 private:
+    bool m_doublePrecision;
+    
     NekDouble IProduct(vector<unsigned int> &processFields,
                        FieldSharedPtr &fromField,
                        Array<OneD, const Array<OneD, NekDouble> > &SaveFld);

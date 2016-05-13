@@ -77,6 +77,9 @@ ProcessInnerProduct::~ProcessInnerProduct()
 
 void ProcessInnerProduct::Process(po::variables_map &vm)
 {
+
+    m_doublePrecision = (vm.count("double-precision-output") == 1)?  true: false;
+
     if (m_f->m_verbose)
     {
         cout << "ProcessInnerProduct: Evaluating inner product" << endl;
@@ -154,6 +157,11 @@ void ProcessInnerProduct::Process(po::variables_map &vm)
     if (allfromflds == false)
     {
 
+        if(m_doublePrecision)
+        {
+            cout.precision(16);
+        }
+        
         for (int f = 0; f < fromfiles.size(); ++f)
         {
             m_f->m_fld->Import(fromfiles[f],
@@ -185,6 +193,11 @@ void ProcessInnerProduct::Process(po::variables_map &vm)
                                allFromField[i]->m_data,
                                LibUtilities::NullFieldMetaDataMap,
                                ElementGIDs);
+        }
+
+        if(m_doublePrecision)
+        {
+            cout.precision(16);
         }
 
         for (int g = 0; g < fromfiles.size(); ++g)

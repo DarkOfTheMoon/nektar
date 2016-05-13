@@ -220,6 +220,7 @@ namespace Nektar
         protected:
             /// Output stream
             ofstream m_fldFile;
+            bool m_doublePrecision;
         };
 
         typedef pair<ModuleType,string> ModuleKey;

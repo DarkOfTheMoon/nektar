@@ -71,6 +71,7 @@ namespace Nektar
         OutputModule::OutputModule(FieldSharedPtr m) : Module(m)
         {
             m_config["outfile"] = ConfigOption(false, "", "Output filename.");
+            m_doublePrecision = false; // initially set option as false. 
         }
 
         void InputModule::AddFile(string fileType, string fileName)
