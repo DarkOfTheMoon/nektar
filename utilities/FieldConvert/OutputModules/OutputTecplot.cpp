@@ -221,25 +221,33 @@ void OutputTecplot::Process(po::variables_map &vm)
                 ASSERTL0(false, "ptsType not supported yet.");
         }
 
+
+        if(m_doublePrecision)
+        {
+            outfile.precision(16);
+            outfile.width(24);
+        }
+        else
+        {
+            outfile.width(12);
+        }
+        
+        
         if(DumpAsFEPoint) // dump in point format
         {
             for(i = 0; i < fPts->GetNpoints(); ++i)
             {
                 for(j = 0; j < dim; ++j)
                 {
-                    outfile << std::setw(12)
-                            << fPts->GetPointVal(j, i) << " ";
+                    outfile << fPts->GetPointVal(j, i) << " ";
                 }
 
                 for(j = 0; j < fPts->GetNFields(); ++j)
                 {
-                    outfile << std::setw(12)
-                            << m_f->m_data[j][i] << " ";
+                    outfile << m_f->m_data[j][i] << " ";
                 }
                 outfile << endl;
             }
-
-
 
             if (m_doError)
             {
@@ -306,8 +314,7 @@ void OutputTecplot::Process(po::variables_map &vm)
             {
                 for(i = 0; i < fPts->GetNpoints(); ++i)
                 {
-                    outfile << std::setw(12)
-                            << fPts->GetPointVal(j, i) << " ";
+                    outfile << fPts->GetPointVal(j, i) << " ";
                     if((!(i % 1000))&&i)
                     {
                         outfile << std::endl;
