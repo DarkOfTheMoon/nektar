@@ -95,6 +95,10 @@ void DriverArnoldi::v_InitObject(ostream &out)
             m_equ[0]->UpdateFields()[i]->SetWaveSpace(true);
         }
     }
+
+    m_session->MatchSolverInfo("OverwriteChkFiles","True",
+                               m_overwriteChkFiles,false);
+                               
     m_negatedOp = m_equ[0]->v_NegatedOp();
 
     m_session->LoadParameter("kdim",  m_kdim,  16);

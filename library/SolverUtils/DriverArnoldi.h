@@ -60,6 +60,7 @@ protected:
     bool      m_timeSteppingAlgorithm; /// underlying operator is time stepping
 
     int       m_infosteps; /// interval to dump information if required.
+    bool      m_overwriteChkFiles;  // Flag to overwrite check point fiels each iteration
 
     int       m_nfields;
     NekDouble m_realShift;

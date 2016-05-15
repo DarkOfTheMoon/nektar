@@ -307,6 +307,11 @@ void DriverModifiedArnoldi::EV_update(
 
     m_equ[0]->DoSolve();
 
+    if(m_overwriteChkFiles)
+    {
+        m_equ[0]->SetCheckpointNumber(1);
+    }
+    
     if(m_EvolutionOperator == eTransientGrowth)
     {
         Array<OneD, MultiRegions::ExpListSharedPtr> fields;
@@ -317,6 +322,11 @@ void DriverModifiedArnoldi::EV_update(
         m_equ[1]->TransCoeffToPhys();
 
         m_equ[1]->DoSolve();
+
+        if(m_overwriteChkFiles)
+        {
+            m_equ[1]->SetCheckpointNumber(1);
+        }
     }
 
     // Copy starting vector into first sequence element.
