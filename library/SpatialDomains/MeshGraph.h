@@ -540,8 +540,34 @@ namespace Nektar
          */
         inline bool MeshGraph::SameExpansions(const std::string var1, const std::string var2)
         {
-            ExpansionMapShPtr expVec1 = m_expansionMapShPtrMap.find(var1)->second;
-            ExpansionMapShPtr expVec2 = m_expansionMapShPtrMap.find(var2)->second;
+            ExpansionMapShPtr expVec1,expVec2;
+
+            // put in check for case where expansion has not been set
+            // and so are using default variable
+            if(m_expansionMapShPtrMap.count(var1) == 0)
+            {
+                WARNINGL0(false,"No expansion defined in EXPANSIONS for " 
+                          "variable:" + var1 +
+                          " using default expansion definition");
+                expVec1 = m_expansionMapShPtrMap.find("DefaultVar")->second;
+            }
+            else
+            {
+                expVec1 = m_expansionMapShPtrMap.find(var1)->second;
+
+            }
+
+            if(m_expansionMapShPtrMap.count(var2) == 0)
+            {
+                WARNINGL0(false,"No expansion defined in EXPANSIONS for " 
+                          "variable:" + var2 +
+                          "using default expansion definition");
+                expVec2 = m_expansionMapShPtrMap.find("DefaultVar")->second;
+            }
+            else
+            {
+                expVec2 = m_expansionMapShPtrMap.find(var2)->second;
+            }
 
             if(expVec1.get() == expVec2.get())
             {

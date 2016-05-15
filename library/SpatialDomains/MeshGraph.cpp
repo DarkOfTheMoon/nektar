@@ -640,9 +640,9 @@ namespace Nektar
                             ASSERTL0(valid,"Unable to correctly parse the field string in ExpansionTypes.");
                         }
 
-                        // check to see if m_expasionVectorShPtrMap has
-                        // already been intiailised and if not intiailse
-                        // vector.
+                        // check to see if m_expasionVectorShPtrMap
+                        // has already been initialised and if not
+                        // initialise vector.
                         if(m_expansionMapShPtrMap.count("DefaultVar") == 0) // no previous definitions
                         {
                             expansionMap = SetUpExpansionMap();
@@ -2327,7 +2327,19 @@ namespace Nektar
             ExpansionMapIter iter;
             ExpansionShPtr returnval;
 
-            ExpansionMapShPtr expansionMap = m_expansionMapShPtrMap.find(variable)->second;
+            ExpansionMapShPtr expansionMap;
+
+            if(m_expansionMapShPtrMap.count(variable) == 1)
+            {
+                expansionMap = m_expansionMapShPtrMap.find(variable)->second;
+            }
+            else
+            {
+                WARNINGL0(false,"No expansion defined in EXPANSIONS for " 
+                          "variable:" + variable +
+                          " using default expansion definition");
+                expansionMap = m_expansionMapShPtrMap.find("DefaultVar")->second;
+            }
 
             for (iter = expansionMap->begin(); iter!=expansionMap->end(); ++iter)
             {
