@@ -75,7 +75,10 @@ protected:
     int m_expdim;
 
     /// Storage for base flow
-    Array<OneD, Array<OneD, NekDouble> >            m_baseflow;
+    Array<OneD, Array<OneD, NekDouble> >               m_baseflow;
+
+    /// Storage for derivative of base flow
+    Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_gradbaseflow;
 
     /// number of slices
     int                                             m_slices;
@@ -130,6 +133,9 @@ protected:
         const NekDouble                                    m_time,
         const NekDouble                                    m_period);
 
+    void UpdateGradBase(const int fld,
+                        const MultiRegions::ExpListSharedPtr &field);
+    
     void DFT(
         const std::string                                  file,
               Array<OneD, MultiRegions::ExpListSharedPtr> &pFields,
