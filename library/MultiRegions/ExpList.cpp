@@ -2219,6 +2219,9 @@ namespace Nektar
                 }
                 else
                 {
+                    WARNINGL0((*m_exp)[expId]->GetBasisType(0) ==
+                              fielddef->m_basis[0],
+                              "Basis do not match between file and expansion");
                     (*m_exp)[expId]->ExtractDataToCoeffs(
                                                          &fielddata[offset], fielddef->m_numModes,
                                                          modes_offset, &coeffs[m_coeff_offset[expId]]);
@@ -2518,8 +2521,9 @@ namespace Nektar
 
         void ExpList::v_ImposeDirichletConditions(Array<OneD,NekDouble>& outarray)
         {
-            ASSERTL0(false,
-                     "This method is not defined or valid for this class type");
+            // Just do nothing if not contfield. 
+            //ASSERTL0(false,
+            // "This method is not defined or valid for this class type");
         }
 
         /**
