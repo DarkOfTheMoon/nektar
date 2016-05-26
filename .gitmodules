@@ -3,3 +3,6 @@
     path = docs/tutorial
     url = git@gitlab.nektar.info:nektar/tutorial
     ignore = all
+[submodule "docs/tutorials"]
+	path = docs/tutorials
+	url = git@gitlab.nektar.info:nektar/tutorial.git
