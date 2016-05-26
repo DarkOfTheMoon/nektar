@@ -619,13 +619,11 @@ namespace Nektar
                 NekDouble * coeffs)
         {
             int data_order0 = nummodes[mode_offset];
-            int fillorder0  = min(m_base[0]->GetNumModes(),data_order0);
             int data_order1 = nummodes[mode_offset+1];
-            int order1      = m_base[1]->GetNumModes();
-            int fillorder1  = min(order1,data_order1);
             int data_order2 = nummodes[mode_offset+2];
+            int order0      = m_base[0]->GetNumModes();
+            int order1      = m_base[1]->GetNumModes();
             int order2      = m_base[2]->GetNumModes();
-            int fillorder2  = min(order2,data_order2);
 
             switch(m_base[0]->GetBasisType())
             {
@@ -634,6 +632,10 @@ namespace Nektar
                     int i,j;
                     int cnt  = 0;
                     int cnt1 = 0;
+
+                    int fillorder0  = min(order0,data_order0);
+                    int fillorder1  = min(order1,data_order1);
+                    int fillorder2  = min(order2,data_order2);
 
                     ASSERTL1(m_base[1]->GetBasisType() ==
                              LibUtilities::eModified_A,
@@ -666,9 +668,47 @@ namespace Nektar
                     }
                 }
                 break;
+                case LibUtilities::eGLL_Lagrange:
+                {
+                    // Assume that input is also Gll_Lagrange but no way to check;
+                    LibUtilities::PointsKey
+                        p0(data_order0, LibUtilities::eGaussLobattoLegendre);
+                    LibUtilities::PointsKey
+                        p1(data_order1, LibUtilities::eGaussLobattoLegendre);
+                    LibUtilities::PointsKey
+                        p2(data_order2, LibUtilities::eGaussLobattoLegendre);
+                    LibUtilities::PointsKey
+                        tp0(order0, LibUtilities::eGaussLobattoLegendre);
+                    LibUtilities::PointsKey
+                        tp1(order1, LibUtilities::eGaussLobattoLegendre);
+                    LibUtilities::PointsKey
+                        tp2(order2, LibUtilities::eGaussLobattoLegendre);
+
+                    LibUtilities::Interp3D(p0, p1, p2, data,tp0,tp1,tnp2,  coeffs);
+                }
+                break;
+                case LibUtilities::eGauss_Lagrange:
+                {
+                    // Assume that input is also Gll_Lagrange but no way to check;
+                    LibUtilities::PointsKey
+                        p0(data_order0,LibUtilities::eGaussGaussLegendre);
+                    LibUtilities::PointsKey
+                        p1(data_order1,LibUtilities::eGaussGaussLegendre);
+                    LibUtilities::PointsKey
+                        p2(data_order2,LibUtilities::eGaussGaussLegendre);
+
+                    LibUtilities::PointsKey
+                        tp0(order0, LibUtilities::eGaussGaussLegendre);
+                    LibUtilities::PointsKey
+                        tp1(order1, LibUtilities::eGaussGaussLegendre);
+                    LibUtilities::PointsKey
+                        tp2(order2, LibUtilities::eGaussGaussLegendre);
+
+                    LibUtilities::Interp3D(p0, p1, p2, data,tp0,tp1,tnp2,  coeffs);
+                }
+                break;
             default:
-                ASSERTL0(false, "basis is either not set up or not "
-                                "hierarchicial");
+                ASSERTL0(false, "basis is interpolation/extraction is not set up");
             }
         }
         
