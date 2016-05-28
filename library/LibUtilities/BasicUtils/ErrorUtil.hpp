@@ -72,7 +72,17 @@ namespace ErrorUtil
     class NekError : public std::runtime_error
     {
     public:
-        NekError(const std::string& message) : std::runtime_error(message) {}
+        NekError(const std::string& message) : std::runtime_error(message)
+	{
+#if defined(NEKTAR_USE_MPI)
+            int flag;
+            MPI_Initialized(&flag);
+            if(flag)
+            {
+                MPI_Abort(MPI_COMM_WORLD,101);
+            }
+#endif
+	}
     };
         
     inline static void Error(ErrType type, const char *routine, int lineNumber, const char *msg, unsigned int level)
