@@ -1810,7 +1810,31 @@ using namespace boost::assign;
             const Array<OneD, const NekDouble> &inarray,
                   Array<OneD,       NekDouble> &outarray)
         {
+#if 1
+            // Loop over element and collect forward expansion
+            int nexp = GetExpSize();
+            int n, e, offset, phys_offset;
+            Array<OneD,NekDouble> e_tmp;
+            Array<OneD, Array<OneD, LocalRegions::ExpansionSharedPtr> >
+                &elmtToTrace = m_traceMap->GetElmtToTrace();
 
+            ASSERTL1(outarray.num_elements() >= m_trace->GetNpoints(),
+                     "input array is of insufficient length");
+            
+            // use m_trace tmp space in element to fill values
+            for(n = 0; n < nexp; ++n)
+            {
+                phys_offset = GetPhys_Offset(n);
+                
+                for(e = 0; e < (*m_exp)[n]->GetNfaces(); ++e)
+                {
+                    offset = m_trace->GetPhys_Offset(elmtToTrace[n][e]->GetElmtId());
+                    (*m_exp)[n]->GetFacePhysVals(e, elmtToTrace[n][e],
+                                                 inarray + phys_offset,
+                                                 e_tmp = outarray + offset);
+                }
+            }
+#else
             Vmath::Zero(outarray.num_elements(), outarray, 1);
 
             Array<OneD, NekDouble> facevals(m_locTraceToTraceMap->GetNFwdLocTracePts());
@@ -1820,7 +1844,7 @@ using namespace boost::assign;
             // gather entries along parallel partitions which have
             // only filled in Fwd part on their own partition
             m_traceMap->UniversalTraceAssemble(outarray);
-
+#endif
         }
         
         /**
