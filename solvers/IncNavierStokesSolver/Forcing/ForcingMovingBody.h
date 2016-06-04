@@ -92,7 +92,7 @@ class ForcingMovingBody : public SolverUtils::Forcing
 
         void CheckIsFromFile(const TiXmlElement* pForce);
 
-        void InitialiseCableModel(
+        void InitialiseVibrationModel(
             const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields);
 
         void InitialiseFilter(
@@ -100,20 +100,19 @@ class ForcingMovingBody : public SolverUtils::Forcing
             const TiXmlElement* pForce);
 
         void ModalDecompositionMethod(
-            const Array<OneD, NekDouble> &Forces,
-                  Array<OneD, Array<OneD, NekDouble> > &vib);
+            const Array<OneD, NekDouble> &Hydroforces,
+                  Array<OneD, Array<OneD, NekDouble> > &motions);
 
         void FiniteElementMethod(
-                  Array<OneD, NekDouble> &Forces,
-                  Array<OneD, Array<OneD, NekDouble> > &vibs,
-                  Array<OneD, Array<OneD, NekDouble> > &rots);
+            const Array<OneD, NekDouble> &Hydroforces,
+                  Array<OneD, Array<OneD, NekDouble> > &vibrations,
+                  Array<OneD, Array<OneD, NekDouble> > &rotations);
 
-        void StructDynModel(
+        void EvaluateVibrationModel(
             const Array<OneD, MultiRegions::ExpListSharedPtr> &pFields,
-                  Array<OneD, Array<OneD, NekDouble> > &HydroForces,
-                  NekDouble time );
+            const NekDouble                                   &time);
 
-        void SetDynEqCoeffMatrix();
+        void SetModeMatrix();
 
         void SetStiffnessMatrix();
 
@@ -122,6 +121,9 @@ class ForcingMovingBody : public SolverUtils::Forcing
         int m_movingBodyCalls;     ///< number of times the movbody have been called
         int m_np;                  ///< number of planes per processors
         int m_vdim;                ///< vibration dimension
+        int m_nstrips;             ///< number of strips
+        int m_nv;                  ///< number of vibration modes
+        int m_nz;                  ///< number of homo modes
 
         NekDouble m_structrho;     ///< mass of the cable per unit length
         NekDouble m_structdamp;    ///< damping ratio of the cable
@@ -131,34 +133,43 @@ class ForcingMovingBody : public SolverUtils::Forcing
         LibUtilities::NektarFFTSharedPtr m_FFT;
         ///
         FilterMovingBodySharedPtr m_MovBodyfilter;
-        /// storage the loading on the cable
-        Array<OneD, Array<OneD, NekDouble> > m_q;
-        /// storage for the cable's motion(x,y) variables:vibrations
+        /// storage for the cable's motion(x,y) variables
+        Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_spv;
         Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_vib;
-        /// storage for the cable's motion(x,y) variables:rotations
         Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_rot;
 
         /// fictitious velocity storage
         Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_fV;
         /// fictitious acceleration storage
         Array<OneD, Array<OneD, Array<OneD, NekDouble> > > m_fA;
-        /// matrices in Modal Decompostion method
+        /// matrices in mode decomposition method
         Array<OneD, DNekMatSharedPtr> m_CoeffMat_A;
+        /// matrices in mode decomposition method
         Array<OneD, DNekMatSharedPtr> m_CoeffMat_B;
-        /// matrices in Finite Element method
+        /// matrices in finite element method
         DNekMatSharedPtr m_CoeffMat_K;
-		DNekMatSharedPtr m_CoeffMat_M;
-		DNekMatSharedPtr m_CoeffMat_D;
+        DNekMatSharedPtr m_CoeffMat_M;
+        DNekMatSharedPtr m_CoeffMat_D;
         /// [0] is displacements, [1] is velocities, [2] is accelerations
         Array<OneD, std::string> m_funcName;
+        Array<OneD, std::string> m_mapfuncName;
         /// motion direction: [0] is 'x' and [1] is 'y'
         Array<OneD, std::string> m_motion;
         /// do determine if the the body motion come from an extern file
         Array<OneD, bool>        m_IsFromFile;
+        Array<OneD, bool>        m_IsMapFromFile;
         /// Store the derivatives of motion variables in x-direction
         Array<OneD, Array< OneD, NekDouble> > m_zta;
         /// Store the derivatives of motion variables in y-direction
         Array<OneD, Array< OneD, NekDouble> > m_eta;
+
+        unsigned int                    m_outputFrequency;
+        Array<OneD, std::ofstream>      m_outputStream;
+        std::string                     m_outputFile_fce;
+        std::string                     m_outputFile_mot;
+        bool                            m_IsHomostrip;
+        bool                            m_IsFictmass;
+
 };
 
 }
