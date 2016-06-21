@@ -1,5 +1,11 @@
 #include <iostream>
+#include <type_traits>
 
+#include <loki/Singleton.h>
+#include <LibUtilities/BasicUtils/SharedArray.hpp>
+#include <LibUtilities/BasicUtils/NekFactory.hpp>
+#include <LibUtilities/LibUtilitiesDeclspec.h>
+#include <LibUtilities/Polylib/Polylib.h>
 #include "PointsTypes.hpp"
 
 namespace Nektar
@@ -7,32 +13,24 @@ namespace Nektar
 namespace LibUtilities
 {
 
-// Dummy Array class for the purpose of isolated development
-struct OneD {};
-template<typename dim, typename datatype>
-class Array {};
+//// Dummy Array class for the purpose of isolated development
+//struct OneD {};
+//template<typename dim, typename datatype>
+//class Array {};
 
 namespace Foundations
 {
 
+typedef double NekDouble;
+typedef std::string PointsParamKey;
+typedef NekDouble PointsParamValue;
+typedef std::map<PointsParamKey, PointsParamValue> PointsParamList;
 
-//
-//template<bool b, typename T = void>
-//struct assert_if {
-//    typedef void type;
-//    static_assert(b, "That is not a valid combination, silly!");
-//};
-//
-//template<typename T>
-//struct assert_if<true, T> {
-//    typedef T type;
-//};
-
-
-struct PointsKey
+class PointsKey
 {
-      std::string name;
-      int npoints[3];
+    public:
+      unsigned int m_numpoints[3];
+      PointsParamList m_params;
 };
 
 
@@ -40,58 +38,95 @@ struct PointsKey
  * @class PointsBase
  * @brief Points base class defining interface and data members
  */
-template<typename datatype>
+template<typename TData>
 class PointsBase
 {
     public:
-        Array<OneD, datatype> GetPoints()
+        virtual ~PointsBase()
+        {
+
+        }
+
+        inline unsigned int GetNumPoints() const
+        {
+            return m_key.m_numpoints[0];
+        }
+
+        inline const Array<OneD, const TData>& GetZ()
         {
             return m_points;
         }
 
+        inline const Array<OneD, const TData>& GetW()
+        {
+            return m_weights;
+        }
+
     protected:
-        Array<OneD, datatype> m_points;
-        Array<OneD, datatype> m_weights;
+        Array<OneD, TData> m_points[3];
+        Array<OneD, TData> m_weights;
+        PointsKey m_key;
 
-        PointsBase() : m_points(), m_weights() {}
+        PointsBase(const PointsKey& pKey) : m_points(), m_weights(), m_key(pKey) {}
+
+        template<typename TPts>
+        void AllocateArrays() {
+            const unsigned int npts = traits::points_traits<TPts>::get_total_points(m_key.m_numpoints[0]);
+            for (unsigned int i = 0; i < traits::points_traits<TPts>::dimension; ++i)
+            {
+                m_points[i] = Array<OneD, TData>(npts);
+            }
+        }
+
 };
 
-// Primary template for Points classes.
-template<typename shape, typename pointstype, typename datatype,
-        class Enable = void>
-class Points
+template<typename TData>
+using PointsFactory = LibUtilities::NekFactory<
+        std::string, PointsBase<TData>, const PointsKey&>;
+
+template<typename TData>
+LIB_UTILITIES_EXPORT PointsFactory<TData>& GetPointsFactory()
 {
+    typedef Loki::SingletonHolder<PointsFactory<TData>,
+                                  Loki::CreateUsingNew,
+                                  Loki::NoDestroy,
+                                  Loki::ClassLevelLockable> Type;
+    return Type::Instance();
+}
+
+
+/**
+ * @class Points
+ * @brief Primary template for Points classes.
+ */
+template<typename TShape, typename TPts, typename TData>
+class Points : public PointsBase<TData>
+{
+    //static_assert(false, "No implementation provided for this points type.");
+
     public:
-        Points() {}
+        Points(const PointsKey& pKey) : PointsBase<TData>(pKey) {}
 };
 
 
-// Triangular Points distribution specialisation
-// This adds
-template<typename pointstype, typename datatype>
-class Points<Triangle, pointstype, datatype, void> : public PointsBase<datatype>
+/**
+ *
+ */
+template<typename TShape, typename TData>
+class Points<TShape, GaussGaussLegendre, TData> : public PointsBase<TData>
 {
+    static_assert(traits::distribution_traits<TShape, GaussGaussLegendre>::is_valid,
+            "Not a valid combination of shape and points type.");
     public:
-        Points(int np1, int np2) {
-            // do something?
-            PointsBase<datatype>::m_points = Array<OneD, datatype>();
+        Points(const PointsKey& pKey) : PointsBase<TData>(pKey)
+        {
+            PointsBase<TData>::template AllocateArrays<GaussGaussLegendre>();
+            std::cout << PointsBase<TData>::m_points[0].num_elements();
+//            Polylib::zwgj(PointsBase<TData>::m_points[0].data(),
+//                          PointsBase<TData>::m_weights.data(),
+//                          pKey.m_numpoints,0.0,0.0);
         }
 };
-
-// Quadrilateral Points distribution specialisation
-template<typename pointstype, typename datatype>
-class Points<Quadrilateral, pointstype, datatype> : public PointsBase<datatype>
-{
-        static_assert(traits::points_traits<Quadrilateral, pointstype>::is_valid,
-                "This combination is not valid.");
-
-    public:
-        Points(int np1, int np2) {
-            // do something?
-            PointsBase<datatype>::m_points = Array<OneD, datatype>();
-        }
-};
-
 
 }
 }
