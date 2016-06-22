@@ -6,7 +6,8 @@
 #include <LibUtilities/BasicUtils/NekFactory.hpp>
 #include <LibUtilities/LibUtilitiesDeclspec.h>
 #include <LibUtilities/Polylib/Polylib.h>
-#include "PointsTypes.hpp"
+#include <LibUtilities/FoundationsNew/ShapeTypes.hpp>
+#include <LibUtilities/FoundationsNew/PointsTypes.hpp>
 
 namespace Nektar
 {

@@ -2,6 +2,7 @@
 using namespace std;
 
 #include <LibUtilities/FoundationsNew/Points.hpp>
+#include <LibUtilities/FoundationsNew/Basis.hpp>
 
 using namespace Nektar;
 using namespace Nektar::LibUtilities::Foundations;
