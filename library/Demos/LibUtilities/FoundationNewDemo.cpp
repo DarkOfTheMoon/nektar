@@ -13,6 +13,11 @@ int main () {
     key.m_numpoints[1] = 6;
     key.m_numpoints[2] = 7;
 
+    BasisKey bkey;
+    bkey.m_nummodes[0] = 4;
+    bkey.m_nummodes[1] = 5;
+    bkey.m_nummodes[2] = 6;
+
     //Points<double, Quadrilateral> Pnotype(key);
     Points<double, Segment, GaussGaussLegendre> P(key);
     Points<double, Quadrilateral, GaussGaussLegendre, GaussGaussLegendre> Pquad(key);
@@ -36,6 +41,10 @@ int main () {
     cout << ptr1->GetZ(0).num_elements() << endl;
     cout << ptr2->GetZ(0).num_elements() << endl;
     cout << ptr2->GetZ(1).num_elements() << endl;
+
+
+    Basis<double, Segment, Points<double, Segment, GaussGaussLegendre>, ModifiedLegendre> B0(bkey);
+    //Basis<double, Triangle, Points<double, Segment, GaussGaussLegendre>, BernsteinTriangle> Bbtri(bkey);
 //    cout << sizeof(Array<OneD, double>) << endl;
 //    cout << sizeof(PointsKey) << endl;
 //    cout << sizeof(Points<double, Quadrilateral, GaussGaussLegendre>) << endl;

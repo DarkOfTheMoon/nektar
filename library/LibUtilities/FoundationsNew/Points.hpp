@@ -144,14 +144,19 @@ LIB_UTILITIES_EXPORT PointsFactory<TData>& GetPointsFactory()
 template<typename TData, typename TShape, typename... TPts>
 class Points : public PointsBase<TData>
 {
+        typedef Points<TData, TShape, TPts...> ThisType;
+        typedef PointsBase<TData> BaseType;
+
         static_assert(sizeof...(TPts) > 0, "No point type given.");
         static_assert(sizeof...(TPts) < 4, "Too many point types given.");
         static_assert(traits::points_traits<TPts...>::dimension == traits::shape_traits<TShape>::dimension,
                 "Points dimension and shape dimension do not agree.");
 
     public:
-        Points(const PointsKey& pKey) : PointsBase<TData>(pKey) {
-            PointsBase<TData>::template AllocateArrays<TPts...>();
+        typedef traits::points_traits<TPts...> traits_info;
+
+        Points(const PointsKey& pKey) : BaseType(pKey) {
+            BaseType::template AllocateArrays<TPts...>();
 //            InitialiseSubType<sizeof...(TPts)-1>(pKey, x);
         }
 //
@@ -191,15 +196,23 @@ class Points : public PointsBase<TData>
 //        }
 };
 
-// bi-Points specialisation
+
+/**
+ * Bi-Points specialisation
+ */
 template<typename TData, typename TShape, typename TPts1, typename TPts2>
 class Points<TData, TShape, TPts1, TPts2> : public PointsBase<TData>
 {
+        typedef Points<TData, TShape, TPts1, TPts2> ThisType;
+        typedef PointsBase<TData> BaseType;
+
         static_assert(traits::points_traits<TPts1, TPts2>::dimension == traits::shape_traits<TShape>::dimension,
                 "Points dimension and shape dimension do not agree.");
 
     public:
-        Points(const PointsKey& pKey) : PointsBase<TData>(pKey) {
+        typedef traits::points_traits<TPts1, TPts2> get_traits;
+
+        Points(const PointsKey& pKey) : BaseType(pKey) {
             //PointsBase<TData>::template AllocateArrays<TPts1, TPts2>();
             x1.Populate(pKey);
             PointsKey tmpKey;
@@ -222,15 +235,23 @@ class Points<TData, TShape, TPts1, TPts2> : public PointsBase<TData>
         Points<TData, typename traits::points_traits<TPts2>::native_shape, TPts2> x2;
 };
 
-// tri-Points specialisation
+
+/**
+ * Tri-Points specialisation
+ */
 template<typename TData, typename TShape, typename TPts1, typename TPts2, typename TPts3>
 class Points<TData, TShape, TPts1, TPts2, TPts3> : public PointsBase<TData>
 {
+        typedef Points<TData, TShape, TPts1, TPts2, TPts3> ThisType;
+        typedef PointsBase<TData> BaseType;
+
         static_assert(traits::points_traits<TPts1, TPts2, TPts3>::dimension == traits::shape_traits<TShape>::dimension,
                 "Points dimension and shape dimension do not agree.");
 
     public:
-        Points(const PointsKey& pKey) : PointsBase<TData>(pKey) {
+        typedef traits::points_traits<TPts1, TPts2, TPts3> get_traits;
+
+        Points(const PointsKey& pKey) : BaseType(pKey) {
             //PointsBase<TData>::template AllocateArrays<TPts1, TPts2, TPts3>();
             PointsKey tmpKey;
             x1.Populate(pKey);
@@ -260,29 +281,34 @@ class Points<TData, TShape, TPts1, TPts2, TPts3> : public PointsBase<TData>
 
 
 /**
- *
+ * Specialisation for GaussGaussLegendre
  */
 template<typename TData, typename TShape>
 class Points<TData, TShape, GaussGaussLegendre> : public PointsBase<TData>
 {
-    static_assert(traits::points_traits<GaussGaussLegendre>::dimension == traits::shape_traits<TShape>::dimension,
-            "Points dimension and shape dimension do not agree.");
-    static_assert(traits::distribution_traits<TShape, GaussGaussLegendre>::is_valid,
-            "Not a valid combination of shape and points type.");
-    typedef Points<TData, TShape, GaussGaussLegendre> TMyType;
+        typedef Points<TData, TShape, GaussGaussLegendre> ThisType;
+        typedef PointsBase<TData> BaseType;
+        typedef GaussGaussLegendre PointsType;
+
+        static_assert(traits::points_traits<PointsType>::dimension == traits::shape_traits<TShape>::dimension,
+                "Points dimension and shape dimension do not agree.");
+        static_assert(traits::distribution_traits<TShape, PointsType>::is_valid,
+                "Not a valid combination of shape and points type.");
 
     public:
+        typedef traits::points_traits<PointsType> get_traits;
+
         Points() : PointsBase<TData>() {}
         Points(const PointsKey& pKey) : PointsBase<TData>(pKey)
         {
             Populate(pKey);
         }
         void Populate(const PointsKey& p) {
-            PointsBase<TData>::m_key = p;
+            BaseType::m_key = p;
             const int n = p.m_numpoints[0];
-            PointsBase<TData>::template AllocateArrays<GaussGaussLegendre>();
-            Polylib::zwgj(PointsBase<TData>::m_points[0].data(),
-                          PointsBase<TData>::m_weights.data(),
+            BaseType::template AllocateArrays<PointsType>();
+            Polylib::zwgj(BaseType::m_points[0].data(),
+                          BaseType::m_weights.data(),
                           n,0.0,0.0);
         }
 

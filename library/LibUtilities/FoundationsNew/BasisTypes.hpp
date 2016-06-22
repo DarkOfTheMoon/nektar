@@ -82,6 +82,16 @@ namespace traits
     };
 
     template<typename TBasis>
+    struct expansion_traits<Segment, TBasis> :
+                                 public shape_traits<Segment>,
+                                 public basis_traits<TBasis>,
+                                 public expansion_traits_base
+    {
+        static const bool is_valid = true;
+    };
+
+
+    template<typename TBasis>
     struct expansion_traits<Quadrilateral, TBasis> :
                                  public shape_traits<Quadrilateral>,
                                  public basis_traits<TBasis>,
