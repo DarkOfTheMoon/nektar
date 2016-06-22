@@ -46,7 +46,7 @@ class PointsBase
             return m_key.m_numpoints[0];
         }
 
-        inline const Array<OneD, const TData>& GetZ()
+        virtual const Array<OneD, const TData> GetZ(const int& i = 0)
         {
             return m_points[0];
         }
@@ -151,43 +151,110 @@ class Points : public PointsBase<TData>
     public:
         Points(const PointsKey& pKey) : PointsBase<TData>(pKey) {
             PointsBase<TData>::template AllocateArrays<TPts...>();
-            InitialiseSubType<sizeof...(TPts)-1>(pKey, x);
+//            InitialiseSubType<sizeof...(TPts)-1>(pKey, x);
+        }
+//
+//
+//        inline const Array<OneD, const TData> GetZ(const int& i) {
+//            switch (i)
+//            {
+//                case 0: return std::get<0>(x).GetZ();
+//                case 1: return std::get<1>(x).GetZ();
+//                default: throw;
+//            }
+//        }
+//
+//
+//    private:
+//        std::tuple<Points<TData, TShape, TPts>...> x;
+//
+//        template<size_t i>
+//        typename std::enable_if<i!=0, void>::type
+//        InitialiseSubType(const PointsKey& p, std::tuple<Points<TData, TShape, TPts>...>& pTuple) {
+//            PointsKey tmpKey;
+//            tmpKey.m_numpoints[0] = p.m_numpoints[i];
+//            tmpKey.m_params = p.m_params;
+//            cout << "Init subtype " << i << " with numpoints=" << tmpKey.m_numpoints[0] << endl;
+//            std::get<i>(pTuple).Populate(p);
+//            InitialiseSubType<i-1>(p, pTuple);
+//        }
+//
+//        template<size_t i>
+//        typename std::enable_if<i==0, void>::type
+//        InitialiseSubType(const PointsKey& p, std::tuple<Points<TData, TShape, TPts>...>& pTuple) {
+//            PointsKey tmpKey;
+//            tmpKey.m_numpoints[0] = p.m_numpoints[i];
+//            tmpKey.m_params = p.m_params;
+//            cout << "Init subtype " << i << " with numpoints=" << tmpKey.m_numpoints[0] << endl;
+//            std::get<i>(pTuple).Populate(tmpKey);
+//        }
+};
+
+// bi-Points specialisation
+template<typename TData, typename TShape, typename TPts1, typename TPts2>
+class Points<TData, TShape, TPts1, TPts2> : public PointsBase<TData>
+{
+        static_assert(traits::points_traits<TPts1, TPts2>::dimension == traits::shape_traits<TShape>::dimension,
+                "Points dimension and shape dimension do not agree.");
+
+    public:
+        Points(const PointsKey& pKey) : PointsBase<TData>(pKey) {
+            //PointsBase<TData>::template AllocateArrays<TPts1, TPts2>();
+            x1.Populate(pKey);
+            PointsKey tmpKey;
+            tmpKey.m_numpoints[0] = pKey.m_numpoints[1];
+            tmpKey.m_params = pKey.m_params;
+            x2.Populate(tmpKey);
         }
 
-
-        inline const Array<OneD, const TData> GetZ(const int& i) {
+        virtual const Array<OneD, const TData> GetZ(const int& i) {
             switch (i)
             {
-                case 0: return std::get<0>(x).GetZ();
-                case 1: return std::get<1>(x).GetZ();
+                case 0: return x1.GetZ();
+                case 1: return x2.GetZ();
                 default: throw;
             }
         }
 
+    private:
+        Points<TData, typename traits::points_traits<TPts1>::native_shape, TPts1> x1;
+        Points<TData, typename traits::points_traits<TPts2>::native_shape, TPts2> x2;
+};
+
+// tri-Points specialisation
+template<typename TData, typename TShape, typename TPts1, typename TPts2, typename TPts3>
+class Points<TData, TShape, TPts1, TPts2, TPts3> : public PointsBase<TData>
+{
+        static_assert(traits::points_traits<TPts1, TPts2, TPts3>::dimension == traits::shape_traits<TShape>::dimension,
+                "Points dimension and shape dimension do not agree.");
+
+    public:
+        Points(const PointsKey& pKey) : PointsBase<TData>(pKey) {
+            //PointsBase<TData>::template AllocateArrays<TPts1, TPts2, TPts3>();
+            PointsKey tmpKey;
+            x1.Populate(pKey);
+            tmpKey.m_numpoints[0] = pKey.m_numpoints[1];
+            tmpKey.m_params = pKey.m_params;
+            x2.Populate(tmpKey);
+            tmpKey.m_numpoints[0] = pKey.m_numpoints[2];
+            tmpKey.m_params = pKey.m_params;
+            x3.Populate(tmpKey);
+        }
+
+        virtual const Array<OneD, const TData> GetZ(const int& i) {
+            switch (i)
+            {
+                case 0: return x1.GetZ();
+                case 1: return x2.GetZ();
+                case 2: return x3.GetZ();
+                default: throw;
+            }
+        }
 
     private:
-        std::tuple<Points<TData, TShape, TPts>...> x;
-
-        template<size_t i>
-        typename std::enable_if<i!=0, void>::type
-        InitialiseSubType(const PointsKey& p, std::tuple<Points<TData, TShape, TPts>...>& pTuple) {
-            PointsKey tmpKey;
-            tmpKey.m_numpoints[0] = p.m_numpoints[i];
-            tmpKey.m_params = p.m_params;
-            cout << "Init subtype " << i << " with numpoints=" << tmpKey.m_numpoints[0] << endl;
-            std::get<i>(pTuple).Populate(p);
-            InitialiseSubType<i-1>(p, pTuple);
-        }
-
-        template<size_t i>
-        typename std::enable_if<i==0, void>::type
-        InitialiseSubType(const PointsKey& p, std::tuple<Points<TData, TShape, TPts>...>& pTuple) {
-            PointsKey tmpKey;
-            tmpKey.m_numpoints[0] = p.m_numpoints[i];
-            tmpKey.m_params = p.m_params;
-            cout << "Init subtype " << i << " with numpoints=" << tmpKey.m_numpoints[0] << endl;
-            std::get<i>(pTuple).Populate(tmpKey);
-        }
+        Points<TData, typename traits::points_traits<TPts1>::native_shape, TPts1> x1;
+        Points<TData, typename traits::points_traits<TPts2>::native_shape, TPts2> x2;
+        Points<TData, typename traits::points_traits<TPts3>::native_shape, TPts3> x3;
 };
 
 
@@ -197,16 +264,18 @@ class Points : public PointsBase<TData>
 template<typename TData, typename TShape>
 class Points<TData, TShape, GaussGaussLegendre> : public PointsBase<TData>
 {
+    static_assert(traits::points_traits<GaussGaussLegendre>::dimension == traits::shape_traits<TShape>::dimension,
+            "Points dimension and shape dimension do not agree.");
     static_assert(traits::distribution_traits<TShape, GaussGaussLegendre>::is_valid,
             "Not a valid combination of shape and points type.");
+    typedef Points<TData, TShape, GaussGaussLegendre> TMyType;
+
     public:
+        Points() : PointsBase<TData>() {}
         Points(const PointsKey& pKey) : PointsBase<TData>(pKey)
         {
             Populate(pKey);
         }
-
-        Points() {}
-
         void Populate(const PointsKey& p) {
             PointsBase<TData>::m_key = p;
             const int n = p.m_numpoints[0];

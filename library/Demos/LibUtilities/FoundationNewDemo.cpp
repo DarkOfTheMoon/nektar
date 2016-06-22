@@ -13,19 +13,36 @@ int main () {
     key.m_numpoints[2] = 7;
 
     //Points<double, Quadrilateral> Pnotype(key);
-    Points<double, Quadrilateral, GaussGaussLegendre> P(key);
+    Points<double, Segment, GaussGaussLegendre> P(key);
     Points<double, Quadrilateral, GaussGaussLegendre, GaussGaussLegendre> Pquad(key);
+    Points<double, Hexahedron, GaussGaussLegendre, GaussGaussLegendre, GaussGaussLegendre> Phex(key);
 
     Array<OneD, double> p1 = Pquad.GetZ(0);
     Array<OneD, double> p2 = Pquad.GetZ(1);
     cout << p1.num_elements() << endl;
     cout << p2.num_elements() << endl;
 
-    cout << sizeof(Array<OneD, double>) << endl;
-    cout << sizeof(PointsKey) << endl;
-    cout << sizeof(Points<double, Quadrilateral, GaussGaussLegendre>) << endl;
-    cout << sizeof(Points<double, Quadrilateral, GaussGaussLegendre, GaussGaussLegendre>) << endl;
-    cout << traits::points_traits<GaussGaussLegendre,GaussGaussLegendre,GaussGaussLegendre>::dimension << endl;
+    Array<OneD, double> h1 = Phex.GetZ(0);
+    Array<OneD, double> h2 = Phex.GetZ(1);
+    Array<OneD, double> h3 = Phex.GetZ(2);
+    cout << h1.num_elements() << endl;
+    cout << h2.num_elements() << endl;
+    cout << h3.num_elements() << endl;
+
+    PointsBase<double>* ptr1 = new Points<double, Segment, GaussGaussLegendre>(key);
+    PointsBase<double>* ptr2 = new Points<double, Quadrilateral, GaussGaussLegendre, GaussGaussLegendre>(key);
+
+    cout << ptr1->GetZ(0).num_elements() << endl;
+    cout << ptr2->GetZ(0).num_elements() << endl;
+    cout << ptr2->GetZ(1).num_elements() << endl;
+//    cout << sizeof(Array<OneD, double>) << endl;
+//    cout << sizeof(PointsKey) << endl;
+//    cout << sizeof(Points<double, Quadrilateral, GaussGaussLegendre>) << endl;
+//    cout << sizeof(Points<double, Quadrilateral, GaussGaussLegendre, GaussGaussLegendre>) << endl;
+//    cout << traits::points_traits<GaussGaussLegendre,GaussGaussLegendre,GaussGaussLegendre>::dimension << endl;
+//
+
+
     // This one should cause a compile error
     //Points<Quadrilateral, Fekete, double> Pfail(key);
 

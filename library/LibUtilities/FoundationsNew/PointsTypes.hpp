@@ -90,6 +90,7 @@ namespace traits
         static const unsigned int get_total_points(unsigned int npts) {
             return npts;
         }
+        typedef Segment native_shape;
     };
 
 
@@ -109,6 +110,7 @@ namespace traits
     {
         static const bool is_tensor_product = true;
         static const unsigned int dimension = 1;
+        typedef Segment native_shape;
     };
 
     template<>
@@ -116,6 +118,7 @@ namespace traits
     {
         static const bool is_tensor_product = true;
         static const unsigned int dimension = 1;
+        typedef Segment native_shape;
     };
 
     template<>
@@ -123,6 +126,7 @@ namespace traits
     {
         static const bool is_tensor_product = true;
         static const unsigned int dimension = 1;
+        typedef Segment native_shape;
     };
 
     template<>
@@ -130,6 +134,7 @@ namespace traits
     {
         static const bool is_tensor_product = true;
         static const unsigned int dimension = 1;
+        typedef Segment native_shape;
     };
 
     template<>
@@ -137,6 +142,7 @@ namespace traits
     {
         static const bool is_tensor_product = true;
         static const unsigned int dimension = 1;
+        typedef Segment native_shape;
     };
 
     template<>
@@ -147,6 +153,7 @@ namespace traits
         static const unsigned int get_total_points(unsigned int npts) {
             return npts*(npts+1)/2;
         }
+        typedef Triangle native_shape;
     };
 
     struct distribution_traits_base
@@ -159,6 +166,15 @@ namespace traits
                                  public points_traits<TPts>,
                                  public distribution_traits_base
     {
+    };
+
+    template<typename TPts>
+    struct distribution_traits<Segment, TPts> :
+                                 public shape_traits<Segment>,
+                                 public points_traits<TPts>,
+                                 public distribution_traits_base
+    {
+        static const bool is_valid = true;
     };
 
     template<typename TPts>
