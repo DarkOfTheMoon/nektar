@@ -92,9 +92,16 @@ namespace traits
         }
     };
 
+
     // Primary template
-    template<typename TPts>
+    template<typename... TPts>
     struct points_traits : public points_traits_base {
+    };
+
+    template<typename T1, typename... TPts>
+    struct points_traits<T1, TPts...> : public points_traits_base {
+        static const unsigned int dimension = points_traits<T1>::dimension + points_traits<TPts...>::dimension;
+        static_assert(dimension <= 3, "Composite points dimension > 3.");
     };
 
     template<>
