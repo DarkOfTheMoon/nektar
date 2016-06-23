@@ -3,6 +3,7 @@ SET(LinkLibraries MultiRegions)
 SET(PP_SOURCES ./Prepacing.cpp
         ../../CellModels/CellModel.cpp
         ../../CellModels/CourtemancheRamirezNattel98.cpp
+	../../CellModels/OCcourtemanche_ramirez_nattel_1998.cpp
         ../../CellModels/FentonKarma.cpp
         ../../CellModels/TenTusscher06.cpp
         ../../Stimuli/Stimulus.cpp

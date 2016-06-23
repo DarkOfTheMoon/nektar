@@ -200,7 +200,8 @@ namespace Nektar
 
         Array<OneD, NekDouble> &tmp = outarray[11];
         Array<OneD, NekDouble> &tmp2 = outarray[12];
-
+//cout<<"V "<<inarray[1][0]<<endl;
+//cout<<"Ca_i "<<inarray[20][0]<<endl;
         // E_Na
         Array<OneD, NekDouble> &tmp_E_na = outarray[14];
         Vmath::Sdiv(n, Na_o, inarray[16], 1, tmp_E_na, 1);
@@ -218,6 +219,7 @@ namespace Nektar
         Vmath::Smul(n, C_m*g_Na, tmp_I_Na, 1, tmp_I_Na, 1);
         Vmath::Vsub(n, outarray[0], 1, tmp_I_Na, 1, outarray[0], 1);
         Vmath::Smul(n, -1.0, tmp_I_Na, 1, outarray[16], 1);
+	//cout<<"I_Na "<<outarray[15][0]<<endl;
 
         // Background current, sodium
         Array<OneD, NekDouble> &tmp_I_b_Na = outarray[15];
@@ -225,6 +227,7 @@ namespace Nektar
         Vmath::Smul(n, C_m*g_b_Na, tmp_I_b_Na, 1, tmp_I_b_Na, 1);
         Vmath::Vsub(n, outarray[0], 1, tmp_I_b_Na, 1, outarray[0], 1);
         Vmath::Vsub(n, outarray[16], 1, tmp_I_b_Na, 1, outarray[16], 1);
+	//cout<<"I_bNa "<<outarray[15][0]<<endl;
 
         // V - E_K
         Array<OneD, NekDouble> &tmp_V_E_k = outarray[14];
@@ -232,7 +235,7 @@ namespace Nektar
         Vmath::Vlog(n, tmp_V_E_k, 1, tmp_V_E_k, 1);
         Vmath::Smul(n, R*T/F, tmp_V_E_k, 1, tmp_V_E_k, 1);
         Vmath::Vsub(n, inarray[0], 1, tmp_V_E_k, 1, tmp_V_E_k, 1);
-
+	
         // Potassium I_K1
         Array<OneD, NekDouble> &tmp_I_K1 = outarray[15];
         Vmath::Sadd(n, 80.0, inarray[0], 1, tmp_I_K1, 1);
@@ -243,6 +246,7 @@ namespace Nektar
         Vmath::Smul(n, C_m*g_K1, tmp_I_K1, 1, tmp_I_K1, 1);
         Vmath::Vsub(n, outarray[0], 1, tmp_I_K1, 1, outarray[0], 1);
         Vmath::Smul(n, -1.0, tmp_I_K1, 1, outarray[18], 1);
+	//cout<<"I_K1 "<<outarray[15][0]<<endl;
 
         // Transient Outward K+ current
         Array<OneD, NekDouble> &tmp_I_to = outarray[15];
@@ -253,6 +257,7 @@ namespace Nektar
         Vmath::Smul(n, C_m*g_to, tmp_I_to, 1, tmp_I_to, 1);
         Vmath::Vsub(n, outarray[0], 1, tmp_I_to, 1, outarray[0], 1);
         Vmath::Vsub(n, outarray[18], 1, tmp_I_to, 1, outarray[18], 1);
+	//cout<<"I_to "<<outarray[15][0]<<endl;
 
         // Ultrarapid Delayed rectifier K+ current
         Array<OneD, NekDouble> &tmp_I_kur = outarray[15];
@@ -270,6 +275,7 @@ namespace Nektar
         Vmath::Smul(n, C_m*g_Kur_scaling, tmp_I_kur, 1, tmp_I_kur, 1);
         Vmath::Vsub(n, outarray[0], 1, tmp_I_kur, 1, outarray[0], 1);
         Vmath::Vsub(n, outarray[18], 1, tmp_I_kur, 1, outarray[18], 1);
+	//cout<<"I_kur "<<outarray[15][0]<<endl;
 
         // Rapid delayed outward rectifier K+ current
         Array<OneD, NekDouble> &tmp_I_Kr = outarray[15];
@@ -282,6 +288,8 @@ namespace Nektar
         Vmath::Smul(n, C_m*g_Kr, tmp_I_Kr, 1, tmp_I_Kr, 1);
         Vmath::Vsub(n, outarray[0], 1, tmp_I_Kr, 1, outarray[0], 1);
         Vmath::Vsub(n, outarray[18], 1, tmp_I_Kr, 1, outarray[18], 1);
+	//cout<<"I_Kr "<<outarray[15][0]<<endl;
+
 
         // Slow delayed outward rectifier K+ Current
         Array<OneD, NekDouble> &tmp_I_Ks = outarray[15];
@@ -290,6 +298,10 @@ namespace Nektar
         Vmath::Smul(n, C_m*g_Ks, tmp_I_Ks, 1, tmp_I_Ks, 1);
         Vmath::Vsub(n, outarray[0], 1, tmp_I_Ks, 1, outarray[0], 1);
         Vmath::Vsub(n, outarray[18], 1, tmp_I_Ks, 1, outarray[18], 1);
+	//cout<<"I_Ks "<<outarray[15][0]<<endl;
+
+
+
 
         // Background current, calcium
         Array<OneD, NekDouble> &tmp_I_b_Ca = outarray[1];
@@ -299,6 +311,8 @@ namespace Nektar
         Vmath::Vsub(n, inarray[0], 1, tmp_I_b_Ca, 1, tmp_I_b_Ca, 1);
         Vmath::Smul(n, C_m*g_b_Ca, tmp_I_b_Ca, 1, tmp_I_b_Ca, 1);
         Vmath::Vsub(n, outarray[0], 1, tmp_I_b_Ca, 1, outarray[0], 1);
+	//cout<<"I_b_Ca "<<outarray[1][0]<<endl;
+
 
         // L-Type Ca2+ current
         Array<OneD, NekDouble> &tmp_I_Ca_L = outarray[2];
@@ -308,6 +322,8 @@ namespace Nektar
         Vmath::Vmul(n, inarray[12], 1, tmp_I_Ca_L, 1, tmp_I_Ca_L, 1);
         Vmath::Smul(n, C_m*g_Ca_L, tmp_I_Ca_L, 1, tmp_I_Ca_L, 1);
         Vmath::Vsub(n, outarray[0], 1, tmp_I_Ca_L, 1, outarray[0], 1);
+	//cout<<"tmp_I_Ca_L "<<outarray[2][0]<<endl;
+
 
         // Na-K Pump Current
         Array<OneD, NekDouble> &tmp_f_Na_k = outarray[14];
@@ -319,6 +335,7 @@ namespace Nektar
         Vmath::Smul(n, 0.1245, tmp_f_Na_k, 1, tmp_f_Na_k, 1);
         Vmath::Vadd(n, tmp_f_Na_k, 1, tmp, 1, tmp_f_Na_k, 1);
         Vmath::Sadd(n, 1.0, tmp_f_Na_k, 1, tmp_f_Na_k, 1);
+	//cout<<"tmp_f_Na_k "<<outarray[0][0]<<endl;
 
         Array<OneD, NekDouble> &tmp_I_Na_K = outarray[15];
         Vmath::Sdiv(n, K_m_Na_i, inarray[16], 1, tmp_I_Na_K, 1);
@@ -329,7 +346,9 @@ namespace Nektar
         Vmath::Vsub(n, outarray[0], 1, tmp_I_Na_K, 1, outarray[0], 1);
         Vmath::Svtvp(n, -3.0, tmp_I_Na_K, 1, outarray[16], 1, outarray[16], 1);
         Vmath::Svtvp(n, 2.0, tmp_I_Na_K, 1, outarray[18], 1, outarray[18], 1);
+	//cout<<"tmp_I_Na_K "<<outarray[15][0]<<endl;
 
+	
         // Na-Ca exchanger current
         Array<OneD, NekDouble> &tmp_I_Na_Ca = outarray[3];
         Vmath::Smul(n, (gamma-1)*F/R/T, inarray[0], 1, tmp, 1);
@@ -350,6 +369,7 @@ namespace Nektar
         Vmath::Vdiv(n, tmp, 1, tmp_I_Na_Ca, 1, tmp_I_Na_Ca, 1);
         Vmath::Vsub(n, outarray[0], 1, tmp_I_Na_Ca, 1, outarray[0], 1);
         Vmath::Svtvp(n, -3.0, tmp_I_Na_Ca, 1, outarray[16], 1, outarray[16], 1);
+	//cout<<"tmp_I_Na_Ca "<<outarray[3][0]<<endl;
 
         // Calcium Pump current
         Array<OneD, NekDouble> &tmp_I_p_Ca = outarray[4];
@@ -357,6 +377,7 @@ namespace Nektar
         Vmath::Vdiv(n, inarray[17], 1, tmp_I_p_Ca, 1, tmp_I_p_Ca, 1);
         Vmath::Smul(n, C_m*I_p_Ca_max, tmp_I_p_Ca, 1, tmp_I_p_Ca, 1);
         Vmath::Vsub(n, outarray[0], 1, tmp_I_p_Ca, 1, outarray[0], 1);
+	//cout<<"tmp_I_p_Ca "<<outarray[4][0]<<endl;
 
         // Scale currents by capacitance
         Vmath::Smul(n, 1.0/C_m, outarray[0], 1, outarray[0], 1);
@@ -369,25 +390,29 @@ namespace Nektar
         Array<OneD, NekDouble> &tmp_I_tr = outarray[5];
         Vmath::Vsub(n, inarray[20], 1, inarray[19], 1, tmp_I_tr, 1);
         Vmath::Smul(n, 1.0/tau_tr, tmp_I_tr, 1, tmp_I_tr, 1);
+	//cout<<"tmp_I_tr "<<outarray[5][0]<<endl;
 
         // I_up_leak
         Array<OneD, NekDouble> &tmp_I_up_leak = outarray[6];
         Vmath::Smul(n, NSR_I_up_max/NSR_I_Ca_max, inarray[20], 1, tmp_I_up_leak, 1);
+	
 
         // I_up
         Array<OneD, NekDouble> &tmp_I_up = outarray[7];
         Vmath::Sdiv(n, NSR_K_up, inarray[17], 1, tmp_I_up, 1);
         Vmath::Sadd(n, 1.0, tmp_I_up, 1, tmp_I_up, 1);
         Vmath::Sdiv(n, NSR_I_up_max, tmp_I_up, 1, tmp_I_up, 1);
+	//cout<<"tmp_I_up "<<outarray[7][0]<<endl;
 
         // I_rel
-        Array<OneD, NekDouble> &tmp_I_rel = outarray[8];
+       /* Array<OneD, NekDouble> &tmp_I_rel = outarray[8];
         Vmath::Vsub(n, inarray[19], 1, inarray[17], 1, tmp_I_rel, 1);
         Vmath::Vmul(n, tmp_I_rel, 1, inarray[13], 1, tmp_I_rel, 1);
         Vmath::Vmul(n, tmp_I_rel, 1, inarray[13], 1, tmp_I_rel, 1);
         Vmath::Vmul(n, tmp_I_rel, 1, inarray[14], 1, tmp_I_rel, 1);
         Vmath::Vmul(n, tmp_I_rel, 1, inarray[15], 1, tmp_I_rel, 1);
-        Vmath::Smul(n, JSR_K_rel, tmp_I_rel, 1, tmp_I_rel, 1);
+        Vmath::Smul(n, JSR_K_rel, tmp_I_rel, 1, tmp_I_rel, 1); */
+	//cout<<"tmp_I_rel "<<0.00000<<endl;
 
         // B1
         Array<OneD, NekDouble> &tmp_B1 = outarray[9];
@@ -397,8 +422,8 @@ namespace Nektar
         Vmath::Smul(n, 0.5/F, tmp_B1, 1, tmp_B1, 1);
         Vmath::Svtvp(n, JSR_V_up, tmp_I_up_leak, 1, tmp_B1, 1, tmp_B1, 1);
         Vmath::Svtvp(n, -JSR_V_up, tmp_I_up, 1, tmp_B1, 1, tmp_B1, 1);
-        Vmath::Svtvp(n, JSR_V_rel, tmp_I_rel, 1, tmp_B1, 1, tmp_B1, 1);
-        Vmath::Smul(n, 1.0/V_i, tmp_B1, 1, tmp_B1, 1);
+      // original  Vmath::Svtvp(n, JSR_V_rel, tmp_I_rel, 1, tmp_B1, 1, tmp_B1, 1);
+        Vmath::Smul(n, 1.0/V_i, tmp_B1, 1, tmp_B1, 1); 
 
         // B2
         Array<OneD, NekDouble> &tmp_B2 = outarray[10];
@@ -419,12 +444,14 @@ namespace Nektar
         Vmath::Svtvp(n, -JSR_V_rel/JSR_V_up, tmp_I_tr, 1, outarray[20], 1, outarray[20], 1);
 
         // Calcium rel (20)
-        Vmath::Vsub(n, tmp_I_tr, 1, tmp_I_rel, 1, tmp, 1);
+        // Original Vmath::Vsub(n, tmp_I_tr, 1, tmp_I_rel, 1, tmp, 1);
+	Vmath::Vadd(n, tmp_I_tr, 1, tmp_I_tr, 1, tmp, 1);
         Vmath::Sadd(n, Km_Csqn, inarray[19], 1, outarray[19], 1);
         Vmath::Vmul(n, outarray[19], 1, outarray[19], 1, outarray[19], 1);
         Vmath::Sdiv(n, Csqn_max*Km_Csqn, outarray[19], 1, outarray[19], 1);
         Vmath::Sadd(n, 1.0, outarray[19], 1, outarray[19], 1);
         Vmath::Vdiv(n, tmp, 1, outarray[19], 1, outarray[19], 1);
+	//cout<<"tmp_Ca_rel "<<outarray[19][0]<<endl; 
 
         // Process gating variables
         const NekDouble * v;
@@ -538,10 +565,11 @@ namespace Nektar
             *x_new = 1.0/(1.0+inarray[17][i]/0.00035);
         }
 
-        Array<OneD, NekDouble> &tmp_Fn = outarray[15];
+        /***
+	Array<OneD, NekDouble> &tmp_Fn = outarray[15];
         Vmath::Svtsvtp(n, 0.5*5e-13/F, tmp_I_Ca_L, 1, -0.2*5e-13/F, tmp_I_Na_Ca, 1, tmp_Fn, 1);
         Vmath::Svtvm(n, 1e-12*JSR_V_rel, tmp_I_rel, 1, tmp_Fn, 1, tmp_Fn, 1);
-
+	//cout<<"tmp_fn "<<tmp_Fn[0]<<endl;
         // u
         for (i = 0, v = &tmp_Fn[0], x = &inarray[13][0], x_new = &outarray[13][0], x_tau = &m_gates_tau[12][0];
                 i < n; ++i, ++v, ++x, ++x_new, ++x_tau)
@@ -563,7 +591,7 @@ namespace Nektar
             *x_tau  = 6.0*(1.0-exp(-(*v-7.9)/5.0))/(1.0+0.3*exp(-(*v-7.9)/5.0))/(*v-7.9);
             *x_new = 1.0 - 1.0/(1.0 + exp(-(*v - 40.0)/17.0));
         }
-
+	****/
     }
 
 

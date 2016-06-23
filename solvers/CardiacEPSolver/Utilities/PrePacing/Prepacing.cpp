@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
         cout << "#";
         for (unsigned int i = 0; i < vCell->GetNumCellVariables(); ++i)
         {
-            cout << "   " << vCell->GetCellVarName(i);
+         //   cout << "   " << vCell->GetCellVarName(i);
         }
         cout << endl;
 
@@ -78,18 +78,18 @@ int main(int argc, char *argv[])
             vTime += vDeltaT;
 
             // Output current solution to stdout
-            cout << vTime << "   " << vSol[0][0];
+         cout << vTime << "   " << vSol[0][0];
             for (unsigned int j = 0; j < vCell->GetNumCellVariables(); ++j)
             {
-                cout << "   " << vCell->GetCellSolution(j)[0];
+               // cout << "   " << vCell->GetCellSolution(j)[0];
             }
             cout << endl;
         }
 
         for (unsigned int i = 0; i < vCell->GetNumCellVariables(); ++i)
         {
-            cout << "# " << vCell->GetCellVarName(i) << "  "
-                 << vCell->GetCellSolution(i)[0] << endl;
+           // cout << "# " << vCell->GetCellVarName(i) << "  "
+             //  << vCell->GetCellSolution(i)[0] << endl;
         }
     }
     catch (...)
