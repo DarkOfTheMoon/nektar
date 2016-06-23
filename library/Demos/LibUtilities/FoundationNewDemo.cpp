@@ -7,6 +7,7 @@ using namespace std;
 using namespace Nektar;
 using namespace Nektar::LibUtilities::Foundations;
 
+
 int main () {
     PointsKey key;
     key.m_numpoints[0] = 5;
@@ -53,6 +54,9 @@ int main () {
 //
 
 
+    // Create a points object using the factory
+    PointsSharedPtr<double> facptr = GetPointsFactory<double>().CreateInstance("GaussGaussLegendre_Segment", key);
+    cout << facptr->GetNumPoints() << endl;
     // This one should cause a compile error
     //Points<Quadrilateral, Fekete, double> Pfail(key);
 

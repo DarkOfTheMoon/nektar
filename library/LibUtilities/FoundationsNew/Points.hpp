@@ -120,6 +120,9 @@ class PointsBase
 };
 
 template<typename TData>
+using PointsSharedPtr = boost::shared_ptr<PointsBase<TData>>;
+
+template<typename TData>
 using PointsFactory = LibUtilities::NekFactory<
         std::string, PointsBase<TData>, const PointsKey&>;
 
@@ -128,11 +131,19 @@ LIB_UTILITIES_EXPORT PointsFactory<TData>& GetPointsFactory()
 {
     typedef Loki::SingletonHolder<PointsFactory<TData>,
                                   Loki::CreateUsingNew,
-                                  Loki::NoDestroy,
-                                  Loki::ClassLevelLockable> Type;
+                                  Loki::NoDestroy> Type;
+    // Putting Loki::ClassLevelLockable causes an assertion!
     return Type::Instance();
 }
 
+//typedef LibUtilities::NekFactory<std::string, PointsBase<double>, const PointsKey&> PointsFactory;
+//LIB_UTILITIES_EXPORT PointsFactory& GetPointsFactory()
+//{
+//    typedef Loki::SingletonHolder<PointsFactory,
+//                                  Loki::CreateUsingNew,
+//                                  Loki::NoDestroy> Type;
+//    return Type::Instance();
+//}
 
 
 
@@ -280,6 +291,11 @@ class Points<TData, TShape, TPts1, TPts2, TPts3> : public PointsBase<TData>
 };
 
 
+namespace detail {
+
+
+}
+
 /**
  * Specialisation for GaussGaussLegendre
  */
@@ -298,6 +314,12 @@ class Points<TData, TShape, GaussGaussLegendre> : public PointsBase<TData>
     public:
         typedef traits::points_traits<PointsType> get_traits;
 
+        static PointsSharedPtr<TData> create(const PointsKey& pKey)
+        {
+            PointsSharedPtr<TData> p = MemoryManager<ThisType>::AllocateSharedPtr(pKey);
+            return p;
+        }
+
         Points() : PointsBase<TData>() {}
         Points(const PointsKey& pKey) : PointsBase<TData>(pKey)
         {
@@ -315,6 +337,45 @@ class Points<TData, TShape, GaussGaussLegendre> : public PointsBase<TData>
 };
 
 
+/**
+ * Specialisation for GaussGaussLegendre
+ */
+template<typename TData, typename TShape>
+class Points<TData, TShape, GaussRadauMLegendre> : public PointsBase<TData>
+{
+        typedef Points<TData, TShape, GaussRadauMLegendre> ThisType;
+        typedef PointsBase<TData> BaseType;
+        typedef GaussGaussLegendre PointsType;
+
+        static_assert(traits::points_traits<PointsType>::dimension == traits::shape_traits<TShape>::dimension,
+                "Points dimension and shape dimension do not agree.");
+        static_assert(traits::distribution_traits<TShape, PointsType>::is_valid,
+                "Not a valid combination of shape and points type.");
+
+    public:
+        typedef traits::points_traits<PointsType> get_traits;
+
+        static PointsSharedPtr<TData> create(const PointsKey& pKey)
+        {
+            PointsSharedPtr<TData> p = MemoryManager<ThisType>::AllocateSharedPtr(pKey);
+            return p;
+        }
+
+        Points() : PointsBase<TData>() {}
+        Points(const PointsKey& pKey) : PointsBase<TData>(pKey)
+        {
+            Populate(pKey);
+        }
+        void Populate(const PointsKey& p) {
+            BaseType::m_key = p;
+            const int n = p.m_numpoints[0];
+            BaseType::template AllocateArrays<PointsType>();
+            Polylib::zwgrjm(BaseType::m_points[0].data(),
+                          BaseType::m_weights.data(),
+                          n,0.0,0.0);
+        }
+
+};
 }
 }
 }

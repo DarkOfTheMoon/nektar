@@ -147,6 +147,7 @@ SET(FoundationSources
         ./Foundations/PhysGalerkinProject.cpp
     ./Foundations/Points.cpp
     ./Foundations/PolyEPoints.cpp
+    ./FoundationsNew/PointsInstantiations.cpp
 )
 
 SET(InterpreterHeaders

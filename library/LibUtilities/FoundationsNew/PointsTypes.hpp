@@ -129,6 +129,7 @@ namespace traits
         static const bool is_valid = true;
     };
 }
+
 }
 }
 }
