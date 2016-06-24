@@ -148,6 +148,7 @@ SET(FoundationSources
     ./Foundations/Points.cpp
     ./Foundations/PolyEPoints.cpp
     ./FoundationsNew/PointsInstantiations.cpp
+    ./FoundationsNew/BasisInstantiations.cpp
 )
 
 SET(InterpreterHeaders

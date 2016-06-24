@@ -19,11 +19,16 @@ int main () {
     bkey.m_nummodes[1] = 5;
     bkey.m_nummodes[2] = 6;
 
-    //Points<double, Quadrilateral> Pnotype(key);
-    Points<double, Segment, GaussGaussLegendre> P(key);
+    // Test some points keys
+    Points<double, Segment,       GaussGaussLegendre> P(key);
     Points<double, Quadrilateral, GaussGaussLegendre, GaussGaussLegendre> Pquad(key);
-    Points<double, Hexahedron, GaussGaussLegendre, GaussGaussLegendre, GaussGaussLegendre> Phex(key);
+    Points<double, Hexahedron,    GaussGaussLegendre, GaussGaussLegendre, GaussGaussLegendre> Phex(key);
 
+    // These should fail
+    //Points<double, Segment,       Fekete> Pseg_fek(key);
+    //Points<double, Triangle,      GaussGaussLegendre> Ptri_gauss(key);
+
+    // Test extraction of constituent points distributions
     Array<OneD, double> p1 = Pquad.GetZ(0);
     Array<OneD, double> p2 = Pquad.GetZ(1);
     cout << p1.num_elements() << endl;
@@ -36,19 +41,32 @@ int main () {
     cout << h2.num_elements() << endl;
     cout << h3.num_elements() << endl;
 
-    PointsBase<double>* ptr1 = new Points<double, Segment, GaussGaussLegendre>(key);
+    // Test access through base class pointer
+    PointsBase<double>* ptr1 = new Points<double, Segment,       GaussGaussLegendre>(key);
     PointsBase<double>* ptr2 = new Points<double, Quadrilateral, GaussGaussLegendre, GaussGaussLegendre>(key);
-
     cout << ptr1->GetZ(0).num_elements() << endl;
     cout << ptr2->GetZ(0).num_elements() << endl;
     cout << ptr2->GetZ(1).num_elements() << endl;
 
+//    // Test accessing undefined points distribution
+//    try {
+//        cout << ptr2->GetZ(2).num_elements() << endl;
+//    }
+//    catch (...) {
+//        cout << "Unable to access 3rd GGL distribution in a quad." << endl;
+//    }
 
+    // Test instantiation of a Basis
     Basis<double, Segment, Points<double, Segment, GaussGaussLegendre>, ModifiedLegendre> B0(bkey);
+
+    // These should fail
     //Basis<double, Triangle, Points<double, Segment, GaussGaussLegendre>, BernsteinTriangle> Bbtri(bkey);
+    //Basis<double, Triangle, Points<double, Segment, GaussGaussLegendre>, BernsteinTriangle> Bbtri(bkey);
+    //Basis<double, Triangle, Points<double, Triangle, GaussGaussLegendre>, BernsteinTriangle> Bbtri(bkey);
+
 //    cout << sizeof(Array<OneD, double>) << endl;
 //    cout << sizeof(PointsKey) << endl;
-//    cout << sizeof(Points<double, Quadrilateral, GaussGaussLegendre>) << endl;
+    cout << "Soze of GGL points: " << sizeof(Points<double, Segment, GaussGaussLegendre>) << endl;
 //    cout << sizeof(Points<double, Quadrilateral, GaussGaussLegendre, GaussGaussLegendre>) << endl;
 //    cout << traits::points_traits<GaussGaussLegendre,GaussGaussLegendre,GaussGaussLegendre>::dimension << endl;
 //
@@ -57,6 +75,8 @@ int main () {
     // Create a points object using the factory
     PointsSharedPtr<double> facptr = GetPointsFactory<double>().CreateInstance("GaussGaussLegendre_Segment", key);
     cout << facptr->GetNumPoints() << endl;
+
+    cout << "Size of Modified basis: " << sizeof(Basis<double, Segment, Points<double, Segment, GaussGaussLegendre>, ModifiedLegendre>) << endl;
     // This one should cause a compile error
     //Points<Quadrilateral, Fekete, double> Pfail(key);
 

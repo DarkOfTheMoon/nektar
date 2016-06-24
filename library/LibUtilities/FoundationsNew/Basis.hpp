@@ -1,3 +1,6 @@
+#ifndef LIBUTILITIES_FOUNDATIONS_BASIS
+#define LIBUTILITIES_FOUNDATIONS_BASIS
+
 #include <iostream>
 #include <type_traits>
 
@@ -9,6 +12,7 @@
 #include <LibUtilities/FoundationsNew/ShapeTypes.hpp>
 #include <LibUtilities/FoundationsNew/PointsTypes.hpp>
 #include <LibUtilities/FoundationsNew/BasisTypes.hpp>
+#include <LibUtilities/FoundationsNew/Points.hpp>
 
 namespace Nektar
 {
@@ -77,6 +81,23 @@ class BasisBase
 };
 
 
+template<typename TData>
+using BasisSharedPtr = boost::shared_ptr<BasisBase<TData>>;
+
+template<typename TData>
+using BasisFactory = LibUtilities::NekFactory<
+        std::string, BasisBase<TData>, const BasisKey&>;
+
+template<typename TData>
+LIB_UTILITIES_EXPORT BasisFactory<TData>& GetBasisFactory()
+{
+    typedef Loki::SingletonHolder<BasisFactory<TData>,
+                                  Loki::CreateUsingNew,
+                                  Loki::NoDestroy> Type;
+    // Putting Loki::ClassLevelLockable causes an assertion!
+    return Type::Instance();
+}
+
 /**
  * @class Basis
  * @brief Primary template for composite Points classes.
@@ -119,6 +140,12 @@ class Basis<TData, TShape, TPts, TBasis1, TBasis2> : public BasisBase<TData>
                 "Basis dimension and shape dimension do not agree.");
 
     public:
+        static BasisSharedPtr<TData> create(const BasisKey& pKey)
+        {
+            BasisSharedPtr<TData> p = MemoryManager<ThisType>::AllocateSharedPtr(pKey);
+            return p;
+        }
+
         Basis(const BasisKey& pKey) : BaseType(pKey) {
             x1.Populate(pKey);
             BasisKey tmpKey;
@@ -156,6 +183,12 @@ class Basis<TData, TShape, TPts, TBasis1, TBasis2, TBasis3> : public BasisBase<T
                 "Basis dimension and shape dimension do not agree.");
 
     public:
+        static BasisSharedPtr<TData> create(const BasisKey& pKey)
+        {
+            BasisSharedPtr<TData> p = MemoryManager<ThisType>::AllocateSharedPtr(pKey);
+            return p;
+        }
+
         Basis(const BasisKey& pKey) : BaseType(pKey) {
             //BasisBase<TData>::template AllocateArrays<TPts1, TPts2, TPts3>();
             BasisKey tmpKey;
@@ -193,6 +226,12 @@ class Basis<TData, TShape, TPts, ModifiedLegendre> : public BasisBase<TData>
                 "Not a valid combination of shape and basis type.");
 
     public:
+        static BasisSharedPtr<TData> create(const BasisKey& pKey)
+        {
+            BasisSharedPtr<TData> p = MemoryManager<ThisType>::AllocateSharedPtr(pKey);
+            return p;
+        }
+
         Basis() : BaseType() {}
         Basis(const BasisKey& pKey) : BaseType(pKey)
         {
@@ -203,6 +242,9 @@ class Basis<TData, TShape, TPts, ModifiedLegendre> : public BasisBase<TData>
             //const int n = p.m_nummodes[0];
             //BasisBase<TData>::template AllocateArrays<ModifiedLegendre>();
         }
+
+    private:
+        TPts m_points;
 
 };
 
@@ -224,6 +266,12 @@ class Basis<TData, TShape, TPts, BernsteinTriangle> : public BasisBase<TData>
                 "Not a valid combination of shape and basis type.");
 
     public:
+        static BasisSharedPtr<TData> create(const BasisKey& pKey)
+        {
+            BasisSharedPtr<TData> p = MemoryManager<ThisType>::AllocateSharedPtr(pKey);
+            return p;
+        }
+
         Basis() : BaseType() {}
         Basis(const BasisKey& pKey) : BaseType(pKey)
         {
@@ -235,9 +283,12 @@ class Basis<TData, TShape, TPts, BernsteinTriangle> : public BasisBase<TData>
             //BasisBase<TData>::template AllocateArrays<ModifiedLegendre>();
         }
 
+    private:
+        TPts m_points;
+
 };
 }
 }
 }
 
-
+#endif

@@ -7,8 +7,8 @@ namespace LibUtilities
 namespace Foundations
 {
 static std::string points[] = {
-        GetPointsFactory<double>().RegisterCreatorFunction("GaussGaussLegendre_Segment", Points<double, Segment, GaussGaussLegendre>::create),
-        GetPointsFactory<double>().RegisterCreatorFunction("GaussRadauMLegendre_Segment", Points<double, Segment, GaussRadauMLegendre>::create),
+        GetPointsFactory<NekDouble>().RegisterCreatorFunction("GaussGaussLegendre_Segment", Points<NekDouble, Segment, GaussGaussLegendre>::create),
+        GetPointsFactory<NekDouble>().RegisterCreatorFunction("GaussRadauMLegendre_Segment", Points<NekDouble, Segment, GaussRadauMLegendre>::create),
 };
 }
 }

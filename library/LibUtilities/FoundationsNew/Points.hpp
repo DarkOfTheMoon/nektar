@@ -1,3 +1,6 @@
+#ifndef LIBUTILITIES_FOUNDATIONS_POINTS
+#define LIBUTILITIES_FOUNDATIONS_POINTS
+
 #include <iostream>
 #include <type_traits>
 
@@ -136,16 +139,6 @@ LIB_UTILITIES_EXPORT PointsFactory<TData>& GetPointsFactory()
     return Type::Instance();
 }
 
-//typedef LibUtilities::NekFactory<std::string, PointsBase<double>, const PointsKey&> PointsFactory;
-//LIB_UTILITIES_EXPORT PointsFactory& GetPointsFactory()
-//{
-//    typedef Loki::SingletonHolder<PointsFactory,
-//                                  Loki::CreateUsingNew,
-//                                  Loki::NoDestroy> Type;
-//    return Type::Instance();
-//}
-
-
 
 
 /**
@@ -223,6 +216,12 @@ class Points<TData, TShape, TPts1, TPts2> : public PointsBase<TData>
     public:
         typedef traits::points_traits<TPts1, TPts2> get_traits;
 
+        static PointsSharedPtr<TData> create(const PointsKey& pKey)
+        {
+            PointsSharedPtr<TData> p = MemoryManager<ThisType>::AllocateSharedPtr(pKey);
+            return p;
+        }
+
         Points(const PointsKey& pKey) : BaseType(pKey) {
             //PointsBase<TData>::template AllocateArrays<TPts1, TPts2>();
             x1.Populate(pKey);
@@ -261,6 +260,12 @@ class Points<TData, TShape, TPts1, TPts2, TPts3> : public PointsBase<TData>
 
     public:
         typedef traits::points_traits<TPts1, TPts2, TPts3> get_traits;
+
+        static PointsSharedPtr<TData> create(const PointsKey& pKey)
+        {
+            PointsSharedPtr<TData> p = MemoryManager<ThisType>::AllocateSharedPtr(pKey);
+            return p;
+        }
 
         Points(const PointsKey& pKey) : BaseType(pKey) {
             //PointsBase<TData>::template AllocateArrays<TPts1, TPts2, TPts3>();
@@ -379,3 +384,5 @@ class Points<TData, TShape, GaussRadauMLegendre> : public PointsBase<TData>
 }
 }
 }
+
+#endif
