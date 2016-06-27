@@ -684,7 +684,7 @@ namespace Nektar
                     LibUtilities::PointsKey
                         tp2(order2, LibUtilities::eGaussLobattoLegendre);
 
-                    LibUtilities::Interp3D(p0, p1, p2, data,tp0,tp1,tnp2,  coeffs);
+                    LibUtilities::Interp3D(p0, p1, p2, data,tp0,tp1,tp2,  coeffs);
                 }
                 break;
                 case LibUtilities::eGauss_Lagrange:
@@ -704,7 +704,7 @@ namespace Nektar
                     LibUtilities::PointsKey
                         tp2(order2, LibUtilities::eGaussGaussLegendre);
 
-                    LibUtilities::Interp3D(p0, p1, p2, data,tp0,tp1,tnp2,  coeffs);
+                    LibUtilities::Interp3D(p0, p1, p2, data,tp0,tp1,tp2,  coeffs);
                 }
                 break;
             default:
