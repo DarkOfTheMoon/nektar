@@ -193,8 +193,7 @@ namespace Nektar
             m_linSysKey(pKey),
             m_expList(pExpList),
             m_robinBCInfo(m_expList.lock()->GetRobinBCInfo()),
-            m_verbose(m_expList.lock()->GetSession()->
-                      DefinesCmdLineArgument("verbose"))
+			      m_weakDirichletBCInfo(m_expList.lock()->GetWeakDirichletBCInfo())
         {
         }
 
@@ -301,6 +300,47 @@ namespace Nektar
                     1.0, new_mat);
             }
 
+            if(m_weakDirichletBCInfo.count(n) != 0) // Add matrices for weak Dirichlet BCs
+            {
+                WeakDirichletBCInfoSharedPtr wDBC;
+
+                // declare local matrix from scaled matrix.
+                int rows = loc_mat->GetRows();
+                int cols = loc_mat->GetColumns();
+
+                /*
+                std::cout << "***" << std::endl;
+                std::cout << "matrix rank in bc = " << rows << " x " << cols << std::endl;
+                std::cout << "***" << std::endl;
+                */
+
+                const NekDouble *dat = loc_mat->GetRawPtr();
+                DNekMatSharedPtr new_mat = MemoryManager<DNekMat>::
+                    AllocateSharedPtr(rows,cols,dat);
+                Blas::Dscal(rows*cols,loc_mat->Scale(),new_mat->GetRawPtr(),1);
+
+                int numBdryFacets = 0;
+                for(wDBC = m_weakDirichletBCInfo.find(n)->second; wDBC; wDBC = wDBC->next)
+                {
+                    numBdryFacets++;
+                }
+
+                Array<OneD, int> edgeids(numBdryFacets);
+
+                numBdryFacets = 0;
+                for(wDBC = m_weakDirichletBCInfo.find(n)->second; wDBC; wDBC = wDBC->next)
+                {
+                    edgeids[numBdryFacets] = wDBC->m_weakDirichletID;
+                    numBdryFacets++;
+                }
+
+                vExp->AddWeakDirichletElementContribution(edgeids, *new_mat);
+
+                // redeclare loc_mat to point to new_mat plus the scalar.
+                loc_mat = MemoryManager<DNekScalMat>::AllocateSharedPtr(
+                    1.0, new_mat);
+            }
+
             // finally return the matrix.
             return loc_mat;
         }
@@ -382,6 +422,60 @@ namespace Nektar
                 new_loc_mat->SetBlock(1,0,loc_mat->GetBlock(1,0));
                 new_loc_mat->SetBlock(1,1,loc_mat->GetBlock(1,1));
                 loc_mat = new_loc_mat;
+            }
+
+			if(m_weakDirichletBCInfo.count(n) != 0) // add weak Dirichlet matrix
+            {
+               WeakDirichletBCInfoSharedPtr wDBC;
+
+                tmp_mat = loc_mat->GetBlock(0,0);
+
+                // declare local matrix from scaled matrix.
+                int rows = tmp_mat->GetRows();
+                int cols = tmp_mat->GetColumns();
+                const NekDouble *dat = tmp_mat->GetRawPtr();
+                DNekMatSharedPtr new_mat = MemoryManager<DNekMat>::
+                    AllocateSharedPtr(rows, cols, dat);
+                Blas::Dscal(rows*cols,tmp_mat->Scale(),new_mat->GetRawPtr(),1);
+
+
+                // add local matrix contribution
+                int numBdryFacets = 0;
+                for(wDBC = m_weakDirichletBCInfo.find(n)->second; wDBC; wDBC = wDBC->next)
+                {
+                    numBdryFacets++;
+                }
+
+                Array<OneD, int> edgeids(numBdryFacets);
+
+                for(wDBC = m_weakDirichletBCInfo.find(n)->second; wDBC; wDBC = wDBC->next)
+                {
+                    edgeids[numBdryFacets] = wDBC->m_weakDirichletID;
+                    numBdryFacets++;
+                }
+
+                 vExp->AddWeakDirichletElementContribution(edgeids, *new_mat);
+
+                // redeclare loc_mat to point to new_mat plus the scalar.
+                tmp_mat = MemoryManager<DNekScalMat>::AllocateSharedPtr(
+                    1.0, new_mat);
+                loc_mat->SetBlock(0,0,tmp_mat);
+
+				/*
+				DNekScalBlkMatSharedPtr new_loc_mat;
+                unsigned int exp_size[] = {tmp_mat->GetRows(), loc_mat->GetBlock(1,1)->GetRows()};
+                unsigned int nblks = 2;
+                new_loc_mat = MemoryManager<DNekScalBlkMat>::AllocateSharedPtr(nblks, nblks, exp_size, exp_size);
+
+
+                new_loc_mat->SetBlock(0,0,tmp_mat);
+                new_loc_mat->SetBlock(0,1,loc_mat->GetBlock(0,1));
+                new_loc_mat->SetBlock(1,0,loc_mat->GetBlock(1,0));
+                new_loc_mat->SetBlock(1,1,loc_mat->GetBlock(1,1));
+                loc_mat = new_loc_mat;
+				*/
+
+
             }
 
             return loc_mat;

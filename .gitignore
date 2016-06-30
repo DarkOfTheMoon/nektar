@@ -11,3 +11,5 @@ ThirdParty
 *.pdf
 # Kdevelop project files
 *.kdev4
+# QtCreator project files
+CMakeLists.txt.user

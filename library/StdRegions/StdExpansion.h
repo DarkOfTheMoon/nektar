@@ -1110,6 +1110,18 @@ namespace Nektar
                 v_AddRobinEdgeContribution(edgeid, primCoeffs, coeffs);
             }
 
+            void AddWeakDirichletElementContribution(const Array<OneD, int>& edgeids, DNekMat &inoutmat)
+            {
+                v_AddWeakDirichletElementContribution(edgeids, inoutmat);
+            }
+
+            void AddWeakDirichletForcingContribution(const Array<OneD, int>& edgeids,
+                                                     const Array<OneD, Array<OneD, const NekDouble> >& lambda,
+                                                     Array<OneD, NekDouble> &coeffs)
+            {
+                v_AddWeakDirichletForcingContribution(edgeids, lambda, coeffs);
+            }
+
             /** \brief This function evaluates the expansion at a single
              *  (arbitrary) point of the domain
              *
@@ -1670,6 +1682,12 @@ namespace Nektar
             STD_REGIONS_EXPORT virtual void v_AddRobinMassMatrix(const int edgeid, const Array<OneD, const NekDouble > &primCoeffs, DNekMatSharedPtr &inoutmat);
 
             STD_REGIONS_EXPORT virtual void v_AddRobinEdgeContribution(const int edgeid, const Array<OneD, const NekDouble> &primCoeffs, Array<OneD, NekDouble> &coeffs);
+
+            STD_REGIONS_EXPORT virtual void v_AddWeakDirichletElementContribution(const Array<OneD, int>& edgeids, DNekMat &inoutmat);
+
+            STD_REGIONS_EXPORT virtual void v_AddWeakDirichletForcingContribution(const Array<OneD, int>& edgeids,
+                                                                                  const Array<OneD, Array<OneD, const NekDouble> >& lambda,
+                                                                                  Array<OneD, NekDouble> &coeffs);
 
             STD_REGIONS_EXPORT virtual NekDouble v_PhysEvaluate(const Array<OneD, const NekDouble>& coords, const Array<OneD, const NekDouble> & physvals);
 

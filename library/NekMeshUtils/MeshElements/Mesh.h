@@ -50,6 +50,7 @@ namespace NekMeshUtils
 enum ConditionType
 {
     eDirichlet,
+    eWeakDirichlet,
     eNeumann,
     eRobin,
     ePeriodic,

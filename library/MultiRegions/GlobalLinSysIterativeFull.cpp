@@ -249,6 +249,61 @@ namespace Nektar
                 Vmath::Vadd(nGlobal, pOutput, 1, robin_A, 1, pOutput, 1);
             }
 
+            // retrieve weak Dirichlet boundary condition information and apply weak Dirichlet
+            // boundary conditions to the solution.
+            const std::map<int, WeakDirichletBCInfoSharedPtr> vWeakDirichletBCInfo
+                                                = expList->GetWeakDirichletBCInfo();
+            if(vWeakDirichletBCInfo.size() > 0)
+            {
+                ASSERTL0(false,
+                        "Weak Dirichlet boundaries not set up in IterativeFull solver.");
+                int nGlobal = m_locToGloMap->GetNumGlobalCoeffs();
+                int nLocal  = m_locToGloMap->GetNumLocalCoeffs();
+                int nDir    = m_locToGloMap->GetNumGlobalDirBndCoeffs();
+                int nNonDir = nGlobal - nDir;
+                Array<OneD, NekDouble> wD_A(nGlobal, 0.0);
+                Array<OneD, NekDouble> wD_l(nLocal,  0.0);
+                Array<OneD, NekDouble> tmp;
+                // NekVector<NekDouble> robin(nNonDir,
+                //                           tmp = wD_A + nDir, eWrapper);
+
+                // Operation: p_A = A * d_A
+                // First map d_A to local solution
+                m_locToGloMap->GlobalToLocal(pInput, wD_l);
+
+                // Iterate over all the elements computing weak Dirichlet BCs where
+                // necessary
+                for (int n = 0; n < expList->GetNumElmts(); ++n)
+                {
+                    int nel = expList->GetOffset_Elmt_Id(n);
+                    int offset = expList->GetCoeff_Offset(n);
+                    int ncoeffs = expList->GetExp(nel)->GetNcoeffs();
+
+                    if(vWeakDirichletBCInfo.count(nel) != 0) // add Weak Dirichlet BC matrix
+                    {
+                        WeakDirichletBCInfoSharedPtr wDBC;
+                        Array<OneD, NekDouble> tmp;
+                        StdRegions::StdExpansionSharedPtr vExp = expList->GetExp(nel);
+
+                        // add local matrix contribution
+                        /*
+                        for(wDBC = vRobinBCInfo.find(nel)->second; wDBC; wDBC = wDBC->next)
+                        {
+                            vExp->AddRobinEdgeContribution(rBC->m_robinID,rBC->m_robinPrimitiveCoeffs, tmp = robin_l + offset);
+                        }
+                        */
+                    }
+                    else
+                    {
+                        Vmath::Zero(ncoeffs, &wD_l[offset], 1);
+                    }
+                }
+
+                // Map local weak Dirichlet contribution back to global coefficients
+                m_locToGloMap->LocalToGlobal(wD_l, wD_A);
+                // Add them to the output of the GeneralMatrixOp
+                Vmath::Vadd(nGlobal, pOutput, 1, wD_A, 1, pOutput, 1);
+            }
         }
 
         /**

@@ -1281,6 +1281,20 @@ namespace Nektar
                      "specific element types");
         }
 
+        void StdExpansion::v_AddWeakDirichletElementContribution(const Array<OneD, int>& edgeids, DNekMat &inoutmat)
+        {
+            NEKERROR(ErrorUtil::efatal, "This function is only valid for "
+                                        "specific element types");
+        }
+
+        void StdExpansion::v_AddWeakDirichletForcingContribution(const Array<OneD, int>& edgeids,
+                                                                 const Array<OneD, Array<OneD, const NekDouble> >& lambda,
+                                                                 Array<OneD, NekDouble> &coeffs)
+        {
+            NEKERROR(ErrorUtil::efatal, "This function is only valid for "
+                                        "specific element types");
+        }
+
         /**
          * @brief Calculate the derivative of the physical points
          * @see StdRegions#StdExpansion#PhysDeriv

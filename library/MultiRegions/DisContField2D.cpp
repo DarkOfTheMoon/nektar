@@ -1421,7 +1421,9 @@ namespace Nektar
             for (cnt = n = 0; n < m_bndCondExpansions.num_elements(); ++n)
             {
                 if (m_bndConditions[n]->GetBoundaryConditionType() == 
-                        SpatialDomains::eDirichlet)
+                        SpatialDomains::eDirichlet ||
+                    m_bndConditions[n]->GetBoundaryConditionType() ==
+                        SpatialDomains::eWeakDirichlet)
                 {
                     for (e = 0; e < m_bndCondExpansions[n]->GetExpSize(); ++e)
                     {
@@ -2010,6 +2012,61 @@ namespace Nektar
         }
 
         /**
+         * Search through the edge expansions and identify which ones
+         * have weak Dirichlet type boundary conditions. If a weak Dirichlet
+         * boundary is found, then store the edge id of the boundary condition
+         * and the array of points of the physical space boundary
+         * condition which are held in the boundary condition primitive
+         * variable coefficient at the quadrature points
+         *
+         * \return std map containing the weak Dirichlet boundary condition
+         * info using a key of the element id
+         *
+         * There is a next member to allow for more than one weak Dirichlet
+         * boundary condition per element
+         */
+        map<int, WeakDirichletBCInfoSharedPtr> DisContField2D::v_GetWeakDirichletBCInfo(void)
+        {
+            int i,cnt;
+            map<int, WeakDirichletBCInfoSharedPtr> returnval;
+            Array<OneD, int> ElmtID,EdgeID;
+            GetBoundaryToElmtMap(ElmtID,EdgeID);
+
+            for(cnt = i = 0; i < m_bndCondExpansions.num_elements(); ++i)
+            {
+                MultiRegions::ExpListSharedPtr locExpList;
+
+                if(m_bndConditions[i]->GetBoundaryConditionType() ==
+                       SpatialDomains::eWeakDirichlet)
+                {
+                    int e,elmtid;
+                    Array<OneD, NekDouble> Array_tmp;
+
+                    locExpList = m_bndCondExpansions[i];
+
+                    for(e = 0; e < locExpList->GetExpSize(); ++e)
+                    {
+                        WeakDirichletBCInfoSharedPtr dInfo = MemoryManager<WeakDirichletBCInfo>
+                            ::AllocateSharedPtr(
+                                EdgeID[cnt+e],
+                                Array_tmp = locExpList->GetPhys() +
+                                            locExpList->GetPhys_Offset(e));
+                        elmtid = ElmtID[cnt+e];
+                        // make link list if necessary
+                        if(returnval.count(elmtid) != 0)
+                        {
+                            dInfo->next = returnval.find(elmtid)->second;
+                        }
+                        returnval[elmtid] = dInfo;
+                    }
+                }
+                cnt += m_bndCondExpansions[i]->GetExpSize();
+            }
+
+            return returnval;
+        }
+
+        /**
          * @brief Search through the edge expansions and identify which ones
          * have Robin/Mixed type boundary conditions.
          * 
@@ -2340,7 +2397,29 @@ namespace Nektar
                         // space storage
                         coeff.Evaluate(x0, x1, x2, time,
                                        locExpList->UpdatePhys());
-                    }    
+                    }
+                    else if (m_bndConditions[i]->GetBoundaryConditionType()
+                             == SpatialDomains::eWeakDirichlet)
+                    {
+                        string filebcs = boost::static_pointer_cast<
+                            SpatialDomains::WeakDirichletBoundaryCondition>
+                                (m_bndConditions[i])->m_filename;
+
+                        if (filebcs != "")
+                        {
+                            ExtractFileBCs(filebcs, varName, locExpList);
+                        }
+                        else
+                        {
+                            LibUtilities::Equation condition =
+                                boost::static_pointer_cast<
+                                    SpatialDomains::WeakDirichletBoundaryCondition>
+                                        (m_bndConditions[i])->
+                                            m_weakDirichletCondition;
+                            condition.Evaluate(x0, x1, x2, time,
+                                               locExpList->UpdatePhys());
+                        }
+                    }
                     else
                     {
                         ASSERTL0(false, "This type of BC not implemented yet");

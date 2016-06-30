@@ -1054,7 +1054,7 @@ namespace Nektar
 
             switch(mkey.GetMatrixType())
             {
-                // case for all symmetric matices
+                // case for all symmetric matrices
             case StdRegions::eHelmholtz:
             case StdRegions::eLaplacian:
                 if( (2*(bwidth+1)) < rows)
@@ -1121,6 +1121,40 @@ namespace Nektar
                     // redeclare loc_mat to point to new_mat plus the scalar.
                     loc_mat = MemoryManager<DNekScalMat>::AllocateSharedPtr(one,new_mat);
                 }
+
+                map<int, WeakDirichletBCInfoSharedPtr> WeakDirichletBCInfo = GetWeakDirichletBCInfo();
+
+                if(WeakDirichletBCInfo.count(n) != 0) // add weak Dirichlet BC element matrix
+                {
+                    WeakDirichletBCInfoSharedPtr wdBC;
+
+                    // declare local matrix from scaled matrix.
+                    int rows = loc_mat->GetRows();
+                    int cols = loc_mat->GetColumns();
+                    const NekDouble *dat = loc_mat->GetRawPtr();
+                    DNekMatSharedPtr new_mat = MemoryManager<DNekMat>::AllocateSharedPtr(rows,cols,dat);
+                    Blas::Dscal(rows*cols,loc_mat->Scale(),new_mat->GetRawPtr(),1);
+
+                    // add local matrix contribution
+                    std::vector<int> facetIDs;
+                    for(wdBC = WeakDirichletBCInfo.find(n)->second;wdBC; wdBC = wdBC->next)
+                    {
+                        facetIDs.push_back(wdBC->m_weakDirichletID);
+                    }
+
+                    Array<OneD, int> facetIDArray(facetIDs.size());
+                    for(int i = 0; i < facetIDs.size(); ++i)
+                    {
+                        facetIDArray[i] = facetIDs[i];
+                    }
+
+                    (*m_exp)[n]->AddWeakDirichletElementContribution(facetIDArray, *new_mat);
+
+                    NekDouble one = 1.0;
+                    // redeclare loc_mat to point to new_mat plus the scalar.
+                    loc_mat = MemoryManager<DNekScalMat>::AllocateSharedPtr(one,new_mat);
+                }
+
 
                 loc_lda = loc_mat->GetColumns();
 
@@ -2834,6 +2868,16 @@ namespace Nektar
         {
             ASSERTL0(false,
                      "This method is not defined or valid for this class type");
+        }
+
+        /**
+         */
+        map<int, WeakDirichletBCInfoSharedPtr> ExpList::v_GetWeakDirichletBCInfo(void)
+        {
+            ASSERTL0(false,
+                     "v_GetWeakDirichletBCInfo() is not defined or valid for this class type");
+            static map<int,WeakDirichletBCInfoSharedPtr> result;
+            return result;
         }
 
         /**

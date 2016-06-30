@@ -53,6 +53,7 @@ namespace Nektar
         enum BoundaryConditionType
         {
             eDirichlet,
+            eWeakDirichlet,
             eNeumann,
             eRobin,
             ePeriodic,
@@ -127,6 +128,26 @@ namespace Nektar
             }
 
             LibUtilities::Equation m_dirichletCondition;
+            std::string m_expr;
+            std::string m_filename;
+        };
+
+        struct WeakDirichletBoundaryCondition : public BoundaryConditionBase
+        {
+
+            WeakDirichletBoundaryCondition(
+                const LibUtilities::SessionReaderSharedPtr &pSession,
+                const std::string& eqn,
+                const std::string& userDefined = std::string("NoUserDefined"),
+                const std::string& filename=std::string("")):
+                    BoundaryConditionBase(eWeakDirichlet, userDefined),
+                    m_weakDirichletCondition(pSession, eqn),
+                    m_expr(eqn),
+                    m_filename(filename)
+            {
+            }
+
+            LibUtilities::Equation m_weakDirichletCondition;
             std::string m_expr;
             std::string m_filename;
         };
@@ -207,6 +228,7 @@ namespace Nektar
 
         typedef boost::shared_ptr<BoundaryConditionBase> BoundaryConditionShPtr;
         typedef boost::shared_ptr<DirichletBoundaryCondition> DirichletBCShPtr;
+        typedef boost::shared_ptr<WeakDirichletBoundaryCondition> WeakDirichletBCShPtr;
         typedef boost::shared_ptr<NeumannBoundaryCondition>   NeumannBCShPtr;
         typedef boost::shared_ptr<RobinBoundaryCondition>     RobinBCShPtr;
 

@@ -1521,6 +1521,25 @@ namespace Nektar
 
         /**
          * Search through the edge expansions and identify which ones
+         * have weak Dirichlet type boundary conditions. If a weak Dirichlet
+         * boundary is found, then store the edge id of the boundary condition
+         * and the array of points of the physical space boundary
+         * condition which are held in the boundary condition primitive
+         * variable coefficient at the quadrature points
+         *
+         * \return std map containing the weak Dirichlet boundary condition
+         * info using a key of the element id
+         *
+         * There is a next member to allow for more than one weak Dirichlet
+         * boundary condition per element
+         */
+        map<int, WeakDirichletBCInfoSharedPtr> DisContField1D::v_GetWeakDirichletBCInfo(void)
+        {
+            return map<int, WeakDirichletBCInfoSharedPtr>();
+        }
+
+        /**
+         * Search through the edge expansions and identify which ones
          * have Robin/Mixed type boundary conditions. If find a Robin
          * boundary then store the edge id of the boundary condition
          * and the array of points of the physical space boundary

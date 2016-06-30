@@ -212,6 +212,8 @@ namespace Nektar
                 SpatialDomains::BoundaryConditions &bcs,
                 const std::string variable);
             
+            virtual std::map<int, WeakDirichletBCInfoSharedPtr> v_GetWeakDirichletBCInfo();
+            
             virtual std::map<int, RobinBCInfoSharedPtr> v_GetRobinBCInfo();
             
             virtual const Array<OneD,const MultiRegions::ExpListSharedPtr>

@@ -171,7 +171,7 @@ namespace Nektar
             }
 
             virtual ~RobinBCInfo()
-            {};
+            {}
 
             int m_robinID; /// id of which edge/face is robin condition
             Array< OneD, const NekDouble > m_robinPrimitiveCoeffs;
@@ -179,6 +179,26 @@ namespace Nektar
         };
 
         typedef boost::shared_ptr<RobinBCInfo> RobinBCInfoSharedPtr;
+
+        // structure to hold information about weak Dirichlet boundary conditions
+
+        struct WeakDirichletBCInfo
+        {
+            WeakDirichletBCInfo(const int id, const Array<OneD, const NekDouble > &primCoeffs):
+                m_weakDirichletID(id),
+                m_weakDirichletPrimitiveCoeffs(primCoeffs)
+            {
+            }
+
+            virtual ~WeakDirichletBCInfo()
+            {}
+
+            int m_weakDirichletID; /// id of which edge/face is weak Dirichlet condition
+            Array< OneD, const NekDouble > m_weakDirichletPrimitiveCoeffs;
+            boost::shared_ptr<WeakDirichletBCInfo> next;
+        };
+
+        typedef boost::shared_ptr<WeakDirichletBCInfo> WeakDirichletBCInfoSharedPtr;
 
         typedef struct _PeriodicEntity
         {

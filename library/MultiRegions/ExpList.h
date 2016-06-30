@@ -777,6 +777,11 @@ namespace Nektar
                 return m_globalOptParam;
             }
 
+            std::map<int, WeakDirichletBCInfoSharedPtr> GetWeakDirichletBCInfo()
+            {
+                return v_GetWeakDirichletBCInfo();
+            }
+
             std::map<int, RobinBCInfoSharedPtr> GetRobinBCInfo()
             {
                 return v_GetRobinBCInfo();
@@ -1359,6 +1364,8 @@ namespace Nektar
                 const std::string varName = "",
                 const NekDouble   x2_in   = NekConstants::kNekUnsetDouble,
                 const NekDouble   x3_in   = NekConstants::kNekUnsetDouble);
+
+            virtual std::map<int, WeakDirichletBCInfoSharedPtr> v_GetWeakDirichletBCInfo(void);
             
             virtual std::map<int, RobinBCInfoSharedPtr> v_GetRobinBCInfo(void);
             

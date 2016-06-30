@@ -486,7 +486,7 @@ namespace Nektar
             }
         }
         
-        // evaluate additional terms in HDG edges. Not that this assumes that
+        // evaluate additional terms in HDG edges. Note that this assumes that
         // edges are unpacked into local cartesian order. 
         void Expansion2D::AddHDGHelmholtzEdgeTerms(
             const NekDouble                  tau,
@@ -668,7 +668,8 @@ namespace Nektar
                     StdRegions::MatrixType DerivType[3] = {StdRegions::eWeakDeriv0,
                                                            StdRegions::eWeakDeriv1,
                                                            StdRegions::eWeakDeriv2};
-                    DNekMat LocMat(ncoeffs,ncoeffs); 
+
+                    // DNekMat LocMat(ncoeffs,ncoeffs); // This is never used???
 
                     returnval = MemoryManager<DNekMat>::AllocateSharedPtr(ncoeffs,ncoeffs);
                     DNekMat &Mat = *returnval;
@@ -1087,6 +1088,42 @@ namespace Nektar
                 ASSERTL0(false,"This matrix type cannot be generated from this class");
                 break;
             }
+
+            if ( mkey.GetMatrixType() == StdRegions::eHybridDGHelmBndLam )
+            {
+                std::cout << "\n\neHybridDGHelmBndLam:" << std::endl;
+                std::cout << *returnval << std::endl;
+            }
+
+            if ( mkey.GetMatrixType() == StdRegions::eHybridDGLamToU )
+            {
+                std::cout << "\n\nHybridDGLamToU:" << std::endl;
+                std::cout << *returnval << std::endl;
+            }
+
+            if ( mkey.GetMatrixType() == StdRegions::eHybridDGHelmholtz )
+            {
+                std::cout << "\n\neHybridDGHelmholtz:" << std::endl;
+                std::cout << *returnval << std::endl;
+            }
+
+            StdRegions::MatrixType DerivType[3] = {StdRegions::eWeakDeriv0,
+                                                   StdRegions::eWeakDeriv1,
+                                                   StdRegions::eWeakDeriv2};
+
+            DNekScalMat  &invMass = *GetLocMatrix(StdRegions::eInvMass);
+
+            const int ncoeffs   = GetNcoeffs();
+            DNekMatSharedPtr tmp = MemoryManager<DNekMat>::AllocateSharedPtr(ncoeffs,ncoeffs);
+
+            for(int i = 0;  i < GetCoordim(); ++i)
+            {
+                DNekScalMat &Dmat = *GetLocMatrix(DerivType[i]);
+                (*tmp) = (*tmp) + Dmat*invMass*Transpose(Dmat);
+            }
+
+            std::cout << "\n\nL = D1*inv(M)*D1^T + D2*inv(M)*D2^T: " << std::endl;
+            std::cout << *tmp << std::endl;
             
             return returnval;
         }
@@ -1291,6 +1328,544 @@ namespace Nektar
                 coeffs[map[i]] = vEdgeCoeffs[i]*sign[i];
             }
         }
+
+        /**
+         * @brief Expansion2D::v_AddDWeakDirichletElementContribution
+         *
+         *
+         * @param  edgeid
+         * @return coeffs
+         */
+
+        void Expansion2D::v_AddWeakDirichletElementContribution(const Array<OneD, int>& edgeids, DNekMat &inoutmat)
+        {
+            ASSERTL1(IsBoundaryInteriorExpansion(),
+                     "Not set up for non boundary-interior expansions");
+
+            const int coordim = GetCoordim();
+            const int nElemCoeffs = GetNcoeffs();
+
+            // Tags for weak derivatives
+            const StdRegions::MatrixType DerivType[3] = {StdRegions::eWeakDeriv0,
+                                                         StdRegions::eWeakDeriv1,
+                                                         StdRegions::eWeakDeriv2};
+
+            // Evaluate \tilde{E}
+
+            ExpansionSharedPtr EdgeExp = GetEdgeExp(edgeids[0]);
+            int nquad_e = EdgeExp->GetNumPoints(0);
+
+            int nEdgeCoeffs = EdgeExp->GetNcoeffs();
+
+            Array<OneD, NekDouble> elemCoeffs(nElemCoeffs), phys(GetTotPoints());
+            Array<OneD, NekDouble> edgePhys  (nquad_e);
+            Array<OneD, NekDouble> edgeCoeffs(nEdgeCoeffs);
+
+            DNekMatSharedPtr tildeEMatPtr[2];
+            DNekMatSharedPtr tildeEMatSumPtr[2];
+
+            Array<OneD,unsigned int> map;
+            Array<OneD,int> sign;
+
+            for(int dir = 0; dir < coordim; ++dir)
+            {
+                tildeEMatPtr[dir] = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs, nElemCoeffs);
+                tildeEMatSumPtr[dir] = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs, nElemCoeffs);
+            }
+
+
+            // -------------------------------------------------
+
+            /*
+            // I) Edge mass matrix contribution - first approach
+
+            StdRegions::VarCoeffMap edgeVarCoeffs;
+
+            for(int ie = 0; ie < edgeids.num_elements(); ++ie)
+            {
+                const int iedge = edgeids[ie];
+
+                EdgeExp = GetEdgeExp(iedge);
+                const DNekScalMat &eMass = *EdgeExp->GetLocMatrix(StdRegions::eMass, StdRegions::NullConstFactorMap, edgeVarCoeffs);
+
+                GetEdgeToElementMap(iedge, v_GetEorient(iedge), map, sign);
+
+                nquad_e = EdgeExp->GetNumPoints(0);
+                nEdgeCoeffs = EdgeExp->GetNcoeffs();
+
+
+                for(int i = 0; i < nEdgeCoeffs; ++i)
+                {
+                    for(int j = 0; j < nEdgeCoeffs; ++j)
+                    {
+                        inoutmat(map[i],map[j]) += sign[i]*sign[j]*eMass(i,j);
+                    }
+                }
+            }
+            */
+
+            // -------------------------------------------------
+
+            // I) Edge mass matrix contribution - second approach
+
+            // const DNekScalMat &Mass = *GetLocMatrix(StdRegions::eInvMass);
+
+            for(int ie = 0; ie < edgeids.num_elements(); ++ie)
+            {
+                const int iedge = edgeids[ie];
+
+                EdgeExp = GetEdgeExp(iedge);
+
+                nquad_e = EdgeExp->GetNumPoints(0);
+                nEdgeCoeffs = EdgeExp->GetNcoeffs();
+
+                if ( edgePhys.num_elements() != nquad_e)
+                {
+                    edgePhys = Array<OneD, NekDouble>(nquad_e);
+                }
+
+                if ( edgeCoeffs.num_elements() != nEdgeCoeffs )
+                {
+                    edgeCoeffs = Array<OneD, NekDouble>(nEdgeCoeffs);
+                }
+
+                GetEdgeToElementMap(iedge, v_GetEorient(iedge), map, sign);
+
+                for (int i = 0; i < nElemCoeffs; ++i)
+                {
+                    Vmath::Zero(nElemCoeffs, elemCoeffs, 1);
+                    elemCoeffs[i] = 1.0;
+
+                    BwdTrans(elemCoeffs, phys); // Phys contains values of the i-the mode at all qd. pts?
+                    GetEdgePhysVals(iedge, phys, edgePhys); // Extract values which are nonzero on edge?
+
+                    EdgeExp->IProductWRTBase(edgePhys, edgeCoeffs);
+
+                    // edgeCoeffs forms one row of \tilde{F}^e, hopefully
+
+                    for(int j = 0; j < nEdgeCoeffs; ++j)
+                    {
+                        inoutmat(i,map[j]) += sign[j] * edgeCoeffs[j]; // ???
+                    }
+                 }
+            }
+
+            // -------------------------------------------------
+
+
+            /// Debugging
+            Array<OneD, NekDouble> tmp(inoutmat.GetRows() * inoutmat.GetColumns());
+
+            // II) All other contributions (not mass matrix)
+            for(int ie = 0; ie < edgeids.num_elements(); ++ie)
+            {
+                // std::cout << "**********************************************************" << std::endl;
+
+                const int iedge = edgeids[ie];
+
+                EdgeExp = GetEdgeExp(iedge);
+
+                nquad_e = EdgeExp->GetNumPoints(0);
+                nEdgeCoeffs = EdgeExp->GetNcoeffs();
+
+                if ( edgePhys.num_elements() != nquad_e)
+                {
+                    edgePhys = Array<OneD, NekDouble>(nquad_e);
+                }
+
+                if ( edgeCoeffs.num_elements() != nEdgeCoeffs )
+                {
+                    edgeCoeffs = Array<OneD, NekDouble>(nEdgeCoeffs);
+                }
+
+                GetEdgeToElementMap(iedge, v_GetEorient(iedge), map, sign);
+
+                const Array<OneD, const Array<OneD, NekDouble> > & normals = GetEdgeNormal(iedge);
+                for(int i =0; i < normals.num_elements(); ++i)
+                {
+                    std::cout << "n[" << i << "] =";
+                    for(int j = 0; j < normals[i].num_elements(); ++j)
+                    {
+                        std::cout << " " << normals[i][j];
+                    }
+                    std::cout << std::endl;
+                }
+
+                for(int dir = 0; dir < coordim; ++dir)
+                {
+                    DNekMat& tildeE = *tildeEMatPtr[dir];
+                    DNekMat& sumTildeE = *tildeEMatSumPtr[dir];
+
+                   // Initialize the matrix tildeE
+                   Vmath::Zero(nElemCoeffs*nElemCoeffs,tildeE.GetPtr(),1);
+
+                   Vmath::Zero(tmp.num_elements(),tmp.data(),1);
+
+                    for (int i = 0; i < nElemCoeffs; ++i)
+                    {
+                        Vmath::Zero(nElemCoeffs, elemCoeffs, 1);
+                        elemCoeffs[i] = 1.0;
+
+                        BwdTrans(elemCoeffs, phys); // Phys contains values of the i-the mode at all qd. pts?
+                        GetEdgePhysVals(iedge, phys, edgePhys); // Extract values which are nonzero on edge?
+
+                        // Multiply edgePhys by normal here...
+                        Vmath::Vmul(nquad_e, normals[dir], 1, edgePhys, 1, edgePhys, 1);
+
+                        EdgeExp->IProductWRTBase(edgePhys, edgeCoeffs);
+
+                        // edgeCoeffs forms one row of \tilde{F}^e, hopefully
+
+                        for(int j = 0; j < nEdgeCoeffs; ++j)
+                        {
+                            tildeE(i,map[j]) = sign[j] * edgeCoeffs[j]; // ???
+                        }
+
+                        AddEdgeBoundaryInt(dir, EdgeExp, edgePhys, tmp);
+                     }
+
+                     /*
+                     std::cout << "edge phys =";
+                     for(int i = 0; i < edgePhys.num_elements(); ++i)
+                     {
+                         std::cout << " " << edgePhys[i];
+                     }
+                     */
+                     std::cout << std::endl;
+
+                     std::cout << "tildeE (edge = " << iedge << ", dir = " << dir << "):" << std::endl;
+                     std::cout << tildeE << std::endl;
+
+
+                     std::cout << std::endl << "tmp =";
+
+                     for(int i = 0; i < tmp.num_elements(); ++i)
+                     {
+                         std::cout << " " << tmp[i];
+                     }
+                     std::cout << "\n\n" << std::endl;
+
+                     sumTildeE = sumTildeE + tildeE;
+                } // Loop over dimensions
+
+                //std::cout << "SUM (dim = " << dir << "): " << std::endl;
+                // std::cout << sumTildeE << std::endl;
+                // std::cout << "**********************************************************" << std::endl;
+
+             } // Loop over selected boundary edges
+
+
+            // Compute the actual Laplace term
+            // DNekMatSharedPtr LaplacePtr = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs, nElemCoeffs);
+            // DNekMat& Laplace = *LaplacePtr;
+
+            // Mass matrix
+            const DNekScalMat  &invMass = *GetLocMatrix(StdRegions::eInvMass);
+            DNekMatSharedPtr DmatTPtr = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs,nElemCoeffs);
+            DNekMat& DmatT = (*DmatTPtr);
+
+
+            // Evaluate D_1 * inv(M)
+            // Evaluate D_2 * inv(M)
+            DNekMatSharedPtr weakDGMatPtr[2];
+
+            for(int dim = 0; dim < coordim; ++dim)
+            {
+                weakDGMatPtr[dim] = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs,nElemCoeffs);
+                DNekMat &weakDGMat = *weakDGMatPtr[dim];
+
+                Vmath::Zero(nElemCoeffs*nElemCoeffs,weakDGMat.GetPtr(),1);
+
+                DNekScalMat &Dmat = *GetLocMatrix(DerivType[dim]);
+                DmatT = Transpose(Dmat);
+                const DNekMat& sumTildeE = *tildeEMatSumPtr[dim];
+
+                // Laplace = DmatT * invMass * Dmat;
+                // std::cout << "Laplace matrix:" << std::endl;
+                // std::cout << Laplace << std::endl;
+                weakDGMat = sumTildeE * (invMass * sumTildeE - invMass * Dmat) - DmatT * invMass * sumTildeE;
+
+                // Finally add the contributions to inoutmat
+
+                std::cout << "dim = " << dim << std::endl;
+                std::cout << "nElemCoeffs = " << nElemCoeffs << std::endl;
+                std::cout << "inoutmat dimensions: " << inoutmat.GetRows() << " x " << inoutmat.GetColumns() << std::endl;
+                std::cout << "weakDGMat dimensions: " << weakDGMat.GetRows() << " x " << weakDGMat.GetColumns() << std::endl;
+
+
+                for(int i = 0; i < nElemCoeffs; ++i)
+                {
+                    for(int j = 0; j < nElemCoeffs; ++j)
+                    {
+                        // inoutmat(i,j) += weakDGMat(i,j);
+                    }
+                }
+            }
+
+
+            /// ******************* DEBUGGING ***********************
+
+            std::cout << inoutmat << std::endl;
+
+            Array<OneD, double> A = Array<OneD, double>(inoutmat.GetRows()*inoutmat.GetColumns());
+
+            for(int i = 0; i < inoutmat.GetRows(); ++i)
+            {
+                for(int j = 0; j < inoutmat.GetColumns(); ++j)
+                {
+                    A[i*inoutmat.GetRows()+j] = inoutmat(i,j);
+                }
+            }
+
+            Array<OneD, NekDouble> EigValReal = Array<OneD, NekDouble>(nElemCoeffs);
+            Array<OneD, NekDouble> EigValImag = Array<OneD, NekDouble>(nElemCoeffs);
+
+
+            FullMatrixFuncs::EigenSolve(inoutmat.GetRows(),A, EigValReal, EigValImag);
+
+            std::cout << "Local matrix contribution eigenvalues:" << std::endl;
+            for(int i = 0; i < EigValReal.num_elements(); ++i)
+            {
+                std::cout << EigValReal[i] << " ";
+            }
+            std::cout << std::endl;
+
+            /*
+            std::cout << "*************************************************************" << std::endl;
+            for(int i = 0; i < inoutmat.GetRows(); ++i)
+            {
+                std::cout << "[" << inoutmat(i,inoutmat.GetRows()-1) << "] [" << inoutmat(inoutmat.GetRows()-1, i) << "]" << std::endl;
+            }
+            */
+
+            std::cout << "Laplace matrix: " << std::endl;
+            const DNekScalMat  &Laplacian = *GetLocMatrix(StdRegions::eLaplacian);
+            std::cout << Laplacian << std::endl;
+        }
+
+
+        /**
+         * @brief Expansion2D::v_AddWeakDirichletForcingContribution: evaluate -D_1*inv(M) * \sum(\tilde{F}_1 * \lambda)
+         *                                                                 and -D_2*inv(M) * \sum(\tilde{F}_2 * \lambda)
+         *                                                            summation is performed over edges specified by the
+         *                                                            edgeids parameter
+         * @param  edgeids    ... array of local edge ids which contribute to the weak BC
+         * @param  lambda     ... Dirichlet values on boundary: each array holds values for one edge on
+         *                        which the boundary condition should be imposed
+         *                        lambda must have the same size as edgeids
+         * @return coeffs     ... coeficients representing forcing values due to weakly imposed BC
+         *                        coeffs should be added to the RHS of linear system
+         */
+
+        void Expansion2D::v_AddWeakDirichletForcingContribution(const Array<OneD, int>& edgeids,
+                                                                const Array<OneD, Array<OneD, const NekDouble> >& lambda,
+                                                                Array<OneD, NekDouble> &coeffs)
+        {
+
+            ASSERTL1(IsBoundaryInteriorExpansion(),
+                     "Not set up for non boundary-interior expansions");
+
+            const int coordim = GetCoordim();
+            const int nElemCoeffs = GetNcoeffs();
+
+            // Tags for weak derivatives
+            const StdRegions::MatrixType DerivType[3] = {StdRegions::eWeakDeriv0,
+                                                         StdRegions::eWeakDeriv1,
+                                                         StdRegions::eWeakDeriv2};
+
+#if 0
+            // Evaluate \tilde{F} - version 1
+
+            const int edgeid = 0;
+
+            // Evaluate \tilde{F} - version 1
+            // IS edgeid LOCAL or GLOBAL ID???
+
+            // Find the position in inarray where to start copying
+            // expansion coefficients by counting how many entries
+            // are occupied by all edges preceding edge_id
+            int offset = 0;
+            for(int e = 0; e < edgeid; ++e)
+            {
+                const int order_e = GetEdgeExp(e)->GetNcoeffs();
+                offset += order_e;
+            }
+
+            // Number of quadrature points and order of current edge
+            ExpansionSharedPtr EdgeExp = GetEdgeExp(edgeid);
+            const int nquad_e = EdgeExp->GetNumPoints(0);
+            const int n_edge_coeffs = EdgeExp->GetNcoeffs();
+
+            Array<OneD, NekDouble> edgePrimCoeffs(n_edge_coeffs);
+            Array<OneD, NekDouble> edgePhys  (nquad_e);
+            Array<OneD, NekDouble> edgePhysBuffer (nquad_e);
+
+            for(int i = 0; i < n_edge_coeffs; ++i)
+            {
+                edgePrimCoeffs[i] = primCoeffs[offset+i];
+            }
+
+            EdgeExp->BwdTrans(edgePrimCoeffs, edgePhys);
+
+            // This is a vector of vectors: stores edge normal at each quadrature point
+            const Array<OneD, const Array<OneD, NekDouble> > & normals = GetEdgeNormal(edgeid);
+            Array<OneD,NekDouble> f(n_elem_coeffs);
+
+            // Vmath::Zero(ncoeffs, coeffs, 1);
+
+            for(int dir = 0; dir < coordim; ++dir)
+            {
+                Vmath::Zero(nquad_e, edgePhysBuffer,1 );
+                Vmath::Zero(n_elem_coeffs, f, 1);
+
+                Vmath::Vmul(nquad_e, normals[dir], 1, edgePhys, 1, edgePhysBuffer, 1);
+
+                if (m_negatedNormals[edgeid])
+                {
+                    Vmath::Neg(nquad_e, edgePhysBuffer, 1);
+                }
+
+                /// @TODO: Maybe real varcoeffs should be used instead of a dummy map???
+                AddEdgeBoundaryInt(edgeid, EdgeExp, edgePhysBuffer, f, StdRegions::NullVarCoeffMap);
+            }
+#endif
+
+            // Evaluate \tilde{F} - version 2
+
+            ExpansionSharedPtr EdgeExp = GetEdgeExp(edgeids[0]);
+            int nquad_e = EdgeExp->GetNumPoints(0);
+
+            int nEdgeCoeffs = EdgeExp->GetNcoeffs();
+
+            Array<OneD, NekDouble> elemCoeffs(nElemCoeffs), phys(GetTotPoints());
+            Array<OneD, NekDouble> edgePhys  (nquad_e);
+            Array<OneD, NekDouble> edgeCoeffs(nEdgeCoeffs);
+
+            DNekMatSharedPtr tildeFMatPtr[2];
+            DNekMatSharedPtr tildeFMatSumPtr[2];
+
+            Array<OneD,unsigned int> map;
+            Array<OneD,int> sign;
+
+            Array<OneD, NekDouble> tildeFTimesLambda[2] = { Array<OneD, NekDouble>(nElemCoeffs),
+                                                            Array<OneD, NekDouble>(nElemCoeffs) };
+
+            Vmath::Zero(nElemCoeffs, tildeFTimesLambda[0], 1);
+            Vmath::Zero(nElemCoeffs, tildeFTimesLambda[1], 1);
+
+            Array<OneD, NekDouble> work0(nElemCoeffs);
+            Array<OneD, NekDouble> work1(nElemCoeffs);
+
+            for(int dir = 0; dir < coordim; ++dir)
+            {
+                tildeFMatPtr[dir] = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs, nEdgeCoeffs);
+                tildeFMatSumPtr[dir] = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs, nEdgeCoeffs);
+
+                DNekMat& tildeF = *tildeFMatPtr[dir];
+
+                for(int ie = 0; ie < edgeids.num_elements(); ++ie)
+                {
+                    const int iedge = edgeids[ie];
+
+                    EdgeExp = GetEdgeExp(iedge);
+
+                    nEdgeCoeffs = EdgeExp->GetNcoeffs();
+                    if ( edgeCoeffs.num_elements() != nEdgeCoeffs )
+                    {
+                        edgeCoeffs = Array<OneD, NekDouble>(nEdgeCoeffs);
+                    }
+
+                    GetEdgeToElementMap(iedge, v_GetEorient(iedge), map, sign);
+
+                    // Initialize the matrix tildeF
+                    Vmath::Zero(nElemCoeffs*nElemCoeffs,tildeF.GetPtr(),1);
+
+                    const Array<OneD, const Array<OneD, NekDouble> > & normals = GetEdgeNormal(iedge);
+
+                    for (int i = 0; i < nElemCoeffs; ++i)
+                    {
+                        Vmath::Zero(nElemCoeffs, elemCoeffs, 1);
+                        elemCoeffs[i] = 1.0;
+
+                        BwdTrans(elemCoeffs, phys); // Phys contains values of the i-the mode at all qd. pts?
+                        GetEdgePhysVals(iedge, phys, edgePhys); // Extract values which are nonzero on edge?
+
+                        // Multiply edgePhys by normal here...
+                        Vmath::Vmul(nquad_e, normals[dir], 1, edgePhys, 1, edgePhys, 1);
+
+                        EdgeExp->IProductWRTBase(edgePhys, edgeCoeffs);
+
+                        // edgeCoeffs forms one row of \tilde{F}^e, hopefully
+
+                        for(int j = 0; j < nEdgeCoeffs; ++j)
+                        {
+                            tildeF(i,j) = sign[j] * edgeCoeffs[j]; // ???
+                        }
+                     }
+
+                     // Nektar uses column-major storage, lda = number of matrix rows
+                     Blas::Dgemv('N', nElemCoeffs, nEdgeCoeffs, 1.0, &(tildeF.GetPtr())[0],
+                                      nElemCoeffs, &lambda[ie][0], 1, 1, &work0[0], 1 );
+
+                     // Accumulate work to tildeFTimesLambda
+                     Vmath::Vadd(nElemCoeffs, &tildeFTimesLambda[dir][0], 1, &work0[0], 1, &tildeFTimesLambda[dir][0], 1);
+                }
+                // Loop over selected boundary edges
+             }
+            // Loop over dimensions
+
+
+            // Mass matrix
+            const DNekScalMat &invMass = *GetLocMatrix(StdRegions::eInvMass);
+
+            // Evaluate D * inv(M) * ( sum( F * lambda )
+            if ( coeffs.num_elements() != nElemCoeffs )
+            {
+                coeffs = Array<OneD, NekDouble>(nElemCoeffs);
+            }
+
+            Vmath::Zero(nElemCoeffs, &coeffs[0], 1);
+
+            for(int dim = 0; dim < coordim; ++dim)
+            {
+                DNekScalMat &Dmat = *GetLocMatrix(DerivType[dim]);
+
+                // work0 = invMass * tildeFTimesLambda
+                Blas::Dgemv('N', nElemCoeffs, nEdgeCoeffs, 1.0, (invMass.GetOwnedMatrix())->GetPtr().get(),
+                        nElemCoeffs, &tildeFTimesLambda[dim][0], 1, 1, &work0[0], 1 );
+
+                // work1 = D * work0 = D * invMass * tildeFTimesLambda
+                Blas::Dgemv('N', nElemCoeffs, nEdgeCoeffs, 1.0, (Dmat.GetOwnedMatrix())->GetPtr().get(),
+                                 nElemCoeffs, &work0[0], 1, 1, &work1[0], 1 );
+
+                // coeffs += work1
+                Vmath::Vadd(nElemCoeffs, &work1[0], 1, &coeffs[0], 1, &coeffs[0], 1);
+            }
+
+            // DAVE:
+
+            /*
+            Array<OneD, NekDouble> coeffs(m_ncoeffs), phys(GetTotPoints());
+            Array<OneD, NekDouble> edgePhys(EdgeExp->GetNumPoints(0));
+            Array<OneD, NekDouble> edgeCoeffs(EdgeExp->GetNcoeffs());
+            for (int i = 0; i < m_ncoeffs; ++i)
+            {
+                Vmath::Zero(m_ncoeffs, coeffs, 1);
+                coeffs[i] = 1.0;
+                BwdTrans(coeffs, phys);
+                GetEdgePhysVals(edgeid, phys, edgePhys);
+
+                // Multiply edgephys by normal here...
+
+                EdgeExp->IProductWRTBase(edgePhys, edgeCoeffs);
+
+                // edgeCoeffs forms one row of \tilde{F}^e, hopefully
+             }
+             */
+
+        }
+
+
 
         DNekMatSharedPtr Expansion2D::v_BuildVertexMatrix(
             const DNekScalMatSharedPtr &r_bnd)

@@ -250,6 +250,12 @@ namespace Nektar
                return GetBndConditions();
            }
 
+           /// @todo Fix weak Dirichlet BCs for homogeneous case
+           virtual std::map<int, WeakDirichletBCInfoSharedPtr> v_GetWeakDirichletBCInfo()
+           {
+               return std::map<int, WeakDirichletBCInfoSharedPtr>();
+           }
+
            /// @todo Fix Robin BCs for homogeneous case
            virtual std::map<int, RobinBCInfoSharedPtr> v_GetRobinBCInfo()
            {

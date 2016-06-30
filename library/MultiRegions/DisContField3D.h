@@ -260,6 +260,8 @@ namespace Nektar
                 const NekDouble   x2_in   = NekConstants::kNekUnsetDouble,
                 const NekDouble   x3_in   = NekConstants::kNekUnsetDouble);
 
+            virtual std::map<int, WeakDirichletBCInfoSharedPtr> v_GetWeakDirichletBCInfo();
+
             virtual std::map<int, RobinBCInfoSharedPtr> v_GetRobinBCInfo();
         };
 

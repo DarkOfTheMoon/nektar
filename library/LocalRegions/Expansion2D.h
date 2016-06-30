@@ -173,6 +173,14 @@ namespace Nektar
                 const Array<OneD, const NekDouble> &primCoeffs,
                 Array<OneD, NekDouble> &coeffs);
 
+            virtual void v_AddWeakDirichletElementContribution(
+			    const Array<OneD, int>& edgeids, DNekMat &inoutmat);
+
+            virtual void v_AddWeakDirichletForcingContribution(
+                 const Array<OneD, int>& edgeids,
+                 const Array<OneD, Array<OneD, const NekDouble> >& lambda,
+                 Array<OneD, NekDouble> &coeffs);
+
             virtual DNekMatSharedPtr v_BuildVertexMatrix(
                 const DNekScalMatSharedPtr &r_bnd); 
 

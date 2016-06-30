@@ -359,6 +359,80 @@ namespace Nektar
                             }
                         }
                     }
+                    else if (conditionType == "WD")
+                    {
+                        if (attrData.empty())
+                        {
+                            // All variables are Dirichlet and are set to zero.
+                            for (std::vector<std::string>::iterator varIter = vars.begin();
+                                varIter != vars.end(); ++varIter)
+                            {
+                                BoundaryConditionShPtr weakDirichletCondition(MemoryManager<WeakDirichletBoundaryCondition>::AllocateSharedPtr(m_session, "0"));
+                                (*boundaryConditions)[*varIter] = weakDirichletCondition;
+                            }
+                        }
+                        else
+                        {
+                            // Use the iterator from above, which must point to the variable.
+                            attr = attr->Next();
+
+                            if (attr)
+                            {
+                                std::string equation, userDefined, filename;
+
+                                while(attr)
+                                {
+                                   attrName = attr->Name();
+
+                                   if (attrName=="USERDEFINEDTYPE") {
+
+                                       // Do stuff for the user defined attribute
+                                       attrData = attr->Value();
+                                       ASSERTL0(!attrData.empty(), "USERDEFINEDTYPE attribute must have associated value.");
+
+                                       m_session->SubstituteExpressions(attrData);
+
+                                       userDefined = attrData;
+                                       isTimeDependent = boost::iequals(attrData,"TimeDependent");
+                                   }
+                                   else if(attrName=="VALUE")
+                                   {
+                                       attrData = attr->Value();
+                                       ASSERTL0(!attrData.empty(), "VALUE attribute must have associated value.");
+
+                                       m_session->SubstituteExpressions(attrData);
+
+                                       equation = attrData;
+                                   }
+                                   else if(attrName=="FILE")
+                                   {
+                                       attrData = attr->Value();
+                                       ASSERTL0(!attrData.empty(), "FILE attribute must be specified.");
+
+                                       m_session->SubstituteExpressions(attrData);
+
+                                       filename = attrData;
+                                   }
+                                   else
+                                   {
+                                       ASSERTL0(false,
+                                                (std::string("Unknown boundary condition attribute: ") + attrName).c_str());
+                                   }
+                                   attr = attr->Next();
+                                }
+
+                                BoundaryConditionShPtr weakDirichletCondition(MemoryManager<WeakDirichletBoundaryCondition>::AllocateSharedPtr(m_session, equation, userDefined, filename));
+                                weakDirichletCondition->SetIsTimeDependent(isTimeDependent);
+                                (*boundaryConditions)[*iter]  = weakDirichletCondition;
+                            }
+                            else
+                            {
+                                // This variable's condition is zero.
+                                BoundaryConditionShPtr weakDirichletCondition(MemoryManager<WeakDirichletBoundaryCondition>::AllocateSharedPtr(m_session, "0"));
+                                (*boundaryConditions)[*iter]  = weakDirichletCondition;
+                            }
+                        }
+                    }
                     else if (conditionType == "R") // Read du/dn +  PRIMCOEFF u = VALUE
                     {
                         if (attrData.empty())

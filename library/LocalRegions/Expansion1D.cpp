@@ -398,6 +398,18 @@ namespace Nektar
             Vmath::Zero(GetNcoeffs(), coeffs, 1);
             coeffs[map] = primCoeffs[0];
         }
+
+        void Expansion1D::v_AddWeakDirichletElementContribution(const Array<OneD, int>& edgeids,
+                                                                DNekMat &inoutmat)
+        {
+        }
+
+        void Expansion1D::v_AddWeakDirichletForcingContribution(const Array<OneD, int>& edgeids,
+                                                                const Array<OneD, Array<OneD, const NekDouble> >& lambda,
+                                                                Array<OneD, NekDouble> &coeffs)
+        {
+        }
+
     } //end of namespace
 } //end of namespace
 
