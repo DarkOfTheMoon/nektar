@@ -36,6 +36,8 @@
 #ifndef NEKMESHUTILS_MESHELEMENTS_MESH
 #define NEKMESHUTILS_MESHELEMENTS_MESH
 
+#include <LibUtilities/Communication/Comm.h>
+
 #include <NekMeshUtils/NekMeshUtilsDeclspec.h>
 #include <NekMeshUtils/MeshElements/Element.h>
 #include <NekMeshUtils/MeshElements/Composite.h>
@@ -123,6 +125,8 @@ public:
     std::set<std::pair<int, int> >  m_spherigonSurfs;
     /// List of face labels for composite annotation
     std::map<int, std::string>      m_faceLabels;
+    /// Communicator
+    LibUtilities::CommSharedPtr     m_comm;
 
     /// Returns the total number of elements in the mesh with
     /// dimension expDim.

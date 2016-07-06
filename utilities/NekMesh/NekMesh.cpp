@@ -162,6 +162,17 @@ int main(int argc, char* argv[])
     vector<ModuleSharedPtr> modules;
     vector<string>          modcmds;
 
+    if (Nektar::LibUtilities::GetCommFactory().ModuleExists("ParallelMPI"))
+    {
+        mesh->m_comm = Nektar::LibUtilities::GetCommFactory().CreateInstance(
+            "ParallelMPI", argc, argv);
+    }
+    else
+    {
+        mesh->m_comm = Nektar::LibUtilities::GetCommFactory().CreateInstance(
+            "Serial", argc, argv);
+    }
+
     if (vm.count("verbose"))
     {
         mesh->m_verbose = true;

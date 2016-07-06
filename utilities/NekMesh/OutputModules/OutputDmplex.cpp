@@ -80,10 +80,13 @@ OutputDmplex::~OutputDmplex()
 
 void OutputDmplex::Process()
 {
-    // We'll set up MPI
-    CommSharedPtr comm =
-        GetCommFactory().CreateInstance("ParallelMPI", 0, NULL);
-    CommMpiSharedPtr mpi = boost::dynamic_pointer_cast<CommMpi>(comm);
+    CommMpiSharedPtr mpi = boost::dynamic_pointer_cast<CommMpi>(m_mesh->m_comm);
+
+    if (!mpi)
+    {
+        cerr << "DMPlex output requires MPI" << endl;
+        abort();
+    }
 
     // And then the PETSc environment
     {
@@ -308,8 +311,7 @@ void OutputDmplex::Process()
         // Extract the output filename and extension
         doc.SaveFile(m_config["outfile"].as<string>());
 
-    } // Petsc shutdown here.
-    comm->Finalise();
+    }
 }
 }
 }

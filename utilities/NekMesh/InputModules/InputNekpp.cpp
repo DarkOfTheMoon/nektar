@@ -70,7 +70,8 @@ void InputNekpp::Process()
     filename.push_back(m_config["infile"].as<string>());
 
     LibUtilities::SessionReaderSharedPtr pSession =
-        LibUtilities::SessionReader::CreateInstance(0, NULL, filename);
+        LibUtilities::SessionReader::CreateInstance(
+            0, NULL, filename, m_mesh->m_comm);
     SpatialDomains::MeshGraphSharedPtr graph =
         SpatialDomains::MeshGraph::Read(pSession);
 
