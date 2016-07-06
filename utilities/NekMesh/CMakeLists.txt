@@ -11,6 +11,8 @@ SET(NekMeshHeaders
     OutputModules/OutputNekpp.h
     OutputModules/OutputXmlBase.h
     ProcessModules/ProcessBL.h
+    ProcessModules/ProcessCurve.h
+    ProcessModules/ProcessCurvedEdges.h
     ProcessModules/ProcessCyl.h
     ProcessModules/ProcessDetectSurf.h
     ProcessModules/ProcessExtractSurf.h
@@ -38,6 +40,8 @@ SET(NekMeshSources
     OutputModules/OutputNekpp.cpp
     OutputModules/OutputXmlBase.cpp
     ProcessModules/ProcessBL.cpp
+    ProcessModules/ProcessCurve.cpp
+    ProcessModules/ProcessCurvedEdges.cpp
     ProcessModules/ProcessCyl.cpp
     ProcessModules/ProcessDetectSurf.cpp
     ProcessModules/ProcessExtractSurf.cpp
@@ -107,6 +111,7 @@ ENDIF (NEKTAR_USE_VTK)
 ADD_NEKTAR_TEST        (Nektar++/InvalidTetFace)
 ADD_NEKTAR_TEST        (Nektar++/Tube45Refinement)
 ADD_NEKTAR_TEST        (Nektar++/Tube45Refinement_extractsurf)
+ADD_NEKTAR_TEST        (Nektar++/CylQuadBl)
 # Gmsh tests
 ADD_NEKTAR_TEST        (Gmsh/CubeAllElements)
 ADD_NEKTAR_TEST        (Gmsh/CubeHex)
