@@ -41,6 +41,8 @@
 #include <petscviewerhdf5.h>
 #include <tinyxml.h>
 
+using namespace std;
+
 using Nektar::LibUtilities::GetCommFactory;
 using Nektar::LibUtilities::CommSharedPtr;
 using Nektar::LibUtilities::CommMpiSharedPtr;
