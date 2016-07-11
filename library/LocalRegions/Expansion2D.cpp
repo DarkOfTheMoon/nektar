@@ -1115,15 +1115,25 @@ namespace Nektar
 
             const int ncoeffs   = GetNcoeffs();
             DNekMatSharedPtr tmp = MemoryManager<DNekMat>::AllocateSharedPtr(ncoeffs,ncoeffs);
+            Vmath::Zero((*tmp).GetRows() * (*tmp).GetColumns(), (*tmp).GetRawPtr(), 1);
+
 
             for(int i = 0;  i < GetCoordim(); ++i)
             {
                 DNekScalMat &Dmat = *GetLocMatrix(DerivType[i]);
-                (*tmp) = (*tmp) + Dmat*invMass*Transpose(Dmat);
+                (*tmp) = (*tmp) + Transpose(Dmat)*invMass*Dmat;
             }
 
-            std::cout << "\n\nL = D1*inv(M)*D1^T + D2*inv(M)*D2^T: " << std::endl;
+            std::cout << "\n\nL = D1^T*inv(M)*D1 + D2^T*inv(M)*D2: " << std::endl;
             std::cout << *tmp << std::endl;
+
+            std::cout << "\neLaplacian = " << std::endl;
+            std::cout << *GetLocMatrix(StdRegions::eLaplacian) << std::endl;
+            std::cout << "\n\n" << std::endl;
+
+            MatrixKey lapkey(StdRegions::eLaplacian, DetShapeType(), *this, mkey.GetConstFactors(), mkey.GetVarCoeffs());
+            DNekScalMat  &LapMat = *GetLocMatrix(lapkey);
+            std::cout << LapMat << std::endl;
             
             return returnval;
         }
@@ -1371,13 +1381,15 @@ namespace Nektar
             {
                 tildeEMatPtr[dir] = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs, nElemCoeffs);
                 tildeEMatSumPtr[dir] = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs, nElemCoeffs);
+
+                Vmath::Zero(nElemCoeffs * nElemCoeffs, (*tildeEMatSumPtr[dir]).GetRawPtr(), 1);
             }
 
 
             // -------------------------------------------------
 
             /*
-            // I) Edge mass matrix contribution - first approach
+            // Ia) Edge mass matrix contribution - first approach
 
             StdRegions::VarCoeffMap edgeVarCoeffs;
 
@@ -1406,10 +1418,11 @@ namespace Nektar
 
             // -------------------------------------------------
 
-            // I) Edge mass matrix contribution - second approach
+            // Ib) Edge mass matrix contribution - second approach
 
             // const DNekScalMat &Mass = *GetLocMatrix(StdRegions::eInvMass);
 
+            /*
             for(int ie = 0; ie < edgeids.num_elements(); ++ie)
             {
                 const int iedge = edgeids[ie];
@@ -1449,12 +1462,13 @@ namespace Nektar
                     }
                  }
             }
+            */
 
             // -------------------------------------------------
 
 
             /// Debugging
-            Array<OneD, NekDouble> tmp(inoutmat.GetRows() * inoutmat.GetColumns());
+            //Array<OneD, NekDouble> tmp(inoutmat.GetRows() * inoutmat.GetColumns());
 
             // II) All other contributions (not mass matrix)
             for(int ie = 0; ie < edgeids.num_elements(); ++ie)
@@ -1499,7 +1513,7 @@ namespace Nektar
                    // Initialize the matrix tildeE
                    Vmath::Zero(nElemCoeffs*nElemCoeffs,tildeE.GetPtr(),1);
 
-                   Vmath::Zero(tmp.num_elements(),tmp.data(),1);
+                   //Vmath::Zero(tmp.num_elements(),tmp.data(),1);
 
                     for (int i = 0; i < nElemCoeffs; ++i)
                     {
@@ -1521,7 +1535,7 @@ namespace Nektar
                             tildeE(i,map[j]) = sign[j] * edgeCoeffs[j]; // ???
                         }
 
-                        AddEdgeBoundaryInt(dir, EdgeExp, edgePhys, tmp);
+                        //AddEdgeBoundaryInt(dir, EdgeExp, edgePhys, tmp);
                      }
 
                      /*
@@ -1536,7 +1550,7 @@ namespace Nektar
                      std::cout << "tildeE (edge = " << iedge << ", dir = " << dir << "):" << std::endl;
                      std::cout << tildeE << std::endl;
 
-
+                     /*
                      std::cout << std::endl << "tmp =";
 
                      for(int i = 0; i < tmp.num_elements(); ++i)
@@ -1544,6 +1558,7 @@ namespace Nektar
                          std::cout << " " << tmp[i];
                      }
                      std::cout << "\n\n" << std::endl;
+                     */
 
                      sumTildeE = sumTildeE + tildeE;
                 } // Loop over dimensions
@@ -1573,6 +1588,7 @@ namespace Nektar
             {
                 weakDGMatPtr[dim] = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs,nElemCoeffs);
                 DNekMat &weakDGMat = *weakDGMatPtr[dim];
+                Vmath::Zero(nElemCoeffs * nElemCoeffs, weakDGMat.GetRawPtr(), 1);
 
                 Vmath::Zero(nElemCoeffs*nElemCoeffs,weakDGMat.GetPtr(),1);
 
@@ -1585,19 +1601,18 @@ namespace Nektar
                 // std::cout << Laplace << std::endl;
                 weakDGMat = sumTildeE * (invMass * sumTildeE - invMass * Dmat) - DmatT * invMass * sumTildeE;
 
-                // Finally add the contributions to inoutmat
-
                 std::cout << "dim = " << dim << std::endl;
                 std::cout << "nElemCoeffs = " << nElemCoeffs << std::endl;
                 std::cout << "inoutmat dimensions: " << inoutmat.GetRows() << " x " << inoutmat.GetColumns() << std::endl;
                 std::cout << "weakDGMat dimensions: " << weakDGMat.GetRows() << " x " << weakDGMat.GetColumns() << std::endl;
 
+                // Finally add the contributions to inoutmat
 
                 for(int i = 0; i < nElemCoeffs; ++i)
                 {
                     for(int j = 0; j < nElemCoeffs; ++j)
                     {
-                        // inoutmat(i,j) += weakDGMat(i,j);
+                        inoutmat(i,j) += weakDGMat(i,j);
                     }
                 }
             }
