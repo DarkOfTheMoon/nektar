@@ -1243,27 +1243,27 @@ namespace Nektar
         {
             int nq = GetTotPoints();
             
-            // Calculate sqrt of the Jacobian
+            // Calculate Jacobian
             Array<OneD, const NekDouble> jac = 
                                     m_metricinfo->GetJac(GetPointsKeys());
-            Array<OneD, NekDouble> sqrt_jac(nq);
+            Array<OneD, NekDouble> Jac(nq);
             if (m_metricinfo->GetGtype() == SpatialDomains::eDeformed)
             {
-                Vmath::Vsqrt(nq,jac,1,sqrt_jac,1);
+                Vmath::Vcopy(nq,jac,1,Jac,1);
             }
             else
             {
-                Vmath::Fill(nq,sqrt(jac[0]),sqrt_jac,1);
+                Vmath::Fill(nq,jac[0],Jac,1);
             }
             
             // Multiply array by sqrt(Jac)
-            Vmath::Vmul(nq,sqrt_jac,1,array,1,array,1);
+            Vmath::Vmul(nq,Jac,1,array,1,array,1);
             
             // Apply std region filter
             StdHexExp::v_SVVLaplacianFilter( array, mkey);
             
             // Divide by sqrt(Jac)
-            Vmath::Vdiv(nq,array,1,sqrt_jac,1,array,1);
+            //Vmath::Vdiv(nq,array,1,sqrt_jac,1,array,1);
         }
 
         //-----------------------------

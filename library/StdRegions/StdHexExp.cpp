@@ -2390,24 +2390,11 @@ namespace Nektar
             
             Array<OneD, NekDouble> orthocoeffs(OrthoExp.GetNcoeffs()); 
             int i,j,k;
-            
-            int cutoff = (int) (mkey.GetConstFactor(eFactorSVVCutoffRatio)*min(nmodes_a,nmodes_b));
+
             NekDouble  SvvDiffCoeff  = mkey.GetConstFactor(eFactorSVVDiffCoeff);
             
             // project onto modal  space.
             OrthoExp.FwdTrans(array,orthocoeffs);
-            
-
-            //  Filter just trilinear space
-            int nmodes = max(nmodes_a,nmodes_b);
-            nmodes = max(nmodes,nmodes_c);
-
-            Array<OneD, NekDouble> fac(nmodes,1.0);
-            for(j = cutoff; j < nmodes; ++j)
-            {
-                fac[j] = fabs((j-nmodes)/((NekDouble) (j-cutoff+1.0)));
-                fac[j] *= fac[j]; //added this line to conform with equation
-            }
 
             for(i = 0; i < nmodes_a; ++i)
             {
@@ -2415,21 +2402,17 @@ namespace Nektar
                 {
                     for(k =  0; k < nmodes_c; ++k)
                     {
-                        if((i >= cutoff)||(j >= cutoff)||(k >= cutoff))
-                        {
-                            orthocoeffs[i*nmodes_a*nmodes_b + j*nmodes_c + k] *= (SvvDiffCoeff*exp( -(fac[i]+fac[j]+fac[k]) ));
-                        }
-                        else
-                        {
-                            orthocoeffs[i*nmodes_a*nmodes_b + j*nmodes_c + k] *= 0.0;
-                        }
+                        NekDouble fac = std::max( pow((1.0*i)/(nmodes_a-1),(nmodes_a-1)/2),
+                                                  pow((1.0*j)/(nmodes_b-1),(nmodes_b-1)/2));
+                        fac = std::max (fac, pow((1.0*k)/(nmodes_c-1),(nmodes_c-1)/2));
+                        orthocoeffs[i*nmodes_a*nmodes_b + j*nmodes_c + k] *=
+                                SvvDiffCoeff * fac;
                     }
                 }
             }
-            
             // backward transform to physical space
             OrthoExp.BwdTrans(orthocoeffs,array);
-        }                        
+        }
     }
 }
 
