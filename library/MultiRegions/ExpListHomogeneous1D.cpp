@@ -258,19 +258,25 @@ namespace Nektar
         void ExpListHomogeneous1D::v_FwdTrans(const Array<OneD, const NekDouble> &inarray, Array<OneD, NekDouble> &outarray, CoeffState coeffstate )
         {
             int cnt = 0, cnt1 = 0;
+            Array<OneD, NekDouble> in;
             Array<OneD, NekDouble> tmparray;
-            
+
+            if(!m_WaveSpace)
+            {
+                in = Array<OneD, NekDouble> (inarray.num_elements());
+                HomogeneousFwdTrans(inarray,in);
+            }
+            else
+            {
+                in = inarray;
+            }
             for(int n = 0; n < m_planes.num_elements(); ++n)
             {
-                m_planes[n]->FwdTrans(inarray+cnt, tmparray = outarray + cnt1,
+                m_planes[n]->FwdTrans(in+cnt, tmparray = outarray + cnt1,
                                       coeffstate);
                 cnt   += m_planes[n]->GetTotPoints();
                 
                 cnt1  += m_planes[n]->GetNcoeffs(); // need to skip ncoeffs
-            }
-            if(!m_WaveSpace)
-            {
-                HomogeneousFwdTrans(outarray,outarray,coeffstate);
             }
         }
 
