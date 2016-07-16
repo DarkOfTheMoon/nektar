@@ -9,6 +9,7 @@
 #include <LibUtilities/BasicUtils/NekFactory.hpp>
 #include <LibUtilities/LibUtilitiesDeclspec.h>
 #include <LibUtilities/Polylib/Polylib.h>
+#include <LibUtilities/LinearAlgebra/NekMatrixFwd.hpp>
 #include <LibUtilities/FoundationsNew/ShapeTypes.hpp>
 #include <LibUtilities/FoundationsNew/PointsTypes.hpp>
 
@@ -34,32 +35,51 @@ class PointsKey
 
 /**
  * @class PointsBase
- * @brief Points base class defining interface and data members
+ * @brief Points base class defining interface and data members.
+ *
+ * A points distribution may be multi-dimensional and may be a composite of two
+ * or three constituent point distributions, combined in a tensor-product
+ * fashion, but conditional that the overall dimension must be less than 3.
  */
 template<typename TData>
 class PointsBase
 {
+        typedef boost::shared_ptr<NekMatrix<TData> > MatrixType;
+
     public:
-        virtual ~PointsBase()
-        {
+        /**
+         * @brief Destructor
+         */
+        virtual ~PointsBase() {}
 
-        }
 
+        /**
+         * @brief Get the number of points in this distribution
+         */
         inline unsigned int GetNumPoints() const
         {
             return m_key.m_numpoints[0];
         }
 
-        virtual const Array<OneD, const TData> GetZ(const int& i = 0)
+        /**
+         * @brief Get the coordinates of one of the component point distributions
+         */
+        inline const Array<OneD, const TData> GetZ(const int& i = 0)
         {
-            return m_points[0];
+            return v_GetZ(i);
         }
 
+        /**
+         * @brief Get the quadrature weights
+         */
         inline const Array<OneD, const TData>& GetW()
         {
             return m_weights;
         }
 
+        /**
+         *
+         */
         inline void GetZW(Array<OneD, const TData> &z,
             Array<OneD, const TData> &w) const
         {
@@ -67,11 +87,17 @@ class PointsBase
             w = m_weights;
         }
 
+        /**
+         *
+         */
         inline void GetPoints(Array<OneD, const TData> &x) const
         {
             x = m_points[0];
         }
 
+        /**
+         *
+         */
         inline void GetPoints(Array<OneD, const TData> &x,
                               Array<OneD, const TData> &y) const
         {
@@ -79,6 +105,9 @@ class PointsBase
             y = m_points[1];
         }
 
+        /**
+         *
+         */
         inline void GetPoints(Array<OneD, const TData> &x,
                               Array<OneD, const TData> &y,
                               Array<OneD, const TData> &z) const
@@ -88,10 +117,22 @@ class PointsBase
             z = m_points[2];
         }
 
+        /**
+         *
+         */
+        inline MatrixType GetInterpMatrix(
+                const Array<OneD, const TData>& pts, const int npts = 1 )
+        {
+            NekDouble* t = v_GetInterpMatrix(npts, pts).data();
+            MatrixType returnval(MemoryManager<NekMatrix<NekDouble> >::AllocateSharedPtr(npts,GetNumPoints(),t));
+
+            return returnval;
+        }
+
     protected:
-        Array<OneD, TData> m_points[3]; // x, y, z coordinates
-        Array<OneD, TData> m_weights;
-        PointsKey m_key;
+        Array<OneD, TData> m_points[3]; /// x, y, z coordinates of points
+        Array<OneD, TData> m_weights;   /// Integration weights
+        PointsKey m_key;                /// Defines number of points
 
         PointsBase(const PointsKey& pKey) {m_key = pKey;}
         PointsBase() {}
@@ -120,6 +161,14 @@ class PointsBase
             m_weights = Array<OneD, TData>(npts);
         }
 
+    private:
+        virtual const Array<OneD, const TData> v_GetZ(const int& i)
+        {
+            ASSERTL1(i == 0, "Only 0 is valid for fundamental types.");
+            return m_points[0];
+        }
+
+        virtual Array<OneD, TData> v_GetInterpMatrixData(const int& npts, const Array<OneD, const TData>& pts) = 0;
 };
 
 template<typename TData>
@@ -150,6 +199,7 @@ class Points : public PointsBase<TData>
 {
         typedef Points<TData, TShape, TPts...> ThisType;
         typedef PointsBase<TData> BaseType;
+        typedef std::tuple<Points<TData, typename traits::points_traits<TPts>::native_shape, TPts>...> TupleType;
 
         static_assert(sizeof...(TPts) > 0, "No point type given.");
         static_assert(sizeof...(TPts) < 4, "Too many point types given.");
@@ -159,147 +209,74 @@ class Points : public PointsBase<TData>
     public:
         typedef traits::points_traits<TPts...> traits_info;
 
+        static PointsSharedPtr<TData> create(const PointsKey& pKey)
+        {
+            PointsSharedPtr<TData> p = MemoryManager<ThisType>::AllocateSharedPtr(pKey);
+            return p;
+        }
+
         Points(const PointsKey& pKey) : BaseType(pKey) {
             BaseType::template AllocateArrays<TPts...>();
-//            InitialiseSubType<sizeof...(TPts)-1>(pKey, x);
-        }
-//
-//
-//        inline const Array<OneD, const TData> GetZ(const int& i) {
-//            switch (i)
-//            {
-//                case 0: return std::get<0>(x).GetZ();
-//                case 1: return std::get<1>(x).GetZ();
-//                default: throw;
-//            }
-//        }
-//
-//
-//    private:
-//        std::tuple<Points<TData, TShape, TPts>...> x;
-//
-//        template<size_t i>
-//        typename std::enable_if<i!=0, void>::type
-//        InitialiseSubType(const PointsKey& p, std::tuple<Points<TData, TShape, TPts>...>& pTuple) {
-//            PointsKey tmpKey;
-//            tmpKey.m_numpoints[0] = p.m_numpoints[i];
-//            tmpKey.m_params = p.m_params;
-//            cout << "Init subtype " << i << " with numpoints=" << tmpKey.m_numpoints[0] << endl;
-//            std::get<i>(pTuple).Populate(p);
-//            InitialiseSubType<i-1>(p, pTuple);
-//        }
-//
-//        template<size_t i>
-//        typename std::enable_if<i==0, void>::type
-//        InitialiseSubType(const PointsKey& p, std::tuple<Points<TData, TShape, TPts>...>& pTuple) {
-//            PointsKey tmpKey;
-//            tmpKey.m_numpoints[0] = p.m_numpoints[i];
-//            tmpKey.m_params = p.m_params;
-//            cout << "Init subtype " << i << " with numpoints=" << tmpKey.m_numpoints[0] << endl;
-//            std::get<i>(pTuple).Populate(tmpKey);
-//        }
-};
-
-
-/**
- * Bi-Points specialisation
- */
-template<typename TData, typename TShape, typename TPts1, typename TPts2>
-class Points<TData, TShape, TPts1, TPts2> : public PointsBase<TData>
-{
-        typedef Points<TData, TShape, TPts1, TPts2> ThisType;
-        typedef PointsBase<TData> BaseType;
-
-        static_assert(traits::points_traits<TPts1, TPts2>::dimension == traits::shape_traits<TShape>::dimension,
-                "Points dimension and shape dimension do not agree.");
-
-    public:
-        typedef traits::points_traits<TPts1, TPts2> get_traits;
-
-        static PointsSharedPtr<TData> create(const PointsKey& pKey)
-        {
-            PointsSharedPtr<TData> p = MemoryManager<ThisType>::AllocateSharedPtr(pKey);
-            return p;
-        }
-
-        Points(const PointsKey& pKey) : BaseType(pKey) {
-            //PointsBase<TData>::template AllocateArrays<TPts1, TPts2>();
-            x1.Populate(pKey);
-            PointsKey tmpKey;
-            tmpKey.m_numpoints[0] = pKey.m_numpoints[1];
-            tmpKey.m_params = pKey.m_params;
-            x2.Populate(tmpKey);
-        }
-
-        virtual const Array<OneD, const TData> GetZ(const int& i) {
-            switch (i)
-            {
-                case 0: return x1.GetZ();
-                case 1: return x2.GetZ();
-                default: throw;
-            }
+            InitialiseSubType<sizeof...(TPts)-1>(pKey, x);
         }
 
     private:
-        Points<TData, typename traits::points_traits<TPts1>::native_shape, TPts1> x1;
-        Points<TData, typename traits::points_traits<TPts2>::native_shape, TPts2> x2;
-};
+        TupleType x;
 
-
-/**
- * Tri-Points specialisation
- */
-template<typename TData, typename TShape, typename TPts1, typename TPts2, typename TPts3>
-class Points<TData, TShape, TPts1, TPts2, TPts3> : public PointsBase<TData>
-{
-        typedef Points<TData, TShape, TPts1, TPts2, TPts3> ThisType;
-        typedef PointsBase<TData> BaseType;
-
-        static_assert(traits::points_traits<TPts1, TPts2, TPts3>::dimension == traits::shape_traits<TShape>::dimension,
-                "Points dimension and shape dimension do not agree.");
-
-    public:
-        typedef traits::points_traits<TPts1, TPts2, TPts3> get_traits;
-
-        static PointsSharedPtr<TData> create(const PointsKey& pKey)
-        {
-            PointsSharedPtr<TData> p = MemoryManager<ThisType>::AllocateSharedPtr(pKey);
-            return p;
-        }
-
-        Points(const PointsKey& pKey) : BaseType(pKey) {
-            //PointsBase<TData>::template AllocateArrays<TPts1, TPts2, TPts3>();
+        template<size_t i>
+        typename std::enable_if<i!=0, void>::type
+        InitialiseSubType(const PointsKey& p, TupleType& pTuple) {
             PointsKey tmpKey;
-            x1.Populate(pKey);
-            tmpKey.m_numpoints[0] = pKey.m_numpoints[1];
-            tmpKey.m_params = pKey.m_params;
-            x2.Populate(tmpKey);
-            tmpKey.m_numpoints[0] = pKey.m_numpoints[2];
-            tmpKey.m_params = pKey.m_params;
-            x3.Populate(tmpKey);
+            tmpKey.m_numpoints[0] = p.m_numpoints[i];
+            tmpKey.m_params = p.m_params;
+            std::cout << "Init subtype " << i << " with numpoints=" << tmpKey.m_numpoints[0] << std::endl;
+            std::get<i>(pTuple).Populate(p);
+            InitialiseSubType<i-1>(p, pTuple);
         }
 
-        virtual const Array<OneD, const TData> GetZ(const int& i) {
-            switch (i)
-            {
-                case 0: return x1.GetZ();
-                case 1: return x2.GetZ();
-                case 2: return x3.GetZ();
-                default: throw;
-            }
+        template<size_t i>
+        typename std::enable_if<i==0, void>::type
+        InitialiseSubType(const PointsKey& p, TupleType& pTuple) {
+            PointsKey tmpKey;
+            tmpKey.m_numpoints[0] = p.m_numpoints[i];
+            tmpKey.m_params = p.m_params;
+            std::cout << "Init subtype " << i << " with numpoints=" << tmpKey.m_numpoints[0] << std::endl;
+            std::get<i>(pTuple).Populate(tmpKey);
         }
 
-    private:
-        Points<TData, typename traits::points_traits<TPts1>::native_shape, TPts1> x1;
-        Points<TData, typename traits::points_traits<TPts2>::native_shape, TPts2> x2;
-        Points<TData, typename traits::points_traits<TPts3>::native_shape, TPts3> x3;
+        template<size_t i>
+        inline typename std::enable_if<i < sizeof...(TPts), PointsBase<TData>*>::type
+        GetTupleEntryPtr()
+        {
+            return &std::get<i>(x);
+        }
+
+        template<size_t i>
+        inline typename std::enable_if<i >= sizeof...(TPts), PointsBase<TData>*>::type
+        GetTupleEntryPtr()
+        {
+            throw std::logic_error("Out of range.");
+        }
+
+        virtual const Array<OneD, const TData> v_GetZ(const int& i) {
+                switch (i)
+                {
+                    case 0: return GetTupleEntryPtr<0>()->GetZ();
+                    case 1: return GetTupleEntryPtr<1>()->GetZ();
+                    case 2: return GetTupleEntryPtr<2>()->GetZ();
+                    default: throw i;
+                }
+        }
+
+        virtual Array<OneD, TData> v_GetInterpMatrixData(const int& npts, const Array<OneD, const TData>& pts)
+        {
+            Array<OneD, TData> interp(0);
+            return interp;
+        }
 };
 
 
-namespace detail {
 
-
-}
 
 /**
  * Specialisation for GaussGaussLegendre
@@ -326,10 +303,12 @@ class Points<TData, TShape, GaussGaussLegendre> : public PointsBase<TData>
         }
 
         Points() : PointsBase<TData>() {}
+
         Points(const PointsKey& pKey) : PointsBase<TData>(pKey)
         {
             Populate(pKey);
         }
+
         void Populate(const PointsKey& p) {
             BaseType::m_key = p;
             const int n = p.m_numpoints[0];
@@ -339,6 +318,14 @@ class Points<TData, TShape, GaussGaussLegendre> : public PointsBase<TData>
                           n,0.0,0.0);
         }
 
+    private:
+        virtual Array<OneD, TData> v_GetInterpMatrixData(const int& npts, const Array<OneD, const TData>& pts)
+        {
+            Array<OneD, TData> interp(npts * BaseType::m_key.m_numpoints[0]);
+            Polylib::Imgj(interp.data(), BaseType::m_points[0].data(),
+                          pts.data(), BaseType::m_key.m_numpoints[0], npts, 0.0, 0.0);
+            return interp;
+        }
 };
 
 
@@ -367,10 +354,12 @@ class Points<TData, TShape, GaussRadauMLegendre> : public PointsBase<TData>
         }
 
         Points() : PointsBase<TData>() {}
+
         Points(const PointsKey& pKey) : PointsBase<TData>(pKey)
         {
             Populate(pKey);
         }
+
         void Populate(const PointsKey& p) {
             BaseType::m_key = p;
             const int n = p.m_numpoints[0];
@@ -378,6 +367,15 @@ class Points<TData, TShape, GaussRadauMLegendre> : public PointsBase<TData>
             Polylib::zwgrjm(BaseType::m_points[0].data(),
                           BaseType::m_weights.data(),
                           n,0.0,0.0);
+        }
+
+    private:
+        virtual Array<OneD, TData> v_GetInterpMatrixData(const int& npts, const Array<OneD, const TData>& pts)
+        {
+            Array<OneD, TData> interp(npts * BaseType::m_key.m_numpoints[0]);
+            Polylib::Imgrjm(interp.data(), BaseType::m_points[0].data(),
+                            pts.data(), BaseType::m_key.m_numpoints[0], npts, 0.0, 0.0);
+            return interp;
         }
 
 };

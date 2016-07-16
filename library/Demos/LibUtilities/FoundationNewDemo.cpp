@@ -3,6 +3,7 @@ using namespace std;
 
 #include <LibUtilities/FoundationsNew/Points.hpp>
 #include <LibUtilities/FoundationsNew/Basis.hpp>
+#include <LibUtilities/FoundationsNew/Interp.hpp>
 
 using namespace Nektar;
 using namespace Nektar::LibUtilities::Foundations;
@@ -47,6 +48,12 @@ int main () {
     cout << ptr1->GetZ(0).num_elements() << endl;
     cout << ptr2->GetZ(0).num_elements() << endl;
     cout << ptr2->GetZ(1).num_elements() << endl;
+    try {
+        cout << ptr2->GetZ(2).num_elements() << endl;
+    }
+    catch (...) {
+        cout << "Could not access third points distribution in 2D tensor product" << endl;
+    }
 
 //    // Test accessing undefined points distribution
 //    try {
