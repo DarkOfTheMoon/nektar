@@ -11,6 +11,7 @@ Nektar++ build system can automatically build tried-and-tested versions of these
 libraries for you. This requires enabling the relevant options in the CMake
 configuration.
 
+The directory containing \nekpp will be refered as \bold{\$NEK} for the remainder of the User Guide. (e.g. if the \nekpp is installed in the home directory with name "nektar++", \$NEK will refer to $\sim$/nektar++)
 
 \subsection{Obtaining the source code}
 There are two ways to obtain the source code for \nekpp:
@@ -47,6 +48,8 @@ packages on most Linux distributions or can be installed manually by a
 \emph{user}. Others are optional and required only for specific features, or can
 be downloaded and compiled for use with Nektar++ \emph{automatically} (but not
 installed system-wide).
+
+Details of the programs and libraries for the functionality of \nekpp can be found in \ref{s:installation:source:cmake}.
 
 \begin{center}
 \begin{tabular}{lccccl}
@@ -99,6 +102,7 @@ tar -zxvf nektar++-(*\nekver*).tar.gz
 \end{lstlisting}
 Change into the \inlsh{nektar++} source code directory
 \begin{lstlisting}[style=BashInputStyle]
+    cd $NEK
     mkdir -p build && cd build
     ccmake ../
     make install
@@ -111,8 +115,11 @@ From a terminal:
     \begin{lstlisting}[style=BashInputStyle]
 tar -zxvf nektar++-(*\nekver*).tar.gz
     \end{lstlisting}
-
-    \item Change into the source-code directory, create a \inltt{build}
+    \item Change into the source-code directory
+    \begin{lstlisting}[style=BashInputStyle]
+    cd $NEK
+\end{lstlisting}
+    create a \inltt{build}
     subdirectory and enter it
     \begin{lstlisting}[style=BashInputStyle]
     mkdir -p build && cd build
@@ -125,12 +132,13 @@ tar -zxvf nektar++-(*\nekver*).tar.gz
     \begin{itemize}
         \item Select the components of Nektar++ (prefixed with
         \inltt{NEKTAR\_BUILD\_}) you would like to build. Disabling solvers
-        which you do not require will speed up the build process.
+        which you do not require will speed up the build process. 
         \item Select the optional libraries you would like to use (prefixed with
         \inltt{NEKTAR\_USE\_}) for additional functionality.
         \item Select the libraries not already available on your system which
         you wish to be compiled automatically (prefixed with
         \inltt{THIRDPARTY\_BUILD\_})
+        \item 
     \end{itemize}
     A full list of configuration options can be found in
     Section~\ref{s:installation:source:cmake}.
@@ -183,6 +191,8 @@ tar -zxvf nektar++-(*\nekver*).tar.gz
     \begin{lstlisting}[style=BashInputStyle]
     ctest
     \end{lstlisting}
+    
+    \item Each time a change is made in the options of CMake (e.g. switching on/off an option), the software has to be installed again following the above procedures.
 \end{enumerate}
 
 \subsection{OS X}
@@ -195,6 +205,8 @@ compiling Nektar++, most of which are available on \emph{MacPorts}
 optional and required only for specific features, or can be downloaded and
 compiled for use with Nektar++ \emph{automatically} (but not installed
 system-wide).
+
+Details of the options in CMake can be found in \ref{s:installation:source:cmake}.
 
 \begin{notebox}
   To compile \nekpp on OS X, Apple's Xcode Developer Tools must be
@@ -244,6 +256,7 @@ Visualisation utilities\\
 \begin{lrbox}{\installationOSXMacPortsTip}\begin{minipage}{0.8\linewidth}
 \begin{lstlisting}[style=BashInputStyle]
 sudo port install cmake
+sudo port install arpack
 \end{lstlisting}
 \end{minipage}
 \end{lrbox}
@@ -254,7 +267,7 @@ CMake, and some other software, is available from MacPorts
 
 \noindent\usebox\installationOSXMacPortsTip
 
-Package names are given in the table above. Similar packages also exist in other
+Package names are given in the table above and can be installed by replacing cmake with other names (e.g. arpack/openmpi). Similar packages also exist in other
 package managers such as Homebrew.
 \end{tipbox}
 
@@ -267,7 +280,8 @@ If you have downloaded the tarball, first unpack it:
 tar -zxvf nektar++-(*\nekver*).tar.gz
 \end{lstlisting}
 Change into the \inlsh{nektar++} source code directory
-\begin{lstlisting}[style=BashInputStyle]
+    \begin{lstlisting}[style=BashInputStyle]
+    cd $NEK
     mkdir -p build && cd build
     ccmake ../
     make install
@@ -302,7 +316,7 @@ tar -zxvf nektar++-(*\nekver*).tar.gz
         \item Select the libraries not already available on your system which
         you wish to be compiled automatically (prefixed with
         \inltt{THIRDPARTY\_BUILD\_})
-        \item
+    
     \end{itemize}
     A full list of configuration options can be found in
     Section~\ref{s:installation:source:cmake}.
@@ -350,6 +364,8 @@ tar -zxvf nektar++-(*\nekver*).tar.gz
     \begin{lstlisting}[style=BashInputStyle]
     ctest
     \end{lstlisting}
+    
+        \item Each time a change is made in the options of CMake (e.g. switching on/off an option), the software has to be installed again following the above procedures.
 \end{enumerate}
 
 \subsection{Windows}
@@ -531,11 +547,11 @@ can be selected using the following options:
     methods. This option should only be required under in a Mac OSX
     environment.
 
-    \item \inlsh{NEKTAR\_USE\_ARPACK}
+    \item \inlsh{NEKTAR\_USE\_ARPACK} (Recommended)
 
     Build \nekpp with support for ARPACK. This provides routines used for
     linear stability analyses. Alternative Arnoldi algorithms are also
-    implemented directly in \nekpp.
+    implemented directly in \nekpp. It is recommended to install this package as most of the calculations will involve the use of ARPACK library.
 
     \item \inlsh{NEKTAR\_USE\_BLAS\_LAPACK} (Required)
 
@@ -572,7 +588,9 @@ can be selected using the following options:
     \item \inlsh{NEKTAR\_USE\_MPI} (Recommended)
 
     Build Nektar++ with MPI parallelisation. This allows solvers to be run in
-    serial or parallel.
+    serial or parallel. Running the solvers in parallel allows many calculations to be carried out simultaneously, reducing the time needed for rendering the result.\\
+
+    If Open MPI does not work when it is fetched automatically from the source, it is possible to install it manually by downloading the software from the official website \url{https://www.open-mpi.org/software/ompi/v2.0/}
 
     \item \inlsh{NEKTAR\_USE\_OPENBLAS}
 

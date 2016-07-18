@@ -22,9 +22,14 @@ To build the Doxygen documentation, the following dependencies are required:
 \end{itemize}
 
 \subsection{Compiling the User Guide}
+The necessary documents needed for the compilation of the User Guide should be fetch to the local machine automatically using the Git Repository before starting the compilation. Detailed information can be see at \emph{Section 1.3.1}.
+
 To compile the User Guide:
 \begin{enumerate}
 \item Configure the Nektar++ build tree as normal.
+    \begin{lstlisting}[style=BashInputStyle]
+cd $NEK/build/docs/user-guide
+\end{lstlisting}
 \item Run
     \begin{lstlisting}[style=BashInputStyle]
 make user-guide-pdf
@@ -51,12 +56,12 @@ If you are using a clone of the \nekpp git repository, you can also download
 the source for the \nekpp tutorials which is available as a \emph{git submodule}.
 
 \begin{enumerate}
-\item From a \nekpp working directory (e.g. \inlsh{\$NEKPP}):
+\item From a \nekpp working directory (e.g. \inlsh{\$NEK}):
 \begin{lstlisting}[style=BashInputStyle]
 git submodule init
 git submodule update --remote
 \end{lstlisting}
-\item From your build directory (e.g. \inlsh{\$NEKPP/build}), re-run \inlsh{cmake} to update the build system to include the tutorials
+\item From your build directory (e.g. \inlsh{\$NEK/build}), re-run \inlsh{cmake} to update the build system to include the tutorials
 \begin{lstlisting}[style=BashInputStyle]
 cmake ../
 \end{lstlisting}
