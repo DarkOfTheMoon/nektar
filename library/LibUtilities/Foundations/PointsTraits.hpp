@@ -1,5 +1,8 @@
-#ifndef LIBUTILITIES_FOUNDATIONS_POINTSTYPES
-#define LIBUTILITIES_FOUNDATIONS_POINTSTYPES
+#ifndef LIBUTILITIES_FOUNDATIONS_POINTSTRAITS
+#define LIBUTILITIES_FOUNDATIONS_POINTSTRAITS
+
+#include <LibUtilities/Foundations/ShapeTypes.hpp>
+#include <LibUtilities/Foundations/PointsTypes.hpp>
 
 namespace Nektar
 {
@@ -7,14 +10,6 @@ namespace LibUtilities
 {
 namespace Foundations
 {
-struct GaussGaussLegendre {};
-struct GaussRadauMLegendre {};
-struct GaussRadauPLegendre {};
-struct GaussLobattoLegendre {};
-struct Fekete {};
-struct Fourier {};
-
-
 namespace traits
 {
     // Default values for all types
@@ -44,6 +39,8 @@ namespace traits
     {
         static const bool is_tensor_product = true;
         static const unsigned int dimension = 1;
+        static const std::string name;
+        static const int id;
         typedef Segment native_shape;
     };
 
@@ -129,7 +126,6 @@ namespace traits
         static const bool is_valid = true;
     };
 }
-
 }
 }
 }

@@ -39,8 +39,9 @@
 #include <LibUtilities/BasicUtils/SharedArray.hpp>
 #include <LibUtilities/BasicConst/NektarUnivTypeDefs.hpp>
 #include <LibUtilities/LibUtilitiesDeclspec.h>
+#include <LibUtilities/Foundations/Basis.hpp>  // for BasisKey
 
-namespace Nektar { namespace LibUtilities { class BasisKey; } }
+//namespace Nektar { namespace LibUtilities { namespace Foundations { class BasisKey; } } }
 
 namespace Nektar
 {
@@ -64,19 +65,19 @@ namespace Nektar
         {
         public:
             LIB_UTILITIES_EXPORT Transposition(
-                    const LibUtilities::BasisKey &HomoBasis0,
+                    const LibUtilities::Foundations::BasisKey &HomoBasis0,
                           LibUtilities::CommSharedPtr hcomm0,
                           LibUtilities::CommSharedPtr hcomm1);
 
             LIB_UTILITIES_EXPORT Transposition(
-                    const LibUtilities::BasisKey &HomoBasis0,
-                    const LibUtilities::BasisKey &HomoBasis1,
+                    const LibUtilities::Foundations::BasisKey &HomoBasis0,
+                    const LibUtilities::Foundations::BasisKey &HomoBasis1,
                           LibUtilities::CommSharedPtr hcomm);
 
             LIB_UTILITIES_EXPORT Transposition(
-                    const LibUtilities::BasisKey &HomoBasis0,
-                    const LibUtilities::BasisKey &HomoBasis1,
-                    const LibUtilities::BasisKey &HomoBasis2,
+                    const LibUtilities::Foundations::BasisKey &HomoBasis0,
+                    const LibUtilities::Foundations::BasisKey &HomoBasis1,
+                    const LibUtilities::Foundations::BasisKey &HomoBasis2,
                           LibUtilities::CommSharedPtr hcomm);
 
             LIB_UTILITIES_EXPORT ~Transposition();

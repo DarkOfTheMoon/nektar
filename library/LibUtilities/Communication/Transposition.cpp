@@ -38,8 +38,7 @@
 #include <LibUtilities/BasicUtils/ErrorUtil.hpp>  // for ASSERTL0, etc
 #include <LibUtilities/BasicUtils/SharedArray.hpp>  // for Array
 #include <LibUtilities/BasicUtils/Vmath.hpp>  // for Vcopy
-#include <LibUtilities/Foundations/Basis.h>  // for BasisKey
-#include <LibUtilities/Foundations/Foundations.hpp>
+#include <LibUtilities/Foundations/Basis.hpp>  // for BasisKey
 
 
 namespace Nektar
@@ -49,7 +48,7 @@ namespace Nektar
         /**
          * Constructor for 1D transform.
          */
-        Transposition::Transposition(const LibUtilities::BasisKey &HomoBasis0,
+        Transposition::Transposition(const LibUtilities::Foundations::BasisKey &HomoBasis0,
                                      LibUtilities::CommSharedPtr hcomm0,
                                      LibUtilities::CommSharedPtr hcomm1)
         {
@@ -65,8 +64,8 @@ namespace Nektar
             m_num_processes =
                         Array<OneD,int>(m_num_homogeneous_directions);
 
-            m_num_homogeneous_points[0]  = HomoBasis0.GetNumPoints();
-            m_num_homogeneous_coeffs[0]  = HomoBasis0.GetNumModes();
+            m_num_homogeneous_points[0]  = HomoBasis0.m_ptsKey.m_numpoints[0];
+            m_num_homogeneous_coeffs[0]  = HomoBasis0.m_nummodes[0];
             m_num_processes[0]           = m_hcomm->GetSize();
             m_num_points_per_proc[0]     = m_num_homogeneous_points[0] /
                                            m_num_processes[0];
@@ -93,34 +92,30 @@ namespace Nektar
                     (NumStrips > global_rank_id) ? global_rank_id:(global_rank_id - NumStrips);
             }
             
-            if(HomoBasis0.GetBasisType() == LibUtilities::eFourier)
+            if (m_num_points_per_proc[0] == 1) // Halfmode
+            {
+                m_K[0] = 1;
+            }
+            else if (m_num_points_per_proc[0] == 2) // Single mode
+            {
+                m_K[0] = 1;
+                m_K[1] = 1;
+            }
+            else
             {
                 for(int i = 0 ; i < m_num_points_per_proc[0] ; i++)
                 {
                     m_K[i] = m_planes_IDs[i]/2;
                 }
             }
-
-            if(HomoBasis0.GetBasisType() == LibUtilities::eFourierSingleMode)
-            {
-                m_K[0] = 1;
-                m_K[1] = 1;
-            }
-
-            if(HomoBasis0.GetBasisType() == LibUtilities::eFourierHalfModeRe ||
-               HomoBasis0.GetBasisType() == LibUtilities::eFourierHalfModeIm)
-            {
-                m_K[0]=1;
-            }
-            //================================================================
         }
 
 
         /**
          * Constructor for 2D transform.
          */
-        Transposition::Transposition(const LibUtilities::BasisKey &HomoBasis0,
-                                     const LibUtilities::BasisKey &HomoBasis1,
+        Transposition::Transposition(const LibUtilities::Foundations::BasisKey &HomoBasis0,
+                                     const LibUtilities::Foundations::BasisKey &HomoBasis1,
                                      LibUtilities::CommSharedPtr hcomm)
         {
             m_hcomm = hcomm;
@@ -135,10 +130,10 @@ namespace Nektar
             m_num_processes =
                             Array<OneD,int>(m_num_homogeneous_directions);
 
-            m_num_homogeneous_points[0]  = HomoBasis0.GetNumPoints();
-            m_num_homogeneous_coeffs[0]  = HomoBasis0.GetNumModes();
-            m_num_homogeneous_points[1]  = HomoBasis1.GetNumPoints();
-            m_num_homogeneous_coeffs[1]  = HomoBasis1.GetNumModes();
+            m_num_homogeneous_points[0]  = HomoBasis0.m_ptsKey.m_numpoints[0];
+            m_num_homogeneous_coeffs[0]  = HomoBasis0.m_nummodes[0];
+            m_num_homogeneous_points[1]  = HomoBasis1.m_ptsKey.m_numpoints[1];
+            m_num_homogeneous_coeffs[1]  = HomoBasis1.m_nummodes[1];
 
             m_num_processes[0]           = m_hcomm->GetRowComm()->GetSize();
             m_num_processes[1]           = m_hcomm->GetColumnComm()->GetSize();
@@ -157,9 +152,9 @@ namespace Nektar
         /**
          * Constructor for 3D transform.
          */
-        Transposition::Transposition(const LibUtilities::BasisKey &HomoBasis0,
-                                     const LibUtilities::BasisKey &HomoBasis1,
-                                     const LibUtilities::BasisKey &HomoBasis2,
+        Transposition::Transposition(const LibUtilities::Foundations::BasisKey &HomoBasis0,
+                                     const LibUtilities::Foundations::BasisKey &HomoBasis1,
+                                     const LibUtilities::Foundations::BasisKey &HomoBasis2,
                                      LibUtilities::CommSharedPtr hcomm)
         {
             m_hcomm = hcomm;

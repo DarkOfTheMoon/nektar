@@ -53,7 +53,7 @@
 #include <LibUtilities/BasicUtils/FileSystem.h>
 #include <LibUtilities/BasicUtils/CompressData.h>
 
-#include <LibUtilities/Foundations/Foundations.hpp>
+#include <LibUtilities/Foundations/PointsTypes.hpp>
 
 
 #include <boost/algorithm/string.hpp>
@@ -784,7 +784,7 @@ namespace Nektar
                                 c.entitytype = entitytype[0];
                                 c.entityid   = cinfo[i].entityid;
                                 c.npoints    = cinfo[i].npoints;
-                                c.type       = kPointsTypeStr[cinfo[i].ptype];
+                                c.type       = Foundations::GetPointsIdToStringMap()[cinfo[i].ptype];
                                 c.ptid       = cinfo[i].ptid;
                                 c.ptoffset   = cinfo[i].ptoffset;
                                 m_meshCurved[std::make_pair(c.entitytype,
@@ -1841,14 +1841,7 @@ namespace Nektar
                             cinfo.id       = c.id;
                             cinfo.entityid = c.entityid;
                             cinfo.npoints  = c.npoints;
-                            for(int i = 0; i < SIZE_PointsType; ++i)
-                            {
-                                if(c.type.compare(kPointsTypeStr[i]) == 0)
-                                {
-                                    cinfo.ptype = (PointsType) i;
-                                    break;
-                                }
-                            }
+                            cinfo.ptype    = Foundations::GetPointsStringToIdMap()[c.type];
                             cinfo.ptid   = 0; // set to just one point set
                             cinfo.ptoffset = ptoffset;
                             ptoffset += c.npoints;

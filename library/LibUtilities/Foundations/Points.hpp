@@ -10,8 +10,8 @@
 #include <LibUtilities/LibUtilitiesDeclspec.h>
 #include <LibUtilities/Polylib/Polylib.h>
 #include <LibUtilities/LinearAlgebra/NekMatrixFwd.hpp>
-#include <LibUtilities/FoundationsNew/ShapeTypes.hpp>
-#include <LibUtilities/FoundationsNew/PointsTypes.hpp>
+#include <LibUtilities/Foundations/ShapeTypes.hpp>
+#include <LibUtilities/Foundations/PointsTraits.hpp>
 
 namespace Nektar
 {
@@ -194,10 +194,13 @@ LIB_UTILITIES_EXPORT PointsFactory<TData>& GetPointsFactory()
  * @class Points
  * @brief Primary template for composite Points classes.
  */
+template<typename TData, typename TShape, typename TPtsTuple>
+class Points {};
+
 template<typename TData, typename TShape, typename... TPts>
-class Points : public PointsBase<TData>
+class Points<TData, TShape, std::tuple<TPts...>> : public PointsBase<TData>
 {
-        typedef Points<TData, TShape, TPts...> ThisType;
+        typedef Points<TData, TShape, std::tuple<TPts...>> ThisType;
         typedef PointsBase<TData> BaseType;
         typedef std::tuple<Points<TData, typename traits::points_traits<TPts>::native_shape, TPts>...> TupleType;
 
@@ -207,13 +210,15 @@ class Points : public PointsBase<TData>
                 "Points dimension and shape dimension do not agree.");
 
     public:
-        typedef traits::points_traits<TPts...> traits_info;
+        typedef traits::points_traits<TPts...> get_traits;
 
         static PointsSharedPtr<TData> create(const PointsKey& pKey)
         {
             PointsSharedPtr<TData> p = MemoryManager<ThisType>::AllocateSharedPtr(pKey);
             return p;
         }
+
+        Points() : PointsBase<TData>()  {}
 
         Points(const PointsKey& pKey) : BaseType(pKey) {
             BaseType::template AllocateArrays<TPts...>();
@@ -375,6 +380,54 @@ class Points<TData, TShape, GaussRadauMLegendre> : public PointsBase<TData>
             Array<OneD, TData> interp(npts * BaseType::m_key.m_numpoints[0]);
             Polylib::Imgrjm(interp.data(), BaseType::m_points[0].data(),
                             pts.data(), BaseType::m_key.m_numpoints[0], npts, 0.0, 0.0);
+            return interp;
+        }
+
+};
+
+/**
+ * Specialisation for Fekete
+ */
+template<typename TData, typename TShape>
+class Points<TData, TShape, Fekete> : public PointsBase<TData>
+{
+        typedef Points<TData, TShape, Fekete> ThisType;
+        typedef PointsBase<TData> BaseType;
+        typedef Fekete PointsType;
+
+        static_assert(traits::points_traits<PointsType>::dimension == traits::shape_traits<TShape>::dimension,
+                "Points dimension and shape dimension do not agree.");
+        static_assert(traits::distribution_traits<TShape, PointsType>::is_valid,
+                "Not a valid combination of shape and points type.");
+
+    public:
+        typedef traits::points_traits<PointsType> get_traits;
+
+        static PointsSharedPtr<TData> create(const PointsKey& pKey)
+        {
+            PointsSharedPtr<TData> p = MemoryManager<ThisType>::AllocateSharedPtr(pKey);
+            return p;
+        }
+
+        Points() : PointsBase<TData>() {}
+
+        Points(const PointsKey& pKey) : PointsBase<TData>(pKey)
+        {
+            Populate(pKey);
+        }
+
+        void Populate(const PointsKey& p) {
+            BaseType::m_key = p;
+            const int n = p.m_numpoints[0];
+            BaseType::template AllocateArrays<PointsType>();
+            std::cout << "Need to generate Fekete points" << std::endl;
+        }
+
+    private:
+        virtual Array<OneD, TData> v_GetInterpMatrixData(const int& npts, const Array<OneD, const TData>& pts)
+        {
+            Array<OneD, TData> interp(npts * BaseType::m_key.m_numpoints[0]);
+            std::cout << "Need to generate Fekete interp" << std::endl;
             return interp;
         }
 

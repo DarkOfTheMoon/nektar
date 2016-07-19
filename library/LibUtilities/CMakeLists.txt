@@ -99,56 +99,17 @@ IF(NEKTAR_USE_FFTW)
 ENDIF(NEKTAR_USE_FFTW)
 
 SET(FoundationHeaders
-    ./Foundations/Basis.h
-    ./Foundations/BasisType.h
-    ./Foundations/BLPoints.h
-    ./Foundations/FoundationsFwd.hpp
-    ./Foundations/Foundations.hpp
-    ./Foundations/FourierPoints.h
-    ./Foundations/FourierSingleModePoints.h
-    ./Foundations/GaussPoints.h
-    ./Foundations/Graph.h
-    ./Foundations/InterpCoeff.h
-    ./Foundations/Interp.h
-    ./Foundations/ManagerAccess.h
-    ./Foundations/NodalPrismEvenlySpaced.h
-    ./Foundations/NodalTetElecData.h
-    ./Foundations/NodalTetElec.h
-    ./Foundations/NodalTetEvenlySpaced.h
-    ./Foundations/NodalTriElecData.h
-    ./Foundations/NodalTriElec.h
-    ./Foundations/NodalTriEvenlySpaced.h
-    ./Foundations/NodalTriFeketeData.h
-    ./Foundations/NodalTriFekete.h
-    ./Foundations/NodalUtil.h
-    ./Foundations/PhysGalerkinProject.h
-    ./Foundations/Points.h
-    ./Foundations/PointsType.h
-    ./Foundations/PolyEPoints.h
+    ./Foundations/Points.hpp
+    ./Foundations/PointsTypes.hpp
+    ./Foundations/PointsTraits.hpp
+    ./Foundations/Basis.hpp
+    ./Foundations/BasisTypes.hpp
 )
 
 SET(FoundationSources
-        ./Foundations/Basis.cpp
-    ./Foundations/BLPoints.cpp
-    ./Foundations/FourierPoints.cpp
-    ./Foundations/FourierSingleModePoints.cpp
-    ./Foundations/GaussPoints.cpp
-    ./Foundations/Graph.cpp
-    ./Foundations/InterpCoeff.cpp
-    ./Foundations/Interp.cpp
-    ./Foundations/ManagerAccess.cpp
-        ./Foundations/NodalPrismEvenlySpaced.cpp
-    ./Foundations/NodalTetElec.cpp
-        ./Foundations/NodalTetEvenlySpaced.cpp
-    ./Foundations/NodalTriElec.cpp
-        ./Foundations/NodalTriEvenlySpaced.cpp
-    ./Foundations/NodalTriFekete.cpp
-    ./Foundations/NodalUtil.cpp
-        ./Foundations/PhysGalerkinProject.cpp
-    ./Foundations/Points.cpp
-    ./Foundations/PolyEPoints.cpp
-    ./FoundationsNew/PointsInstantiations.cpp
-    ./FoundationsNew/BasisInstantiations.cpp
+    ./Foundations/PointsInstantiations.cpp
+    ./Foundations/BasisInstantiations.cpp
+    ./Foundations/PointsTraitsStaticInit.cpp
 )
 
 SET(InterpreterHeaders

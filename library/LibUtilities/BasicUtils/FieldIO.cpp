@@ -53,6 +53,7 @@
 
 #include "zlib.h"
 #include <set>
+using namespace std;
 
 #ifdef NEKTAR_USE_MPI
 #include <mpi.h>
@@ -242,22 +243,7 @@ namespace Nektar
                 }
                 elemTag->SetAttribute("SHAPE", shapeString);
 
-                // Write BASIS
-                std::string basisString;
-                {
-                    std::stringstream basisStringStream;
-                    bool first = true;
-                    for (std::vector<BasisType>::size_type i = 0; i < fielddefs[f]->m_basis.size(); i++)
-                    {
-                        if (!first)
-                            basisStringStream << ",";
-                        basisStringStream
-                        << BasisTypeMap[fielddefs[f]->m_basis[i]];
-                        first = false;
-                    }
-                    basisString = basisStringStream.str();
-                }
-                elemTag->SetAttribute("BASIS", basisString);
+                elemTag->SetAttribute("BASISKEY", fielddefs[f]->m_basis);
 
                 // Write homogeneuous length details
                 if(fielddefs[f]->m_numHomogeneousDir)
@@ -439,7 +425,7 @@ namespace Nektar
                     {
                         fs::path pfilename(filenames[i]);
                         fullpath = pinfilename / pfilename;
-                        string fname = PortablePath(fullpath);
+                        std::string fname = PortablePath(fullpath);
 
                         TiXmlDocument doc1(fname);
                         bool loadOkay1 = doc1.LoadFile();
@@ -753,6 +739,7 @@ namespace Nektar
                 {
                     // Extract the attributes.
                     std::string idString;
+                    std::string basisKeyString;
                     std::string shapeString;
                     std::string basisString;
                     std::string homoLengthsString;
@@ -763,6 +750,7 @@ namespace Nektar
                     std::string numPointsString;
                     std::string fieldsString;
                     std::string pointsString;
+                    bool basisKeyDef = false;
                     bool pointDef = false;
                     bool numPointDef = false;
                     TiXmlAttribute *attr = element->FirstAttribute();
@@ -772,6 +760,11 @@ namespace Nektar
                         if (attrName == "FIELDS")
                         {
                             fieldsString.insert(0, attr->Value());
+                        }
+                        else if (attrName == "BASISKEY")
+                        {
+                            basisKeyString.insert(0, attr->Value());
+                            basisKeyDef = true;
                         }
                         else if (attrName == "SHAPE")
                         {
@@ -893,24 +886,38 @@ namespace Nektar
 
                     ASSERTL0(valid, std::string("Unable to correctly parse the shape type: ").append(shapeString).c_str());
 
-                    // Get the basis
-                    std::vector<std::string> basisStrings;
-                    std::vector<BasisType> basis;
-                    valid = ParseUtils::GenerateOrderedStringVector(basisString.c_str(), basisStrings);
-                    ASSERTL0(valid, "Unable to correctly parse the basis types.");
-                    for (std::vector<std::string>::size_type i = 0; i < basisStrings.size(); i++)
+                    // Construct the basis key if not provided
+                    if (!basisKeyDef)
                     {
-                        valid = false;
-                        for (unsigned int j = 0; j < SIZE_BasisType; j++)
+                        // Add the basis
+                        std::vector<std::string> basisStrings;
+                        valid = ParseUtils::GenerateOrderedStringVector(basisString.c_str(), basisStrings);
+                        ASSERTL0(valid, "Unable to correctly parse the basis types.");
+                        basisKeyString = basisStrings[0];
+                        for (std::vector<std::string>::size_type i = 1; i < basisString.size(); ++i)
                         {
-                            if (BasisTypeMap[j] == basisStrings[i])
+                            basisKeyString += "," + basisString[i];
+                        }
+
+                        // Add the points types
+                        if(!pointDef)
+                        {
+                            basisKeyString += "_";
+                            std::vector<std::string> pointsStrings;
+                            valid = ParseUtils::GenerateOrderedStringVector(pointsString.c_str(), pointsStrings);
+                            ASSERTL0(valid, "Unable to correctly parse the points types.");
+                            basisKeyString += pointsStrings[0];
+                            for (std::vector<std::string>::size_type i = 0; i < pointsStrings.size(); i++)
                             {
-                                basis.push_back((BasisType) j);
-                                valid = true;
-                                break;
+                                basisKeyString += "," + pointsString[i];
                             }
                         }
-                        ASSERTL0(valid, std::string("Unable to correctly parse the basis type: ").append(basisStrings[i]).c_str());
+                        else
+                        {
+                            // Default points distributions here
+                        }
+
+                        basisKeyString += shapeString;
                     }
 
                     // Get homoLengths
@@ -947,31 +954,6 @@ namespace Nektar
                     }
 
 
-                    // Get points type
-                    std::vector<PointsType> points;
-
-                    if(pointDef)
-                    {
-                        std::vector<std::string> pointsStrings;
-                        valid = ParseUtils::GenerateOrderedStringVector(pointsString.c_str(), pointsStrings);
-                        ASSERTL0(valid, "Unable to correctly parse the points types.");
-                        for (std::vector<std::string>::size_type i = 0; i < pointsStrings.size(); i++)
-                        {
-                            valid = false;
-                            for (unsigned int j = 0; j < SIZE_PointsType; j++)
-                            {
-                                if (kPointsTypeStr[j] == pointsStrings[i])
-                                {
-                                    points.push_back((PointsType) j);
-                                    valid = true;
-                                    break;
-                                }
-                            }
-
-                            ASSERTL0(valid, std::string("Unable to correctly parse the points type: ").append(pointsStrings[i]).c_str());
-                        }
-                    }
-
                     // Get numModes
                     std::vector<unsigned int> numModes;
                     bool UniOrder = false;
@@ -999,9 +981,9 @@ namespace Nektar
 
                     FieldDefinitionsSharedPtr fielddef  = 
                             MemoryManager<FieldDefinitions>::AllocateSharedPtr(shape, 
-                            elementIds, basis, UniOrder, numModes, Fields, numHomoDir, 
+                            elementIds, basisString, UniOrder, numModes, Fields, numHomoDir,
                             homoLengths, strips, homoSIDs, homoZIDs, homoYIDs, 
-                            points, pointDef, numPoints, numPointDef);
+                            pointsString, pointDef, numPoints, numPointDef);
 
                     fielddefs.push_back(fielddef);
 

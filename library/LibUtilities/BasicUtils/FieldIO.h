@@ -38,8 +38,8 @@
 
 #include <LibUtilities/BasicUtils/CompressData.h>
 #include <LibUtilities/BasicUtils/ShapeType.hpp>
-#include <LibUtilities/Foundations/Basis.h>
-#include <LibUtilities/Foundations/Points.h>
+#include <LibUtilities/Foundations/Basis.hpp>
+#include <LibUtilities/Foundations/Points.hpp>
 #include <tinyxml.h>
 
 namespace Nektar
@@ -47,7 +47,6 @@ namespace Nektar
 namespace LibUtilities
 {
 static std::vector<NekDouble>                NullNekDoubleVector;
-static std::vector<LibUtilities::PointsType> NullPointsTypeVector;
 static std::vector<unsigned int>             NullUnsignedIntVector;
 
 typedef std::map<std::string, std::string> FieldMetaDataMap;
@@ -60,7 +59,7 @@ struct FieldDefinitions
     FieldDefinitions(
         ShapeType                                   shapeType,
         const std::vector<unsigned int>            &elementIDs,
-        const std::vector<LibUtilities::BasisType> &basis,
+        const std::string                          &basis,
         bool                                        uniOrder,
         const std::vector<unsigned int>            &numModes,
         const std::vector<std::string>             &fields,
@@ -74,8 +73,7 @@ struct FieldDefinitions
                                                         = NullUnsignedIntVector,
         const std::vector<unsigned int>            &HomoYIDs
                                                         = NullUnsignedIntVector,
-        const std::vector<LibUtilities::PointsType> &points
-                                                         = NullPointsTypeVector,
+        const std::string                          &points = "",
         bool                                        pointsDef = false,
         const std::vector<unsigned int>            &numPoints
                                                         = NullUnsignedIntVector,
@@ -92,7 +90,7 @@ struct FieldDefinitions
 
     ShapeType                             m_shapeType;
     std::vector<unsigned int>             m_elementIDs;
-    std::vector<LibUtilities::BasisType>  m_basis;
+    std::string                           m_basis;
     int                                   m_numHomogeneousDir;
     std::vector<NekDouble>                m_homogeneousLengths;
     bool                                  m_homoStrips;
@@ -102,7 +100,7 @@ struct FieldDefinitions
     /// True if filesystem is shared.
     bool                                  m_sharedFilesystem;
     /// Define the type of points per direction.
-    std::vector<LibUtilities::PointsType> m_points;
+    std::string                           m_points;
     bool                                  m_pointsDef;
     /// Define order of the element group.
     /// * UniOrder: same order for each element

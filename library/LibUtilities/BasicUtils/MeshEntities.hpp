@@ -36,7 +36,6 @@
 #ifndef NEKTAR_LIBUTILITIES_BASICUTILS_MESHENTITIES_HPP
 #define NEKTAR_LIBUTILITIES_BASICUTILS_MESHENTITIES_HPP
 
-#include <LibUtilities/Foundations/PointsType.h>
 namespace Nektar
 {
     namespace LibUtilities

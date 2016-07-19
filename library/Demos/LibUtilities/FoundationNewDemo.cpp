@@ -1,9 +1,9 @@
 #include <iostream>
 using namespace std;
 
-#include <LibUtilities/FoundationsNew/Points.hpp>
-#include <LibUtilities/FoundationsNew/Basis.hpp>
-#include <LibUtilities/FoundationsNew/Interp.hpp>
+#include <LibUtilities/Foundations/Points.hpp>
+#include <LibUtilities/Foundations/Basis.hpp>
+#include <LibUtilities/Foundations/Interp.hpp>
 
 using namespace Nektar;
 using namespace Nektar::LibUtilities::Foundations;
@@ -22,8 +22,8 @@ int main () {
 
     // Test some points keys
     Points<double, Segment,       GaussGaussLegendre> P(key);
-    Points<double, Quadrilateral, GaussGaussLegendre, GaussGaussLegendre> Pquad(key);
-    Points<double, Hexahedron,    GaussGaussLegendre, GaussGaussLegendre, GaussGaussLegendre> Phex(key);
+    Points<double, Quadrilateral, std::tuple<GaussGaussLegendre, GaussGaussLegendre>> Pquad(key);
+    Points<double, Hexahedron,    std::tuple<GaussGaussLegendre, GaussGaussLegendre, GaussGaussLegendre>> Phex(key);
 
     // These should fail
     //Points<double, Segment,       Fekete> Pseg_fek(key);
@@ -44,7 +44,7 @@ int main () {
 
     // Test access through base class pointer
     PointsBase<double>* ptr1 = new Points<double, Segment,       GaussGaussLegendre>(key);
-    PointsBase<double>* ptr2 = new Points<double, Quadrilateral, GaussGaussLegendre, GaussGaussLegendre>(key);
+    PointsBase<double>* ptr2 = new Points<double, Quadrilateral, std::tuple<GaussGaussLegendre, GaussGaussLegendre>>(key);
     cout << ptr1->GetZ(0).num_elements() << endl;
     cout << ptr2->GetZ(0).num_elements() << endl;
     cout << ptr2->GetZ(1).num_elements() << endl;
@@ -64,7 +64,8 @@ int main () {
 //    }
 
     // Test instantiation of a Basis
-    Basis<double, Segment, Points<double, Segment, GaussGaussLegendre>, ModifiedLegendre> B0(bkey);
+    Basis<double, Segment, GaussGaussLegendre, ModifiedLegendre> B0(bkey);
+    Basis<double, Quadrilateral, std::tuple<GaussGaussLegendre, GaussGaussLegendre>, std::tuple<ModifiedLegendre, ModifiedLegendre>> Bquad(bkey);
 
     // These should fail
     //Basis<double, Triangle, Points<double, Segment, GaussGaussLegendre>, BernsteinTriangle> Bbtri(bkey);
@@ -83,7 +84,7 @@ int main () {
     PointsSharedPtr<double> facptr = GetPointsFactory<double>().CreateInstance("GaussGaussLegendre_Segment", key);
     cout << facptr->GetNumPoints() << endl;
 
-    cout << "Size of Modified basis: " << sizeof(Basis<double, Segment, Points<double, Segment, GaussGaussLegendre>, ModifiedLegendre>) << endl;
+    cout << "Size of Modified basis: " << sizeof(Basis<double, Segment, GaussGaussLegendre, ModifiedLegendre>) << endl;
     // This one should cause a compile error
     //Points<Quadrilateral, Fekete, double> Pfail(key);
 
