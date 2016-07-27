@@ -104,12 +104,15 @@ SET(FoundationHeaders
     ./Foundations/PointsTraits.hpp
     ./Foundations/Basis.hpp
     ./Foundations/BasisTypes.hpp
+    ./Foundations/ShapeTypes.hpp
 )
 
 SET(FoundationSources
     ./Foundations/PointsInstantiations.cpp
     ./Foundations/BasisInstantiations.cpp
+    ./Foundations/ShapeInstantiations.cpp
     ./Foundations/PointsTraitsStaticInit.cpp
+    ./Foundations/BasisKey.cpp
 )
 
 SET(InterpreterHeaders

@@ -35,7 +35,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include <StdRegions/StdExpansion.h>
-#include <LibUtilities/Foundations/ManagerAccess.h>  // for BasisManager, etc
+//#include <LibUtilities/Foundations/ManagerAccess.h>  // for BasisManager, etc
 
 namespace Nektar
 {

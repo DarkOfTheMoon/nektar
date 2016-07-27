@@ -9,21 +9,13 @@
 #include <LibUtilities/BasicUtils/NekFactory.hpp>
 #include <LibUtilities/LibUtilitiesDeclspec.h>
 #include <LibUtilities/Polylib/Polylib.h>
+#include <LibUtilities/Foundations/Foundations.hpp>
 #include <LibUtilities/Foundations/ShapeTypes.hpp>
 #include <LibUtilities/Foundations/PointsTypes.hpp>
 #include <LibUtilities/Foundations/BasisTypes.hpp>
 #include <LibUtilities/Foundations/Points.hpp>
+#include "BasisKey.h"
 
-template <class T>
-struct is_not_tuple { static const bool value = true; };
-
-template <typename... Args>
-struct is_not_tuple<std::tuple<Args...>> { static const bool value = false; };
-
-template <typename... Args>
-struct is_not_tuple<const std::tuple<Args...>> {
-        static const bool value = false;
-};
 
 namespace Nektar
 {
@@ -31,20 +23,6 @@ namespace LibUtilities
 {
 namespace Foundations
 {
-
-typedef double NekDouble;
-typedef std::string BasisParamKey;
-typedef NekDouble BasisParamValue;
-typedef std::map<BasisParamKey, BasisParamValue> BasisParamList;
-
-class BasisKey
-{
-    public:
-      unsigned int m_dim;
-      unsigned int m_nummodes[3];
-      BasisParamList m_params;
-      PointsKey m_ptsKey;
-};
 
 
 /**
@@ -59,6 +37,16 @@ class BasisBase
         virtual ~BasisBase()
         {
         };
+
+        inline LibUtilities::Foundations::ShapeType GetShapeType() const
+        {
+            return v_GetShapeType();
+        }
+
+        inline std::string GetShapeName() const
+        {
+            return v_GetShapeName();
+        }
 
         /// Return order of basis from the basis specification.
         inline int GetNumModes() const
@@ -90,6 +78,9 @@ class BasisBase
         {
             return traits::basis_traits<TBasis>::get_total_modes(m_key.m_nummodes[i]);
         }
+
+        virtual LibUtilities::Foundations::ShapeType v_GetShapeType() = 0;
+        virtual std::string v_GetShapeName() = 0;
 
 };
 
@@ -142,6 +133,16 @@ class Basis<TData, TShape, std::tuple<TPts...>, std::tuple<TBasis...>> : public 
 
         Basis(const BasisKey& pKey) : BasisBase<TData>(pKey) {
             //BasisBase<TData>::template AllocateArrays<TBasis...>();
+        }
+
+        virtual LibUtilities::Foundations::ShapeType v_GetShapeType()
+        {
+            return traits::shape_traits<TShape>::type;
+        }
+
+        virtual std::string v_GetShapeName()
+        {
+            return std::string(traits::shape_traits<TShape>::name);
         }
 
     protected:
@@ -270,6 +271,17 @@ class Basis<TData, TShape, TPts, ModifiedLegendre> : public BasisBase<TData>
             //BasisBase<TData>::template AllocateArrays<ModifiedLegendre>();
         }
 
+    protected:
+        virtual LibUtilities::Foundations::ShapeType v_GetShapeType()
+        {
+            return traits::shape_traits<TShape>::type;
+        }
+
+        virtual std::string v_GetShapeName()
+        {
+            return std::string(traits::shape_traits<TShape>::name);
+        }
+
     private:
         Points<TData, typename traits::points_traits<TPts>::native_shape, TPts> m_points;
 
@@ -309,6 +321,17 @@ class Basis<TData, TShape, TPts, BernsteinTriangle> : public BasisBase<TData>
             BaseType::m_key = p;
             //const int n = p.m_nummodes[0];
             //BasisBase<TData>::template AllocateArrays<ModifiedLegendre>();
+        }
+
+    protected:
+        virtual LibUtilities::Foundations::ShapeType v_GetShapeType()
+        {
+            return traits::shape_traits<TShape>::type;
+        }
+
+        virtual std::string v_GetShapeName()
+        {
+            return std::string(traits::shape_traits<TShape>::name);
         }
 
     private:

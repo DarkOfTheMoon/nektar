@@ -1,12 +1,19 @@
 #include <iostream>
 using namespace std;
 
+#include <LibUtilities/BasicUtils/NekManager.hpp>
+#include <LibUtilities/Foundations/Foundations.hpp>
 #include <LibUtilities/Foundations/Points.hpp>
 #include <LibUtilities/Foundations/Basis.hpp>
 #include <LibUtilities/Foundations/Interp.hpp>
 
 using namespace Nektar;
 using namespace Nektar::LibUtilities::Foundations;
+
+BasisSharedPtr<double> CreateBasisObject(const BasisKey& bkey)
+{
+    return GetBasisFactory<double>().CreateInstance(bkey.m_id.GetString(), bkey);
+}
 
 
 int main () {
@@ -15,7 +22,9 @@ int main () {
     key.m_numpoints[1] = 6;
     key.m_numpoints[2] = 7;
 
+    char keyid[4] = "MOD";
     BasisKey bkey;
+    bkey.m_id = keyid;
     bkey.m_nummodes[0] = 4;
     bkey.m_nummodes[1] = 5;
     bkey.m_nummodes[2] = 6;
@@ -79,10 +88,18 @@ int main () {
 //    cout << traits::points_traits<GaussGaussLegendre,GaussGaussLegendre,GaussGaussLegendre>::dimension << endl;
 //
 
-
     // Create a points object using the factory
-    PointsSharedPtr<double> facptr = GetPointsFactory<double>().CreateInstance("GaussGaussLegendre_Segment", key);
+    PointsSharedPtr<double> facptr = GetPointsFactory().CreateInstance("GaussGaussLegendre_Segment", key);
     cout << facptr->GetNumPoints() << endl;
+
+//    cout << "Basis creation" << endl;
+//    GetBasisFactory<double>().PrintAvailableClasses(std::cout);
+//    BasisSharedPtr<double> bfacptr = GetBasisFactory<double>().CreateInstance("GaussGaussLegendre_Segment", bkey);
+//
+//    LibUtilities::NekManager<BasisKey, BasisBase<double>, BasisKey::opLess> bmanager;
+//    bmanager.RegisterGlobalCreator(boost::bind(CreateBasisObject, _1));
+//
+//    BasisSharedPtr<double> bfac2ptr = bmanager[bkey];
 
     cout << "Size of Modified basis: " << sizeof(Basis<double, Segment, GaussGaussLegendre, ModifiedLegendre>) << endl;
     // This one should cause a compile error

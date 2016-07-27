@@ -7,6 +7,22 @@ namespace LibUtilities
 {
 namespace Foundations
 {
+
+// Types of geometry types.
+enum ShapeType
+{
+    eNoShapeType,
+    ePoint,
+    eSegment,
+    eTriangle,
+    eQuadrilateral,
+    eTetrahedron,
+    ePyramid,
+    ePrism,
+    eHexahedron,
+    SIZE_ShapeType
+};
+
 struct Segment {};
 struct Triangle {};
 struct Quadrilateral {};
@@ -21,6 +37,7 @@ namespace traits
             static const int dimension = 0;
             static const bool is_simplex = false;
             static constexpr char name[] = "";
+            static const enum ShapeType type = eNoShapeType;
     };
 
     // Primary shape traits template
@@ -33,6 +50,7 @@ namespace traits
             static const int dimension = 1;
             static const bool is_simplex = false;
             static constexpr char name[] = "Segment";
+            static const enum ShapeType type = eSegment;
     };
 
     template<>
@@ -40,6 +58,7 @@ namespace traits
             static const int dimension = 2;
             static const bool is_simplex = true;
             static constexpr char name[] = "Triangle";
+            static const enum ShapeType type = eTriangle;
     };
 
     template<>
@@ -47,6 +66,7 @@ namespace traits
             static const int dimension = 2;
             static const bool is_simplex = false;
             static constexpr char name[] = "Quadrilateral";
+            static const enum ShapeType type = eQuadrilateral;
     };
 
     template<>
@@ -54,6 +74,7 @@ namespace traits
             static const int dimension = 3;
             static const bool is_simplex = true;
             static constexpr char name[] = "Tetrahedron";
+            static const enum ShapeType type = eTetrahedron;
     };
 
     template<>
@@ -61,6 +82,7 @@ namespace traits
             static const int dimension = 3;
             static const bool is_simplex = true;
             static constexpr char name[] = "Prism";
+            static const enum ShapeType type = ePrism;
     };
 
     template<>
@@ -68,6 +90,7 @@ namespace traits
             static const int dimension = 3;
             static const bool is_simplex = true;
             static constexpr char name[] = "Pyramid";
+            static const enum ShapeType type = ePyramid;
     };
 
     template<>
@@ -75,9 +98,12 @@ namespace traits
             static const int dimension = 3;
             static const bool is_simplex = false;
             static constexpr char name[] = "Hexahedron";
+            static const enum ShapeType type = eHexahedron;
     };
 
 }
+
+
 }
 }
 }

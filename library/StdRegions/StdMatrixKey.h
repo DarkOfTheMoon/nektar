@@ -38,8 +38,8 @@
 
 #include <StdRegions/StdRegions.hpp>
 #include <StdRegions/StdRegionsDeclspec.h>
-#include <LibUtilities/Foundations/Foundations.hpp>  // for PointsType, etc
-#include <LibUtilities/Foundations/Basis.h>
+//#include <LibUtilities/Foundations/Foundations.hpp>  // for PointsType, etc
+//#include <LibUtilities/Foundations/Basis.h>
 
 
 namespace Nektar
@@ -53,7 +53,7 @@ namespace Nektar
         {
         public:
             STD_REGIONS_EXPORT StdMatrixKey( const StdRegions::MatrixType matrixType,
-                          const LibUtilities::ShapeType shapeType,
+                          const LibUtilities::Foundations::ShapeType shapeType,
                           const StdRegions::StdExpansion &stdExpansion,
                           const ConstFactorMap &factorMap = NullConstFactorMap,
                           const VarCoeffMap &varCoeffMap = NullVarCoeffMap,
@@ -84,15 +84,15 @@ namespace Nektar
                 return m_matrixType;
             }
 
-            LibUtilities::ShapeType GetShapeType() const
+            LibUtilities::Foundations::ShapeType GetShapeType() const
             {
-                return m_shapeType;
+                return m_base.GetShapeType();
             }
 
-            LibUtilities::PointsType GetNodalPointsType() const
-            {
-                return m_nodalPointsType;
-            }
+//            LibUtilities::PointsType GetNodalPointsType() const
+//            {
+//                return m_nodalPointsType;
+//            }
            
             int GetNcoeffs() const
             {
@@ -176,12 +176,13 @@ namespace Nektar
             }
 
         protected:
-            LibUtilities::ShapeType m_shapeType;
-            Array<OneD, const LibUtilities::BasisSharedPtr> m_base;
+//            LibUtilities::ShapeType m_shapeType;
+//            Array<OneD, const LibUtilities::BasisSharedPtr> m_base;
+            LibUtilities::Foundations::BasisBase<NekDouble> m_base;
 
             unsigned int m_ncoeffs;
             MatrixType   m_matrixType;
-            LibUtilities::PointsType m_nodalPointsType;
+//            LibUtilities::PointsType m_nodalPointsType;
             
             ConstFactorMap m_factors;
             VarCoeffMap m_varcoeffs;

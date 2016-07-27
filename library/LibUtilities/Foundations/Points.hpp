@@ -32,6 +32,21 @@ class PointsKey
       PointsParamList m_params;
 };
 
+template<typename TData>
+class PointsBase;
+
+template<typename TData>
+using PointsSharedPtr = boost::shared_ptr<PointsBase<TData>>;
+
+template<typename TData>
+using PointsFactory = LibUtilities::NekFactory<
+        std::string, PointsBase<TData>, const PointsKey&>;
+
+// For some reason get undefined symbols when using a templated form...
+//template<typename TData>
+//LIB_UTILITIES_EXPORT PointsFactory<TData>& GetPointsFactory();
+
+LIB_UTILITIES_EXPORT PointsFactory<NekDouble>& GetPointsFactory();
 
 /**
  * @class PointsBase
@@ -170,23 +185,6 @@ class PointsBase
 
         virtual Array<OneD, TData> v_GetInterpMatrixData(const int& npts, const Array<OneD, const TData>& pts) = 0;
 };
-
-template<typename TData>
-using PointsSharedPtr = boost::shared_ptr<PointsBase<TData>>;
-
-template<typename TData>
-using PointsFactory = LibUtilities::NekFactory<
-        std::string, PointsBase<TData>, const PointsKey&>;
-
-template<typename TData>
-LIB_UTILITIES_EXPORT PointsFactory<TData>& GetPointsFactory()
-{
-    typedef Loki::SingletonHolder<PointsFactory<TData>,
-                                  Loki::CreateUsingNew,
-                                  Loki::NoDestroy> Type;
-    // Putting Loki::ClassLevelLockable causes an assertion!
-    return Type::Instance();
-}
 
 
 

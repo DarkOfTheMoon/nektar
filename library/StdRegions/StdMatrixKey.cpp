@@ -47,13 +47,13 @@ namespace Nektar
                                    const LibUtilities::ShapeType shapeType,
                                    const StdExpansion &stdExpansion,
                                    const ConstFactorMap &factorMap,
-                                   const VarCoeffMap &varCoeffMap,
-                                   LibUtilities::PointsType nodalType) :
-            m_shapeType(shapeType),
+                                   const VarCoeffMap &varCoeffMap):
+//                                   LibUtilities::PointsType nodalType) :
+//            m_shapeType(shapeType),
             m_base(stdExpansion.GetBase()),
             m_ncoeffs(stdExpansion.GetNcoeffs()),
             m_matrixType(matrixType),
-            m_nodalPointsType(nodalType),
+//            m_nodalPointsType(nodalType),
             m_factors(factorMap),
             m_varcoeffs(varCoeffMap),
             m_varcoeff_hashes(varCoeffMap.size())
@@ -70,11 +70,11 @@ namespace Nektar
 
         StdMatrixKey::StdMatrixKey(const StdMatrixKey& rhs,
                       const StdRegions::MatrixType matrixType) :
-            m_shapeType(rhs.m_shapeType),
+//            m_shapeType(rhs.m_shapeType),
             m_base(rhs.m_base),
             m_ncoeffs(rhs.m_ncoeffs),
             m_matrixType(matrixType),
-            m_nodalPointsType(rhs.m_nodalPointsType),
+//            m_nodalPointsType(rhs.m_nodalPointsType),
             m_factors(rhs.m_factors),
             m_varcoeffs(rhs.m_varcoeffs),
             m_varcoeff_hashes(rhs.m_varcoeff_hashes)
@@ -82,11 +82,11 @@ namespace Nektar
         }
 
         StdMatrixKey::StdMatrixKey(const StdMatrixKey& rhs) :
-            m_shapeType(rhs.m_shapeType),
+//            m_shapeType(rhs.m_shapeType),
             m_base(rhs.m_base),
             m_ncoeffs(rhs.m_ncoeffs),
             m_matrixType(rhs.m_matrixType),
-            m_nodalPointsType(rhs.m_nodalPointsType),
+//            m_nodalPointsType(rhs.m_nodalPointsType),
             m_factors(rhs.m_factors),
             m_varcoeffs(rhs.m_varcoeffs),
             m_varcoeff_hashes(rhs.m_varcoeff_hashes)
