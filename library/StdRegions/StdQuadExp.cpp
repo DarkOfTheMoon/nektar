@@ -1597,33 +1597,17 @@ namespace Nektar
             }
             else
             {
-                //for the "old" implementation
-                int cutoff = (int) (mkey.GetConstFactor(eFactorSVVCutoffRatio)*
-                                                        min(nmodes_a,nmodes_b));
-
                 // project onto modal  space.
                 OrthoExp.FwdTrans(array,orthocoeffs);
 
-                //counters for scanning through orthocoeffs array
-                int j, k, cnt = 0;
-
-                //------"New" Version August 22nd '13--------------------
-                for(j = 0; j < nmodes_a; ++j)
+                for(int j = 0; j < nmodes_a; ++j)
                 {
-                    for(k = 0; k < nmodes_b; ++k)
+                    for(int k = 0; k < nmodes_b; ++k)
                     {
-                        if(j + k >= cutoff)//to filter out only the "high-modes"
-                        {
-                             orthocoeffs[j*nmodes_b+k] *=
-                                 (SvvDiffCoeff*exp(-(j+k-nmodes)*(j+k-nmodes)/
-                                                    ((NekDouble)((j+k-cutoff+1)*
-                                                         (j+k-cutoff+1)))));
-                         }
-                        else
-                        {
-                             orthocoeffs[j*nmodes_b+k] *= 0.0;
-                        }
-                        cnt++;
+                        NekDouble fac = std::max( pow((1.0*j)/(nmodes_a-1),(nmodes_a-1)/2),
+                                                  pow((1.0*k)/(nmodes_b-1),(nmodes_b-1)/2));
+                        orthocoeffs[j*nmodes_b+k] *=
+                                SvvDiffCoeff * fac / (nmodes-1);
                     }
                 }
 

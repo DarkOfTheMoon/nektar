@@ -2378,6 +2378,8 @@ namespace Nektar
             int nmodes_a = m_base[0]->GetNumModes();
             int nmodes_b = m_base[1]->GetNumModes();
             int nmodes_c = m_base[2]->GetNumModes();
+            int nmodes = min(nmodes_a,nmodes_b);
+            nmodes = min(nmodes, nmodes_c);
             // Declare orthogonal basis. 
             LibUtilities::PointsKey pa(qa,m_base[0]->GetPointsType());
             LibUtilities::PointsKey pb(qb,m_base[1]->GetPointsType());
@@ -2406,7 +2408,7 @@ namespace Nektar
                                                   pow((1.0*j)/(nmodes_b-1),(nmodes_b-1)/2));
                         fac = std::max (fac, pow((1.0*k)/(nmodes_c-1),(nmodes_c-1)/2));
                         orthocoeffs[i*nmodes_a*nmodes_b + j*nmodes_c + k] *=
-                                SvvDiffCoeff * fac;
+                                SvvDiffCoeff * fac / (nmodes-1);
                     }
                 }
             }
