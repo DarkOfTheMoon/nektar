@@ -1597,6 +1597,7 @@ namespace Nektar
             }
             else
             {
+                NekDouble PSvv = mkey.GetConstFactor(eFactorSVVCutoffRatio);
                 // project onto modal  space.
                 OrthoExp.FwdTrans(array,orthocoeffs);
 
@@ -1604,8 +1605,8 @@ namespace Nektar
                 {
                     for(int k = 0; k < nmodes_b; ++k)
                     {
-                        NekDouble fac = std::max( pow((1.0*j)/(nmodes_a-1),(nmodes_a-1)/2),
-                                                  pow((1.0*k)/(nmodes_b-1),(nmodes_b-1)/2));
+                        NekDouble fac = std::max( pow((1.0*j)/(nmodes_a-1),PSvv),
+                                                  pow((1.0*k)/(nmodes_b-1),PSvv));
                         orthocoeffs[j*nmodes_b+k] *=
                                 SvvDiffCoeff * fac / (nmodes-1);
                     }
