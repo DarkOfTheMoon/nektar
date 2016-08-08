@@ -39,6 +39,27 @@ There are two ways to obtain the source code for \nekpp:
 	\end{itemize}
 \end{itemize}
 
+\subsection{Third Party Software Installation}
+
+Third party software can be installed manually by downloading the installation files from the official websites. Here are the list of websites you may visit:
+
+\begin{itemize}
+\item CMake \texttt{https://cmake.org/}
+\item BLAS \texttt{http://www.netlib.org/blas/}
+\item LAPACK \texttt{http://www.netlib.org/lapack/}
+\item Boost \texttt{http://www.boost.org/}
+\item ModMETIS \texttt{https://www.nektar.info/thirdparty/}
+\item FFTW \texttt{http://www.fftw.org/}
+\item ARPACK \texttt{http://www.caam.rice.edu/software/ARPACK/}
+\item OpenMPI \texttt{https://www.open-mpi.org/}
+\item GSMPI \texttt{http://ae-nektar.ae.ic.ac.uk/ dmoxey/test/gsmpi-1.1/}
+\item PETSc \texttt{https://www.mcs.anl.gov/petsc/}
+\item Scotch \texttt{http://gforge.inria.fr/projects/scotch/}
+\item VTK \texttt{http://www.vtk.org/}
+\end{itemize}
+
+You may also find all of the above at \texttt{https://www.nektar.info/thirdparty/} \textbf{(supposed to add description to the softwares and move the CMake component selection here as of what is discussed)}
+
 \subsection{Linux}
 \subsubsection{Prerequisites}
 \nekpp uses a number of external programs and libraries for some or all of its
@@ -368,6 +389,20 @@ tar -zxvf nektar++-(*\nekver*).tar.gz
         \item Each time a change is made in the options of CMake (e.g. switching on/off an option), the software has to be installed again following the above procedures.
 \end{enumerate}
 
+\subsubsection{Frequently Asked Questions}
+
+\begin{itemize}
+\item What if the OpenMPI is not working? \\ Enter the command in terminal
+    \begin{lstlisting}[style=BashInputStyle]
+sudo port select mpi openmpi-mp-fortran 
+sudo port select mpi
+    \end{lstlisting}
+    Test if OpenMPI works by entering the command
+        \begin{lstlisting}[style=BashInputStyle]
+mpirun
+    \end{lstlisting}
+\end{itemize}
+
 \subsection{Windows}
 
 Windows compilation is supported, but the build process is somewhat convoluted
@@ -471,7 +506,7 @@ ModMETIS          & \cmark & \cmark & \cmark       & \\
   \end{lstlisting}
 \end{enumerate}
 
-\subsection{CMake Option Reference}
+\subsection{CMake Option Reference (to be moved to the front)}
 \label{s:installation:source:cmake}
 This section describes the main configuration options which can be set when
 building Nektar++. The default options should work on almost all systems, but
@@ -590,7 +625,7 @@ can be selected using the following options:
     Build Nektar++ with MPI parallelisation. This allows solvers to be run in
     serial or parallel. Running the solvers in parallel allows many calculations to be carried out simultaneously, reducing the time needed for rendering the result.\\
 
-    If Open MPI does not work when it is fetched automatically from the source, it is possible to install it manually by downloading the software from the official website \url{https://www.open-mpi.org/software/ompi/v2.0/}
+    If OpenMPI does not work when it is fetched automatically from the source, it is possible to install it manually by downloading the software from the official website \url{https://www.open-mpi.org/software/ompi/v2.0/}
 
     \item \inlsh{NEKTAR\_USE\_OPENBLAS}
 
