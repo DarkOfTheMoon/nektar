@@ -826,7 +826,166 @@ namespace Nektar
               Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &derivativesO1,
               Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &viscousTensor)
     {
+        int i, j;
+        int nVariables = m_fields.num_elements();
+        int nPts       = physfield[0].num_elements();
 
+        // Stokes hypothesis
+        const NekDouble lambda = -2.0/3.0;
+
+        // Auxiliary variables
+        Array<OneD, NekDouble > mu                 (nPts, 0.0);
+        Array<OneD, NekDouble > thermalConductivity(nPts, 0.0);
+        Array<OneD, NekDouble > divVel             (nPts, 0.0);
+        Array<OneD, NekDouble > tmp                (nPts, 0.0);
+        Array<OneD, NekDouble > tmp2               (nPts, 0.0);
+
+        // Variable viscosity through the Sutherland's law
+        if (m_ViscosityType == "Variable")
+        {
+            m_varConv->GetDynamicViscosity(physfield[nVariables-2], mu);
+            NekDouble tRa = m_Cp / m_Prandtl;
+            Vmath::Smul(nPts, tRa, mu, 1, thermalConductivity, 1);
+        }
+        else
+        {
+            Vmath::Fill(nPts, m_mu, mu, 1);
+            Vmath::Fill(nPts, m_thermalConductivity,
+                        thermalConductivity, 1);
+        }
+
+        // Velocity divergence
+        for (j = 0; j < m_spacedim; ++j)
+        {
+            Vmath::Vadd(nPts, divVel, 1, derivativesO1[j][j], 1,
+                        divVel, 1);
+        }
+
+        // Velocity divergence scaled by lambda * mu
+        Vmath::Smul(nPts, lambda, divVel, 1, divVel, 1);
+        Vmath::Vmul(nPts, mu,  1, divVel, 1, divVel, 1);
+
+        // Viscous flux vector for the rho equation = 0
+        for (i = 0; i < m_spacedim; ++i)
+        {
+            Vmath::Zero(nPts, viscousTensor[i][0], 1);
+        }
+
+        // Viscous stress tensor (for the momentum equations)
+        for (i = 0; i < m_spacedim; ++i)
+        {
+            for (j = i; j < m_spacedim; ++j)
+            {
+                Vmath::Vadd(nPts, derivativesO1[i][j], 1,
+                                  derivativesO1[j][i], 1,
+                                  viscousTensor[i][j+1], 1);
+
+                Vmath::Vmul(nPts, mu, 1,
+                                  viscousTensor[i][j+1], 1,
+                                  viscousTensor[i][j+1], 1);
+
+                if (i == j)
+                {
+                    // Add divergence term to diagonal
+                    Vmath::Vadd(nPts, viscousTensor[i][j+1], 1,
+                                  divVel, 1,
+                                  viscousTensor[i][j+1], 1);
+                }
+                else
+                {
+                    // Copy to make symmetric
+                    Vmath::Vcopy(nPts, viscousTensor[i][j+1], 1,
+                                       viscousTensor[j][i+1], 1);
+                }
+            }
+        }
+
+        // Terms for the energy equation
+
+        // Calculate -k*T/rho
+        Vmath::Vdiv(nPts, thermalConductivity, 1,
+                            physfield[nVariables-1], 1,
+                            tmp, 1);
+        Vmath::Vmul(nPts, tmp, 1,
+                            physfield[nVariables-2], 1,
+                            tmp, 1);
+        Vmath::Neg(nPts, tmp, 1);
+
+        // Calculate flux for energy equation
+        for (i = 0; i < m_spacedim; ++i)
+        {
+            // -(k*T/rho)*rho_i
+            Vmath::Vmul(nPts, tmp, 1,
+                            derivativesO1[i][m_spacedim+1], 1,
+                            viscousTensor[i][m_spacedim+1], 1);
+
+            for (j = 0; j < m_spacedim; ++j)
+            {
+                // - mu*gamma/Pr * u_j * u_j,i
+                Vmath::Smul(nPts, -m_gamma/m_Prandtl,
+                            mu, 1,
+                            tmp2, 1);
+                Vmath::Vmul(nPts, physfield[j], 1,
+                            tmp2, 1,
+                            tmp2, 1);
+                Vmath::Vvtvp(nPts, tmp2, 1,
+                               derivativesO1[i][j], 1,
+                               viscousTensor[i][m_spacedim+1], 1,
+                               viscousTensor[i][m_spacedim+1], 1);
+
+                // - mu*gamma/(2*rho*Pr) * u_j*u_j * rho_i
+                Vmath::Smul(nPts, -m_gamma/(2*m_Prandtl),
+                            mu, 1,
+                            tmp2, 1);
+                Vmath::Vdiv(nPts, tmp2, 1,
+                            physfield[nVariables-1], 1,
+                            tmp2, 1);
+                Vmath::Vmul(nPts, physfield[j], 1,
+                            tmp2, 1,
+                            tmp2, 1);
+                Vmath::Vmul(nPts, physfield[j], 1,
+                            tmp2, 1,
+                            tmp2, 1);
+                Vmath::Vvtvp(nPts, physfield[j], 1,
+                               derivativesO1[i][m_spacedim+1], 1,
+                               viscousTensor[i][m_spacedim+1], 1,
+                               viscousTensor[i][m_spacedim+1], 1);
+
+                // + u_j * tau_ij
+                Vmath::Vvtvp(nPts, physfield[j], 1,
+                               viscousTensor[i][j+1], 1,
+                               viscousTensor[i][m_spacedim+1], 1,
+                               viscousTensor[i][m_spacedim+1], 1);
+            }
+        }
+        // Correct fluxes for momentum equation using Imex
+        for (i = 0; i < m_spacedim; ++i)
+        {
+            for (j = 0; j < m_spacedim; ++j)
+            {
+                // - mu*u_j,i
+                Vmath::Vmul(nPts, mu, 1,
+                                  derivativesO1[i][j], 1,
+                                  tmp2, 1);
+                Vmath::Vsub(nPts, viscousTensor[i][j+1], 1,
+                                  tmp2, 1,
+                                  viscousTensor[i][j+1], 1);
+
+                // - mu*u_j/rho * rho_i
+                Vmath::Vmul(nPts, mu, 1,
+                                  physfield[j], 1,
+                                  tmp2, 1);
+                Vmath::Vdiv(nPts, tmp2, 1,
+                                  physfield[nVariables-1], 1,
+                                  tmp2, 1);
+                Vmath::Vmul(nPts, tmp2, 1,
+                                  derivativesO1[i][m_spacedim+1], 1,
+                                  tmp2, 1);
+                Vmath::Vsub(nPts, viscousTensor[i][j+1], 1,
+                                  tmp2, 1,
+                                  viscousTensor[i][j+1], 1);
+            }
+        }
     }
 
     /**

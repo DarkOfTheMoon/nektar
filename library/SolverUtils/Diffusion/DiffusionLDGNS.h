@@ -71,6 +71,7 @@ namespace Nektar
             
             Array<OneD, Array<OneD, NekDouble> > m_homoDerivs;
             
+            bool                                 m_explicitDiffusion;
             int                                  m_spaceDim;
             int                                  m_diffDim;
             

@@ -65,6 +65,8 @@ namespace Nektar
                                       m_thermalConductivity, 0.0257);
             m_session->LoadParameter ("rhoInf",        m_rhoInf, 1.225);
             m_session->LoadParameter ("pInf",          m_pInf, 101325);
+            m_session->MatchSolverInfo("DIFFUSIONADVANCEMENT","Explicit",
+                                        m_explicitDiffusion, true);
             
             // Setting up the normals
             int i;
@@ -175,7 +177,7 @@ namespace Nektar
             {
                 m_viscTensor[j] = Array<OneD, Array<OneD, NekDouble> >(
                                                                     nScalars+1);
-                for (i = 0; i < nScalars+1; ++i)
+                for (i = 0; i < nConvectiveFields; ++i)
                 {
                     m_viscTensor[j][i] = Array<OneD, NekDouble>(nPts, 0.0);
                 }
@@ -304,6 +306,11 @@ namespace Nektar
             
             int nTracePts = fields[0]->GetTrace()->GetTotPoints();
             int nScalars  = inarray.num_elements();
+
+            if (m_explicitDiffusion == false)
+            {
+                nScalars = nScalars-1;
+            }
             
             Array<OneD, NekDouble> tmp1(nTracePts, 0.0);
             Array<OneD, NekDouble> tmp2(nTracePts, 0.0);
@@ -484,6 +491,38 @@ namespace Nektar
                                      &uplus[nScalars-1][id2], 1, 
                                      &penaltyfluxO1[nScalars-1][id2], 1);
                         
+                    }
+                }
+            }
+
+            // Compute boundary conditions for density
+            if (m_explicitDiffusion == false)
+            {
+                cnt = 0;
+                nBndRegions = fields[0]->
+                GetBndCondExpansions().num_elements();
+                for (j = 0; j < nBndRegions; ++j)
+                {
+                    nBndEdges = fields[0]->
+                    GetBndCondExpansions()[j]->GetExpSize();
+                    for (e = 0; e < nBndEdges; ++e)
+                    {
+                        nBndEdgePts = fields[0]->
+                        GetBndCondExpansions()[j]->GetExp(e)->GetTotPoints();
+
+                        id1 = fields[0]->
+                        GetBndCondExpansions()[j]->GetPhys_Offset(e);
+
+                        id2 = fields[0]->GetTrace()->
+                        GetPhys_Offset(fields[0]->GetTraceMap()->
+                                       GetBndCondTraceToGlobalTraceMap(cnt++));
+
+
+                        // For both Dirichlet and Neumann boundary condition:
+                        // uFlux = uBCs
+                        Vmath::Vcopy(nBndEdgePts, &uplus[nScalars][id2], 1,
+                                     &penaltyfluxO1[nScalars][id2], 1);
+
                     }
                 }
             }

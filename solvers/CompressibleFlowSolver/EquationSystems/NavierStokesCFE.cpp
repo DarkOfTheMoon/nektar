@@ -63,21 +63,22 @@ namespace Nektar
     {
         int i;
         int nvariables = inarray.num_elements();
+        int nInputs    = m_explicitDiffusion ? (nvariables-1) : nvariables;
         int npoints    = GetNpoints();
         int nTracePts  = GetTraceTotPoints();
 
         Array<OneD, Array<OneD, NekDouble> > outarrayDiff(nvariables);
 
-        Array<OneD, Array<OneD, NekDouble> > inarrayDiff(nvariables-1);
-        Array<OneD, Array<OneD, NekDouble> > inFwd(nvariables-1);
-        Array<OneD, Array<OneD, NekDouble> > inBwd(nvariables-1);
+        Array<OneD, Array<OneD, NekDouble> > inarrayDiff(nInputs);
+        Array<OneD, Array<OneD, NekDouble> > inFwd(nInputs);
+        Array<OneD, Array<OneD, NekDouble> > inBwd(nInputs);
 
         for (i = 0; i < nvariables; ++i)
         {
             outarrayDiff[i] = Array<OneD, NekDouble>(npoints);
         }
 
-        for (i = 0; i < nvariables-1; ++i)
+        for (i = 0; i < nInputs; ++i)
         {
             inarrayDiff[i] = Array<OneD, NekDouble>(npoints);
             inFwd[i]       = Array<OneD, NekDouble>(nTracePts);
@@ -94,6 +95,12 @@ namespace Nektar
 
         // Extract velocities
         m_varConv->GetVelocityVector(inarray, inarrayDiff);
+
+        // Density for semi-implicit
+        if( !m_explicitDiffusion )
+        {
+            Vmath::Vcopy(npoints, inarray[0], 1, inarrayDiff[nvariables-1], 1);
+        }
 
         // Repeat calculation for trace space
         if (pFwd == NullNekDoubleArrayofArray || 
@@ -114,6 +121,12 @@ namespace Nektar
 
             m_varConv->GetVelocityVector(pFwd, inFwd);
             m_varConv->GetVelocityVector(pBwd, inBwd);
+
+            if( !m_explicitDiffusion )
+            {
+                Vmath::Vcopy(npoints, pFwd[0], 1, inFwd[nvariables-1], 1);
+                Vmath::Vcopy(npoints, pBwd[0], 1, inBwd[nvariables-1], 1);
+            }
         }
 
         // Diffusion term in physical rhs form
