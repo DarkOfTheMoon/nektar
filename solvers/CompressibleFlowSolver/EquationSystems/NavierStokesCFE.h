@@ -71,6 +71,12 @@ namespace Nektar
               Array<OneD,       Array<OneD, NekDouble> > &outarray,
             const Array<OneD, Array<OneD, NekDouble> >   &pFwd,
             const Array<OneD, Array<OneD, NekDouble> >   &pBwd);
+  private:
+    virtual void v_DoImplicitSolve(
+            const Array<OneD, const Array<OneD, NekDouble> > &inarray,
+                  Array<OneD,       Array<OneD, NekDouble> > &outarray,
+            const NekDouble                                   time,
+            const NekDouble                                   aii_Dt);
   };
 }
 #endif

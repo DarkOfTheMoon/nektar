@@ -106,6 +106,8 @@ namespace Nektar
         {
             m_ode.DefineOdeRhs    (&CompressibleFlowSystem::DoOdeRhs, this);
             m_ode.DefineProjection(&CompressibleFlowSystem::DoOdeProjection, this);
+            m_ode.m_ode.DefineImplicitSolve(
+                    &CompressibleFlowSystem::DoImplicitSolve, this);
         }
         else
         {
@@ -193,16 +195,32 @@ namespace Nektar
         {
             m_advection->SetFluxVector(&CompressibleFlowSystem::
                                        GetFluxVectorDeAlias, this);
-            m_diffusion->SetFluxVectorNS(
-                &CompressibleFlowSystem::GetViscousFluxVectorDeAlias,
-                this);
+            if (m_explicitDiffusion)
+            {
+                m_diffusion->SetFluxVectorNS(
+                    &CompressibleFlowSystem::GetViscousFluxVectorDeAlias,
+                    this);
+            }
+            else
+            {
+                ASSERTL0(false,
+                    "Imex viscous flux not implemented with dealiasing");
+            }
         }
         else
         {
             m_advection->SetFluxVector  (&CompressibleFlowSystem::
                                           GetFluxVector, this);
-            m_diffusion->SetFluxVectorNS(&CompressibleFlowSystem::
-                                          GetViscousFluxVector, this);
+            if (m_explicitDiffusion)
+            {
+                m_diffusion->SetFluxVectorNS(&CompressibleFlowSystem::
+                        GetViscousFluxVector, this);
+            }
+            else
+            {
+                m_diffusion->SetFluxVectorNS(&CompressibleFlowSystem::
+                        GetViscousFluxVectorSemiImplicit, this);
+            }
         }
 
         // Setting up Riemann solver for advection operator
@@ -329,6 +347,18 @@ namespace Nektar
                 ASSERTL0(false, "Unknown projection scheme");
                 break;
         }
+    }
+
+    /**
+     * @brief Solve the implicit system when using IMEX
+     */
+    void CompressibleFlowSystem::DoImplicitSolve(
+            const Array<OneD, const Array<OneD, NekDouble> > &inarray,
+                  Array<OneD,       Array<OneD, NekDouble> > &outarray,
+            const NekDouble                                   time,
+            const NekDouble                                   aii_Dt)
+    {
+        v_DoImplicitSolve(inarray, outarray, time, aii_Dt);
     }
 
     /**
@@ -785,6 +815,18 @@ namespace Nektar
                     viscousTensor[i][j]);
             }
         }
+    }
+
+    /**
+     * @brief Return the flux vector for the LDG diffusion problem using
+     *        semi-implicit time integration.
+     */
+    void CompressibleFlowSystem::GetViscousFluxVectorSemiImplicit(
+        const Array<OneD, Array<OneD, NekDouble> >               &physfield,
+              Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &derivativesO1,
+              Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &viscousTensor)
+    {
+
     }
 
     /**

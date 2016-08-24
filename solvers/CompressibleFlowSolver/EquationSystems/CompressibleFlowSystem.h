@@ -117,6 +117,11 @@ namespace Nektar
             const Array<OneD, const Array<OneD, NekDouble> > &inarray,
                   Array<OneD,       Array<OneD, NekDouble> > &outarray,
             const NekDouble                                   time);
+        void DoImplicitSolve(
+            const Array<OneD, const Array<OneD, NekDouble> > &inarray,
+                  Array<OneD,       Array<OneD, NekDouble> > &outarray,
+            const NekDouble                                   time,
+            const NekDouble                                   aii_Dt);
 
         void DoAdvection(
             const Array<OneD, const Array<OneD, NekDouble> > &inarray,
@@ -142,6 +147,10 @@ namespace Nektar
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &derivatives,
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &viscousTensor);
         void GetViscousFluxVectorDeAlias(
+            const Array<OneD, Array<OneD, NekDouble> >         &physfield,
+            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &derivatives,
+            Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &viscousTensor);
+        void GetViscousFluxVectorSemiImplicit(
             const Array<OneD, Array<OneD, NekDouble> >         &physfield,
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &derivatives,
             Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &viscousTensor);
@@ -198,6 +207,12 @@ namespace Nektar
         {
             // Do nothing by default
         }
+
+        virtual void v_DoImplicitSolve(
+            const Array<OneD, const Array<OneD, NekDouble> > &inarray,
+                  Array<OneD,       Array<OneD, NekDouble> > &outarray,
+            const NekDouble                                   time,
+            const NekDouble                                   aii_Dt) = 0;
     };
 }
 #endif
