@@ -176,7 +176,7 @@ namespace Nektar
         Vmath::Smul(nq, -factors[StdRegions::eFactorLambda],
                         inarray[nvariables-1], 1, F, 1);
         m_fields[nvariables-1]->HelmSolve(
-            F[nvariables-1],
+            F,
             m_fields[nvariables-1]->UpdateCoeffs(),
             NullFlagList, factors);
 

@@ -106,7 +106,7 @@ namespace Nektar
         {
             m_ode.DefineOdeRhs    (&CompressibleFlowSystem::DoOdeRhs, this);
             m_ode.DefineProjection(&CompressibleFlowSystem::DoOdeProjection, this);
-            m_ode.m_ode.DefineImplicitSolve(
+            m_ode.DefineImplicitSolve(
                     &CompressibleFlowSystem::DoImplicitSolve, this);
         }
         else
