@@ -124,8 +124,8 @@ namespace Nektar
 
             if( !m_explicitDiffusion )
             {
-                Vmath::Vcopy(npoints, pFwd[0], 1, inFwd[nvariables-1], 1);
-                Vmath::Vcopy(npoints, pBwd[0], 1, inBwd[nvariables-1], 1);
+                Vmath::Vcopy(nTracePts, pFwd[0], 1, inFwd[nvariables-1], 1);
+                Vmath::Vcopy(nTracePts, pBwd[0], 1, inBwd[nvariables-1], 1);
             }
         }
 
@@ -163,9 +163,8 @@ namespace Nektar
         // Setting boundary conditions
         SetBoundaryConditions(outarray, time);
 
-        // Density has no implicit part -> outarray = inarray / aii_Dt
-        Vmath::Smul(nq, 1.0/aii_Dt,
-                        inarray[0], 1, outarray[0], 1);
+        // Density has no implicit part -> outarray = inarray
+        Vmath::Vcopy(nq, inarray[0], 1, outarray[0], 1);
 
         // Defining the scalar factors for momentum Helmholtz equation
         factors[StdRegions::eFactorTau]    = 1.0;
