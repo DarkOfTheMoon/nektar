@@ -212,7 +212,10 @@ namespace Nektar
             const Array<OneD, const Array<OneD, NekDouble> > &inarray,
                   Array<OneD,       Array<OneD, NekDouble> > &outarray,
             const NekDouble                                   time,
-            const NekDouble                                   aii_Dt) = 0;
+            const NekDouble                                   aii_Dt)
+        {
+            // Do nothing by default
+        }
     };
 }
 #endif
