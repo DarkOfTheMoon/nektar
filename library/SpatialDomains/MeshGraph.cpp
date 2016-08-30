@@ -2094,8 +2094,19 @@ namespace Nektar
                         {
                             returnval = false;
                         }
+
+
                     }
                 }
+
+                if(m_domainRange->m_checkGID)
+                {
+                    if(geom.GetGlobalID() != m_domainRange->m_gID)
+                    {
+                        returnval = false;
+                    }
+                }
+                
             }
             return returnval;
         }
@@ -2201,6 +2212,13 @@ namespace Nektar
                     }
                 }
 
+                if(m_domainRange->m_checkGID)
+                {
+                    if(geom.GetGlobalID() != m_domainRange->m_gID)
+                    {
+                        returnval = false;
+                    }
+                }
             }
 
             return returnval;

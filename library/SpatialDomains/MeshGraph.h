@@ -152,6 +152,9 @@ namespace Nektar
 
             bool                    m_checkShape;
             LibUtilities::ShapeType m_shapeType;
+
+            bool                    m_checkGID;
+            int                     m_gID;
         };
 
         typedef boost::shared_ptr<DomainRange> DomainRangeShPtr;

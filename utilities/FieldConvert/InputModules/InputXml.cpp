@@ -172,6 +172,7 @@ void InputXml::Process(po::variables_map &vm)
         rng->m_doZrange     = false;
         rng->m_doYrange     = false;
         rng->m_checkShape   = false;
+        rng->m_checkGID     = false;
 
         switch(nvalues)
         {
@@ -203,6 +204,7 @@ void InputXml::Process(po::variables_map &vm)
             rng->m_doXrange = false;
             rng->m_doYrange = false;
             rng->m_doZrange = false;
+            rng->m_checkGID = false;
         }
 
         rng->m_checkShape = true;
@@ -225,6 +227,25 @@ void InputXml::Process(po::variables_map &vm)
                  "argument");
     }
 
+
+    // define range to only take a single shape.
+    if(vm.count("elementid"))
+    {
+        if(rng == SpatialDomains::NullDomainRangeShPtr)
+        {
+            rng = MemoryManager<SpatialDomains::DomainRange>::
+                                                    AllocateSharedPtr();
+            rng->m_doXrange = false;
+            rng->m_doYrange = false;
+            rng->m_doZrange = false;
+            rng->m_checkShape = false;
+        }
+
+        rng->m_checkGID = true;
+        rng->m_gID = vm["elementid"].as<int>(); 
+    }
+
+    
     // Set up command lines options that will be passed through to SessionReader
     vector<string> cmdArgs;
     cmdArgs.push_back("FieldConvert");

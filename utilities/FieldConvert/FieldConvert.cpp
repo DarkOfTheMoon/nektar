@@ -57,6 +57,7 @@ int main(int argc, char* argv[])
                 "Output at n equipspaced points along the collapsed coordinates (for .dat, .vtk).")
         ("output-points-hom-z", po::value<int>(),
                 "Number of planes in the z-direction for output of Homogeneous 1D expansion(for .dat, .vtk).")
+        ("elementid",po::value<int>(),"Only write out specified element id")
         ("error,e",
                 "Write error of fields for regression checking")
         ("forceoutput,f",
