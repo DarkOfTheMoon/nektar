@@ -55,8 +55,8 @@ namespace Nektar
     template<typename DataType, typename FormType>
     std::ostream& operator<<(std::ostream& os, const NekMatrix<DataType, FormType>& rhs)
     {
-        int oswidth = 9;
-        int osprecision = 6;
+        int oswidth = 20;
+        int osprecision = 15;
 
         for(unsigned int i = 0; i < rhs.GetRows(); ++i)
         {

@@ -2419,6 +2419,10 @@ namespace Nektar
                             condition.Evaluate(x0, x1, x2, time,
                                                locExpList->UpdatePhys());
                         }
+
+                        locExpList->IProductWRTBase(
+                            locExpList->GetPhys(),
+                            locExpList->UpdateCoeffs());
                     }
                     else
                     {

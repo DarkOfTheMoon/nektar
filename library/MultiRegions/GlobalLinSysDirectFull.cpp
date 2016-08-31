@@ -116,7 +116,7 @@ namespace Nektar
             int nDirDofs  = pLocToGloMap->GetNumGlobalDirBndCoeffs();
             int nGlobDofs = pLocToGloMap->GetNumGlobalCoeffs();
             Array<OneD, NekDouble> tmp(nGlobDofs);
-            
+
             if(nDirDofs)
             {
                 // calculate the dirichlet forcing
@@ -183,6 +183,7 @@ namespace Nektar
                     if( (2*(bwidth+1)) < rows)
                     {
                         matStorage = ePOSITIVE_DEFINITE_SYMMETRIC_BANDED;
+                        matStorage = eFULL;
                         Gmat = MemoryManager<DNekMat>
                                         ::AllocateSharedPtr(rows, cols, zero,
                                                             matStorage,
@@ -191,6 +192,7 @@ namespace Nektar
                     else
                     {
                         matStorage = ePOSITIVE_DEFINITE_SYMMETRIC;
+                        matStorage = eFULL;
                         Gmat = MemoryManager<DNekMat>
                                         ::AllocateSharedPtr(rows, cols, zero,
                                                             matStorage);
@@ -251,6 +253,84 @@ namespace Nektar
                 }
                 cnt   += loc_lda;
             }
+
+            int nCoeffs = m_expList.lock()->GetNcoeffs();
+
+            DNekMat Gmat2 = *Gmat;
+
+            Array<OneD, NekDouble> EigValReal = Array<OneD, NekDouble>(rows);
+            Array<OneD, NekDouble> EigValImag = Array<OneD, NekDouble>(rows);
+            Array<OneD, NekDouble> EigV = Array<OneD, NekDouble>(rows * rows);
+
+            // FullMatrixFuncs::EigenSolve(rows,(*Gmat).GetRawPtr(), EigValReal, EigValImag);
+            Gmat2.EigenSolve(EigValReal, EigValImag, EigV);
+
+            std::cout << "Global matrix eigenvalues:" << std::endl;
+            for(int i = 0; i < EigValReal.num_elements(); ++i)
+            {
+                std::cout << EigValReal[i] << " + " << EigValImag[i] << "i" << std::endl;
+            }
+
+            std::string evecReField = "EvecRe";
+            std::string evecImField = "EvecIm";
+
+            std::vector<std::vector<NekDouble> > data(1);
+            std::vector<LibUtilities::FieldDefinitionsSharedPtr> fielddef =
+                m_expList.lock()->GetFieldDefinitions();
+
+            int imagTrack = -1;
+
+            for (int i = 0; i < EigValReal.num_elements(); ++i)
+            {
+                if (EigValImag[i] != 0.0)
+                {
+                    if (imagTrack == -1)
+                    {
+                        imagTrack = i;
+                    }
+
+                    Array<OneD, NekDouble> tmp(rows), tmp2(nCoeffs);
+
+                    // Real component
+                    Vmath::Vcopy(rows, EigV + imagTrack * rows, 1, tmp, 1);
+                    pLocToGloMap->GlobalToLocal(tmp, tmp2);
+                    m_expList.lock()->AppendFieldData(
+                        fielddef[0], data[0], tmp2);
+                    fielddef[0]->m_fields.push_back(
+                        evecReField + boost::lexical_cast<std::string>(i));
+
+                    // Imaginary component
+                    Vmath::Vcopy(rows, EigV + (imagTrack+1) * rows, 1, tmp, 1);
+
+                    if (imagTrack+1 == i)
+                    {
+                        // Negate this component
+                        Vmath::Neg(rows, tmp, 1);
+
+                        // Reset our counter
+                        imagTrack = -1;
+                    }
+
+                    pLocToGloMap->GlobalToLocal(tmp, tmp2);
+                    m_expList.lock()->AppendFieldData(
+                        fielddef[0], data[0], tmp2);
+                    fielddef[0]->m_fields.push_back(
+                        evecImField + boost::lexical_cast<std::string>(i));
+                }
+                else
+                {
+                    // Real eigenvector
+                    Array<OneD, NekDouble> tmp(rows), tmp2(nCoeffs);
+                    Vmath::Vcopy(rows, EigV + i * rows, 1, tmp, 1);
+                    pLocToGloMap->GlobalToLocal(tmp, tmp2);
+                    m_expList.lock()->AppendFieldData(
+                        fielddef[0], data[0], tmp2);
+                    fielddef[0]->m_fields.push_back(
+                        evecReField + boost::lexical_cast<std::string>(i));
+                }
+            }
+
+            LibUtilities::Write("evecs.fld", fielddef, data);
 
             if(rows)
             {
