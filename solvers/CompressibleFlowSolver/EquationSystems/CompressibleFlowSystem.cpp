@@ -946,7 +946,7 @@ namespace Nektar
                 Vmath::Vmul(nPts, physfield[j], 1,
                             tmp2, 1,
                             tmp2, 1);
-                Vmath::Vvtvp(nPts, physfield[j], 1,
+                Vmath::Vvtvp(nPts, tmp2, 1,
                                derivativesO1[i][m_spacedim+1], 1,
                                viscousTensor[i][m_spacedim+1], 1,
                                viscousTensor[i][m_spacedim+1], 1);
