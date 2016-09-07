@@ -9,9 +9,9 @@
 #include <LibUtilities/BasicUtils/NekFactory.hpp>
 #include <LibUtilities/LibUtilitiesDeclspec.h>
 #include <LibUtilities/Polylib/Polylib.h>
-#include <LibUtilities/LinearAlgebra/NekMatrixFwd.hpp>
+#include <LibUtilities/LinearAlgebra/NekMatrix.hpp>
 #include <LibUtilities/Foundations/ShapeTypes.hpp>
-#include <LibUtilities/Foundations/PointsTraits.hpp>
+#include <LibUtilities/Foundations/Points/PointsTraits.hpp>
 
 namespace Nektar
 {
@@ -93,6 +93,14 @@ class PointsBase
         }
 
         /**
+         * @brief Get the derivative matrix
+         */
+        inline const MatrixType& GetD(int dir = 0) const
+        {
+            return m_ddata[dir];
+        }
+
+        /**
          *
          */
         inline void GetZW(Array<OneD, const TData> &z,
@@ -147,6 +155,8 @@ class PointsBase
     protected:
         Array<OneD, TData> m_points[3]; /// x, y, z coordinates of points
         Array<OneD, TData> m_weights;   /// Integration weights
+        MatrixType         m_ddata[3];  /// derivative
+
         PointsKey m_key;                /// Defines number of points
 
         PointsBase(const PointsKey& pKey) {m_key = pKey;}
@@ -168,12 +178,17 @@ class PointsBase
         template<typename... TPts>
         void AllocateArrays() {
             const unsigned int npts = GetNumberOfPoints<TPts...>();
+            unsigned int i = 0;
             std::cout << "Allocating storage of size: " << npts << std::endl;
-            for (unsigned int i = 0; i < traits::points_traits<TPts...>::dimension; ++i)
+            for (i = 0; i < traits::points_traits<TPts...>::dimension; ++i)
             {
                 m_points[i] = Array<OneD, TData>(npts);
             }
             m_weights = Array<OneD, TData>(npts);
+            for (i = 0; i < traits::points_traits<TPts...>::dimension; ++i)
+            {
+                m_ddata[i] = MemoryManager<NekMatrix<TData> >::AllocateSharedPtr(npts,npts);
+            }
         }
 
     private:
@@ -193,7 +208,7 @@ class PointsBase
  * @brief Primary template for composite Points classes.
  */
 template<typename TData, typename TShape, typename TPtsTuple>
-class Points {};
+class Points;
 
 template<typename TData, typename TShape, typename... TPts>
 class Points<TData, TShape, std::tuple<TPts...>> : public PointsBase<TData>
@@ -222,6 +237,8 @@ class Points<TData, TShape, std::tuple<TPts...>> : public PointsBase<TData>
             BaseType::template AllocateArrays<TPts...>();
             InitialiseSubType<sizeof...(TPts)-1>(pKey, x);
         }
+
+        virtual ~Points() {}
 
     private:
         TupleType x;
@@ -311,6 +328,8 @@ class Points<TData, TShape, GaussGaussLegendre> : public PointsBase<TData>
         {
             Populate(pKey);
         }
+
+        virtual ~Points() {}
 
         void Populate(const PointsKey& p) {
             BaseType::m_key = p;

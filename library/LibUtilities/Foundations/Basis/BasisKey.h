@@ -24,7 +24,7 @@ class BasisKey
         }
 
     public:
-        TriArray<char> m_id;
+        std::string m_id;
         unsigned int m_dim;
         unsigned char m_basistype[3][3];
         unsigned int m_nummodes[3];

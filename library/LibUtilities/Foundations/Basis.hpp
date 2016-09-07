@@ -1,3 +1,38 @@
+///////////////////////////////////////////////////////////////////////////////
+//
+// File: Basis.hpp
+//
+// For more information, please see: http://www.nektar.info
+//
+// The MIT License
+//
+// Copyright (c) 2006 Division of Applied Mathematics, Brown University (USA),
+// Department of Aeronautics, Imperial College London (UK), and Scientific
+// Computing and Imaging Institute, University of Utah (USA).
+//
+// License for the specific language governing rights and limitations under
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the "Software"),
+// to deal in the Software without restriction, including without limitation
+// the rights to use, copy, modify, merge, publish, distribute, sublicense,
+// and/or sell copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+//
+// Description: Base class for Basis types
+//
+///////////////////////////////////////////////////////////////////////////////
+
 #ifndef LIBUTILITIES_FOUNDATIONS_BASIS
 #define LIBUTILITIES_FOUNDATIONS_BASIS
 
@@ -8,13 +43,9 @@
 #include <LibUtilities/BasicUtils/SharedArray.hpp>
 #include <LibUtilities/BasicUtils/NekFactory.hpp>
 #include <LibUtilities/LibUtilitiesDeclspec.h>
-#include <LibUtilities/Polylib/Polylib.h>
-#include <LibUtilities/Foundations/Foundations.hpp>
-#include <LibUtilities/Foundations/ShapeTypes.hpp>
-#include <LibUtilities/Foundations/PointsTypes.hpp>
-#include <LibUtilities/Foundations/BasisTypes.hpp>
+#include <LibUtilities/Foundations/Basis/BasisTypes.hpp>
+#include <LibUtilities/Foundations/Basis/BasisKey.h>
 #include <LibUtilities/Foundations/Points.hpp>
-#include "BasisKey.h"
 
 
 namespace Nektar
@@ -26,46 +57,115 @@ namespace Foundations
 
 
 /**
- * @class BasisBase
- * @brief Basis base class defining interface and data members
+ * @class   BasisBase
+ * @brief   Basis base class defining interface and storage for basis data.
+ * @details This class provides a base class for all bases. Bases may be
+ *          a single fundamental basis type, or a composition of multiple basis
+ *          types. For example, a 2D basis may be a fundamentally 2D basis of
+ *          2D modes, or a composition of two (possibly different) 1D bases.
+ *
+ *          The implementation for different fundamental bases is provided in
+ *          template specialisations of the Basis class. Each basis has an
+ *          associated Points instance which implements the point distribution
+ *          on which quadrature is performed.
+ *
+ * @tparam  TData The data type used for defining the basis.
  */
 template<typename TData>
 class BasisBase
 {
     public:
-        /// Destructor.
+        /**
+         * @brief Destructor.
+         */
         virtual ~BasisBase()
         {
         };
 
+        /**
+         * @brief Get number of constituent bases.
+         */
+        inline int GetNumConstituentBases() const
+        {
+            return v_GetNumConstituentBases();
+        }
+
+        /**
+         * @brief Get a constituent basis in a basis composition.
+         */
+        inline const BasisBase<TData>& GetConstituentBasis(int i) const
+        {
+            return v_GetConstituentBasis(i);
+        }
+
+        /**
+         * @brief Get the points object associated with this basis.
+         */
+        inline const PointsBase<TData>& GetPoints() const
+        {
+            return v_GetPoints();
+        }
+
+        /**
+         * @brief Get the shape type associated with this basis.
+         */
         inline LibUtilities::Foundations::ShapeType GetShapeType() const
         {
             return v_GetShapeType();
         }
 
+        /**
+         * @brief Get the shape name as a string.
+         */
         inline std::string GetShapeName() const
         {
             return v_GetShapeName();
         }
 
-        /// Return order of basis from the basis specification.
+        /**
+         * @brief Return total number of modes from the basis specification.
+         */
         inline int GetNumModes() const
         {
             return m_key.m_nummodes[0];
         }
 
-        /// Return total number of modes from the basis specification.
-        virtual int GetTotNumModes() const
+        /**
+         * @brief Get basis matrix data \f$ \phi_j(\xi_i) \f$.
+         */
+        virtual const Array<OneD, const TData>& GetBdata() const
         {
-            return m_key.m_nummodes[0];
+            return m_bdata;
         }
 
+
     protected:
+        /// Holds the basis key for this basis.
         BasisKey                m_key;
 
-        BasisBase(const BasisKey& pKey) {m_key = pKey;}
+        /// Holds the evaluation of the basis polynomials at quadrature points.
+        Array<OneD, TData>      m_bdata;
+
+        /// Holds the derivation matrix for the basis.
+        Array<OneD, TData>      m_dbdata;
+
+        /**
+         * @brief Constructor. This base class can not be instantiated directly.
+         */
+        BasisBase(const BasisKey& pKey)
+        {
+            m_key = pKey;
+        }
+
+        /**
+         * @brief Default constructor.
+         */
         BasisBase() {}
 
+        /**
+         * @brief For a multi-constituent basis, compute total number of modes
+         * by induction.
+         */
         template<typename TBasis1, typename TBasis2, typename... TBasisOther>
         unsigned int GetNumberOfModes(int i = 0)
         {
@@ -73,271 +173,68 @@ class BasisBase
                     * GetNumberOfModes<TBasis2, TBasisOther...>(i + 1);
         }
 
+        /**
+         * @brief For a multi-constituent basis, compute total number of modes
+         * by induction. Terminating case.
+         */
         template<typename TBasis>
         unsigned int GetNumberOfModes(int i = 0)
         {
             return traits::basis_traits<TBasis>::get_total_modes(m_key.m_nummodes[i]);
         }
 
-        virtual LibUtilities::Foundations::ShapeType v_GetShapeType() = 0;
-        virtual std::string v_GetShapeName() = 0;
+        /**
+         * @copydoc BasisBase::GetNumConstitutentBases()
+         * Defaults to 1.
+         */
+        virtual int v_GetNumConstituentBases() const
+        {
+            return 1;
+        }
+
+        /**
+         * @copydoc BasisBase::GetConstituentBasis(int)
+         */
+        virtual const BasisBase<TData>& v_GetConstituentBasis(int i) const
+        {
+            if (i > 0)
+            {
+                throw i;
+            }
+            return *this;
+        }
+
+        /**
+         * @copydoc BasisBase::GetPoints()
+         */
+        virtual const PointsBase<TData>& v_GetPoints() const = 0;
+
+        /**
+         * @copydoc BasisBase::GetShapeType()
+         */
+        virtual LibUtilities::Foundations::ShapeType v_GetShapeType() const = 0;
+
+        /**
+         * @copydoc BasisBase::GetShapeName()
+         */
+        virtual std::string v_GetShapeName() const = 0;
 
 };
 
-
+/// A shared pointer to a BasisBase object.
 template<typename TData>
 using BasisSharedPtr = boost::shared_ptr<BasisBase<TData>>;
 
+/// A factory pattern for creating Basis objects.
 template<typename TData>
 using BasisFactory = LibUtilities::NekFactory<
         std::string, BasisBase<TData>, const BasisKey&>;
 
-template<typename TData>
-LIB_UTILITIES_EXPORT BasisFactory<TData>& GetBasisFactory()
-{
-    typedef Loki::SingletonHolder<BasisFactory<TData>,
-                                  Loki::CreateUsingNew,
-                                  Loki::NoDestroy> Type;
-    // Putting Loki::ClassLevelLockable causes an assertion!
-    return Type::Instance();
-}
-
-/**
- * @class Basis
- * @brief Primary template for composite Points classes.
- */
-template<typename TData, typename TShape, typename... TTuple>
-class Basis : public BasisBase<TData> {};
-
-template<typename TData, typename TShape, typename... TPts, typename... TBasis>
-class Basis<TData, TShape, std::tuple<TPts...>, std::tuple<TBasis...>> : public BasisBase<TData>
-{
-        typedef Basis<TData, TShape, std::tuple<TPts...>, std::tuple<TBasis...>> ThisType;
-        typedef BasisBase<TData> BaseType;
-        typedef std::tuple<Basis<TData, typename traits::basis_traits<TBasis>::native_shape, TPts, TBasis>...> TupleType;
-
-        static_assert(sizeof...(TBasis) > 0, "No basis type given.");
-        static_assert(sizeof...(TBasis) < 4, "Too many basis types given. Must be 3 or less.");
-        static_assert(sizeof...(TPts) == sizeof...(TBasis), "Basis and Points types do not match.");
-        static_assert(traits::basis_traits<TBasis...>::dimension == traits::shape_traits<TShape>::dimension,
-                "Basis dimension and shape dimension do not agree.");
-        static_assert(traits::points_traits<TPts...>::dimension == traits::shape_traits<TShape>::dimension,
-                "Points dimension does not match shape dimension,");
-
-    public:
-        static BasisSharedPtr<TData> create(const BasisKey& pKey)
-        {
-            BasisSharedPtr<TData> b = MemoryManager<ThisType>::AllocateSharedPtr(pKey);
-            return b;
-        }
-
-        Basis(const BasisKey& pKey) : BasisBase<TData>(pKey) {
-            //BasisBase<TData>::template AllocateArrays<TBasis...>();
-        }
-
-        virtual LibUtilities::Foundations::ShapeType v_GetShapeType()
-        {
-            return traits::shape_traits<TShape>::type;
-        }
-
-        virtual std::string v_GetShapeName()
-        {
-            return std::string(traits::shape_traits<TShape>::name);
-        }
-
-    protected:
-        Points<TData, TShape, std::tuple<TPts...>> m_points;
-        TupleType x;
-};
+//template<typename TData>
+LIB_UTILITIES_EXPORT BasisFactory<NekDouble>& GetBasisFactory();
 
 
-/**
- * Bi-Basis specialisation
- */
-//template<typename TData, typename TShape, template<typename, typename, typename...> class TPts, typename TBasis1, typename TBasis2>
-//class Basis<TData, TShape, TPts, TBasis1, TBasis2> : public BasisBase<TData>
-//{
-//        typedef Points<TData, TShape, TPts, TBasis1, TBasis2> ThisType;
-//        typedef PointsBase<TData> BaseType;
-//
-//        static_assert(TPts::get_traits::dimension == traits::shape_traits<TShape>::dimension,
-//                "Points dimension does not match shape dimension,");
-//        static_assert(traits::basis_traits<TBasis1, TBasis2>::dimension == traits::shape_traits<TShape>::dimension,
-//                "Basis dimension and shape dimension do not agree.");
-//
-//    public:
-//        static BasisSharedPtr<TData> create(const BasisKey& pKey)
-//        {
-//            BasisSharedPtr<TData> p = MemoryManager<ThisType>::AllocateSharedPtr(pKey);
-//            return p;
-//        }
-//
-//        Basis(const BasisKey& pKey) : BaseType(pKey) {
-//            x1.Populate(pKey);
-//            BasisKey tmpKey;
-//            tmpKey.m_nummodes[0] = pKey.m_nummodes[1];
-//            tmpKey.m_params = pKey.m_params;
-//            x2.Populate(tmpKey);
-//        }
-//
-//        /// Return total number of modes from the basis specification.
-//        virtual int GetTotNumModes() const
-//        {
-//            return BaseType::template GetNumberOfModes<TBasis1, TBasis2>();
-//        }
-//
-//
-//    private:
-//        TPts m_points;
-//        Basis<TData, typename traits::basis_traits<TBasis1>::native_shape, TBasis1> x1;
-//        Basis<TData, typename traits::basis_traits<TBasis2>::native_shape, TBasis2> x2;
-//};
 
-
-/**
- * Tri-Basis specialisation
- */
-//template<typename TData, typename TShape, template<typename, typename, typename...> class TPts, typename TBasis1, typename TBasis2, typename TBasis3>
-//class Basis<TData, TShape, TPts, TBasis1, TBasis2, TBasis3> : public BasisBase<TData>
-//{
-//        typedef Basis<TData, TShape, TPts, TBasis1, TBasis2, TBasis3> ThisType;
-//        typedef BasisBase<TData> BaseType;
-//
-//        static_assert(TPts::get_traits::dimension == traits::shape_traits<TShape>::dimension,
-//                "Points dimension does not match shape dimension,");
-//        static_assert(traits::basis_traits<TBasis1, TBasis2, TBasis3>::dimension == traits::shape_traits<TShape>::dimension,
-//                "Basis dimension and shape dimension do not agree.");
-//
-//    public:
-//        static BasisSharedPtr<TData> create(const BasisKey& pKey)
-//        {
-//            BasisSharedPtr<TData> p = MemoryManager<ThisType>::AllocateSharedPtr(pKey);
-//            return p;
-//        }
-//
-//        Basis(const BasisKey& pKey) : BaseType(pKey) {
-//            //BasisBase<TData>::template AllocateArrays<TPts1, TPts2, TPts3>();
-//            BasisKey tmpKey;
-//            x1.Populate(pKey);
-//            tmpKey.m_nummodes[0] = pKey.m_nummodes[1];
-//            tmpKey.m_params = pKey.m_params;
-//            x2.Populate(tmpKey);
-//            tmpKey.m_nummodes[0] = pKey.m_nummodes[2];
-//            tmpKey.m_params = pKey.m_params;
-//            x3.Populate(tmpKey);
-//        }
-//
-//    private:
-//        TPts m_points;
-//        Basis<TData, typename traits::basis_traits<TBasis1>::native_shape, TBasis1> x1;
-//        Basis<TData, typename traits::basis_traits<TBasis2>::native_shape, TBasis2> x2;
-//        Basis<TData, typename traits::basis_traits<TBasis3>::native_shape, TBasis3> x3;
-//};
-
-
-/**
- *
- */
-template<typename TData, typename TShape, typename TPts>
-class Basis<TData, TShape, TPts, ModifiedLegendre> : public BasisBase<TData>
-{
-        typedef Basis<TData, TShape, TPts, ModifiedLegendre> ThisType;
-        typedef BasisBase<TData> BaseType;
-
-        static_assert(is_not_tuple<TPts>::value, "Is a tuple.");
-        static_assert(traits::points_traits<TPts>::dimension == traits::shape_traits<TShape>::dimension,
-                "Points dimension does not match shape dimension,");
-        static_assert(traits::basis_traits<ModifiedLegendre>::dimension == traits::shape_traits<TShape>::dimension,
-                "Basis dimension and shape dimension do not agree.");
-        static_assert(traits::expansion_traits<TShape, ModifiedLegendre>::is_valid,
-                "Not a valid combination of shape and basis type.");
-
-    public:
-        static BasisSharedPtr<TData> create(const BasisKey& pKey)
-        {
-            BasisSharedPtr<TData> p = MemoryManager<ThisType>::AllocateSharedPtr(pKey);
-            return p;
-        }
-
-        Basis() : BaseType() {}
-
-        Basis(const BasisKey& pKey) : BaseType(pKey)
-        {
-            Populate(pKey);
-        }
-        void Populate(const BasisKey& p) {
-            BaseType::m_key = p;
-            //const int n = p.m_nummodes[0];
-            //BasisBase<TData>::template AllocateArrays<ModifiedLegendre>();
-        }
-
-    protected:
-        virtual LibUtilities::Foundations::ShapeType v_GetShapeType()
-        {
-            return traits::shape_traits<TShape>::type;
-        }
-
-        virtual std::string v_GetShapeName()
-        {
-            return std::string(traits::shape_traits<TShape>::name);
-        }
-
-    private:
-        Points<TData, typename traits::points_traits<TPts>::native_shape, TPts> m_points;
-
-};
-
-
-/**
- *
- */
-template<typename TData, typename TShape, typename TPts>
-class Basis<TData, TShape, TPts, BernsteinTriangle> : public BasisBase<TData>
-{
-        typedef Basis<TData, TShape, TPts, BernsteinTriangle> ThisType;
-        typedef BasisBase<TData> BaseType;
-
-        static_assert(traits::points_traits<TPts>::dimension == traits::shape_traits<TShape>::dimension,
-                "Points dimension does not match shape dimension,");
-        static_assert(traits::basis_traits<BernsteinTriangle>::dimension == traits::shape_traits<TShape>::dimension,
-                "Basis dimension and shape dimension do not agree.");
-        static_assert(traits::expansion_traits<TShape, BernsteinTriangle>::is_valid,
-                "Not a valid combination of shape and basis type.");
-
-    public:
-        static BasisSharedPtr<TData> create(const BasisKey& pKey)
-        {
-            BasisSharedPtr<TData> p = MemoryManager<ThisType>::AllocateSharedPtr(pKey);
-            return p;
-        }
-
-        Basis() : BaseType() {}
-
-        Basis(const BasisKey& pKey) : BaseType(pKey)
-        {
-            Populate(pKey);
-        }
-        void Populate(const BasisKey& p) {
-            BaseType::m_key = p;
-            //const int n = p.m_nummodes[0];
-            //BasisBase<TData>::template AllocateArrays<ModifiedLegendre>();
-        }
-
-    protected:
-        virtual LibUtilities::Foundations::ShapeType v_GetShapeType()
-        {
-            return traits::shape_traits<TShape>::type;
-        }
-
-        virtual std::string v_GetShapeName()
-        {
-            return std::string(traits::shape_traits<TShape>::name);
-        }
-
-    private:
-        Points<TData, typename traits::points_traits<TPts>::native_shape, TPts> m_points;
-
-};
 }
 }
 }

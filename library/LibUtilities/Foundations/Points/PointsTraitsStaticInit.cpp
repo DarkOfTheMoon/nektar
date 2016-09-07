@@ -1,4 +1,4 @@
-#include <LibUtilities/Foundations/PointsTraits.hpp>
+#include <LibUtilities/Foundations/Points/PointsTraits.hpp>
 
 namespace Nektar
 {
@@ -11,8 +11,7 @@ PointsStringToIdMap& GetPointsStringToIdMap()
 {
     typedef Loki::SingletonHolder<PointsStringToIdMap,
         Loki::CreateUsingNew,
-        Loki::NoDestroy,
-        Loki::ClassLevelLockable> Type;
+        Loki::NoDestroy> Type;
     return Type::Instance();
 }
 
@@ -20,8 +19,7 @@ PointsIdToStringMap& GetPointsIdToStringMap()
 {
     typedef Loki::SingletonHolder<PointsIdToStringMap,
         Loki::CreateUsingNew,
-        Loki::NoDestroy,
-        Loki::ClassLevelLockable> Type;
+        Loki::NoDestroy> Type;
     return Type::Instance();
 }
 

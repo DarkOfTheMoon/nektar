@@ -2,6 +2,7 @@
 #define LIBUTILITIES_FOUNDATIONS_BASISTYPES
 
 #include <LibUtilities/BasicUtils/ErrorUtil.hpp>
+#include <LibUtilities/Foundations/ShapeTypes.hpp>
 
 namespace Nektar
 {
@@ -19,8 +20,8 @@ namespace traits
 {
     // Default values for all types
     struct basis_traits_base {
-        static const bool is_tensor_product = false;
         static const unsigned int dimension = 0;
+        static const unsigned int num_constituent_bases = 1;
         static const unsigned int get_total_modes(unsigned int nmodes) {
             return nmodes;
         }
@@ -31,6 +32,7 @@ namespace traits
     // Primary template
     template<typename... TPts>
     struct basis_traits : public basis_traits_base {
+        static const unsigned int num_constituent_bases = sizeof...(TPts);
     };
 
     template<typename T1, typename... TBasis>
@@ -42,21 +44,18 @@ namespace traits
     template<>
     struct basis_traits<ModifiedLegendre> : public basis_traits_base
     {
-        static const bool is_tensor_product = true;
         static const unsigned int dimension = 1;
     };
 
     template<>
     struct basis_traits<Lagrange> : public basis_traits_base
     {
-        static const bool is_tensor_product = true;
         static const unsigned int dimension = 1;
     };
 
     template<>
     struct basis_traits<BernsteinTriangle> : public basis_traits_base
     {
-        static const bool is_tensor_product = false;
         static const unsigned int dimension = 2;
         typedef Triangle native_shape;
     };
@@ -64,7 +63,6 @@ namespace traits
     template<>
     struct basis_traits<BernsteinTetrahedron> : public basis_traits_base
     {
-        static const bool is_tensor_product = false;
         static const unsigned int dimension = 3;
         typedef Tetrahedron native_shape;
     };
@@ -115,7 +113,7 @@ namespace traits
                                  public basis_traits<TBasis>,
                                  public expansion_traits_base
     {
-        static const bool is_valid = basis_traits<TBasis>::is_tensor_product;
+        static const bool is_valid = true;
         static const int get_num_coefficients(int Na, int Nb)
         {
             ASSERTL2(Na > 1, "Order in 'a' direction must be > 1.");
@@ -163,7 +161,7 @@ namespace traits
                                  public basis_traits<TBasis>,
                                  public expansion_traits_base
     {
-        static const bool is_valid = basis_traits<TBasis>::is_tensor_product;
+        static const bool is_valid = true;
         static const int get_num_coefficients(int Na, int Nb, int Nc)
         {
             ASSERTL2(Na > 1, "Order in 'a' direction must be > 1.");
@@ -188,7 +186,7 @@ namespace traits
                                  public basis_traits<TBasis>,
                                  public expansion_traits_base
     {
-        static const bool is_valid = basis_traits<TBasis>::is_tensor_product;
+        static const bool is_valid = true;
 
         /**
          * Adds up the number of cells in a truncated Nc by Nc by Nc
@@ -254,7 +252,7 @@ namespace traits
                                  public basis_traits<TBasis>,
                                  public expansion_traits_base
     {
-        static const bool is_valid = basis_traits<TBasis>::is_tensor_product;
+        static const bool is_valid = true;
         static const int get_num_coefficients(int Na, int Nb, int Nc)
         {
             ASSERTL1(Na > 1, "Order in 'a' direction must be > 1.");
@@ -287,7 +285,7 @@ namespace traits
                                  public basis_traits<TBasis>,
                                  public expansion_traits_base
     {
-        static const bool is_valid = basis_traits<TBasis>::is_tensor_product;
+        static const bool is_valid = true;
         static const int get_num_coefficients(int Na, int Nb, int Nc)
         {
             return 0;

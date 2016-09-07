@@ -53,7 +53,7 @@
 #include <LibUtilities/BasicUtils/FileSystem.h>
 #include <LibUtilities/BasicUtils/CompressData.h>
 
-#include <LibUtilities/Foundations/PointsTypes.hpp>
+#include <LibUtilities/Foundations/Points/PointsTypes.hpp>
 
 
 #include <boost/algorithm/string.hpp>

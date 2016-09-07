@@ -2,7 +2,7 @@
 #define LIBUTILITIES_FOUNDATIONS_POINTSTRAITS
 
 #include <LibUtilities/Foundations/ShapeTypes.hpp>
-#include <LibUtilities/Foundations/PointsTypes.hpp>
+#include <LibUtilities/Foundations/Points/PointsTypes.hpp>
 
 namespace Nektar
 {

@@ -100,19 +100,19 @@ ENDIF(NEKTAR_USE_FFTW)
 
 SET(FoundationHeaders
     ./Foundations/Points.hpp
-    ./Foundations/PointsTypes.hpp
-    ./Foundations/PointsTraits.hpp
+    ./Foundations/Points/PointsTypes.hpp
+    ./Foundations/Points/PointsTraits.hpp
     ./Foundations/Basis.hpp
-    ./Foundations/BasisTypes.hpp
+    ./Foundations/Basis/BasisTypes.hpp
     ./Foundations/ShapeTypes.hpp
 )
 
 SET(FoundationSources
-    ./Foundations/PointsInstantiations.cpp
-    ./Foundations/BasisInstantiations.cpp
+    ./Foundations/Points/PointsInstantiations.cpp
+    ./Foundations/Basis/BasisInstantiations.cpp
     ./Foundations/ShapeInstantiations.cpp
-    ./Foundations/PointsTraitsStaticInit.cpp
-    ./Foundations/BasisKey.cpp
+    ./Foundations/Points/PointsTraitsStaticInit.cpp
+    ./Foundations/Basis/BasisKey.cpp
 )
 
 SET(InterpreterHeaders

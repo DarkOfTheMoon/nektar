@@ -1,4 +1,4 @@
-#include <LibUtilities/Foundations/BasisKey.h>
+#include <LibUtilities/Foundations/Basis/BasisKey.h>
 
 namespace Nektar
 {
