@@ -1,4 +1,5 @@
-#include <LibUtilities/Foundations/Points.hpp>
+#include <LibUtilities/Foundations/Points/PointsGauss.hpp>
+#include <LibUtilities/Foundations/Points/PointsFekete.hpp>
 
 namespace Nektar
 {

@@ -12,6 +12,10 @@
 #include <LibUtilities/Foundations/Basis/BasisTypes.hpp>
 #include <LibUtilities/Foundations/Points.hpp>
 
+#include <LibUtilities/Foundations/Points/PointsTemplate.hpp>
+#include <LibUtilities/Foundations/Points/PointsGauss.hpp>
+#include <LibUtilities/Foundations/Points/PointsFekete.hpp>
+
 namespace Nektar
 {
 namespace LibUtilities
@@ -28,10 +32,6 @@ namespace Foundations
  */
 template<typename TData, typename TShape, typename... TTuple>
 class Basis;
-
-
-
-
 
 
 /**
