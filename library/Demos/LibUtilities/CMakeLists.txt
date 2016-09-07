@@ -10,6 +10,9 @@ SET(PartitionAnalyseSources
     
 SET(FoundationSources
     FoundationDemo.cpp)	
+
+SET(FoundationOperatorSources
+    FoundationOperatorDemo.cpp)
 	
 SET(FoundationNewSources
     FoundationNewDemo.cpp)
@@ -43,6 +46,9 @@ TARGET_LINK_LIBRARIES(PartitionAnalyse LibUtilities)
 
 ADD_NEKTAR_EXECUTABLE(FoundationDemo demos FoundationSources )
 TARGET_LINK_LIBRARIES(FoundationDemo LibUtilities)
+
+ADD_NEKTAR_EXECUTABLE(FoundationOperatorDemo demos FoundationOperatorSources )
+TARGET_LINK_LIBRARIES(FoundationOperatorDemo LibUtilities)
 
 ADD_NEKTAR_EXECUTABLE(FoundationNewDemo demos FoundationNewSources )
 TARGET_LINK_LIBRARIES(FoundationNewDemo LibUtilities)

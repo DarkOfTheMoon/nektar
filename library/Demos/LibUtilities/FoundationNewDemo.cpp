@@ -1,3 +1,38 @@
+///////////////////////////////////////////////////////////////////////////////
+//
+// File: FoundationNewDemo.cpp
+//
+// For more information, please see: http://www.nektar.info
+//
+// The MIT License
+//
+// Copyright (c) 2006 Division of Applied Mathematics, Brown University (USA),
+// Department of Aeronautics, Imperial College London (UK), and Scientific
+// Computing and Imaging Institute, University of Utah (USA).
+//
+// License for the specific language governing rights and limitations under
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the "Software"),
+// to deal in the Software without restriction, including without limitation
+// the rights to use, copy, modify, merge, publish, distribute, sublicense,
+// and/or sell copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+//
+// Description: Demonstrator for new basis classes
+//
+///////////////////////////////////////////////////////////////////////////////
+
 #include <iostream>
 #include <type_traits>
 using namespace std;
@@ -12,221 +47,39 @@ using namespace std;
 #include <LibUtilities/Foundations/Basis/BasisBernstein.hpp>
 #include <LibUtilities/Foundations/Interp.hpp>
 #include <LibUtilities/Foundations/Points/PointsTraits.hpp>
-
 using namespace Nektar;
 using namespace Nektar::LibUtilities::Foundations;
 
-// VecMat
-struct SingleVector {};
-struct MultipleVector {};
-
-// Impl
-struct SumFac {};
-struct LocalMatrix {};
-struct IterPerExp {};
-struct StdMat {};
-
-// Op
-struct BwdTransOp {};
-
-// Multiplicity policies
-class MultiplicityPolicySingle {
-    protected:
-        void dgemv(DNekMatSharedPtr pMat, Array<OneD, NekDouble>& pIn, Array<OneD, NekDouble>& pOut)
-        {
-            cout << "Act on single vector" << endl;
-        }
-};
-
-class MultiplicityPolicyMultiple {
-    protected:
-        void dgemv(DNekMatSharedPtr pMat, Array<OneD, NekDouble>& pIn, Array<OneD, NekDouble>& pOut)
-        {
-            cout << "Act on multiple vectors" << endl;
-//            Blas::Dgemm('N', 'N', pMat->GetRows(), pIn.num_elements() / pMat->GetColumns(),
-//                    pMat->GetColumns(), 1.0, pMat->GetRawPtr(),
-//                    pMat->GetRows(), pIn.get(), pMat->GetColumns(),
-//                    0.0, pOut.get(), pMat->GetRows());
-        }
-};
-
-// Operator policies
-// These can be defined in any way as long as there is the createMatrix function
-class OperatorPolicyBwdTrans {
-    public:
-        DNekMatSharedPtr createMatrix(BasisBase<NekDouble>& pBasis) {
-            const PointsBase<NekDouble>& pts = pBasis.GetPoints();
-            return MemoryManager<DNekMat>::AllocateSharedPtr(
-                    pBasis.GetNumModes(),
-                    pts.GetNumPoints(),
-                    pBasis.GetBdata().get());
-        }
-};
-
-class OperatorPolicyIProductWRTBase {
-    public:
-        DNekMatSharedPtr createMatrix(BasisBase<NekDouble>& pBasis) {
-
-        }
-};
-
-template<typename, typename T>
-struct has_createMatrix {
-    static_assert(
-        std::integral_constant<T, false>::value,
-        "Second template parameter needs to be of function type.");
-};
-
-template<typename C, typename Ret, typename... Args>
-struct has_createMatrix<C, Ret(Args...)> {
-private:
-    template<typename T>
-    static constexpr auto check(T*)
-    -> typename
-        std::is_same<
-            decltype( std::declval<T>().createMatrix( std::declval<Args>()... ) ),
-            Ret
-        >::type;  // attempt to call it and see if the return type is correct
-
-    template<typename>
-    static constexpr std::false_type check(...);
-
-    typedef decltype(check<C>(0)) type;
-
-public:
-    static constexpr bool value = type::value;
-};
-
-
-template<typename TData>
-class OperatorBase {
-
-    public:
-        OperatorBase(BasisBase<TData>& pBasis) : m_basis(pBasis) {}
-        virtual ~OperatorBase() {}
-
-        virtual void operator()(Array<OneD, TData>& in, Array<OneD, TData>& out) = 0;
-
-    protected:
-        BasisBase<TData>& m_basis;
-};
-
 
 /**
- * @brief Primary template for Operator class
+ * Creator function for use with Basis manager.
  */
-template<typename TData, typename TShape, typename TImpl, typename OpPolicy, typename MultPolicy>
-class Operator;
-
-
-/**
- * @brief LocalMatrix implementation (only valid on single elements)
- */
-template<typename TData, typename TShape, typename OpPolicy>
-class Operator<TData, TShape, LocalMatrix, OpPolicy, MultiplicityPolicySingle>
-        : public OperatorBase<TData>, private OpPolicy, private MultiplicityPolicySingle
-{
-        using OperatorBase<TData>::m_basis;
-
-        static_assert(has_createMatrix<OpPolicy, DNekMatSharedPtr(BasisBase<NekDouble>&)>::value, "No createMatrix");
-
-    public:
-        Operator(BasisBase<TData>& pBasis) : OperatorBase<TData>(pBasis) {}
-        virtual ~Operator() {}
-
-        virtual void operator()(Array<OneD, TData>& in, Array<OneD, TData>& out) {
-            DNekMatSharedPtr mat = this->createMatrix(m_basis);
-            this->dgemv(mat, in, out);
-        }
-};
-
-
-/**
- * @brief SumFac implementation
- */
-template<typename TData, typename OpPolicy, typename MultPolicy>
-class Operator<TData, Quadrilateral, SumFac, OpPolicy, MultPolicy>
-        : public OperatorBase<TData>, private OpPolicy, private MultPolicy
-{
-        using OperatorBase<TData>::m_basis;
-
-        static_assert(has_createMatrix<OpPolicy, DNekMatSharedPtr(BasisBase<NekDouble>&)>::value, "No createMatrix");
-
-    public:
-        Operator(BasisBase<TData>& pBasis) : OperatorBase<TData>(pBasis) {}
-        virtual ~Operator() {}
-
-        virtual void operator()(Array<OneD, TData>& in, Array<OneD, TData>& out) {
-            for (int i = 0; i < m_basis.GetNumConstituentBases(); ++i)
-            {
-                BasisBase<TData> b = m_basis.GetConstitutentBasis(i);
-            }
-//            DNekMatSharedPtr mat = this->createMatrix(m_basis);
-//            this->dgemv(mat, in, out);
-        }
-};
-
-
-/**
- * @brief IterPerExp implementation
- */
-template<typename TData, typename OpPolicy, typename MultPolicy>
-class Operator<TData, Quadrilateral, IterPerExp, OpPolicy, MultPolicy>
-        : public OperatorBase<TData>, private OpPolicy, private MultPolicy
-{
-        using OperatorBase<TData>::m_basis;
-
-        static_assert(has_createMatrix<OpPolicy, DNekMatSharedPtr(BasisBase<NekDouble>&)>::value, "No createMatrix");
-
-    public:
-        Operator(BasisBase<TData>& pBasis) : OperatorBase<TData>(pBasis) {}
-        virtual ~Operator() {}
-
-        virtual void operator()(Array<OneD, TData>& in, Array<OneD, TData>& out) {
-//            DNekMatSharedPtr mat = this->createMatrix(m_basis);
-//            this->dgemv(mat, in, out);
-        }
-};
-
-
-template<typename TData>
-class TestQuadExp {
-    public:
-        TestQuadExp(BasisBase<NekDouble>& pB0) {
-            m_BwdTransOpImpl = new Operator<TData, Quadrilateral, LocalMatrix,
-                                            OperatorPolicyBwdTrans,
-                                            MultiplicityPolicySingle>(pB0);
-            m_IProdWRTBaseOpImpl = new Operator<TData, Quadrilateral, LocalMatrix,
-                                            OperatorPolicyIProductWRTBase,
-                                            MultiplicityPolicySingle>(pB0);
-        }
-
-        void BwdTrans(Array<OneD, NekDouble>& in, Array<OneD, NekDouble>& out)
-        {
-            (*m_BwdTransOpImpl)(in, out);
-        }
-
-    private:
-        OperatorBase<NekDouble>* m_BwdTransOpImpl;
-        OperatorBase<NekDouble>* m_IProdWRTBaseOpImpl;
-};
-
-
-
-
-
 BasisSharedPtr<double> CreateBasisObject(const BasisKey& bkey)
 {
     return GetBasisFactory().CreateInstance(bkey.m_id, bkey);
 }
 
 
+/**
+ * This program demonstrates and tests the use of the new points and basis
+ * classes.
+ */
 int main () {
+    // Create a key for instantiating a Points object. This simply holds the
+    // number of points in the points distribution in up to three dimensions.
+    // Unused dimensions are ignored, so instantiating a 2D points distribution
+    // will ignore m_numpoints[2], for example.
     PointsKey key;
     key.m_numpoints[0] = 5;
     key.m_numpoints[1] = 6;
     key.m_numpoints[2] = 7;
 
+    // We create a key for instantiating a Basis object. As well as the number
+    // of modes in each direction, we store an associated PointsKey and an ID
+    // descriptor which specified the type of Bases, Points and Shape that the
+    // basis key describes. For composite bases, the types of each constituent
+    // basis are separated by the underscore (_). For example:
+    //    MOD_MOD,GLL_GLL,Quadrilateral
     BasisKey bkey;
     bkey.m_id = "MOD,GGL,Segment";
     bkey.m_ptsKey = key;
@@ -234,75 +87,101 @@ int main () {
     bkey.m_nummodes[1] = 5;
     bkey.m_nummodes[2] = 6;
 
-    // Test some points keys
+    // Instantiate a Points object for a segment using Gauss-Gauss-Legendre
+    // point distributions
     Points<double, Segment,       GaussGaussLegendre> P(key);
+
+    // Instantiate a composite Points object for a quadrilateral using
+    // Gauss-Gauss-Legendre point distributions in each direction
     Points<double, Quadrilateral, std::tuple<GaussGaussLegendre, GaussGaussLegendre>> Pquad(key);
+
+    // Instantiate a composite Points object for a hexahedron.
     Points<double, Hexahedron,    std::tuple<GaussGaussLegendre, GaussGaussLegendre, GaussGaussLegendre>> Phex(key);
 
-    // These should fail
-    //Points<double, Segment,       Fekete> Pseg_fek(key);
-    //Points<double, Triangle,      GaussGaussLegendre> Ptri_gauss(key);
+    // Points traits describe at compile-time, properties of a Points class.
+    // These can be tested to ensure consistency of the template parameters.
+    // For example, to ensure the dimension of the Shape parameter, matches that
+    // of the provided Point distributions. The following examples, should
+    // therefore fail to compile and produce a static assertion error.
 
-    // Test extraction of constituent points distributions
+    // -- A segment with a triangle Fekete electrostatic distribution
+    // Points<double, Segment,       Fekete> Pseg_fek(key);
+
+    // -- A triangle with a 1D distribution
+    // Points<double, Triangle,      GaussGaussLegendre> Ptri_gauss(key);
+
+    // -- A segment with a 2D composite distribution
+    // Points<double, Segment, std::tuple<GaussGaussLegendre, GaussGaussLegendre>> Pseg_gauss_gauss(key);
+
+    // In composite point distributions, the points in the different directions
+    // can be retrieved with an index to GetZ. This function will throw a
+    // std::logic_error if the index is out of range.
     Array<OneD, double> p1 = Pquad.GetZ(0);
     Array<OneD, double> p2 = Pquad.GetZ(1);
-    cout << p1.num_elements() << endl;
-    cout << p2.num_elements() << endl;
+    cout << "Size in quad dim0: " << p1.num_elements() << endl;
+    cout << "Size in quad dim1: " << p2.num_elements() << endl;
 
     Array<OneD, double> h1 = Phex.GetZ(0);
     Array<OneD, double> h2 = Phex.GetZ(1);
     Array<OneD, double> h3 = Phex.GetZ(2);
-    cout << h1.num_elements() << endl;
-    cout << h2.num_elements() << endl;
-    cout << h3.num_elements() << endl;
+    cout << "Size in hex dim0: " << h1.num_elements() << endl;
+    cout << "Size in hex dim1: " << h2.num_elements() << endl;
+    cout << "Size in hex dim2: " << h3.num_elements() << endl;
 
-    // Test access through base class pointer
+    // To use the classes with the Factory pattern, these methods must be
+    // accessible through the base class pointer. Here we test that methods can
+    // be called successfully through the base class pointer.
     PointsBase<double>* ptr1 = new Points<double, Segment,       GaussGaussLegendre>(key);
     PointsBase<double>* ptr2 = new Points<double, Quadrilateral, std::tuple<GaussGaussLegendre, GaussGaussLegendre>>(key);
-    cout << ptr1->GetZ(0).num_elements() << endl;
-    cout << ptr2->GetZ(0).num_elements() << endl;
-    cout << ptr2->GetZ(1).num_elements() << endl;
+    cout << "Size in seg ptr dim0: " << ptr1->GetZ(0).num_elements() << endl;
+    cout << "Size in quad ptr dim0: " << ptr2->GetZ(0).num_elements() << endl;
+    cout << "Size in quad ptr dim1: " << ptr2->GetZ(1).num_elements() << endl;
+    // We test that accessing an index out of range indeed produces the error.
     try {
         cout << ptr2->GetZ(2).num_elements() << endl;
     }
-    catch (...) {
-        cout << "Could not access third points distribution in 2D tensor product" << endl;
+    catch (const std::logic_error& e) {
+        cout << "Error message produced: " << e.what() << endl;
     }
 
-    // Test instantiation of a Basis
+    // A Basis is defined in a similar manner to Points. Template parameters
+    // specify the data type, target shape, points distribution and basis type.
+    // A one-dimensional and two-dimensional basis may be instantiated as below.
+    // Again, the dimension of the (possibly composite) basis type, must match
+    // that of the shape and the (possibly composite) points distribution. In
+    // addition, the dimension of each constituent basis must match the
+    // dimension of the corresponding points distribution.
     Basis<double, Segment, GaussGaussLegendre, ModifiedLegendre> B0(bkey);
     Basis<double, Quadrilateral, std::tuple<GaussGaussLegendre, GaussGaussLegendre>, std::tuple<ModifiedLegendre, ModifiedLegendre>> Bquad(bkey);
 
-    // This should fail
-    //Basis<double, Triangle, GaussGaussLegendre, BernsteinTriangle> Bbtri(bkey);
+    // -- Here we try to instantiate a Bernstein triangle basis on a triangle
+    //    but with a 1D point distribution, which should fail.
+    // Basis<double, Triangle, GaussGaussLegendre, BernsteinTriangle> Bbtri(bkey);
 
-//    cout << sizeof(Array<OneD, double>) << endl;
-    cout << "Size of points key: " << sizeof(PointsKey) << endl;
-    cout << "Size of GGL points: " << sizeof(Points<double, Segment, GaussGaussLegendre>) << endl;
-    cout << "Size of GGL quad pts: " << sizeof(Points<double, Quadrilateral, std::tuple<GaussGaussLegendre, GaussGaussLegendre>>) << endl;
-    cout << "Size of Modified basis: " << sizeof(Basis<double, Segment, GaussGaussLegendre, ModifiedLegendre>) << endl;
-
-    // Create a points object using the factory
-    cout << "Points factory creation." << endl;
+    // We first print out the available classes in the Points factory
     GetPointsFactory().PrintAvailableClasses(std::cout);
-    PointsSharedPtr<double> facptr = GetPointsFactory().CreateInstance("GGL,Segment", key);
-    cout << facptr->GetNumPoints() << endl;
 
-    cout << "Basis creation" << endl;
+    // We can then instantiate a Points object using the factory. The key is a
+    // string which specified the point distribution and shape.
+    PointsSharedPtr<double> facptr = GetPointsFactory().CreateInstance("GGL,Segment", key);
+
+    // We can similarly instantiate a Basis object using the factory. The key
+    // is again a string (same as what is stored in the basis key).
     GetBasisFactory().PrintAvailableClasses(std::cout);
     BasisSharedPtr<double> bfacptr = GetBasisFactory().CreateInstance("MOD,GGL,Segment", bkey);
     BasisSharedPtr<double> bfacquadptr = GetBasisFactory().CreateInstance("MOD_MOD,GGL_GGL,Quadrilateral", bkey);
 
-    cout << "Create using manager" << endl;
+    // A manager can also be used to instantiate Bases using the helper function
+    // CreateBasisObject. In this case, the helper function uses the string
+    // stored in the basis key to actually instantiate the object.
     LibUtilities::NekManager<BasisKey, BasisBase<double>, BasisKey::opLess> bmanager;
     bmanager.RegisterGlobalCreator(boost::bind(CreateBasisObject, _1));
     BasisSharedPtr<double> bmanptr = bmanager[bkey];
 
-    // Create test element and perform operations
-    cout << "Create test element" << endl;
-    Array<OneD, NekDouble> testarray;
-    TestQuadExp<NekDouble> quadexp(B0);
-    cout << "Perform bwdtrans" << endl;
-    quadexp.BwdTrans(testarray, testarray);
+    // Finally, we look at the memory footprint of the various classes.
+    cout << "Size of points key: " << sizeof(PointsKey) << endl;
+    cout << "Size of GGL points: " << sizeof(Points<double, Segment, GaussGaussLegendre>) << endl;
+    cout << "Size of GGL quad pts: " << sizeof(Points<double, Quadrilateral, std::tuple<GaussGaussLegendre, GaussGaussLegendre>>) << endl;
+    cout << "Size of Modified basis: " << sizeof(Basis<double, Segment, GaussGaussLegendre, ModifiedLegendre>) << endl;
 
 }

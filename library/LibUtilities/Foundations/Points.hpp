@@ -166,7 +166,7 @@ class PointsBase
         unsigned int GetNumberOfPoints(int i = 0)
         {
             return traits::points_traits<TPts1>::get_total_points(m_key.m_numpoints[i])
-                    * GetNumberOfPoints<TPts2, TPtsOther...>(i + 1);
+                    * GetNumberOfPoints<TPts2, TPtsOther...>(i+1);
         }
 
         template<typename TPts>
@@ -179,7 +179,6 @@ class PointsBase
         void AllocateArrays() {
             const unsigned int npts = GetNumberOfPoints<TPts...>();
             unsigned int i = 0;
-            std::cout << "Allocating storage of size: " << npts << std::endl;
             for (i = 0; i < traits::points_traits<TPts...>::dimension; ++i)
             {
                 m_points[i] = Array<OneD, TData>(npts);
@@ -194,7 +193,10 @@ class PointsBase
     private:
         virtual const Array<OneD, const TData> v_GetZ(const int& i)
         {
-            ASSERTL1(i == 0, "Only 0 is valid for fundamental types.");
+            if (i != 0)
+            {
+                throw std::logic_error("Constituent points index out of range.");
+            }
             return m_points[0];
         }
 
@@ -249,8 +251,7 @@ class Points<TData, TShape, std::tuple<TPts...>> : public PointsBase<TData>
             PointsKey tmpKey;
             tmpKey.m_numpoints[0] = p.m_numpoints[i];
             tmpKey.m_params = p.m_params;
-            std::cout << "Init subtype " << i << " with numpoints=" << tmpKey.m_numpoints[0] << std::endl;
-            std::get<i>(pTuple).Populate(p);
+            std::get<i>(pTuple).Populate(tmpKey);
             InitialiseSubType<i-1>(p, pTuple);
         }
 
@@ -260,7 +261,6 @@ class Points<TData, TShape, std::tuple<TPts...>> : public PointsBase<TData>
             PointsKey tmpKey;
             tmpKey.m_numpoints[0] = p.m_numpoints[i];
             tmpKey.m_params = p.m_params;
-            std::cout << "Init subtype " << i << " with numpoints=" << tmpKey.m_numpoints[0] << std::endl;
             std::get<i>(pTuple).Populate(tmpKey);
         }
 
@@ -275,7 +275,7 @@ class Points<TData, TShape, std::tuple<TPts...>> : public PointsBase<TData>
         inline typename std::enable_if<i >= sizeof...(TPts), PointsBase<TData>*>::type
         GetTupleEntryPtr()
         {
-            throw std::logic_error("Out of range.");
+            throw std::logic_error("Constituent points index out of range.");
         }
 
         virtual const Array<OneD, const TData> v_GetZ(const int& i) {
