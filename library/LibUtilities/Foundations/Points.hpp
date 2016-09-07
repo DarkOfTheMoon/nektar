@@ -1,3 +1,38 @@
+///////////////////////////////////////////////////////////////////////////////
+//
+// File: Points.hpp
+//
+// For more information, please see: http://www.nektar.info
+//
+// The MIT License
+//
+// Copyright (c) 2006 Division of Applied Mathematics, Brown University (USA),
+// Department of Aeronautics, Imperial College London (UK), and Scientific
+// Computing and Imaging Institute, University of Utah (USA).
+//
+// License for the specific language governing rights and limitations under
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the "Software"),
+// to deal in the Software without restriction, including without limitation
+// the rights to use, copy, modify, merge, publish, distribute, sublicense,
+// and/or sell copies of the Software, and to permit persons to whom the
+// Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+// THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+//
+// Description: Base class for Points distributions
+//
+///////////////////////////////////////////////////////////////////////////////
+
 #ifndef LIBUTILITIES_FOUNDATIONS_POINTS
 #define LIBUTILITIES_FOUNDATIONS_POINTS
 
@@ -20,33 +55,28 @@ namespace LibUtilities
 namespace Foundations
 {
 
-typedef double NekDouble;
+/// Data type for parameter key name in PointsKey
 typedef std::string PointsParamKey;
+/// Data type for parameter value in PointsKey
 typedef NekDouble PointsParamValue;
+/// List of parameters key/value pairs
 typedef std::map<PointsParamKey, PointsParamValue> PointsParamList;
 
+/**
+ * @brief Information about a Points object
+ */
 class PointsKey
 {
     public:
-      unsigned int m_numpoints[3];
-      PointsParamList m_params;
+        /// Number of points for each of the constituent point distributions
+        unsigned int m_numpoints[3];
+        /// List of zero or more parameters
+        PointsParamList m_params;
 };
 
-template<typename TData>
-class PointsBase;
-
-template<typename TData>
-using PointsSharedPtr = boost::shared_ptr<PointsBase<TData>>;
-
-template<typename TData>
-using PointsFactory = LibUtilities::NekFactory<
-        std::string, PointsBase<TData>, const PointsKey&>;
-
-// For some reason get undefined symbols when using a templated form...
-//template<typename TData>
-//LIB_UTILITIES_EXPORT PointsFactory<TData>& GetPointsFactory();
-
 LIB_UTILITIES_EXPORT PointsFactory<NekDouble>& GetPointsFactory();
+
+
 
 /**
  * @class PointsBase
@@ -203,10 +233,14 @@ class PointsBase
         virtual Array<OneD, TData> v_GetInterpMatrixData(const int& npts, const Array<OneD, const TData>& pts) = 0;
 };
 
+/// A shared pointer to a PointsBase object
+template<typename TData>
+using PointsSharedPtr = boost::shared_ptr<PointsBase<TData>>;
 
-
-
-
+/// A factory for generating Points objects
+template<typename TData>
+using PointsFactory = LibUtilities::NekFactory<
+        std::string, PointsBase<TData>, const PointsKey&>;
 
 
 }
