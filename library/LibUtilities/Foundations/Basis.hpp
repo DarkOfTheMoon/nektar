@@ -57,7 +57,6 @@ namespace Foundations
 
 
 /**
- * @class   BasisBase
  * @brief   Basis base class defining interface and storage for basis data.
  * @details This class provides a base class for all bases. Bases may be
  *          a single fundamental basis type, or a composition of multiple basis

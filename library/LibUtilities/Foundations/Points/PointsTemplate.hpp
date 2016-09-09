@@ -39,16 +39,8 @@
 #include <iostream>
 #include <type_traits>
 
-//#include <loki/Singleton.h>
-//#include <LibUtilities/BasicUtils/SharedArray.hpp>
-//#include <LibUtilities/BasicUtils/NekFactory.hpp>
-//#include <LibUtilities/LibUtilitiesDeclspec.h>
-//#include <LibUtilities/Polylib/Polylib.h>
-//#include <LibUtilities/LinearAlgebra/NekMatrix.hpp>
-//#include <LibUtilities/Foundations/ShapeTypes.hpp>
-//#include <LibUtilities/Foundations/Points/PointsTraits.hpp>
-
 #include <LibUtilities/Foundations/Points.hpp>
+
 
 namespace Nektar
 {
@@ -58,18 +50,35 @@ namespace Foundations
 {
 
 /**
- * @class Points
- * @brief Primary template for composite Points classes.
+ * @brief Primary template for Points classes.
+ * @tparam TData Data type of the point coordinates and weight values.
+ * @tparam TShape The native shape of this point distribution
+ * @tparam TPtsTuple A std::tuple of data types containing one or more point
+ *                   distributions which form the composite point distribution.
  */
 template<typename TData, typename TShape, typename TPtsTuple>
 class Points;
 
+/**
+ * @brief Composite Points classes.
+ * @tparam TData Data type of the point coordinates and weight values.
+ * @tparam TShape The native shape of this point distribution
+ * @tparam TPts A list of data types containing one or more points distributions
+ *                   which form the composite points distribution.
+ */
 template<typename TData, typename TShape, typename... TPts>
 class Points<TData, TShape, std::tuple<TPts...>> : public PointsBase<TData>
 {
+        /// The type of this class
         typedef Points<TData, TShape, std::tuple<TPts...>> ThisType;
+        /// The type of the base class
         typedef PointsBase<TData> BaseType;
-        typedef std::tuple<Points<TData, typename traits::points_traits<TPts>::native_shape, TPts>...> TupleType;
+        /// The type of the tuple for holding constituent point types
+        typedef std::tuple<Points<TData,
+                           typename traits::points_traits<TPts>::native_shape,
+                           TPts>...
+                          > TupleType;
+
 
         static_assert(sizeof...(TPts) > 0, "No point type given.");
         static_assert(sizeof...(TPts) < 4, "Too many point types given.");

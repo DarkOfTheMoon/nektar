@@ -49,7 +49,7 @@ namespace Foundations
 {
 
 /**
- * Specialisation for Fekete
+ * @brief Specialisation for Fekete
  */
 template<typename TData, typename TShape>
 class Points<TData, TShape, Fekete> : public PointsBase<TData>

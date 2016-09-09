@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// File: Foundations.hpp
+// File: PointsRegistration.cpp
 //
 // For more information, please see: http://www.nektar.info
 //
@@ -29,16 +29,12 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 //
-// Description: Helper classes and typedefs for Foundations classes
+// Description: Register available Points classes with factory.
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef LIBRARY_LIBUTILITIES_FOUNDATIONS_FOUNDATIONS_HPP_
-#define LIBRARY_LIBUTILITIES_FOUNDATIONS_FOUNDATIONS_HPP_
-
-#include <map>
-
-// This is just a collection of useful templates, typedefs and helper classes
+#include <LibUtilities/Foundations/Points/PointsGauss.hpp>
+#include <LibUtilities/Foundations/Points/PointsFekete.hpp>
 
 namespace Nektar
 {
@@ -47,24 +43,32 @@ namespace LibUtilities
 namespace Foundations
 {
 
-template <class T>
-struct is_not_tuple { static const bool value = true; };
+/**
+ * @brief Get the singleton Points factory
+ */
+PointsFactory<NekDouble>& GetPointsFactory()
+{
+    typedef Loki::SingletonHolder<PointsFactory<NekDouble>,
+                                  Loki::CreateUsingNew,
+                                  Loki::NoDestroy> Type;
 
-template <typename... Args>
-struct is_not_tuple<std::tuple<Args...>> { static const bool value = false; };
+    // Loki::ClassLevelLockable
 
-template <typename... Args>
-struct is_not_tuple<const std::tuple<Args...>> {
-        static const bool value = false;
+    return Type::Instance();
+}
+
+
+/**
+ * Register available Points classes with factory
+ */
+static std::string points[] = {
+        GetPointsFactory().RegisterCreatorFunction("GGL,Segment", Points<NekDouble, Segment, GaussGaussLegendre>::create,
+                                                   "Gauss-Gauss-Legendre on Segment"),
+        GetPointsFactory().RegisterCreatorFunction("GRM,Segment", Points<NekDouble, Segment, GaussRadauMLegendre>::create,
+                                                   "Gauss-RadauM-Legendre on Segment"),
 };
-
-typedef double NekDouble;
-typedef std::string BasisParamKey;
-typedef NekDouble BasisParamValue;
-typedef std::map<BasisParamKey, BasisParamValue> BasisParamList;
-
 }
 }
 }
 
-#endif /* LIBRARY_LIBUTILITIES_FOUNDATIONS_FOUNDATIONS_HPP_ */
+

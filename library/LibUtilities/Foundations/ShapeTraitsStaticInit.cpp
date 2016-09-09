@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// File: Foundations.hpp
+// File: ShapeTraitsStaticInit.cpp
 //
 // For more information, please see: http://www.nektar.info
 //
@@ -29,16 +29,11 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 //
-// Description: Helper classes and typedefs for Foundations classes
+// Description: Static initialisation of shape traits
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef LIBRARY_LIBUTILITIES_FOUNDATIONS_FOUNDATIONS_HPP_
-#define LIBRARY_LIBUTILITIES_FOUNDATIONS_FOUNDATIONS_HPP_
-
-#include <map>
-
-// This is just a collection of useful templates, typedefs and helper classes
+#include <LibUtilities/Foundations/ShapeTypes.hpp>
 
 namespace Nektar
 {
@@ -46,25 +41,17 @@ namespace LibUtilities
 {
 namespace Foundations
 {
-
-template <class T>
-struct is_not_tuple { static const bool value = true; };
-
-template <typename... Args>
-struct is_not_tuple<std::tuple<Args...>> { static const bool value = false; };
-
-template <typename... Args>
-struct is_not_tuple<const std::tuple<Args...>> {
-        static const bool value = false;
-};
-
-typedef double NekDouble;
-typedef std::string BasisParamKey;
-typedef NekDouble BasisParamValue;
-typedef std::map<BasisParamKey, BasisParamValue> BasisParamList;
-
+namespace traits
+{
+    // These are needed as char[] is not integer or enum type
+    constexpr char shape_traits<Segment>::name[];
+    constexpr char shape_traits<Triangle>::name[];
+    constexpr char shape_traits<Quadrilateral>::name[];
+    constexpr char shape_traits<Tetrahedron>::name[];
+    constexpr char shape_traits<Prism>::name[];
+    constexpr char shape_traits<Pyramid>::name[];
+    constexpr char shape_traits<Hexahedron>::name[];
 }
 }
 }
-
-#endif /* LIBRARY_LIBUTILITIES_FOUNDATIONS_FOUNDATIONS_HPP_ */
+}

@@ -49,7 +49,7 @@ namespace Foundations
 {
 
 /**
- * Specialisation for GaussGaussLegendre
+ * @brief Specialisation for GaussGaussLegendre
  */
 template<typename TData, typename TShape>
 class Points<TData, TShape, GaussGaussLegendre> : public PointsBase<TData>

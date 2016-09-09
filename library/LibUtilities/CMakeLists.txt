@@ -108,10 +108,10 @@ SET(FoundationHeaders
 )
 
 SET(FoundationSources
-    ./Foundations/Points/PointsInstantiations.cpp
-    ./Foundations/Basis/BasisInstantiations.cpp
-    ./Foundations/ShapeInstantiations.cpp
+    ./Foundations/ShapeTraitsStaticInit.cpp
+    ./Foundations/Points/PointsRegistration.cpp
     ./Foundations/Points/PointsTraitsStaticInit.cpp
+    ./Foundations/Basis/BasisRegistration.cpp
     ./Foundations/Basis/BasisKey.cpp
 )
 

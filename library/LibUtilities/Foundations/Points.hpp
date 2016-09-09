@@ -74,9 +74,6 @@ class PointsKey
         PointsParamList m_params;
 };
 
-LIB_UTILITIES_EXPORT PointsFactory<NekDouble>& GetPointsFactory();
-
-
 
 /**
  * @class PointsBase
@@ -131,17 +128,19 @@ class PointsBase
         }
 
         /**
-         *
+         * @brief Get both the coordinates and quadrature weights.
+         * @param z  Output array in which to put the coordinates.
+         * @param w  Output array in which to put the quadrature weights.
          */
         inline void GetZW(Array<OneD, const TData> &z,
-            Array<OneD, const TData> &w) const
+                          Array<OneD, const TData> &w) const
         {
             z = m_points[0];
             w = m_weights;
         }
 
         /**
-         *
+         * @brief Get the coordinates of 1D point distributions
          */
         inline void GetPoints(Array<OneD, const TData> &x) const
         {
@@ -149,7 +148,7 @@ class PointsBase
         }
 
         /**
-         *
+         * @brief Get the coordinates of 2D point distributions
          */
         inline void GetPoints(Array<OneD, const TData> &x,
                               Array<OneD, const TData> &y) const
@@ -159,7 +158,7 @@ class PointsBase
         }
 
         /**
-         *
+         * @brief Get the coordinates of 3D point distributions
          */
         inline void GetPoints(Array<OneD, const TData> &x,
                               Array<OneD, const TData> &y,
@@ -171,7 +170,8 @@ class PointsBase
         }
 
         /**
-         *
+         * @brief Get the interpolation matrix from this points distribution
+         *        to the points distribution provided by \pts.
          */
         inline MatrixType GetInterpMatrix(
                 const Array<OneD, const TData>& pts, const int npts = 1 )
@@ -183,15 +183,19 @@ class PointsBase
         }
 
     protected:
-        Array<OneD, TData> m_points[3]; /// x, y, z coordinates of points
-        Array<OneD, TData> m_weights;   /// Integration weights
-        MatrixType         m_ddata[3];  /// derivative
+        Array<OneD, TData> m_points[3]; ///< x, y, z coordinates of points
+        Array<OneD, TData> m_weights;   ///< Integration weights
+        MatrixType         m_ddata[3];  ///< derivative
 
-        PointsKey m_key;                /// Defines number of points
+        PointsKey m_key;                ///< Defines number of points
 
         PointsBase(const PointsKey& pKey) {m_key = pKey;}
         PointsBase() {}
 
+        /**
+         * @brief Calculate the total number of points in a composite points
+         *        distribution using induction.
+         */
         template<typename TPts1, typename TPts2, typename... TPtsOther>
         unsigned int GetNumberOfPoints(int i = 0)
         {
@@ -199,12 +203,19 @@ class PointsBase
                     * GetNumberOfPoints<TPts2, TPtsOther...>(i+1);
         }
 
+        /**
+         * @brief Calculate the total number of points in a composite points
+         *        distribution using induction. Terminating case.
+         */
         template<typename TPts>
         unsigned int GetNumberOfPoints(int i = 0)
         {
             return traits::points_traits<TPts>::get_total_points(m_key.m_numpoints[i]);
         }
 
+        /**
+         * @brief Allocate necessary storage for a composite point distribution
+         */
         template<typename... TPts>
         void AllocateArrays() {
             const unsigned int npts = GetNumberOfPoints<TPts...>();
@@ -221,6 +232,9 @@ class PointsBase
         }
 
     private:
+        /**
+         * @copydoc PointsBase::GetZ(const int&)
+         */
         virtual const Array<OneD, const TData> v_GetZ(const int& i)
         {
             if (i != 0)
@@ -241,6 +255,8 @@ using PointsSharedPtr = boost::shared_ptr<PointsBase<TData>>;
 template<typename TData>
 using PointsFactory = LibUtilities::NekFactory<
         std::string, PointsBase<TData>, const PointsKey&>;
+
+LIB_UTILITIES_EXPORT PointsFactory<NekDouble>& GetPointsFactory();
 
 
 }

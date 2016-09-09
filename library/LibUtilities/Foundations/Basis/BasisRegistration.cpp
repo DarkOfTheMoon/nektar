@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //
-// File: Foundations.hpp
+// File: BasisRegistration.cpp
 //
 // For more information, please see: http://www.nektar.info
 //
@@ -29,16 +29,13 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 //
-// Description: Helper classes and typedefs for Foundations classes
+// Description: Populate the Basis factory
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef LIBRARY_LIBUTILITIES_FOUNDATIONS_FOUNDATIONS_HPP_
-#define LIBRARY_LIBUTILITIES_FOUNDATIONS_FOUNDATIONS_HPP_
-
-#include <map>
-
-// This is just a collection of useful templates, typedefs and helper classes
+#include <LibUtilities/Foundations/Basis.hpp>
+#include <LibUtilities/Foundations/Basis/BasisGauss.hpp>
+#include <LibUtilities/Foundations/Basis/BasisBernstein.hpp>
 
 namespace Nektar
 {
@@ -47,24 +44,30 @@ namespace LibUtilities
 namespace Foundations
 {
 
-template <class T>
-struct is_not_tuple { static const bool value = true; };
+/**
+ * @brief Get the singleton Basis factory.
+ */
+BasisFactory<NekDouble>& GetBasisFactory()
+{
+    typedef Loki::SingletonHolder<BasisFactory<NekDouble>,
+                                  Loki::CreateUsingNew,
+                                  Loki::NoDestroy> Type;
+    // Putting Loki::ClassLevelLockable causes an assertion!
+    return Type::Instance();
+}
 
-template <typename... Args>
-struct is_not_tuple<std::tuple<Args...>> { static const bool value = false; };
-
-template <typename... Args>
-struct is_not_tuple<const std::tuple<Args...>> {
-        static const bool value = false;
+/**
+ * Register available basis classes with factory
+ */
+static std::string bases[] = {
+        GetBasisFactory().RegisterCreatorFunction("MOD,GGL,Segment", Basis<NekDouble, Segment, std::tuple<GaussGaussLegendre>, std::tuple<ModifiedLegendre>>::create,
+                                                  "Modified basis with Gauss-Gauss-Legendre on Segment"),
+        GetBasisFactory().RegisterCreatorFunction("MOD,GRM,Segment", Basis<NekDouble, Segment, std::tuple<GaussRadauMLegendre>, std::tuple<ModifiedLegendre>>::create,
+                                                  "Modified basis with Gauss-RadauM-Legendre on Segment"),
+        GetBasisFactory().RegisterCreatorFunction("MOD_MOD,GGL_GGL,Quadrilateral", Basis<NekDouble, Quadrilateral, std::tuple<GaussGaussLegendre, GaussGaussLegendre>, std::tuple<ModifiedLegendre, ModifiedLegendre>>::create,
+                                                  "Modified basis with Gauss-Gauss-Legendre on Quadrilateral")
 };
 
-typedef double NekDouble;
-typedef std::string BasisParamKey;
-typedef NekDouble BasisParamValue;
-typedef std::map<BasisParamKey, BasisParamValue> BasisParamList;
-
 }
 }
 }
-
-#endif /* LIBRARY_LIBUTILITIES_FOUNDATIONS_FOUNDATIONS_HPP_ */
