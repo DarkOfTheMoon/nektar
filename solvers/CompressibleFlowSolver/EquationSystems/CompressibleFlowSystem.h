@@ -81,6 +81,7 @@ namespace Nektar
         NekDouble                           m_thermalConductivity;
         NekDouble                           m_Cp;
         NekDouble                           m_Prandtl;
+        bool                                m_variableCoeffs;
 
         // Auxiliary object to convert variables
         VariableConverterSharedPtr          m_varConv;

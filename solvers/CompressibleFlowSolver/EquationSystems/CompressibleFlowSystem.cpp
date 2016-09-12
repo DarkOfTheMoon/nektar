@@ -167,6 +167,10 @@ namespace Nektar
         m_session->LoadSolverInfo("ViscosityType", m_ViscosityType, "Constant");
         m_session->LoadParameter ("mu",            m_mu,            1.78e-05);
 
+        // Variable coefficients for IMEX
+        m_session->MatchSolverInfo("VariableCoeffs","True",
+                                   m_variableCoeffs, false);
+
         // Thermal conductivity or Prandtl
         if( m_session->DefinesParameter("thermalConductivity"))
         {
@@ -199,7 +203,8 @@ namespace Nektar
     void CompressibleFlowSystem::InitAdvectionDiffusion()
     {
         // Check if projection type is correct
-        ASSERTL0(m_projectionType == MultiRegions::eDiscontinuous,
+        ASSERTL0(m_projectionType == MultiRegions::eDiscontinuous ||
+                 !m_explicitDiffusion,
                 "Unsupported projection type.");
 
         string advName, diffName, riemName;
@@ -979,19 +984,32 @@ namespace Nektar
             }
         }
         // Correct fluxes for momentum equation using Imex
+        NekDouble fac;
         for (i = 0; i < m_spacedim; ++i)
         {
             for (j = 0; j < m_spacedim; ++j)
             {
-                // - mu*u_j,i
+                if ( (i == j) && m_variableCoeffs)
+                {
+                    fac = 4.0/3.0;
+                }
+                else
+                {
+                    fac = 1.0;
+                }
+
+                // - fac*mu*u_j,i
                 Vmath::Vmul(nPts, mu, 1,
                                   derivativesO1[i][j], 1,
+                                  tmp2, 1);
+                Vmath::Smul(nPts, fac,
+                                  tmp2, 1,
                                   tmp2, 1);
                 Vmath::Vsub(nPts, viscousTensor[i][j+1], 1,
                                   tmp2, 1,
                                   viscousTensor[i][j+1], 1);
 
-                // - mu*u_j/rho * rho_i
+                // - fac*mu*u_j/rho * rho_i
                 Vmath::Vmul(nPts, mu, 1,
                                   physfield[j], 1,
                                   tmp2, 1);
@@ -1000,6 +1018,9 @@ namespace Nektar
                                   tmp2, 1);
                 Vmath::Vmul(nPts, tmp2, 1,
                                   derivativesO1[i][m_spacedim+1], 1,
+                                  tmp2, 1);
+                Vmath::Smul(nPts, fac,
+                                  tmp2, 1,
                                   tmp2, 1);
                 Vmath::Vsub(nPts, viscousTensor[i][j+1], 1,
                                   tmp2, 1,

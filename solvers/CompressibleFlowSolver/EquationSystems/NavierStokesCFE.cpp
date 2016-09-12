@@ -34,6 +34,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include <CompressibleFlowSolver/EquationSystems/NavierStokesCFE.h>
+#include <MultiRegions/GlobalLinSys.h>
 
 using namespace std;
 
@@ -154,17 +155,52 @@ namespace Nektar
         int nq = m_fields[0]->GetNpoints();
         int nvariables = inarray.num_elements();
         StdRegions::ConstFactorMap factors;
+        // For variable factors case
+        StdRegions::VarCoeffMap    varcoeff = StdRegions::NullVarCoeffMap;
+        Array< OneD, NekDouble>    kinvis;
 
         // Forcing term for the Helmholtz problem (previous time-level)
         Array< OneD, NekDouble> F(nq);
-
-        // TODO: Variable factors
 
         // Setting boundary conditions
         SetBoundaryConditions(outarray, time);
 
         // Density has no implicit part -> outarray = inarray
         Vmath::Vcopy(nq, inarray[0], 1, outarray[0], 1);
+
+        // Variable factors type
+        StdRegions::VarCoeffType varcoefftypes[3]
+            = {StdRegions::eVarCoeffD00,
+               StdRegions::eVarCoeffD11,
+               StdRegions::eVarCoeffD22};
+
+        if (m_variableCoeffs)
+        {
+            // Initialise variable factors
+            for (int i = 0; i < nvariables-2; ++i)
+            {
+                varcoeff[varcoefftypes[i]] =
+                        Array<OneD, NekDouble>(nq, 0.0);
+            }
+            // Calculate kinematic viscosity
+            kinvis = Array<OneD, NekDouble>     (nq);
+            Array<OneD, NekDouble>          tmp1(nq);
+            Array<OneD, NekDouble>          tmp2(nq);
+            if (m_ViscosityType == "Variable")
+            {
+                // Calculate pressure
+                m_varConv->GetPressure(inarray, tmp1);
+                // Extract temperature
+                m_varConv->GetTemperature(inarray, tmp1, tmp2);
+                // Get viscosity
+                m_varConv->GetDynamicViscosity(tmp2, tmp1);
+            }
+            else
+            {
+                Vmath::Fill(nq, m_mu, tmp1, 1);
+            }
+            Vmath::Vdiv( nq, tmp1, 1, m_fields[0]->GetPhys(), 1, kinvis, 1);
+        }
 
         // Defining the scalar factors for momentum Helmholtz equation
         factors[StdRegions::eFactorTau]    = 1.0;
@@ -173,10 +209,29 @@ namespace Nektar
         // Solve the momentum equations with Helmholtz solver
         for (int i = 1; i < nvariables-1; ++i)
         {
+            if (m_variableCoeffs)
+            {
+                // Set diagonal terms
+                for (int j = 0; j < nvariables-2; ++j)
+                {
+                    if (j == (i-1))
+                    {
+                        Vmath::Smul( nq, (4.0/3.0)*m_rhoInf/m_mu, kinvis, 1,
+                                    varcoeff[varcoefftypes[j]], 1);
+                    }
+                    else
+                    {
+                        Vmath::Smul( nq, 1.0*m_rhoInf/m_mu      , kinvis, 1,
+                                    varcoeff[varcoefftypes[j]], 1);
+                    }
+                }
+            }
+
             Vmath::Smul(nq, -factors[StdRegions::eFactorLambda],
                         inarray[i], 1, F, 1);
+
             m_fields[i]->HelmSolve(F, m_fields[i]->UpdateCoeffs(),
-                                   NullFlagList, factors);
+                                   NullFlagList, factors, varcoeff);
             m_fields[i]->BwdTrans(m_fields[i]->GetCoeffs(), outarray[i]);
         }
 
@@ -185,14 +240,36 @@ namespace Nektar
                                                 (m_gamma * aii_Dt * m_mu);
 
         // Solve the energy equation with Helmholtz solver
+        if (m_variableCoeffs)
+        {
+            // Set diagonal terms
+            for (int j = 0; j < nvariables-2; ++j)
+            {
+                Vmath::Smul( nq, 1.0*m_rhoInf/m_mu    , kinvis, 1,
+                            varcoeff[varcoefftypes[j]], 1);
+            }
+        }
+
         Vmath::Smul(nq, -factors[StdRegions::eFactorLambda],
                         inarray[nvariables-1], 1, F, 1);
         m_fields[nvariables-1]->HelmSolve(
             F,
             m_fields[nvariables-1]->UpdateCoeffs(),
-            NullFlagList, factors);
+            NullFlagList, factors, varcoeff);
 
         m_fields[nvariables-1]->BwdTrans(m_fields[nvariables-1]->GetCoeffs(),
                                          outarray[nvariables-1]);
+
+        if (m_variableCoeffs)
+        {
+            if (LibUtilities::NekManager<MultiRegions::GlobalLinSysKey,
+                                    MultiRegions::GlobalLinSys>::
+                                    PoolCreated(std::string("GlobalLinSys")))
+            {
+                LibUtilities::NekManager<MultiRegions::GlobalLinSysKey,
+                                    MultiRegions::GlobalLinSys>::
+                                    ClearManager(std::string("GlobalLinSys"));
+            }
+        }
     }
 }
