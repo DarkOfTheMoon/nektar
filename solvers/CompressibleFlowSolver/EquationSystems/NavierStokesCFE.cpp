@@ -153,7 +153,6 @@ namespace Nektar
         const NekDouble                                   aii_Dt)
     {
         int nq = m_fields[0]->GetNpoints();
-        int nvariables = inarray.num_elements();
         StdRegions::ConstFactorMap factors;
         // For variable factors case
         StdRegions::VarCoeffMap    varcoeff;
@@ -177,7 +176,7 @@ namespace Nektar
         if (m_variableCoeffs)
         {
             // Initialise variable factors
-            for (int i = 0; i < nvariables-2; ++i)
+            for (int i = 0; i < m_spacedim; ++i)
             {
                 varcoeff[varcoefftypes[i]] =
                         Array<OneD, NekDouble>(nq, 0.0);
@@ -211,23 +210,24 @@ namespace Nektar
         factors[StdRegions::eFactorLambda] = m_rhoInf / (aii_Dt * m_mu);
 
         // Solve the momentum equations with Helmholtz solver
-        for (int i = 1; i < nvariables-1; ++i)
+        for (int i = 1; i < m_spacedim+1; ++i)
         {
             if (m_variableCoeffs)
             {
+                NekDouble fac;
                 // Set diagonal terms
-                for (int j = 0; j < nvariables-2; ++j)
+                for (int j = 0; j < m_spacedim; ++j)
                 {
                     if (j == (i-1))
                     {
-                        Vmath::Smul( nq, (4.0/3.0)*m_rhoInf/m_mu, kinvis, 1,
-                                    varcoeff[varcoefftypes[j]], 1);
+                        fac = 1.0; //4.0/3.0;
                     }
                     else
                     {
-                        Vmath::Smul( nq, 1.0*m_rhoInf/m_mu      , kinvis, 1,
-                                    varcoeff[varcoefftypes[j]], 1);
+                        fac = 1.0;
                     }
+                    Vmath::Smul( nq, fac*m_rhoInf/m_mu, kinvis, 1,
+                                    varcoeff[varcoefftypes[j]], 1);
                 }
             }
 
@@ -247,7 +247,7 @@ namespace Nektar
         if (m_variableCoeffs)
         {
             // Set diagonal terms
-            for (int j = 0; j < nvariables-2; ++j)
+            for (int j = 0; j < m_spacedim; ++j)
             {
                 Vmath::Smul( nq, 1.0*m_rhoInf/m_mu    , kinvis, 1,
                             varcoeff[varcoefftypes[j]], 1);
@@ -255,14 +255,14 @@ namespace Nektar
         }
 
         Vmath::Smul(nq, -factors[StdRegions::eFactorLambda],
-                        inarray[nvariables-1], 1, F, 1);
-        m_fields[nvariables-1]->HelmSolve(
+                        inarray[m_spacedim+1], 1, F, 1);
+        m_fields[m_spacedim+1]->HelmSolve(
             F,
-            m_fields[nvariables-1]->UpdateCoeffs(),
+            m_fields[m_spacedim+1]->UpdateCoeffs(),
             NullFlagList, factors, varcoeff);
 
-        m_fields[nvariables-1]->BwdTrans(m_fields[nvariables-1]->GetCoeffs(),
-                                         outarray[nvariables-1]);
+        m_fields[m_spacedim+1]->BwdTrans(m_fields[m_spacedim+1]->GetCoeffs(),
+                                         outarray[m_spacedim+1]);
 
         if (m_variableCoeffs)
         {
