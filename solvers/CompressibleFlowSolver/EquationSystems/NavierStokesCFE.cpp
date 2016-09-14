@@ -156,7 +156,7 @@ namespace Nektar
         int nvariables = inarray.num_elements();
         StdRegions::ConstFactorMap factors;
         // For variable factors case
-        StdRegions::VarCoeffMap    varcoeff = StdRegions::NullVarCoeffMap;
+        StdRegions::VarCoeffMap    varcoeff;
         Array< OneD, NekDouble>    kinvis;
 
         // Forcing term for the Helmholtz problem (previous time-level)
@@ -200,6 +200,10 @@ namespace Nektar
                 Vmath::Fill(nq, m_mu, tmp1, 1);
             }
             Vmath::Vdiv( nq, tmp1, 1, m_fields[0]->GetPhys(), 1, kinvis, 1);
+        }
+        else
+        {
+            varcoeff = StdRegions::NullVarCoeffMap;
         }
 
         // Defining the scalar factors for momentum Helmholtz equation
