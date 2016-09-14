@@ -991,7 +991,7 @@ namespace Nektar
             {
                 if ( (i == j) && m_variableCoeffs)
                 {
-                    fac = 1.0; //4.0/3.0;
+                    fac = 4.0/3.0;
                 }
                 else
                 {

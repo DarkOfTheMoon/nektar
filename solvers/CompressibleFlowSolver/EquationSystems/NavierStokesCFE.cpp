@@ -220,7 +220,7 @@ namespace Nektar
                 {
                     if (j == (i-1))
                     {
-                        fac = 1.0; //4.0/3.0;
+                        fac = 4.0/3.0;
                     }
                     else
                     {
@@ -237,6 +237,18 @@ namespace Nektar
             m_fields[i]->HelmSolve(F, m_fields[i]->UpdateCoeffs(),
                                    NullFlagList, factors, varcoeff);
             m_fields[i]->BwdTrans(m_fields[i]->GetCoeffs(), outarray[i]);
+
+            if (m_variableCoeffs)
+            {
+                if (LibUtilities::NekManager<MultiRegions::GlobalLinSysKey,
+                                    MultiRegions::GlobalLinSys>::
+                                    PoolCreated(std::string("GlobalLinSys")))
+                {
+                    LibUtilities::NekManager<MultiRegions::GlobalLinSysKey,
+                                        MultiRegions::GlobalLinSys>::
+                                        ClearManager(std::string("GlobalLinSys"));
+                }
+            }
         }
 
         // Defining the scalar factors for energy Helmholtz equation
