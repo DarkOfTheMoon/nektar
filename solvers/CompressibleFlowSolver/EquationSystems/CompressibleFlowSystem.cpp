@@ -76,7 +76,17 @@ namespace Nektar
         InitialiseParameters();
 
         // Setting up advection and diffusion operators
-        InitAdvectionDiffusion();
+        InitAdvection();
+
+        // Create artificial diffusion
+        if (m_shockCaptureType != "Off")
+        {
+            m_artificialDiffusion = GetArtificialDiffusionFactory()
+                                    .CreateInstance(m_shockCaptureType,
+                                                    m_session,
+                                                    m_fields,
+                                                    m_spacedim);
+        }
 
         // Forcing terms for the sponge region
         m_forcing = SolverUtils::Forcing::Load(m_session, m_fields,
@@ -188,64 +198,39 @@ namespace Nektar
             m_thermalConductivity = m_Cp * m_mu / m_Prandtl;
         }
 
-        // Parameters for sensor
-        m_session->LoadParameter ("Skappa",        m_Skappa,        -2.048);
-        m_session->LoadParameter ("Kappa",         m_Kappa,         0.0);
-        m_session->LoadParameter ("mu0",           m_mu0,           1.0);
-
         // Steady state tolerance
         m_session->LoadParameter("SteadyStateTol", m_steadyStateTol, 0.0);
+
+        // Shock capture
+        m_session->LoadSolverInfo("ShockCaptureType",
+                                  m_shockCaptureType,    "Off");
     }
 
     /**
      * @brief Create advection and diffusion objects for CFS
      */
-    void CompressibleFlowSystem::InitAdvectionDiffusion()
+    void CompressibleFlowSystem::InitAdvection()
     {
         // Check if projection type is correct
         ASSERTL0(m_projectionType == MultiRegions::eDiscontinuous ||
                  !m_explicitDiffusion,
                 "Unsupported projection type.");
 
-        string advName, diffName, riemName;
+        string advName, riemName;
         m_session->LoadSolverInfo("AdvectionType", advName, "WeakDG");
-        m_session->LoadSolverInfo("DiffusionType", diffName, "LDGNS");
 
         m_advection = SolverUtils::GetAdvectionFactory()
                                     .CreateInstance(advName, advName);
-        m_diffusion = SolverUtils::GetDiffusionFactory()
-                                    .CreateInstance(diffName, diffName);
 
         if (m_specHP_dealiasing)
         {
             m_advection->SetFluxVector(&CompressibleFlowSystem::
                                        GetFluxVectorDeAlias, this);
-            if (m_explicitDiffusion)
-            {
-                m_diffusion->SetFluxVectorNS(
-                    &CompressibleFlowSystem::GetViscousFluxVectorDeAlias,
-                    this);
-            }
-            else
-            {
-                ASSERTL0(false,
-                    "Imex viscous flux not implemented with dealiasing");
-            }
         }
         else
         {
             m_advection->SetFluxVector  (&CompressibleFlowSystem::
                                           GetFluxVector, this);
-            if (m_explicitDiffusion)
-            {
-                m_diffusion->SetFluxVectorNS(&CompressibleFlowSystem::
-                        GetViscousFluxVector, this);
-            }
-            else
-            {
-                m_diffusion->SetFluxVectorNS(&CompressibleFlowSystem::
-                        GetViscousFluxVectorSemiImplicit, this);
-            }
         }
 
         // Setting up Riemann solver for advection operator
@@ -255,11 +240,6 @@ namespace Nektar
         riemannSolver = SolverUtils::GetRiemannSolverFactory()
                                     .CreateInstance(riemName);
 
-        // Setting up upwind solver for diffusion operator
-        SolverUtils::RiemannSolverSharedPtr riemannSolverLDG;
-        riemannSolverLDG = SolverUtils::GetRiemannSolverFactory()
-                                        .CreateInstance("UpwindLDG");
-
         // Setting up parameters for advection operator Riemann solver
         riemannSolver->SetParam (
             "gamma",   &CompressibleFlowSystem::GetGamma,   this);
@@ -268,19 +248,9 @@ namespace Nektar
         riemannSolver->SetVector(
             "N",       &CompressibleFlowSystem::GetNormals, this);
 
-        // Setting up parameters for diffusion operator Riemann solver
-        riemannSolverLDG->SetParam (
-            "gamma",   &CompressibleFlowSystem::GetGamma,   this);
-        riemannSolverLDG->SetVector(
-            "vecLocs", &CompressibleFlowSystem::GetVecLocs, this);
-        riemannSolverLDG->SetVector(
-            "N",       &CompressibleFlowSystem::GetNormals, this);
-
         // Concluding initialisation of advection / diffusion operators
         m_advection->SetRiemannSolver   (riemannSolver);
-        m_diffusion->SetRiemannSolver   (riemannSolverLDG);
         m_advection->InitObject         (m_session, m_fields);
-        m_diffusion->InitObject         (m_session, m_fields);
     }
 
     /**
@@ -413,6 +383,11 @@ namespace Nektar
             const Array<OneD, Array<OneD, NekDouble> >   &pBwd)
     {
         v_DoDiffusion(inarray, outarray, pFwd, pBwd);
+
+        if (m_shockCaptureType != "Off")
+        {
+            m_artificialDiffusion->DoArtificialDiffusion(inarray, outarray);
+        }
     }
 
     void CompressibleFlowSystem::SetBoundaryConditions(
@@ -591,441 +566,6 @@ namespace Nektar
                 OneDptscale,
                 flux_interp[m_spacedim+1][j],
                 flux[m_spacedim+1][j]);
-        }
-    }
-
-
-    /**
-     * @brief Return the flux vector for the LDG diffusion problem.
-     * \todo Complete the viscous flux vector
-     */
-    void CompressibleFlowSystem::GetViscousFluxVector(
-        const Array<OneD, Array<OneD, NekDouble> >               &physfield,
-              Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &derivativesO1,
-              Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &viscousTensor)
-    {
-        int i, j;
-        int nVariables = m_fields.num_elements();
-        int nPts       = physfield[0].num_elements();
-
-        // Stokes hypothesis
-        const NekDouble lambda = -2.0/3.0;
-
-        // Auxiliary variables
-        Array<OneD, NekDouble > mu                 (nPts, 0.0);
-        Array<OneD, NekDouble > thermalConductivity(nPts, 0.0);
-        Array<OneD, NekDouble > divVel             (nPts, 0.0);
-
-        // Variable viscosity through the Sutherland's law
-        if (m_ViscosityType == "Variable")
-        {
-            m_varConv->GetDynamicViscosity(physfield[nVariables-2], mu);
-            NekDouble tRa = m_Cp / m_Prandtl;
-            Vmath::Smul(nPts, tRa, mu, 1, thermalConductivity, 1);
-        }
-        else
-        {
-            Vmath::Fill(nPts, m_mu, mu, 1);
-            Vmath::Fill(nPts, m_thermalConductivity,
-                        thermalConductivity, 1);
-        }
-
-        // Velocity divergence
-        for (j = 0; j < m_spacedim; ++j)
-        {
-            Vmath::Vadd(nPts, divVel, 1, derivativesO1[j][j], 1,
-                        divVel, 1);
-        }
-
-        // Velocity divergence scaled by lambda * mu
-        Vmath::Smul(nPts, lambda, divVel, 1, divVel, 1);
-        Vmath::Vmul(nPts, mu,  1, divVel, 1, divVel, 1);
-
-        // Viscous flux vector for the rho equation = 0
-        for (i = 0; i < m_spacedim; ++i)
-        {
-            Vmath::Zero(nPts, viscousTensor[i][0], 1);
-        }
-
-        // Viscous stress tensor (for the momentum equations)
-        for (i = 0; i < m_spacedim; ++i)
-        {
-            for (j = i; j < m_spacedim; ++j)
-            {
-                Vmath::Vadd(nPts, derivativesO1[i][j], 1,
-                                  derivativesO1[j][i], 1,
-                                  viscousTensor[i][j+1], 1);
-
-                Vmath::Vmul(nPts, mu, 1,
-                                  viscousTensor[i][j+1], 1,
-                                  viscousTensor[i][j+1], 1);
-
-                if (i == j)
-                {
-                    // Add divergence term to diagonal
-                    Vmath::Vadd(nPts, viscousTensor[i][j+1], 1,
-                                  divVel, 1,
-                                  viscousTensor[i][j+1], 1);
-                }
-                else
-                {
-                    // Copy to make symmetric
-                    Vmath::Vcopy(nPts, viscousTensor[i][j+1], 1,
-                                       viscousTensor[j][i+1], 1);
-                }
-            }
-        }
-
-        // Terms for the energy equation
-        for (i = 0; i < m_spacedim; ++i)
-        {
-            Vmath::Zero(nPts, viscousTensor[i][m_spacedim+1], 1);
-            // u_j * tau_ij
-            for (j = 0; j < m_spacedim; ++j)
-            {
-                Vmath::Vvtvp(nPts, physfield[j], 1,
-                               viscousTensor[i][j+1], 1,
-                               viscousTensor[i][m_spacedim+1], 1,
-                               viscousTensor[i][m_spacedim+1], 1);
-            }
-            // Add k*T_i
-            Vmath::Vvtvp(nPts, thermalConductivity, 1,
-                               derivativesO1[i][m_spacedim], 1,
-                               viscousTensor[i][m_spacedim+1], 1,
-                               viscousTensor[i][m_spacedim+1], 1);
-        }
-    }
-
-    /**
-     * @brief Return the flux vector for the LDG diffusion problem.
-     * \todo Complete the viscous flux vector
-     */
-    void CompressibleFlowSystem::GetViscousFluxVectorDeAlias(
-        const Array<OneD, Array<OneD, NekDouble> >               &physfield,
-              Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &derivativesO1,
-              Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &viscousTensor)
-    {
-        int i, j;
-        int nVariables = m_fields.num_elements();
-        // Factor to rescale 1d points in dealiasing.
-        NekDouble OneDptscale = 2;
-        // Get number of points to dealias a cubic non-linearity
-        int nPts      = m_fields[0]->Get1DScaledTotPoints(OneDptscale);
-        int nPts_orig = physfield[0].num_elements();
-
-        // Stokes hypothesis
-        const NekDouble lambda = -2.0/3.0;
-
-        // Auxiliary variables
-        Array<OneD, NekDouble > mu                 (nPts, 0.0);
-        Array<OneD, NekDouble > thermalConductivity(nPts, 0.0);
-        Array<OneD, NekDouble > divVel             (nPts, 0.0);
-
-        // Variable viscosity through the Sutherland's law
-        if (m_ViscosityType == "Variable")
-        {
-            m_varConv->GetDynamicViscosity(physfield[nVariables-2], mu);
-            NekDouble tRa = m_Cp / m_Prandtl;
-            Vmath::Smul(nPts, tRa, mu, 1, thermalConductivity, 1);
-        }
-        else
-        {
-            Vmath::Fill(nPts, m_mu, mu, 1);
-            Vmath::Fill(nPts, m_thermalConductivity,
-                        thermalConductivity, 1);
-        }
-
-        // Interpolate inputs and initialise interpolated output
-        Array<OneD, Array<OneD, NekDouble> > vel_interp(m_spacedim);
-        Array<OneD, Array<OneD, Array<OneD, NekDouble> > >
-                                             deriv_interp(m_spacedim);
-        Array<OneD, Array<OneD, Array<OneD, NekDouble> > >
-                                             out_interp(m_spacedim);
-        for (i = 0; i < m_spacedim; ++i)
-        {
-            // Interpolate velocity
-            vel_interp[i]   = Array<OneD, NekDouble> (nPts);
-            m_fields[0]->PhysInterp1DScaled(
-                OneDptscale, physfield[i], vel_interp[i]);
-
-            // Interpolate derivatives
-            deriv_interp[i] = Array<OneD,Array<OneD,NekDouble> > (m_spacedim+1);
-            for (j = 0; j < m_spacedim+1; ++j)
-            {
-                deriv_interp[i][j] = Array<OneD, NekDouble> (nPts);
-                m_fields[0]->PhysInterp1DScaled(
-                    OneDptscale, derivativesO1[i][j], deriv_interp[i][j]);
-            }
-
-            // Output (start from j=1 since flux is zero for rho)
-            out_interp[i] = Array<OneD,Array<OneD,NekDouble> > (m_spacedim+2);
-            for (j = 1; j < m_spacedim+2; ++j)
-            {
-                out_interp[i][j] = Array<OneD, NekDouble> (nPts);
-            }
-        }
-
-        // Velocity divergence
-        for (j = 0; j < m_spacedim; ++j)
-        {
-            Vmath::Vadd(nPts, divVel, 1, deriv_interp[j][j], 1,
-                        divVel, 1);
-        }
-
-        // Velocity divergence scaled by lambda * mu
-        Vmath::Smul(nPts, lambda, divVel, 1, divVel, 1);
-        Vmath::Vmul(nPts, mu,  1, divVel, 1, divVel, 1);
-
-        // Viscous flux vector for the rho equation = 0 (no need to dealias)
-        for (i = 0; i < m_spacedim; ++i)
-        {
-            Vmath::Zero(nPts_orig, viscousTensor[i][0], 1);
-        }
-
-        // Viscous stress tensor (for the momentum equations)
-        for (i = 0; i < m_spacedim; ++i)
-        {
-            for (j = i; j < m_spacedim; ++j)
-            {
-                Vmath::Vadd(nPts, deriv_interp[i][j], 1,
-                                  deriv_interp[j][i], 1,
-                                  out_interp[i][j+1], 1);
-
-                Vmath::Vmul(nPts, mu, 1,
-                                  out_interp[i][j+1], 1,
-                                  out_interp[i][j+1], 1);
-
-                if (i == j)
-                {
-                    // Add divergence term to diagonal
-                    Vmath::Vadd(nPts, out_interp[i][j+1], 1,
-                                  divVel, 1,
-                                  out_interp[i][j+1], 1);
-                }
-                else
-                {
-                    // Make symmetric
-                    out_interp[j][i+1] = out_interp[i][j+1];
-                }
-            }
-        }
-
-        // Terms for the energy equation
-        for (i = 0; i < m_spacedim; ++i)
-        {
-            Vmath::Zero(nPts, out_interp[i][m_spacedim+1], 1);
-            // u_j * tau_ij
-            for (j = 0; j < m_spacedim; ++j)
-            {
-                Vmath::Vvtvp(nPts, vel_interp[j], 1,
-                               out_interp[i][j+1], 1,
-                               out_interp[i][m_spacedim+1], 1,
-                               out_interp[i][m_spacedim+1], 1);
-            }
-            // Add k*T_i
-            Vmath::Vvtvp(nPts, thermalConductivity, 1,
-                               deriv_interp[i][m_spacedim], 1,
-                               out_interp[i][m_spacedim+1], 1,
-                               out_interp[i][m_spacedim+1], 1);
-        }
-
-        // Project to original space
-        for (i = 0; i < m_spacedim; ++i)
-        {
-            for (j = 1; j < m_spacedim+2; ++j)
-            {
-                m_fields[0]->PhysGalerkinProjection1DScaled(
-                    OneDptscale,
-                    out_interp[i][j],
-                    viscousTensor[i][j]);
-            }
-        }
-    }
-
-    /**
-     * @brief Return the flux vector for the LDG diffusion problem using
-     *        semi-implicit time integration.
-     */
-    void CompressibleFlowSystem::GetViscousFluxVectorSemiImplicit(
-        const Array<OneD, Array<OneD, NekDouble> >               &physfield,
-              Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &derivativesO1,
-              Array<OneD, Array<OneD, Array<OneD, NekDouble> > > &viscousTensor)
-    {
-        int i, j;
-        int nVariables = m_fields.num_elements();
-        int nPts       = physfield[0].num_elements();
-
-        // Stokes hypothesis
-        const NekDouble lambda = -2.0/3.0;
-
-        // Auxiliary variables
-        Array<OneD, NekDouble > mu                 (nPts, 0.0);
-        Array<OneD, NekDouble > thermalConductivity(nPts, 0.0);
-        Array<OneD, NekDouble > divVel             (nPts, 0.0);
-        Array<OneD, NekDouble > tmp                (nPts, 0.0);
-        Array<OneD, NekDouble > tmp2               (nPts, 0.0);
-
-        // Variable viscosity through the Sutherland's law
-        if (m_ViscosityType == "Variable")
-        {
-            m_varConv->GetDynamicViscosity(physfield[nVariables-2], mu);
-            NekDouble tRa = m_Cp / m_Prandtl;
-            Vmath::Smul(nPts, tRa, mu, 1, thermalConductivity, 1);
-        }
-        else
-        {
-            Vmath::Fill(nPts, m_mu, mu, 1);
-            Vmath::Fill(nPts, m_thermalConductivity,
-                        thermalConductivity, 1);
-        }
-
-        // Velocity divergence
-        for (j = 0; j < m_spacedim; ++j)
-        {
-            Vmath::Vadd(nPts, divVel, 1, derivativesO1[j][j], 1,
-                        divVel, 1);
-        }
-
-        // Velocity divergence scaled by lambda * mu
-        Vmath::Smul(nPts, lambda, divVel, 1, divVel, 1);
-        Vmath::Vmul(nPts, mu,  1, divVel, 1, divVel, 1);
-
-        // Viscous flux vector for the rho equation = 0
-        for (i = 0; i < m_spacedim; ++i)
-        {
-            Vmath::Zero(nPts, viscousTensor[i][0], 1);
-        }
-
-        // Viscous stress tensor (for the momentum equations)
-        for (i = 0; i < m_spacedim; ++i)
-        {
-            for (j = i; j < m_spacedim; ++j)
-            {
-                Vmath::Vadd(nPts, derivativesO1[i][j], 1,
-                                  derivativesO1[j][i], 1,
-                                  viscousTensor[i][j+1], 1);
-
-                Vmath::Vmul(nPts, mu, 1,
-                                  viscousTensor[i][j+1], 1,
-                                  viscousTensor[i][j+1], 1);
-
-                if (i == j)
-                {
-                    // Add divergence term to diagonal
-                    Vmath::Vadd(nPts, viscousTensor[i][j+1], 1,
-                                  divVel, 1,
-                                  viscousTensor[i][j+1], 1);
-                }
-                else
-                {
-                    // Copy to make symmetric
-                    Vmath::Vcopy(nPts, viscousTensor[i][j+1], 1,
-                                       viscousTensor[j][i+1], 1);
-                }
-            }
-        }
-
-        // Terms for the energy equation
-
-        // Calculate -k*T/rho
-        Vmath::Vdiv(nPts, thermalConductivity, 1,
-                            physfield[nVariables-1], 1,
-                            tmp, 1);
-        Vmath::Vmul(nPts, tmp, 1,
-                            physfield[nVariables-2], 1,
-                            tmp, 1);
-        Vmath::Neg(nPts, tmp, 1);
-
-        // Calculate flux for energy equation
-        for (i = 0; i < m_spacedim; ++i)
-        {
-            // -(k*T/rho)*rho_i
-            Vmath::Vmul(nPts, tmp, 1,
-                            derivativesO1[i][m_spacedim+1], 1,
-                            viscousTensor[i][m_spacedim+1], 1);
-
-            for (j = 0; j < m_spacedim; ++j)
-            {
-                // - mu*gamma/Pr * u_j * u_j,i
-                Vmath::Smul(nPts, -m_gamma/m_Prandtl,
-                            mu, 1,
-                            tmp2, 1);
-                Vmath::Vmul(nPts, physfield[j], 1,
-                            tmp2, 1,
-                            tmp2, 1);
-                Vmath::Vvtvp(nPts, tmp2, 1,
-                               derivativesO1[i][j], 1,
-                               viscousTensor[i][m_spacedim+1], 1,
-                               viscousTensor[i][m_spacedim+1], 1);
-
-                // - mu*gamma/(2*rho*Pr) * u_j*u_j * rho_i
-                Vmath::Smul(nPts, -m_gamma/(2*m_Prandtl),
-                            mu, 1,
-                            tmp2, 1);
-                Vmath::Vdiv(nPts, tmp2, 1,
-                            physfield[nVariables-1], 1,
-                            tmp2, 1);
-                Vmath::Vmul(nPts, physfield[j], 1,
-                            tmp2, 1,
-                            tmp2, 1);
-                Vmath::Vmul(nPts, physfield[j], 1,
-                            tmp2, 1,
-                            tmp2, 1);
-                Vmath::Vvtvp(nPts, tmp2, 1,
-                               derivativesO1[i][m_spacedim+1], 1,
-                               viscousTensor[i][m_spacedim+1], 1,
-                               viscousTensor[i][m_spacedim+1], 1);
-
-                // + u_j * tau_ij
-                Vmath::Vvtvp(nPts, physfield[j], 1,
-                               viscousTensor[i][j+1], 1,
-                               viscousTensor[i][m_spacedim+1], 1,
-                               viscousTensor[i][m_spacedim+1], 1);
-            }
-        }
-        // Correct fluxes for momentum equation using Imex
-        NekDouble fac;
-        for (i = 0; i < m_spacedim; ++i)
-        {
-            for (j = 0; j < m_spacedim; ++j)
-            {
-                if ( (i == j) && m_variableCoeffs)
-                {
-                    fac = 4.0/3.0;
-                }
-                else
-                {
-                    fac = 1.0;
-                }
-
-                // - fac*mu*u_j,i
-                Vmath::Vmul(nPts, mu, 1,
-                                  derivativesO1[i][j], 1,
-                                  tmp2, 1);
-                Vmath::Smul(nPts, fac,
-                                  tmp2, 1,
-                                  tmp2, 1);
-                Vmath::Vsub(nPts, viscousTensor[i][j+1], 1,
-                                  tmp2, 1,
-                                  viscousTensor[i][j+1], 1);
-
-                // - fac*mu*u_j/rho * rho_i
-                Vmath::Vmul(nPts, mu, 1,
-                                  physfield[j], 1,
-                                  tmp2, 1);
-                Vmath::Vdiv(nPts, tmp2, 1,
-                                  physfield[nVariables-1], 1,
-                                  tmp2, 1);
-                Vmath::Vmul(nPts, tmp2, 1,
-                                  derivativesO1[i][m_spacedim+1], 1,
-                                  tmp2, 1);
-                Vmath::Smul(nPts, fac,
-                                  tmp2, 1,
-                                  tmp2, 1);
-                Vmath::Vsub(nPts, viscousTensor[i][j+1], 1,
-                                  tmp2, 1,
-                                  viscousTensor[i][j+1], 1);
-            }
         }
     }
 
@@ -1389,136 +929,6 @@ namespace Nektar
         return returnval;
     }
 
-    void CompressibleFlowSystem::GetSensor(
-        const Array<OneD, const Array<OneD, NekDouble> > &physarray,
-              Array<OneD,                   NekDouble>   &Sensor,
-              Array<OneD,                   NekDouble>   &SensorKappa)
-    {
-        int e, NumModesElement, nQuadPointsElement;
-        int nTotQuadPoints  = GetTotPoints();
-        int nElements       = m_fields[0]->GetExpSize();
-
-        // Find solution (SolP) at p = P;
-        // The input array (physarray) is the solution at p = P;
-
-        Array<OneD,int> ExpOrderElement = GetNumExpModesPerExp();
-
-        Array<OneD, NekDouble> SolP    (nTotQuadPoints, 0.0);
-        Array<OneD, NekDouble> SolPmOne(nTotQuadPoints, 0.0);
-        Array<OneD, NekDouble> SolNorm (nTotQuadPoints, 0.0);
-
-        Vmath::Vcopy(nTotQuadPoints, physarray[0], 1, SolP, 1);
-
-        int CoeffsCount = 0;
-
-        for (e = 0; e < nElements; e++)
-        {
-            NumModesElement        = ExpOrderElement[e];
-            int nQuadPointsElement = m_fields[0]->GetExp(e)->GetTotPoints();
-            int nCoeffsElement     = m_fields[0]->GetExp(e)->GetNcoeffs();
-            int numCutOff          = NumModesElement - 1;
-
-            // Set-up of the Orthogonal basis for a Quadrilateral element which
-            // is needed to obtain thesolution at P =  p - 1;
-
-            Array<OneD, NekDouble> SolPElementPhys  (nQuadPointsElement, 0.0);
-            Array<OneD, NekDouble> SolPElementCoeffs(nCoeffsElement,     0.0);
-
-            Array<OneD, NekDouble> SolPmOneElementPhys(nQuadPointsElement, 0.0);
-            Array<OneD, NekDouble> SolPmOneElementCoeffs(nCoeffsElement, 0.0);
-
-            // create vector the save the solution points per element at P = p;
-
-            for (int i = 0; i < nQuadPointsElement; i++)
-            {
-                SolPElementPhys[i] = SolP[CoeffsCount+i];
-            }
-
-            m_fields[0]->GetExp(e)->FwdTrans(SolPElementPhys,
-                                             SolPElementCoeffs);
-
-            // ReduceOrderCoeffs reduces the polynomial order of the solution
-            // that is represented by the coeffs given as an inarray. This is
-            // done by projecting the higher order solution onto the orthogonal
-            // basis and padding the higher order coefficients with zeros.
-
-            m_fields[0]->GetExp(e)->ReduceOrderCoeffs(numCutOff,
-                                                      SolPElementCoeffs,
-                                                      SolPmOneElementCoeffs);
-
-            m_fields[0]->GetExp(e)->BwdTrans(SolPmOneElementCoeffs,
-                                             SolPmOneElementPhys);
-
-            for (int i = 0; i < nQuadPointsElement; i++)
-            {
-                SolPmOne[CoeffsCount+i] = SolPmOneElementPhys[i];
-            }
-
-            NekDouble SolPmeanNumerator   = 0.0;
-            NekDouble SolPmeanDenumerator = 0.0;
-
-            // Determining the norm of the numerator of the Sensor
-
-            Vmath::Vsub(nQuadPointsElement,
-                        SolPElementPhys, 1,
-                        SolPmOneElementPhys, 1,
-                        SolNorm, 1);
-
-            Vmath::Vmul(nQuadPointsElement,
-                        SolNorm, 1,
-                        SolNorm, 1,
-                        SolNorm, 1);
-
-            for (int i = 0; i < nQuadPointsElement; i++)
-            {
-                SolPmeanNumerator   += SolNorm[i];
-                SolPmeanDenumerator += SolPElementPhys[i];
-            }
-
-            for (int i = 0; i < nQuadPointsElement; ++i)
-            {
-                Sensor[CoeffsCount+i] =
-                    sqrt(SolPmeanNumerator / nQuadPointsElement) /
-                    sqrt(SolPmeanDenumerator / nQuadPointsElement);
-
-                Sensor[CoeffsCount+i] = log10(Sensor[CoeffsCount+i]);
-            }
-            CoeffsCount += nQuadPointsElement;
-        }
-
-        CoeffsCount = 0.0;
-
-        for (e = 0; e < nElements; e++)
-        {
-            NumModesElement    = ExpOrderElement[e];
-            NekDouble ThetaS   = m_mu0;
-            NekDouble Phi0     = m_Skappa;
-            NekDouble DeltaPhi = m_Kappa;
-            nQuadPointsElement = m_fields[0]->GetExp(e)->GetTotPoints();
-
-            for (int i = 0; i < nQuadPointsElement; i++)
-            {
-                if (Sensor[CoeffsCount+i] <= (Phi0 - DeltaPhi))
-                {
-                    SensorKappa[CoeffsCount+i] = 0;
-                }
-                else if(Sensor[CoeffsCount+i] >= (Phi0 + DeltaPhi))
-                {
-                    SensorKappa[CoeffsCount+i] = ThetaS;
-                }
-                else if(abs(Sensor[CoeffsCount+i]-Phi0) < DeltaPhi)
-                {
-                    SensorKappa[CoeffsCount+i] =
-                        ThetaS / 2 * (1 + sin(M_PI * (Sensor[CoeffsCount+i] -
-                                                      Phi0) / (2 * DeltaPhi)));
-                }
-            }
-
-            CoeffsCount += nQuadPointsElement;
-        }
-
-    }
-
     void CompressibleFlowSystem::v_ExtraFldOutput(
         std::vector<Array<OneD, NekDouble> > &fieldcoeffs,
         std::vector<std::string>             &variables)
@@ -1543,7 +953,7 @@ namespace Nektar
             m_varConv->GetPressure  (tmp, pressure);
             m_varConv->GetSoundSpeed(tmp, pressure, soundspeed);
             m_varConv->GetMach      (tmp, soundspeed, mach);
-            GetSensor    (tmp, sensor, SensorKappa);
+            m_varConv->GetSensor    (m_fields[0], tmp, sensor, SensorKappa);
 
             Array<OneD, NekDouble> pFwd(nCoeffs), sFwd(nCoeffs), mFwd(nCoeffs);
             Array<OneD, NekDouble> sensFwd(nCoeffs);
@@ -1561,6 +971,16 @@ namespace Nektar
             fieldcoeffs.push_back(sFwd);
             fieldcoeffs.push_back(mFwd);
             fieldcoeffs.push_back(sensFwd);
+
+            if (m_artificialDiffusion)
+            {
+                // reuse pressure
+                m_artificialDiffusion->GetArtificialViscosity(tmp, pressure);
+                m_fields[0]->FwdTrans_IterPerExp(pressure,   pFwd);
+
+                variables.push_back  ("ArtificialVisc");
+                fieldcoeffs.push_back(pFwd);
+            }
         }
     }
 }
