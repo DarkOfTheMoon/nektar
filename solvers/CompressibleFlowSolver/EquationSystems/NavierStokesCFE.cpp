@@ -264,6 +264,7 @@ namespace Nektar
         m_fields[m_spacedim+1]->BwdTrans(m_fields[m_spacedim+1]->GetCoeffs(),
                                          outarray[m_spacedim+1]);
 
+        // Clear managers to avoid using too much memory
         if (m_variableCoeffs)
         {
             if (LibUtilities::NekManager<MultiRegions::GlobalLinSysKey,
@@ -274,6 +275,10 @@ namespace Nektar
                                     MultiRegions::GlobalLinSys>::
                                     ClearManager(std::string("GlobalLinSys"));
             }
+            LibUtilities::NekManager<LocalRegions::MatrixKey,
+                DNekScalMat, LocalRegions::MatrixKey::opLess>::ClearManager();
+            LibUtilities::NekManager<LocalRegions::MatrixKey,
+                DNekScalBlkMat, LocalRegions::MatrixKey::opLess>::ClearManager();
         }
     }
 }
