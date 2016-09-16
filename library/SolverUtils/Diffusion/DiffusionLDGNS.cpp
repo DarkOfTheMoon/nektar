@@ -641,6 +641,21 @@ namespace Nektar
                                     &qtemp[id2], 1, 
                                     &penaltyflux[id2], 1);
                     }
+                    else if(boost::iequals(fields[var]->GetBndConditions()[i]->
+                                           GetUserDefined(), "WallAdiabatic"))
+                    {
+                        if ((var == m_spaceDim + 1))
+                        {
+                            Vmath::Zero(nBndEdgePts, &penaltyflux[id2], 1);
+                        }
+                        else
+                        {
+                            Vmath::Vmul(nBndEdgePts,
+                                        &m_traceNormals[dir][id2], 1,
+                                        &qtemp[id2], 1,
+                                        &penaltyflux[id2], 1);
+                        }
+                    }
                     // 3.4) In case of Neumann bcs: 
                     // uflux = u+
                     else if((fields[var]->GetBndConditions()[i])->
@@ -657,23 +672,6 @@ namespace Nektar
                                       UpdatePhys())[id1], 1, 
                                     &penaltyflux[id2], 1);
                          */
-                    }
-                    else if(boost::iequals(fields[var]->GetBndConditions()[i]->
-                                           GetUserDefined(), "WallAdiabatic"))
-                    {
-                        if ((var == m_spaceDim + 1))
-                        {
-                            Vmath::Zero(nBndEdgePts, &penaltyflux[id2], 1);
-                        }
-                        else
-                        {
-                            
-                            Vmath::Vmul(nBndEdgePts,
-                                        &m_traceNormals[dir][id2], 1,
-                                        &qtemp[id2], 1,
-                                        &penaltyflux[id2], 1);
-                            
-                        }
                     }
                 }
             }
