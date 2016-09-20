@@ -1497,6 +1497,7 @@ namespace Nektar
                 GetEdgeToElementMap(iedge, v_GetEorient(iedge), map, sign);
 
                 const Array<OneD, const Array<OneD, NekDouble> > & normals = GetEdgeNormal(iedge);
+                /*
                 for(int i =0; i < normals.num_elements(); ++i)
                 {
                     std::cout << "n[" << i << "] =";
@@ -1506,6 +1507,7 @@ namespace Nektar
                     }
                     std::cout << std::endl;
                 }
+                */
 
                 for(int dir = 0; dir < coordim; ++dir)
                 {
@@ -1523,7 +1525,7 @@ namespace Nektar
                         elemCoeffs[i] = 1.0;
 
                         BwdTrans(elemCoeffs, phys); // Phys contains values of the i-the mode at all qd. pts?
-                        GetEdgePhysVals(iedge, phys, edgePhys); // Extract values which are nonzero on edge?
+                        GetEdgePhysVals(iedge, EdgeExp, phys, edgePhys); // Extract values which are nonzero on edge?
 
                         // Multiply edgePhys by normal here...
                         Vmath::Vmul(nquad_e, normals[dir], 1, edgePhys, 1, edgePhys, 1);
@@ -1547,10 +1549,13 @@ namespace Nektar
                          std::cout << " " << edgePhys[i];
                      }
                      */
+
+                     /*
                      std::cout << std::endl;
 
                      std::cout << "tildeE (edge = " << iedge << ", dir = " << dir << "):" << std::endl;
                      std::cout << tildeE << std::endl;
+                     */
 
                      /*
                      std::cout << std::endl << "tmp =";
@@ -1603,10 +1608,12 @@ namespace Nektar
                 // std::cout << Laplace << std::endl;
                 weakDGMat = sumTildeE * (invMass * sumTildeE - invMass * Dmat) - DmatT * invMass * sumTildeE;
 
+                /*
                 std::cout << "dim = " << dim << std::endl;
                 std::cout << "nElemCoeffs = " << nElemCoeffs << std::endl;
                 std::cout << "inoutmat dimensions: " << inoutmat.GetRows() << " x " << inoutmat.GetColumns() << std::endl;
                 std::cout << "weakDGMat dimensions: " << weakDGMat.GetRows() << " x " << weakDGMat.GetColumns() << std::endl;
+                */
 
                 // Finally add the contributions to inoutmat
 
@@ -1622,6 +1629,7 @@ namespace Nektar
 
             /// ******************* DEBUGGING ***********************
 
+            /*
             std::cout << inoutmat << std::endl;
 
             Array<OneD, double> A = Array<OneD, double>(inoutmat.GetRows()*inoutmat.GetColumns());
@@ -1639,13 +1647,16 @@ namespace Nektar
 
 
             FullMatrixFuncs::EigenSolve(inoutmat.GetRows(),A, EigValReal, EigValImag);
+            */
 
+            /*
             std::cout << "Local matrix contribution eigenvalues:" << std::endl;
             for(int i = 0; i < EigValReal.num_elements(); ++i)
             {
                 std::cout << EigValReal[i] << " ";
             }
             std::cout << std::endl;
+            */
 
             /*
             std::cout << "*************************************************************" << std::endl;
@@ -1655,9 +1666,11 @@ namespace Nektar
             }
             */
 
+            /*
             std::cout << "Laplace matrix: " << std::endl;
             const DNekScalMat  &Laplacian = *GetLocMatrix(StdRegions::eLaplacian);
             std::cout << Laplacian << std::endl;
+            */
         }
 
 
