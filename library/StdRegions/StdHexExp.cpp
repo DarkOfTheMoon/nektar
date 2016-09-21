@@ -51,20 +51,14 @@ namespace Nektar
         }
 
 
-        StdHexExp::StdHexExp(const LibUtilities::BasisKey &Ba,
-                        const LibUtilities::BasisKey &Bb,
-                        const LibUtilities::BasisKey &Bc):
-            StdExpansion(Ba.GetNumModes()*Bb.GetNumModes()*Bc.GetNumModes(), 3,
-                                                   Ba, Bb, Bc),
-            StdExpansion3D(Ba.GetNumModes()*Bb.GetNumModes()*Bc.GetNumModes(),
-                           Ba, Bb, Bc)
+        StdHexExp::StdHexExp(const LibUtilities::Foundations::BasisKey &B):
+            StdExpansion(B),
+            StdExpansion3D(B)
         {
         }
 
 
-        StdHexExp::StdHexExp(const  LibUtilities::BasisKey &Ba,
-                        const  LibUtilities::BasisKey &Bb,
-                        const  LibUtilities::BasisKey &Bc,
+        StdHexExp::StdHexExp(const  LibUtilities::Foundations::BasisKey &B,
                         NekDouble *coeffs,
                         NekDouble *phys)
         {
@@ -80,13 +74,6 @@ namespace Nektar
 
         StdHexExp::~StdHexExp()
         {
-        }
-
-        bool StdHexExp::v_IsBoundaryInteriorExpansion()
-        {
-            return (m_base[0]->GetBasisType() == LibUtilities::eModified_A) &&
-                   (m_base[1]->GetBasisType() == LibUtilities::eModified_A) &&
-                   (m_base[2]->GetBasisType() == LibUtilities::eModified_A);
         }
 
 
@@ -185,20 +172,9 @@ namespace Nektar
                                 const Array<OneD, const NekDouble>& inarray,
                                       Array<OneD, NekDouble> &outarray)
         {
-            ASSERTL1( (m_base[1]->GetBasisType() != LibUtilities::eOrtho_B)  ||
-                      (m_base[1]->GetBasisType() != LibUtilities::eModified_B),
-                      "Basis[1] is not a general tensor type");
-
-            ASSERTL1( (m_base[2]->GetBasisType() != LibUtilities::eOrtho_C) ||
-                      (m_base[2]->GetBasisType() != LibUtilities::eModified_C),
-                      "Basis[2] is not a general tensor type");
-
-            if(m_base[0]->Collocation() && m_base[1]->Collocation()
-                    && m_base[2]->Collocation())
+            if(m_base->IsCollocation())
             {
-                Vmath::Vcopy(m_base[0]->GetNumPoints()
-                                * m_base[1]->GetNumPoints()
-                                * m_base[2]->GetNumPoints(),
+                Vmath::Vcopy(m_base->GetPoints().GetNumPoints(),
                              inarray, 1, outarray, 1);
             }
             else
@@ -214,14 +190,20 @@ namespace Nektar
         void StdHexExp::v_BwdTrans_SumFac(const Array<OneD, const NekDouble>& inarray,
                                          Array<OneD, NekDouble> &outarray)
         {
-            Array<OneD, NekDouble> wsp(m_base[0]->GetNumPoints()*
-                                       m_base[2]->GetNumModes()*
-                                       (m_base[1]->GetNumModes() + m_base[1]->GetNumPoints())); // FIX THIS
+            ASSERTL1(m_base->GetNumConstituentBases() == 3,
+                    "v_BwdTrans_SumFac currently only implemented for 1D tensor product bases.");
 
-            BwdTrans_SumFacKernel(m_base[0]->GetBdata(),
-                                    m_base[1]->GetBdata(),
-                                    m_base[2]->GetBdata(),
-                                    inarray,outarray,wsp,true,true,true);
+            Array<OneD, NekDouble> wsp(
+                    m_base->GetConstituentBasis(0).GetPoints().GetNumPoints() *
+                    m_base->GetConstituentBasis(2).GetNumModes() *
+                    (m_base->GetConstituentBasis(1).GetNumModes()
+                            + m_base->GetConstituentBasis(1).GetPoints().GetNumPoints())); // FIX THIS
+
+            BwdTrans_SumFacKernel(
+                    m_base->GetConstituentBasis(0).GetBdata(),
+                    m_base->GetConstituentBasis(1).GetBdata(),
+                    m_base->GetConstituentBasis(2).GetBdata(),
+                    inarray,outarray,wsp,true,true,true);
         }
 
 
@@ -249,23 +231,21 @@ namespace Nektar
                     bool doCheckCollDir1,
                     bool doCheckCollDir2)
         {
-            int  nquad0  = m_base[0]->GetNumPoints();
-            int  nquad1  = m_base[1]->GetNumPoints();
-            int  nquad2  = m_base[2]->GetNumPoints();
-            int  nmodes0 = m_base[0]->GetNumModes();
-            int  nmodes1 = m_base[1]->GetNumModes();
-            int  nmodes2 = m_base[2]->GetNumModes();
+            ASSERTL1(m_base->GetNumConstituentBases() == 3,
+                    "Current implementation expects three 1D bases.");
 
-            // Check if using collocation, if requested.
-            bool colldir0 = doCheckCollDir0?(m_base[0]->Collocation()):false;
-            bool colldir1 = doCheckCollDir1?(m_base[1]->Collocation()):false;
-            bool colldir2 = doCheckCollDir2?(m_base[2]->Collocation()):false;
+            int  nquad0  = m_base->GetConstituentBasis(0).GetPoints().GetNumPoints();
+            int  nquad1  = m_base->GetConstituentBasis(1).GetPoints().GetNumPoints();
+            int  nquad2  = m_base->GetConstituentBasis(2).GetPoints().GetNumPoints();
+            int  nmodes0 = m_base->GetConstituentBasis(0).GetNumModes();
+            int  nmodes1 = m_base->GetConstituentBasis(1).GetNumModes();
+            int  nmodes2 = m_base->GetConstituentBasis(2).GetNumModes();
 
             // If collocation in all directions, Physical values at quadrature
             // points is just a copy of the modes.
-            if(colldir0 && colldir1 && colldir2)
+            if(m_base->IsCollocation())
             {
-                Vmath::Vcopy(m_ncoeffs,inarray.get(),1,outarray.get(),1);
+                Vmath::Vcopy(m_base->GetNumModes(),inarray.get(),1,outarray.get(),1);
             }
             else
             {
@@ -308,11 +288,9 @@ namespace Nektar
         {
             // If using collocation expansion, coefficients match physical
             // data points so just do a direct copy.
-            if( (m_base[0]->Collocation())
-                    &&(m_base[1]->Collocation())
-                    &&(m_base[2]->Collocation()) )
+            if( m_base->IsCollocation())
             {
-                Vmath::Vcopy(GetNcoeffs(), &inarray[0], 1, &outarray[0], 1);
+                Vmath::Vcopy(m_base->GetNumModes(), &inarray[0], 1, &outarray[0], 1);
             }
             else
             {
@@ -320,12 +298,12 @@ namespace Nektar
                 IProductWRTBase(inarray,outarray);
 
                 // get Mass matrix inverse
-                StdMatrixKey      masskey(eInvMass,DetShapeType(),*this);
+                StdMatrixKey      masskey(eInvMass,m_base->GetShapeType(),*this);
                 DNekMatSharedPtr matsys = GetStdMatrix(masskey);
 
                 // copy inarray in case inarray == outarray
-                DNekVec in (m_ncoeffs,outarray);
-                DNekVec out(m_ncoeffs,outarray,eWrapper);
+                DNekVec in (m_base->GetNumModes(),outarray);
+                DNekVec out(m_base->GetNumModes(),outarray,eWrapper);
 
                 // Solve for coefficients.
                 out = (*matsys)*in;
@@ -367,9 +345,7 @@ namespace Nektar
                 const Array<OneD, const NekDouble> &inarray,
                       Array<OneD,       NekDouble> &outarray)
         {
-            if(m_base[0]->Collocation() && 
-               m_base[1]->Collocation() && 
-               m_base[2]->Collocation())
+            if(m_base->IsCollocation())
             {
                 MultiplyByQuadratureMetric(inarray,outarray);
             }
@@ -385,12 +361,12 @@ namespace Nektar
         void StdHexExp::v_IProductWRTBase_MatOp(const Array<OneD, const NekDouble>& inarray,
                                                Array<OneD, NekDouble> &outarray)
         {
-            int nq = GetTotPoints();
-            StdMatrixKey      iprodmatkey(eIProductWRTBase,DetShapeType(),*this);
+            int nq = m_base->GetPoints().GetNumPoints();
+            StdMatrixKey      iprodmatkey(eIProductWRTBase,m_base->GetShapeType(),*this);
             DNekMatSharedPtr  iprodmat = GetStdMatrix(iprodmatkey);
 
-            Blas::Dgemv('N',m_ncoeffs,nq,1.0,iprodmat->GetPtr().get(),
-                        m_ncoeffs, inarray.get(), 1, 0.0, outarray.get(), 1);
+            Blas::Dgemv('N',m_base->GetNumModes(),nq,1.0,iprodmat->GetPtr().get(),
+                        m_base->GetNumModes(), inarray.get(), 1, 0.0, outarray.get(), 1);
         }
 
         /**
@@ -401,11 +377,14 @@ namespace Nektar
                   Array<OneD,       NekDouble> &outarray,
             bool                                multiplybyweights)
         {
-            int    nquad0 = m_base[0]->GetNumPoints();
-            int    nquad1 = m_base[1]->GetNumPoints();
-            int    nquad2 = m_base[2]->GetNumPoints();
-            int    order0 = m_base[0]->GetNumModes();
-            int    order1 = m_base[1]->GetNumModes();
+            ASSERTL1(m_base->GetNumConstituentBases() == 3,
+                    "IProductWRTBase_SumFac currently only implemented for 1D tensor product bases.");
+
+            int    nquad0 = m_base->GetConstituentBasis(0).GetPoints().GetNumPoints();
+            int    nquad1 = m_base->GetConstituentBasis(1).GetPoints().GetNumPoints();
+            int    nquad2 = m_base->GetConstituentBasis(2).GetPoints().GetNumPoints();
+            int    order0 = m_base->GetConstituentBasis(0).GetNumModes();
+            int    order1 = m_base->GetConstituentBasis(1).GetNumModes();
 
             Array<OneD, NekDouble> wsp(nquad0*nquad1*(nquad2+order0) +
                                        order0*order1*nquad2);
@@ -415,17 +394,19 @@ namespace Nektar
                 Array<OneD, NekDouble> tmp(inarray.num_elements());
                 MultiplyByQuadratureMetric(inarray,tmp);
 
-                StdHexExp::IProductWRTBase_SumFacKernel(m_base[0]->GetBdata(),
-                                           m_base[1]->GetBdata(),
-                                           m_base[2]->GetBdata(),
-                                           tmp,outarray,wsp,true,true,true);
+                StdHexExp::IProductWRTBase_SumFacKernel(
+                        m_base->GetConstituentBasis(0).GetBdata(),
+                        m_base->GetConstituentBasis(1).GetBdata(),
+                        m_base->GetConstituentBasis(2).GetBdata(),
+                        tmp,outarray,wsp,true,true,true);
             }
             else
             {
-                StdHexExp::IProductWRTBase_SumFacKernel(m_base[0]->GetBdata(),
-                                           m_base[1]->GetBdata(),
-                                           m_base[2]->GetBdata(),
-                                           inarray,outarray,wsp,true,true,true);
+                StdHexExp::IProductWRTBase_SumFacKernel(
+                        m_base->GetConstituentBasis(0).GetBdata(),
+                        m_base->GetConstituentBasis(1).GetBdata(),
+                        m_base->GetConstituentBasis(2).GetBdata(),
+                        inarray,outarray,wsp,true,true,true);
             }
         }
 
@@ -444,20 +425,19 @@ namespace Nektar
                                                      bool doCheckCollDir1,
                                                      bool doCheckCollDir2)
         {
-            int  nquad0  = m_base[0]->GetNumPoints();
-            int  nquad1  = m_base[1]->GetNumPoints();
-            int  nquad2  = m_base[2]->GetNumPoints();
-            int  nmodes0 = m_base[0]->GetNumModes();
-            int  nmodes1 = m_base[1]->GetNumModes();
-            int  nmodes2 = m_base[2]->GetNumModes();
+            ASSERTL1(m_base->GetNumConstituentBases() == 3,
+                    "IProductWRTBase_SumFac currently only implemented for 1D tensor product bases.");
 
-            bool colldir0 = doCheckCollDir0?(m_base[0]->Collocation()):false;
-            bool colldir1 = doCheckCollDir1?(m_base[1]->Collocation()):false;
-            bool colldir2 = doCheckCollDir2?(m_base[2]->Collocation()):false;
+            int  nquad0  = m_base->GetConstituentBasis(0).GetPoints().GetNumPoints();
+            int  nquad1  = m_base->GetConstituentBasis(1).GetPoints().GetNumPoints();
+            int  nquad2  = m_base->GetConstituentBasis(2).GetPoints().GetNumPoints();
+            int  nmodes0 = m_base->GetConstituentBasis(0).GetNumModes();
+            int  nmodes1 = m_base->GetConstituentBasis(1).GetNumModes();
+            int  nmodes2 = m_base->GetConstituentBasis(2).GetNumModes();
 
-            if(colldir0 && colldir1 && colldir2)
+            if(m_base->IsCollocation())
             {
-                Vmath::Vcopy(m_ncoeffs,inarray.get(),1,outarray.get(),1);
+                Vmath::Vcopy(m_base->GetNumModes(),inarray.get(),1,outarray.get(),1);
             }
             else
             {               
@@ -468,7 +448,7 @@ namespace Nektar
                 Array<OneD, NekDouble> tmp1 = wsp + nmodes0*nquad1*nquad2;
 
 
-               if(colldir0)
+               if(m_base->GetConstituentBasis(0).IsCollocation())
                {
                     // reshuffle data for next operation. 
                     for(int n = 0; n < nmodes0; ++n)
@@ -485,7 +465,7 @@ namespace Nektar
                                 0.0, tmp0.get(),     nquad1*nquad2);
                 }
 
-                if(colldir1)
+                if(m_base->GetConstituentBasis(1).IsCollocation())
                 {
                     // reshuffle data for next operation. 
                     for(int n = 0; n < nmodes1; ++n)
@@ -502,7 +482,7 @@ namespace Nektar
                                 0.0, tmp1.get(),     nquad2*nmodes0);
                 }
 
-                if(colldir2)
+                if(m_base->GetConstituentBasis(2).IsCollocation())
                 {
                     // reshuffle data for next operation. 
                     for(int n = 0; n < nmodes2; ++n)
@@ -535,7 +515,7 @@ namespace Nektar
         {
             ASSERTL0((dir==0)||(dir==1)||(dir==2),"input dir is out of range");
 
-            int nq = GetTotPoints();
+            int nq = m_base->GetPoints().GetNumPoints();
             MatrixType mtype;
 
             switch (dir)
@@ -551,11 +531,11 @@ namespace Nektar
                     break;
             }
 
-            StdMatrixKey      iprodmatkey(mtype,DetShapeType(),*this);
+            StdMatrixKey      iprodmatkey(mtype,m_base->GetShapeType(),*this);
             DNekMatSharedPtr  iprodmat = GetStdMatrix(iprodmatkey);
 
-            Blas::Dgemv('N',m_ncoeffs,nq,1.0,iprodmat->GetPtr().get(),
-                        m_ncoeffs, inarray.get(), 1, 0.0, outarray.get(), 1);
+            Blas::Dgemv('N',m_base->GetNumModes(),nq,1.0,iprodmat->GetPtr().get(),
+                        m_base->GetNumModes(), inarray.get(), 1, 0.0, outarray.get(), 1);
         }
 
 
@@ -565,10 +545,10 @@ namespace Nektar
         {
             ASSERTL0((dir==0)||(dir==1)||(dir==2),"input dir is out of range");
 
-            int    nquad1 = m_base[1]->GetNumPoints();
-            int    nquad2 = m_base[2]->GetNumPoints();
-            int    order0 = m_base[0]->GetNumModes();
-            int    order1 = m_base[1]->GetNumModes();
+            int    nquad1 = m_base->GetConstituentBasis(1).GetPoints().GetNumPoints();
+            int    nquad2 = m_base->GetConstituentBasis(2).GetPoints().GetNumPoints();
+            int    order0 = m_base->GetConstituentBasis(0).GetNumModes();
+            int    order1 = m_base->GetConstituentBasis(1).GetNumModes();
 
             // If outarray > inarray then no need for temporary storage.
             Array<OneD, NekDouble> tmp = outarray;
@@ -587,25 +567,25 @@ namespace Nektar
             switch (dir)
             {
                 case 0:
-                    IProductWRTBase_SumFacKernel(m_base[0]->GetDbdata(),
-                                                 m_base[1]->GetBdata(),
-                                                 m_base[2]->GetBdata(),
-                                                 tmp,outarray,wsp,
-                                                 false,true,true);
+                    IProductWRTBase_SumFacKernel(
+                            m_base->GetConstituentBasis(0).GetDbdata(),
+                            m_base->GetConstituentBasis(1).GetBdata(),
+                            m_base->GetConstituentBasis(2).GetBdata(),
+                            tmp,outarray,wsp,false,true,true);
                     break;
                 case 1:
-                    IProductWRTBase_SumFacKernel(m_base[0]->GetBdata(),
-                                                 m_base[1]->GetDbdata(),
-                                                 m_base[2]->GetBdata(),
-                                                 tmp,outarray,wsp,
-                                                 true,false,true);
+                    IProductWRTBase_SumFacKernel(
+                            m_base->GetConstituentBasis(0).GetBdata(),
+                            m_base->GetConstituentBasis(1).GetDbdata(),
+                            m_base->GetConstituentBasis(2).GetBdata(),
+                            tmp,outarray,wsp,true,false,true);
                     break;
                 case 2:
-                    IProductWRTBase_SumFacKernel(m_base[0]->GetBdata(),
-                                                 m_base[1]->GetBdata(),
-                                                 m_base[2]->GetDbdata(),
-                                                 tmp,outarray,wsp,
-                                                 true,true,false);
+                    IProductWRTBase_SumFacKernel(
+                            m_base->GetConstituentBasis(0).GetBdata(),
+                            m_base->GetConstituentBasis(1).GetBdata(),
+                            m_base->GetConstituentBasis(2).GetDbdata(),
+                            tmp,outarray,wsp,true,true,false);
                     break;
             }
         }
@@ -625,16 +605,16 @@ namespace Nektar
                                 Array<OneD, NekDouble> &outarray)
         {
             int    i,j;
-            int   nquad0 = m_base[0]->GetNumPoints();
-            int   nquad1 = m_base[1]->GetNumPoints();
-            int   nquad2 = m_base[2]->GetNumPoints();
+            int   nquad0 = m_base->GetConstituentBasis(0).GetPoints().GetNumPoints();
+            int   nquad1 = m_base->GetConstituentBasis(1).GetPoints().GetNumPoints();
+            int   nquad2 = m_base->GetConstituentBasis(2).GetPoints().GetNumPoints();
 
-            Array<OneD, const NekDouble> base0  = m_base[0]->GetBdata();
-            Array<OneD, const NekDouble> base1  = m_base[1]->GetBdata();
-            Array<OneD, const NekDouble> base2  = m_base[2]->GetBdata();
+            Array<OneD, const NekDouble> base0  = m_base->GetConstituentBasis(0).GetBdata();
+            Array<OneD, const NekDouble> base1  = m_base->GetConstituentBasis(1).GetBdata();
+            Array<OneD, const NekDouble> base2  = m_base->GetConstituentBasis(2).GetBdata();
 
-            int   btmp0 = m_base[0]->GetNumModes();
-            int   btmp1 = m_base[1]->GetNumModes();
+            int   btmp0 = m_base->GetConstituentBasis(0).GetNumModes();
+            int   btmp1 = m_base->GetConstituentBasis(1).GetNumModes();
             int   mode2 = mode/(btmp0*btmp1);
             int   mode1 = (mode-mode2*btmp0*btmp1)/btmp0;
             int   mode0 = (mode-mode2*btmp0*btmp1)%btmp0;
@@ -644,7 +624,7 @@ namespace Nektar
             ASSERTL2(mode1 == (int)floor((1.0*mode-mode2*btmp0*btmp1)
                                 /(btmp0*btmp1)),
                      "Integer Truncation not Equiv to Floor");
-            ASSERTL2(m_ncoeffs <= mode,
+            ASSERTL2(m_base->GetNumModes() <= mode,
                      "calling argument mode is larger than total expansion "
                      "order");
 
@@ -698,19 +678,12 @@ namespace Nektar
 
         int StdHexExp::v_NumBndryCoeffs() const
         {
-            ASSERTL1(GetBasisType(0) == LibUtilities::eModified_A ||
-                     GetBasisType(0) == LibUtilities::eGLL_Lagrange,
-                     "BasisType is not a boundary interior form");
-            ASSERTL1(GetBasisType(1) == LibUtilities::eModified_A ||
-                     GetBasisType(1) == LibUtilities::eGLL_Lagrange,
-                     "BasisType is not a boundary interior form");
-            ASSERTL1(GetBasisType(2) == LibUtilities::eModified_A ||
-                     GetBasisType(2) == LibUtilities::eGLL_Lagrange,
-                     "BasisType is not a boundary interior form");
+            ASSERTL1(m_base->IsBoundaryInterior(),
+                     "Basis is not of boundary-interior form.");
 
-            int nmodes0 = m_base[0]->GetNumModes();
-            int nmodes1 = m_base[1]->GetNumModes();
-            int nmodes2 = m_base[2]->GetNumModes();
+            int nmodes0 = m_base->GetConstituentBasis(0).GetNumModes();
+            int nmodes1 = m_base->GetConstituentBasis(1).GetNumModes();
+            int nmodes2 = m_base->GetConstituentBasis(2).GetNumModes();
 
             return ( 2*( nmodes0*nmodes1 + nmodes0*nmodes2
                         + nmodes1*nmodes2)
@@ -719,19 +692,12 @@ namespace Nektar
 
         int StdHexExp::v_NumDGBndryCoeffs() const
         {
-            ASSERTL1(GetBasisType(0) == LibUtilities::eModified_A ||
-                     GetBasisType(0) == LibUtilities::eGLL_Lagrange,
-                     "BasisType is not a boundary interior form");
-            ASSERTL1(GetBasisType(1) == LibUtilities::eModified_A ||
-                     GetBasisType(1) == LibUtilities::eGLL_Lagrange,
-                     "BasisType is not a boundary interior form");
-            ASSERTL1(GetBasisType(2) == LibUtilities::eModified_A ||
-                     GetBasisType(2) == LibUtilities::eGLL_Lagrange,
-                     "BasisType is not a boundary interior form");
+            ASSERTL1(m_base->IsBoundaryInterior(),
+                     "Basis is not of boundary-interior form.");
 
-            int nmodes0 = m_base[0]->GetNumModes();
-            int nmodes1 = m_base[1]->GetNumModes();
-            int nmodes2 = m_base[2]->GetNumModes();
+            int nmodes0 = m_base->GetConstituentBasis(0).GetNumModes();
+            int nmodes1 = m_base->GetConstituentBasis(1).GetNumModes();
+            int nmodes2 = m_base->GetConstituentBasis(2).GetNumModes();
 
             return  2*( nmodes0*nmodes1 + nmodes0*nmodes2
                         + nmodes1*nmodes2 );
@@ -743,38 +709,42 @@ namespace Nektar
 
             if((i == 0)||(i == 2)||(i == 8)||(i == 10))
             {
-                return  GetBasisNumModes(0);
+                return m_base->GetConstituentBasis(0).GetNumModes();
             }
             else if((i == 1)||(i == 3)||(i == 9)||(i == 11))
             {
-                return  GetBasisNumModes(1);
+                return m_base->GetConstituentBasis(1).GetNumModes();
             }
             else
             {
-                return GetBasisNumModes(2);
+                return m_base->GetConstituentBasis(2).GetNumModes();
             }
         }
 
         int StdHexExp::v_GetTotalEdgeIntNcoeffs() const
         {
-	  return 4*(GetBasisNumModes(0)+GetBasisNumModes(1)+GetBasisNumModes(2));
-	}
-
+            return 4*(m_base->GetConstituentBasis(0).GetNumModes()+
+                      m_base->GetConstituentBasis(1).GetNumModes()+
+                      m_base->GetConstituentBasis(2).GetNumModes());
+        }
 
         int StdHexExp::v_GetFaceNcoeffs(const int i) const
         {
             ASSERTL2((i >= 0) && (i <= 5), "face id is out of range");
             if((i == 0) || (i == 5))
             {
-                return GetBasisNumModes(0)*GetBasisNumModes(1);
+                return m_base->GetConstituentBasis(0).GetNumModes() *
+                       m_base->GetConstituentBasis(1).GetNumModes();
             }
             else if((i == 1) || (i == 3))
             {
-                return GetBasisNumModes(0)*GetBasisNumModes(2);
+                return m_base->GetConstituentBasis(0).GetNumModes() *
+                       m_base->GetConstituentBasis(2).GetNumModes();
             }
             else
             {
-                return GetBasisNumModes(1)*GetBasisNumModes(2);
+                return m_base->GetConstituentBasis(1).GetNumModes() *
+                       m_base->GetConstituentBasis(2).GetNumModes();
             }
         }
 
@@ -784,25 +754,31 @@ namespace Nektar
             ASSERTL2((i >= 0) && (i <= 5), "face id is out of range");
             if((i == 0) || (i == 5))
             {
-                return (GetBasisNumModes(0)-2)*(GetBasisNumModes(1)-2);
+                return (m_base->GetConstituentBasis(0).GetNumModes()-2) *
+                       (m_base->GetConstituentBasis(1).GetNumModes()-2);
             }
             else if((i == 1) || (i == 3))
             {
-                return (GetBasisNumModes(0)-2)*(GetBasisNumModes(2)-2);
+                return (m_base->GetConstituentBasis(0).GetNumModes()-2) *
+                       (m_base->GetConstituentBasis(2).GetNumModes()-2);
             }
             else
             {
-                return (GetBasisNumModes(1)-2)*(GetBasisNumModes(2)-2);
+                return (m_base->GetConstituentBasis(1).GetNumModes()-2) *
+                       (m_base->GetConstituentBasis(2).GetNumModes()-2);
             }
 
         }
 
         int StdHexExp::v_GetTotalFaceIntNcoeffs() const
         {
-	    return 2*((GetBasisNumModes(0)-2)*(GetBasisNumModes(1)-2)+
-	              (GetBasisNumModes(0)-2)*(GetBasisNumModes(2)-2)+
-		      (GetBasisNumModes(1)-2)*(GetBasisNumModes(2)-2));
-	}
+            return 2*((m_base->GetConstituentBasis(0).GetNumModes()-2) *
+                      (m_base->GetConstituentBasis(1).GetNumModes()-2) +
+                      (m_base->GetConstituentBasis(0).GetNumModes()-2) *
+                      (m_base->GetConstituentBasis(2).GetNumModes()-2) +
+                      (m_base->GetConstituentBasis(1).GetNumModes()-2) *
+                      (m_base->GetConstituentBasis(2).GetNumModes()-2));
+        }
 
         int StdHexExp::v_GetFaceNumPoints(const int i) const
         {
@@ -810,22 +786,22 @@ namespace Nektar
             
             if (i == 0 || i == 5)
             {
-                return m_base[0]->GetNumPoints()*
-                       m_base[1]->GetNumPoints();
+                return m_base->GetConstituentBasis(0).GetPoints().GetNumPoints() *
+                       m_base->GetConstituentBasis(1).GetPoints().GetNumPoints();
             }
             else if (i == 1 || i == 3)
             {
-                return m_base[0]->GetNumPoints()*
-                       m_base[2]->GetNumPoints();
+                return m_base->GetConstituentBasis(0).GetPoints().GetNumPoints()*
+                       m_base->GetConstituentBasis(2).GetPoints().GetNumPoints();
             }
             else
             {
-                return m_base[1]->GetNumPoints()*
-                       m_base[2]->GetNumPoints();
+                return m_base->GetConstituentBasis(1).GetPoints().GetNumPoints()*
+                       m_base->GetConstituentBasis(2).GetPoints().GetNumPoints();
             }
         }
 
-        LibUtilities::PointsKey StdHexExp::v_GetFacePointsKey(
+        LibUtilities::Foundations::PointsKey StdHexExp::v_GetFacePointsKey(
             const int i, const int j) const
         {
             ASSERTL2(i >= 0 && i <= 5, "face id is out of range");
@@ -833,15 +809,15 @@ namespace Nektar
             
             if (i == 0 || i == 5)
             {
-                return m_base[j]->GetPointsKey();
+                return m_base->GetConstituentBasis(j).GetPoints().GetKey();
             }
             else if (i == 1 || i == 3)
             {
-                return m_base[2*j]->GetPointsKey();
+                return m_base->GetConstituentBasis(2*j).GetPoints().GetKey();
             }
             else
             {
-                return m_base[j+1]->GetPointsKey();
+                return m_base->GetConstituentBasis(j+1).GetPoints().GetKey();
             }
         }
 
@@ -854,66 +830,67 @@ namespace Nektar
         }
 
 
-        const LibUtilities::BasisKey StdHexExp::v_DetFaceBasisKey(
+        const LibUtilities::Foundations::BasisKey StdHexExp::v_DetFaceBasisKey(
             const int i, const int k) const
         {
-            ASSERTL2(i >= 0 && i <= 5, "face id is out of range");
-            ASSERTL2(k >= 0 && k <= 1, "basis key id is out of range");
+            ASSERTL0(false, "Implement v_DetFaceBasisKey");
+            return m_base->GetKey(); //avoid warning
+//            ASSERTL2(i >= 0 && i <= 5, "face id is out of range");
+//            ASSERTL2(k >= 0 && k <= 1, "basis key id is out of range");
+//
+//            int dir = k;
+//            switch(i)
+//            {
+//                case 0:
+//                case 5:
+//                    dir = k;
+//                    break;
+//                case 1:
+//                case 3:
+//                    dir = 2*k;
+//                    break;
+//                case 2:
+//                case 4:
+//                    dir = k+1;
+//                    break;
+//            }
+//
+//            return EvaluateQuadFaceBasisKey(k,
+//                                            m_base[dir]->GetBasisType(),
+//                                            m_base[dir]->GetNumPoints(),
+//                                            m_base[dir]->GetNumModes());
 
-            int dir = k;
-            switch(i)
-            {
-                case 0:
-                case 5:
-                    dir = k;
-                    break;
-                case 1:
-                case 3:
-                    dir = 2*k;
-                    break;
-                case 2:
-                case 4:
-                    dir = k+1;
-                    break;
-            }
-            
-            return EvaluateQuadFaceBasisKey(k,
-                                            m_base[dir]->GetBasisType(),
-                                            m_base[dir]->GetNumPoints(),
-                                            m_base[dir]->GetNumModes());
         }
 
-        LibUtilities::BasisType StdHexExp::v_GetEdgeBasisType(const int i) const
-        {
-            ASSERTL2((i >= 0)&&(i <= 11),"edge id is out of range");
-
-            if((i == 0)||(i == 2)||(i==8)||(i==10))
-            {
-                return  GetBasisType(0);
-            }
-            else if((i == 1)||(i == 3)||(i == 9)||(i == 11))
-            {
-                return  GetBasisType(1);
-            }
-            else
-            {
-                return GetBasisType(2);
-            }
-        }
+//        LibUtilities::BasisType StdHexExp::v_GetEdgeBasisType(const int i) const
+//        {
+//            ASSERTL2((i >= 0)&&(i <= 11),"edge id is out of range");
+//
+//            if((i == 0)||(i == 2)||(i==8)||(i==10))
+//            {
+//                return  GetBasisType(0);
+//            }
+//            else if((i == 1)||(i == 3)||(i == 9)||(i == 11))
+//            {
+//                return  GetBasisType(1);
+//            }
+//            else
+//            {
+//                return GetBasisType(2);
+//            }
+//        }
 
         void StdHexExp::v_GetCoords( Array<OneD, NekDouble> & xi_x,
                                 Array<OneD, NekDouble> & xi_y,
                                 Array<OneD, NekDouble> & xi_z)
         {
-            Array<OneD, const NekDouble> eta_x = m_base[0]->GetZ();
-            Array<OneD, const NekDouble> eta_y = m_base[1]->GetZ();
-            Array<OneD, const NekDouble> eta_z = m_base[2]->GetZ();
-            int Qx = GetNumPoints(0);
-            int Qy = GetNumPoints(1);
-            int Qz = GetNumPoints(2);
+            Array<OneD, const NekDouble> eta_x = m_base->GetConstituentBasis(0).GetPoints().GetZ();
+            Array<OneD, const NekDouble> eta_y = m_base->GetConstituentBasis(1).GetPoints().GetZ();
+            Array<OneD, const NekDouble> eta_z = m_base->GetConstituentBasis(2).GetPoints().GetZ();
+            int Qx = m_base->GetConstituentBasis(0).GetPoints().GetNumPoints();
+            int Qy = m_base->GetConstituentBasis(1).GetPoints().GetNumPoints();
+            int Qz = m_base->GetConstituentBasis(2).GetPoints().GetNumPoints();
 
-            // Convert collapsed coordinates into cartesian coordinates:
-            // eta --> xi
             for( int k = 0; k < Qz; ++k ) {
                 for( int j = 0; j < Qy; ++j ) {
                     for( int i = 0; i < Qx; ++i ) {
@@ -942,17 +919,18 @@ namespace Nektar
             int i,j;
             int nummodesA, nummodesB;
             
-            ASSERTL1(GetEdgeBasisType(0) == GetEdgeBasisType(1) &&
-                     GetEdgeBasisType(0) == GetEdgeBasisType(2),
-                     "Method only implemented if BasisType is indentical in "
-                     "all directions");
-            ASSERTL1(GetEdgeBasisType(0) == LibUtilities::eModified_A ||
-                     GetEdgeBasisType(0) == LibUtilities::eGLL_Lagrange,
-                     "Method only implemented for Modified_A or GLL_Lagrange BasisType");
+            WARNINGL1(false, "Require GetEdgeBasisType check here.");
+//            ASSERTL1(GetEdgeBasisType(0) == GetEdgeBasisType(1) &&
+//                     GetEdgeBasisType(0) == GetEdgeBasisType(2),
+//                     "Method only implemented if BasisType is indentical in "
+//                     "all directions");
+//            ASSERTL1(GetEdgeBasisType(0) == LibUtilities::eModified_A ||
+//                     GetEdgeBasisType(0) == LibUtilities::eGLL_Lagrange,
+//                     "Method only implemented for Modified_A or GLL_Lagrange BasisType");
                         
-            const int nummodes0 = m_base[0]->GetNumModes();
-            const int nummodes1 = m_base[1]->GetNumModes();
-            const int nummodes2 = m_base[2]->GetNumModes();
+            const int nummodes0 = m_base->GetConstituentBasis(0).GetNumModes();
+            const int nummodes1 = m_base->GetConstituentBasis(1).GetNumModes();
+            const int nummodes2 = m_base->GetConstituentBasis(2).GetNumModes();
 
             switch(fid)
             {
@@ -986,7 +964,8 @@ namespace Nektar
                 CheckForZeroedModes = true;
             }
             
-            bool modified = (GetEdgeBasisType(0) == LibUtilities::eModified_A);
+            WARNINGL0(false, "Check this.");
+            bool modified = true; //(GetEdgeBasisType(0) == LibUtilities::eModified_A);
             int nFaceCoeffs = P*Q;
             
             if(maparray.num_elements() != nFaceCoeffs)
@@ -1285,15 +1264,8 @@ namespace Nektar
          */
         int StdHexExp::v_GetVertexMap(const int localVertexId, bool useCoeffPacking)
         {
-            ASSERTL1(GetBasisType(0) == LibUtilities::eModified_A ||
-                     GetBasisType(0) == LibUtilities::eGLL_Lagrange,
-                     "BasisType is not a boundary interior form");
-            ASSERTL1(GetBasisType(1) == LibUtilities::eModified_A ||
-                     GetBasisType(1) == LibUtilities::eGLL_Lagrange,
-                     "BasisType is not a boundary interior form");
-            ASSERTL1(GetBasisType(2) == LibUtilities::eModified_A ||
-                     GetBasisType(2) == LibUtilities::eGLL_Lagrange,
-                     "BasisType is not a boundary interior form");
+            ASSERTL1(m_base->IsBoundaryInterior(),
+                     "Basis must be of boundary-interior form.");
 
             ASSERTL1((localVertexId>=0)&&(localVertexId<8),
                      "local vertex id must be between 0 and 7");
@@ -1303,15 +1275,19 @@ namespace Nektar
             int r = 0;
 
             // Retrieve the number of modes in each dimension.
-            int nummodes [3] = {m_base[0]->GetNumModes(),
-                                m_base[1]->GetNumModes(),
-                                m_base[2]->GetNumModes()};
+            int nummodes [3] = {m_base->GetConstituentBasis(0).GetNumModes(),
+                                m_base->GetConstituentBasis(1).GetNumModes(),
+                                m_base->GetConstituentBasis(2).GetNumModes()};
+
+            bool isGLL_Lagrange0 = m_base->GetConstituentBasis(0).IsOfType<LibUtilities::Foundations::Lagrange>();
+            bool isGLL_Lagrange1 = m_base->GetConstituentBasis(1).IsOfType<LibUtilities::Foundations::Lagrange>();
+            bool isGLL_Lagrange2 = m_base->GetConstituentBasis(2).IsOfType<LibUtilities::Foundations::Lagrange>();
 
             if(useCoeffPacking == true) // follow packing of coefficients i.e q,r,p
             {
                 if(localVertexId > 3)
                 {
-                    if( GetBasisType(2) == LibUtilities::eGLL_Lagrange)
+                    if(isGLL_Lagrange2)
                     {
                         r = nummodes[2]-1;
                     }
@@ -1327,7 +1303,7 @@ namespace Nektar
                     break;
                 case 1:
                     {
-                        if( GetBasisType(0) == LibUtilities::eGLL_Lagrange)
+                        if(isGLL_Lagrange0)
                         {
                             p = nummodes[0]-1;
                         }
@@ -1339,7 +1315,7 @@ namespace Nektar
                     break;
                 case 2:
                     {
-                        if( GetBasisType(1) == LibUtilities::eGLL_Lagrange)
+                        if(isGLL_Lagrange1)
                         {
                             q = nummodes[1]-1;
                         }
@@ -1351,7 +1327,7 @@ namespace Nektar
                     break;
                 case 3:
                     {
-                        if( GetBasisType(1) == LibUtilities::eGLL_Lagrange)
+                        if(isGLL_Lagrange1)
                         {
                             p = nummodes[0]-1;
                             q = nummodes[1]-1;
@@ -1370,7 +1346,7 @@ namespace Nektar
                 // Right face (vertices 1,2,5,6)
                 if( (localVertexId % 4) % 3 > 0 )
                 {
-                    if( GetBasisType(0) == LibUtilities::eGLL_Lagrange)
+                    if( isGLL_Lagrange0)
                     {
                         p = nummodes[0]-1;
                     }
@@ -1383,7 +1359,7 @@ namespace Nektar
                 // Back face (vertices 2,3,6,7)
                 if( localVertexId % 4 > 1 )
                 {
-                    if( GetBasisType(1) == LibUtilities::eGLL_Lagrange)
+                    if(isGLL_Lagrange1)
                     {
                         q = nummodes[1]-1;
                     }
@@ -1396,7 +1372,7 @@ namespace Nektar
                 // Top face (vertices 4,5,6,7)
                 if( localVertexId > 3)
                 {
-                    if( GetBasisType(2) == LibUtilities::eGLL_Lagrange)
+                    if(isGLL_Lagrange2)
                     {
                         r = nummodes[2]-1;
                     }
@@ -1422,15 +1398,8 @@ namespace Nektar
                                 Array<OneD, unsigned int> &maparray,
                                 Array<OneD, int> &signarray)
         {
-            ASSERTL1(GetBasisType(0) == LibUtilities::eModified_A ||
-                     GetBasisType(0) == LibUtilities::eGLL_Lagrange,
-                     "BasisType is not a boundary interior form");
-            ASSERTL1(GetBasisType(1) == LibUtilities::eModified_A ||
-                     GetBasisType(1) == LibUtilities::eGLL_Lagrange,
-                     "BasisType is not a boundary interior form");
-            ASSERTL1(GetBasisType(2) == LibUtilities::eModified_A ||
-                     GetBasisType(2) == LibUtilities::eGLL_Lagrange,
-                     "BasisType is not a boundary interior form");
+            ASSERTL1(m_base->IsBoundaryInterior(),
+                     "Basis is not of boundary-interior form.");
 
             ASSERTL1((eid>=0)&&(eid<12),
                      "local edge id must be between 0 and 11");
@@ -1451,13 +1420,13 @@ namespace Nektar
                 fill( signarray.get() , signarray.get()+nEdgeIntCoeffs, 1 );
             }
 
-            int nummodes [3] = {m_base[0]->GetNumModes(),
-                                m_base[1]->GetNumModes(),
-                                m_base[2]->GetNumModes()};
+            int nummodes [3] = {m_base->GetConstituentBasis(0).GetNumModes(),
+                                m_base->GetConstituentBasis(1).GetNumModes(),
+                                m_base->GetConstituentBasis(2).GetNumModes()};
 
-            const LibUtilities::BasisType bType [3] = {GetBasisType(0),
-                                                       GetBasisType(1),
-                                                       GetBasisType(2)};
+            bool isGLL_Lagrange0 = m_base->GetConstituentBasis(0).IsOfType<LibUtilities::Foundations::Lagrange>();
+            bool isGLL_Lagrange1 = m_base->GetConstituentBasis(1).IsOfType<LibUtilities::Foundations::Lagrange>();
+            bool isGLL_Lagrange2 = m_base->GetConstituentBasis(2).IsOfType<LibUtilities::Foundations::Lagrange>();
 
             bool reverseOrdering = false;
             bool signChange = false;
@@ -1480,7 +1449,7 @@ namespace Nektar
             case 10:
             case 11:
                 {
-                    if( bType[2] == LibUtilities::eGLL_Lagrange)
+                    if( isGLL_Lagrange2 )
                     {
                         IdxRange[2][0] = nummodes[2] - 1;
                         IdxRange[2][1] = nummodes[2];
@@ -1497,7 +1466,7 @@ namespace Nektar
             case 6:
             case 7:
                 {
-                    if( bType[2] == LibUtilities::eGLL_Lagrange)
+                    if( isGLL_Lagrange2 )
                     {
                         IdxRange[2][0] = 1;
                         IdxRange[2][1] = nummodes[2] - 1;
@@ -1537,7 +1506,7 @@ namespace Nektar
             case 7:
             case 10:
                 {
-                    if( bType[1] == LibUtilities::eGLL_Lagrange)
+                    if( isGLL_Lagrange1 )
                     {
                         IdxRange[1][0] = nummodes[1] - 1;
                         IdxRange[1][1] = nummodes[1];
@@ -1552,7 +1521,7 @@ namespace Nektar
             case 1:
             case 9:
                 {
-                    if( bType[1] == LibUtilities::eGLL_Lagrange)
+                    if( isGLL_Lagrange1 )
                     {
                         IdxRange[1][0] = 1;
                         IdxRange[1][1] = nummodes[1] - 1;
@@ -1577,7 +1546,7 @@ namespace Nektar
             case 3:
             case 11:
                 {
-                    if( bType[1] == LibUtilities::eGLL_Lagrange)
+                    if( isGLL_Lagrange1 )
                     {
                         IdxRange[1][0] = 1;
                         IdxRange[1][1] = nummodes[1] - 1;
@@ -1617,7 +1586,7 @@ namespace Nektar
             case 6:
             case 9:
                 {
-                    if( bType[0] == LibUtilities::eGLL_Lagrange)
+                    if( isGLL_Lagrange0 )
                     {
                         IdxRange[0][0] = nummodes[0] - 1;
                         IdxRange[0][1] = nummodes[0];
@@ -1632,7 +1601,7 @@ namespace Nektar
             case 0:
             case 8:
                 {
-                    if( bType[0] == LibUtilities::eGLL_Lagrange)
+                    if( isGLL_Lagrange0 )
                     {
                         IdxRange[0][0] = 1;
                         IdxRange[0][1] = nummodes[0] - 1;
@@ -1657,7 +1626,7 @@ namespace Nektar
             case 2:
             case 10:
                 {
-                    if( bType[0] == LibUtilities::eGLL_Lagrange)
+                    if( isGLL_Lagrange0 )
                     {
                         IdxRange[0][0] = 1;
                         IdxRange[0][1] = nummodes[0] - 1;
@@ -1720,15 +1689,8 @@ namespace Nektar
                                 Array<OneD, unsigned int> &maparray,
                                 Array<OneD, int>& signarray)
         {
-            ASSERTL1(GetBasisType(0) == LibUtilities::eModified_A ||
-                     GetBasisType(0) == LibUtilities::eGLL_Lagrange,
-                     "BasisType is not a boundary interior form");
-            ASSERTL1(GetBasisType(1) == LibUtilities::eModified_A ||
-                     GetBasisType(1) == LibUtilities::eGLL_Lagrange,
-                     "BasisType is not a boundary interior form");
-            ASSERTL1(GetBasisType(2) == LibUtilities::eModified_A ||
-                     GetBasisType(2) == LibUtilities::eGLL_Lagrange,
-                     "BasisType is not a boundary interior form");
+            ASSERTL1(m_base->IsBoundaryInterior(),
+                     "Basis is not of boundary-interior form.");
 
             ASSERTL1((fid>=0)&&(fid<6),
                      "local face id must be between 0 and 5");
@@ -1749,13 +1711,9 @@ namespace Nektar
                 fill( signarray.get() , signarray.get()+nFaceIntCoeffs, 1 );
             }
 
-            int nummodes [3] = {m_base[0]->GetNumModes(),
-                                m_base[1]->GetNumModes(),
-                                m_base[2]->GetNumModes()};
-
-            const LibUtilities::BasisType bType [3] = {GetBasisType(0),
-                                                       GetBasisType(1),
-                                                       GetBasisType(2)};
+            int nummodes [3] = {m_base->GetConstituentBasis(0).GetNumModes(),
+                                m_base->GetConstituentBasis(1).GetNumModes(),
+                                m_base->GetConstituentBasis(2).GetNumModes()};
 
             int nummodesA = 0;
             int nummodesB = 0;
@@ -1808,6 +1766,9 @@ namespace Nektar
 
             int IdxRange [3][2];
             int Incr[3];
+            bool isGLL_Lagrange0 = m_base->GetConstituentBasis(0).IsOfType<LibUtilities::Foundations::Lagrange>();
+            bool isGLL_Lagrange1 = m_base->GetConstituentBasis(1).IsOfType<LibUtilities::Foundations::Lagrange>();
+            bool isGLL_Lagrange2 = m_base->GetConstituentBasis(2).IsOfType<LibUtilities::Foundations::Lagrange>();
 
             Array<OneD, int> sign0(nummodes[0], 1);
             Array<OneD, int> sign1(nummodes[1], 1);
@@ -1826,7 +1787,7 @@ namespace Nektar
                 break;
             case 5: // top face
                 {
-                    if( bType[2] == LibUtilities::eGLL_Lagrange)
+                    if( isGLL_Lagrange2 )
                     {
                         IdxRange[2][0] = nummodes[2] - 1;
                         IdxRange[2][1] = nummodes[2];
@@ -1843,7 +1804,7 @@ namespace Nektar
                 break;
             default: // all other faces
                 {
-                    if( bType[2] == LibUtilities::eGLL_Lagrange)
+                    if( isGLL_Lagrange2 )
                     {
                         if( (((int) faceOrient)-5) % 2 )
                         {
@@ -1889,7 +1850,7 @@ namespace Nektar
                 break;
             case 3:
                 {
-                    if( bType[1] == LibUtilities::eGLL_Lagrange)
+                    if( isGLL_Lagrange1 )
                     {
                         IdxRange[1][0] = nummodes[1] - 1;
                         IdxRange[1][1] = nummodes[1];
@@ -1906,7 +1867,7 @@ namespace Nektar
             case 0:
             case 5:
                 {
-                    if( bType[1] == LibUtilities::eGLL_Lagrange)
+                    if( isGLL_Lagrange1 )
                     {
                         if( (((int) faceOrient)-5) % 2 )
                         {
@@ -1940,7 +1901,7 @@ namespace Nektar
                 break;
             default: // case2: case4:
                 {
-                    if( bType[1] == LibUtilities::eGLL_Lagrange)
+                    if( isGLL_Lagrange1 )
                     {
                         if( (((int) faceOrient)-5) % 4 > 1 )
                         {
@@ -1984,7 +1945,7 @@ namespace Nektar
                 break;
             case 2:
                 {
-                    if( bType[0] == LibUtilities::eGLL_Lagrange)
+                    if( isGLL_Lagrange0 )
                     {
                         IdxRange[0][0] = nummodes[0] - 1;
                         IdxRange[0][1] = nummodes[0];
@@ -2000,7 +1961,7 @@ namespace Nektar
                 break;
             default:
                 {
-                    if( bType[0] == LibUtilities::eGLL_Lagrange)
+                    if( isGLL_Lagrange0 )
                     {
                         if( (((int) faceOrient)-5) % 4 > 1 )
                         {
@@ -2057,31 +2018,20 @@ namespace Nektar
          */
         void StdHexExp::v_GetInteriorMap(Array<OneD, unsigned int>& outarray)
         {
-            ASSERTL1(GetBasisType(0) == LibUtilities::eModified_A ||
-                     GetBasisType(0) == LibUtilities::eGLL_Lagrange,
-                     "BasisType is not a boundary interior form");
-            ASSERTL1(GetBasisType(1) == LibUtilities::eModified_A ||
-                     GetBasisType(1) == LibUtilities::eGLL_Lagrange,
-                     "BasisType is not a boundary interior form");
-            ASSERTL1(GetBasisType(2) == LibUtilities::eModified_A ||
-                     GetBasisType(2) == LibUtilities::eGLL_Lagrange,
-                     "BasisType is not a boundary interior form");
+            ASSERTL1(m_base->IsBoundaryInterior(),
+                     "Basis is not of boundary-interior form.");
 
             int i;
-            int nummodes [3] = {m_base[0]->GetNumModes(),
-                                m_base[1]->GetNumModes(),
-                                m_base[2]->GetNumModes()};
+            int nummodes [3] = {m_base->GetConstituentBasis(0).GetNumModes(),
+                                m_base->GetConstituentBasis(1).GetNumModes(),
+                                m_base->GetConstituentBasis(2).GetNumModes()};
 
-            int nIntCoeffs = m_ncoeffs - NumBndryCoeffs();
+            int nIntCoeffs = m_base->GetNumModes() - NumBndryCoeffs();
 
             if(outarray.num_elements() != nIntCoeffs)
             {
                 outarray = Array<OneD, unsigned int>(nIntCoeffs);
             }
-
-            const LibUtilities::BasisType Btype [3] = {GetBasisType(0),
-                                                       GetBasisType(1),
-                                                       GetBasisType(2)};
 
             int p,q,r;
             int cnt = 0;
@@ -2090,7 +2040,7 @@ namespace Nektar
 
             for(i = 0; i < 3; i++)
             {
-                if( Btype[i] == LibUtilities::eModified_A)
+                if( m_base->GetConstituentBasis(i).IsOfType<LibUtilities::Foundations::ModifiedLegendre>() )
                 {
                     IntIdx[i][0]  = 2;
                     IntIdx[i][1]  = nummodes[i];
@@ -2121,20 +2071,13 @@ namespace Nektar
          */
         void StdHexExp::v_GetBoundaryMap(Array<OneD, unsigned int>& outarray)
         {
-            ASSERTL1(GetBasisType(0) == LibUtilities::eModified_A ||
-                     GetBasisType(0) == LibUtilities::eGLL_Lagrange,
-                     "BasisType is not a boundary interior form");
-            ASSERTL1(GetBasisType(1) == LibUtilities::eModified_A ||
-                     GetBasisType(1) == LibUtilities::eGLL_Lagrange,
-                     "BasisType is not a boundary interior form");
-            ASSERTL1(GetBasisType(2) == LibUtilities::eModified_A ||
-                     GetBasisType(2) == LibUtilities::eGLL_Lagrange,
-                     "BasisType is not a boundary interior form");
+            ASSERTL1(m_base->IsBoundaryInterior(),
+                     "Basis is not of boundary-interior form.");
 
             int i;
-            int nummodes [3] = {m_base[0]->GetNumModes(),
-                                m_base[1]->GetNumModes(),
-                                m_base[2]->GetNumModes()};
+            int nummodes [3] = {m_base->GetConstituentBasis(0).GetNumModes(),
+                                m_base->GetConstituentBasis(1).GetNumModes(),
+                                m_base->GetConstituentBasis(2).GetNumModes()};
 
             int nBndCoeffs = NumBndryCoeffs();
 
@@ -2142,10 +2085,6 @@ namespace Nektar
             {
                 outarray = Array<OneD, unsigned int>(nBndCoeffs);
             }
-
-            const LibUtilities::BasisType Btype [3] = {GetBasisType(0),
-                                                       GetBasisType(1),
-                                                       GetBasisType(2)};
 
             int p,q,r;
             int cnt = 0;
@@ -2157,7 +2096,7 @@ namespace Nektar
             {
                 BndIdx[i][0] = 0;
 
-                if( Btype[i] == LibUtilities::eModified_A)
+                if( m_base->GetConstituentBasis(i).IsOfType<LibUtilities::Foundations::ModifiedLegendre>())
                 {
                     BndIdx[i][1] = 1;
                     IntIdx[i][0]  = 2;
@@ -2277,16 +2216,16 @@ namespace Nektar
 
             if(inarray.get() == outarray.get())
             {
-                Array<OneD,NekDouble> tmp(m_ncoeffs);
-                Vmath::Vcopy(m_ncoeffs,inarray.get(),1,tmp.get(),1);
+                Array<OneD,NekDouble> tmp(m_base->GetNumModes());
+                Vmath::Vcopy(m_base->GetNumModes(),inarray.get(),1,tmp.get(),1);
 
-                Blas::Dgemv('N', m_ncoeffs, m_ncoeffs, 1.0, mat->GetPtr().get(),
-                            m_ncoeffs, tmp.get(), 1, 0.0, outarray.get(), 1);
+                Blas::Dgemv('N', m_base->GetNumModes(), m_base->GetNumModes(), 1.0, mat->GetPtr().get(),
+                            m_base->GetNumModes(), tmp.get(), 1, 0.0, outarray.get(), 1);
             }
             else
             {
-                Blas::Dgemv('N', m_ncoeffs, m_ncoeffs, 1.0, mat->GetPtr().get(),
-                            m_ncoeffs, inarray.get(), 1, 0.0, outarray.get(), 1);
+                Blas::Dgemv('N', m_base->GetNumModes(), m_base->GetNumModes(), 1.0, mat->GetPtr().get(),
+                            m_base->GetNumModes(), inarray.get(), 1, 0.0, outarray.get(), 1);
             }
         }
 
@@ -2295,15 +2234,15 @@ namespace Nektar
                                                  Array<OneD, NekDouble> &outarray)
         {
             int    i;
-            int    nquad0 = m_base[0]->GetNumPoints();
-            int    nquad1 = m_base[1]->GetNumPoints();
-            int    nquad2 = m_base[2]->GetNumPoints();
+            int    nquad0 = m_base->GetConstituentBasis(0).GetPoints().GetNumPoints();
+            int    nquad1 = m_base->GetConstituentBasis(1).GetPoints().GetNumPoints();
+            int    nquad2 = m_base->GetConstituentBasis(2).GetPoints().GetNumPoints();
             int nq01 = nquad0*nquad1;
             int nq12 = nquad1*nquad2;
 
-            const Array<OneD, const NekDouble>& w0 = m_base[0]->GetW();
-            const Array<OneD, const NekDouble>& w1 = m_base[1]->GetW();
-            const Array<OneD, const NekDouble>& w2 = m_base[2]->GetW();
+            const Array<OneD, const NekDouble>& w0 = m_base->GetConstituentBasis(0).GetPoints().GetW();
+            const Array<OneD, const NekDouble>& w1 = m_base->GetConstituentBasis(1).GetPoints().GetW();
+            const Array<OneD, const NekDouble>& w2 = m_base->GetConstituentBasis(2).GetPoints().GetW();
 
             for(i = 0; i < nq12; ++i)
             {
@@ -2328,63 +2267,65 @@ namespace Nektar
                                               const StdMatrixKey &mkey)
         {
             // Generate an orthonogal expansion
-            int qa = m_base[0]->GetNumPoints();
-            int qb = m_base[1]->GetNumPoints();
-            int qc = m_base[2]->GetNumPoints();
-            int nmodes_a = m_base[0]->GetNumModes();
-            int nmodes_b = m_base[1]->GetNumModes();
-            int nmodes_c = m_base[2]->GetNumModes();
-            // Declare orthogonal basis. 
-            LibUtilities::PointsKey pa(qa,m_base[0]->GetPointsType());
-            LibUtilities::PointsKey pb(qb,m_base[1]->GetPointsType());
-            LibUtilities::PointsKey pc(qc,m_base[2]->GetPointsType());
+//            int qa = m_base->GetConstituentBasis(0).GetPoints().GetNumPoints();
+//            int qb = m_base->GetConstituentBasis(1).GetPoints().GetNumPoints();
+//            int qc = m_base->GetConstituentBasis(2).GetPoints().GetNumPoints();
+//            int nmodes_a = m_base->GetConstituentBasis(0).GetNumModes();
+//            int nmodes_b = m_base->GetConstituentBasis(1).GetNumModes();
+//            int nmodes_c = m_base->GetConstituentBasis(2).GetNumModes();
+            ASSERTL1(false, "Fix SVVLaplacianFilter");
 
-            LibUtilities::BasisKey Ba(LibUtilities::eOrtho_A,nmodes_a,pa);
-            LibUtilities::BasisKey Bb(LibUtilities::eOrtho_A,nmodes_b,pb);
-            LibUtilities::BasisKey Bc(LibUtilities::eOrtho_A,nmodes_c,pc);
-            StdHexExp OrthoExp(Ba,Bb,Bc);
-            
-            Array<OneD, NekDouble> orthocoeffs(OrthoExp.GetNcoeffs()); 
-            int i,j,k;
-            
-            int cutoff = (int) (mkey.GetConstFactor(eFactorSVVCutoffRatio)*min(nmodes_a,nmodes_b));
-            NekDouble  SvvDiffCoeff  = mkey.GetConstFactor(eFactorSVVDiffCoeff);
-            
-            // project onto modal  space.
-            OrthoExp.FwdTrans(array,orthocoeffs);
-            
-
-            //  Filter just trilinear space
-            int nmodes = max(nmodes_a,nmodes_b);
-            nmodes = max(nmodes,nmodes_c);
-
-            Array<OneD, NekDouble> fac(nmodes,1.0);
-            for(j = cutoff; j < nmodes; ++j)
-            {
-                fac[j] = fabs((j-nmodes)/((NekDouble) (j-cutoff+1.0)));
-                fac[j] *= fac[j]; //added this line to conform with equation
-            }
-
-            for(i = 0; i < nmodes_a; ++i)
-            {
-                for(j = 0; j < nmodes_b; ++j)
-                {
-                    for(k =  0; k < nmodes_c; ++k)
-                    {
-                        if((i >= cutoff)||(j >= cutoff)||(k >= cutoff))
-                        {
-                            orthocoeffs[i*nmodes_a*nmodes_b + j*nmodes_c + k] *= (SvvDiffCoeff*exp( -(fac[i]+fac[j]+fac[k]) ));
-                        }
-                        else
-                        {
-                            orthocoeffs[i*nmodes_a*nmodes_b + j*nmodes_c + k] *= 0.0;
-                        }
-                    }
-                }
-            }
-            
-            // backward transform to physical space
-            OrthoExp.BwdTrans(orthocoeffs,array);
+//            // Declare orthogonal basis.
+//            LibUtilities::PointsKey pa(qa,m_base[0]->GetPointsType());
+//            LibUtilities::PointsKey pb(qb,m_base[1]->GetPointsType());
+//            LibUtilities::PointsKey pc(qc,m_base[2]->GetPointsType());
+//
+//            LibUtilities::BasisKey Ba(LibUtilities::eOrtho_A,nmodes_a,pa);
+//            LibUtilities::BasisKey Bb(LibUtilities::eOrtho_A,nmodes_b,pb);
+//            LibUtilities::BasisKey Bc(LibUtilities::eOrtho_A,nmodes_c,pc);
+//            StdHexExp OrthoExp(Ba,Bb,Bc);
+//
+//            Array<OneD, NekDouble> orthocoeffs(OrthoExp.GetNcoeffs());
+//            int i,j,k;
+//
+//            int cutoff = (int) (mkey.GetConstFactor(eFactorSVVCutoffRatio)*min(nmodes_a,nmodes_b));
+//            NekDouble  SvvDiffCoeff  = mkey.GetConstFactor(eFactorSVVDiffCoeff);
+//
+//            // project onto modal  space.
+//            OrthoExp.FwdTrans(array,orthocoeffs);
+//
+//
+//            //  Filter just trilinear space
+//            int nmodes = max(nmodes_a,nmodes_b);
+//            nmodes = max(nmodes,nmodes_c);
+//
+//            Array<OneD, NekDouble> fac(nmodes,1.0);
+//            for(j = cutoff; j < nmodes; ++j)
+//            {
+//                fac[j] = fabs((j-nmodes)/((NekDouble) (j-cutoff+1.0)));
+//                fac[j] *= fac[j]; //added this line to conform with equation
+//            }
+//
+//            for(i = 0; i < nmodes_a; ++i)
+//            {
+//                for(j = 0; j < nmodes_b; ++j)
+//                {
+//                    for(k =  0; k < nmodes_c; ++k)
+//                    {
+//                        if((i >= cutoff)||(j >= cutoff)||(k >= cutoff))
+//                        {
+//                            orthocoeffs[i*nmodes_a*nmodes_b + j*nmodes_c + k] *= (SvvDiffCoeff*exp( -(fac[i]+fac[j]+fac[k]) ));
+//                        }
+//                        else
+//                        {
+//                            orthocoeffs[i*nmodes_a*nmodes_b + j*nmodes_c + k] *= 0.0;
+//                        }
+//                    }
+//                }
+//            }
+//
+//            // backward transform to physical space
+//            OrthoExp.BwdTrans(orthocoeffs,array);
         }                        
     }
 }

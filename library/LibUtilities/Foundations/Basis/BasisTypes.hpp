@@ -58,6 +58,8 @@ namespace traits
 struct basis_traits_base {
     static const unsigned int dimension = 0;
     static const unsigned int num_constituent_bases = 1;
+    static const bool is_boundary_interior = false;
+    static const bool is_collocation = false;
     static const unsigned int get_total_modes(unsigned int nmodes) {
         return nmodes;
     }
@@ -66,27 +68,31 @@ struct basis_traits_base {
 
 
 // Primary template
-template<typename... TPts>
+template<typename... TBasis>
 struct basis_traits : public basis_traits_base {
-    static const unsigned int num_constituent_bases = sizeof...(TPts);
+    static const unsigned int num_constituent_bases = sizeof...(TBasis);
 };
 
 template<typename T1, typename... TBasis>
 struct basis_traits<T1, TBasis...> : public basis_traits_base {
     static const unsigned int dimension = basis_traits<T1>::dimension + basis_traits<TBasis...>::dimension;
     static_assert(dimension <= 3, "Composite basis dimension > 3.");
+    static const bool is_boundary_interior = basis_traits<T1>::is_boundary_interior && basis_traits<TBasis...>::is_boundary_interior;
+    static const bool is_collocation = basis_traits<T1>::is_collocation && basis_traits<TBasis...>::is_collocation;
 };
 
 template<>
 struct basis_traits<ModifiedLegendre> : public basis_traits_base
 {
     static const unsigned int dimension = 1;
+    static const bool is_boundary_interior = true;
 };
 
 template<>
 struct basis_traits<Lagrange> : public basis_traits_base
 {
     static const unsigned int dimension = 1;
+    static const bool collocation = true;
 };
 
 template<>
@@ -104,10 +110,11 @@ struct basis_traits<BernsteinTetrahedron> : public basis_traits_base
 };
 
 
-
+template<typename TShape, typename TBasis>
 struct expansion_traits_base
 {
     static const bool is_valid = false;
+    static const bool is_boundary_interior = std::is_same<TBasis, ModifiedLegendre>::value;
     static const int get_num_coefficients(int Na, int Nb = 1, int Nc = 1)
     {
         return 0;
@@ -121,7 +128,7 @@ struct expansion_traits_base
 template<typename TShape, typename TBasis>
 struct expansion_traits : public shape_traits<TShape>,
                              public basis_traits<TBasis>,
-                             public expansion_traits_base
+                             public expansion_traits_base<TShape, TBasis>
 {
 };
 
@@ -129,7 +136,7 @@ template<typename TBasis>
 struct expansion_traits<Segment, TBasis> :
                              public shape_traits<Segment>,
                              public basis_traits<TBasis>,
-                             public expansion_traits_base
+                             public expansion_traits_base<Segment, TBasis>
 {
     static const bool is_valid = true;
     static const int get_num_coefficients(int Na)
@@ -147,7 +154,7 @@ template<typename TBasis>
 struct expansion_traits<Quadrilateral, TBasis> :
                              public shape_traits<Quadrilateral>,
                              public basis_traits<TBasis>,
-                             public expansion_traits_base
+                             public expansion_traits_base<Quadrilateral, TBasis>
 {
     static const bool is_valid = true;
     static const int get_num_coefficients(int Na, int Nb)
@@ -169,7 +176,7 @@ template<typename TBasis>
 struct expansion_traits<Triangle, TBasis> :
                              public shape_traits<Triangle>,
                              public basis_traits<TBasis>,
-                             public expansion_traits_base
+                             public expansion_traits_base<Triangle, TBasis>
 {
     static const bool is_valid = false;
     static const int get_num_coefficients(int Na, int Nb)
@@ -195,7 +202,7 @@ template<typename TBasis>
 struct expansion_traits<Hexahedron, TBasis> :
                              public shape_traits<Hexahedron>,
                              public basis_traits<TBasis>,
-                             public expansion_traits_base
+                             public expansion_traits_base<Hexahedron, TBasis>
 {
     static const bool is_valid = true;
     static const int get_num_coefficients(int Na, int Nb, int Nc)
@@ -220,7 +227,7 @@ template<typename TBasis>
 struct expansion_traits<Tetrahedron, TBasis> :
                              public shape_traits<Tetrahedron>,
                              public basis_traits<TBasis>,
-                             public expansion_traits_base
+                             public expansion_traits_base<Tetrahedron, TBasis>
 {
     static const bool is_valid = true;
 
@@ -286,7 +293,7 @@ template<typename TBasis>
 struct expansion_traits<Prism, TBasis> :
                              public shape_traits<Prism>,
                              public basis_traits<TBasis>,
-                             public expansion_traits_base
+                             public expansion_traits_base<Prism, TBasis>
 {
     static const bool is_valid = true;
     static const int get_num_coefficients(int Na, int Nb, int Nc)
@@ -319,7 +326,7 @@ template<typename TBasis>
 struct expansion_traits<Pyramid, TBasis> :
                              public shape_traits<Pyramid>,
                              public basis_traits<TBasis>,
-                             public expansion_traits_base
+                             public expansion_traits_base<Pyramid, TBasis>
 {
     static const bool is_valid = true;
     static const int get_num_coefficients(int Na, int Nb, int Nc)
@@ -338,7 +345,7 @@ template<>
 struct expansion_traits<Triangle, BernsteinTriangle> :
                             public shape_traits<Triangle>,
                             public basis_traits<BernsteinTriangle>,
-                            public expansion_traits_base
+                            public expansion_traits_base<Triangle, BernsteinTriangle>
 {
     static const bool is_valid = true;
 };

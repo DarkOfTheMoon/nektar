@@ -42,18 +42,12 @@ namespace Nektar
     namespace StdRegions
     {
         StdExpansion::StdExpansion(void):
-            m_elmt_id(0),
-            m_ncoeffs(0)
+            m_elmt_id(0)
         {
         }
 
-        StdExpansion::StdExpansion(const int numcoeffs, const int numbases,
-            const LibUtilities::BasisKey &Ba,
-            const LibUtilities::BasisKey &Bb,
-            const LibUtilities::BasisKey &Bc):
-            m_base(numbases),
+        StdExpansion::StdExpansion(const LibUtilities::Foundations::BasisKey &B):
             m_elmt_id(0),
-            m_ncoeffs(numcoeffs),
             m_stdMatrixManager(
                 boost::bind(&StdExpansion::CreateStdMatrix, this, _1),
                 std::string("StdExpansionStdMatrix")),
@@ -64,35 +58,13 @@ namespace Nektar
                 boost::bind(&StdExpansion::CreateIndexMap,this, _1),
                 std::string("StdExpansionIndexMap"))
         {
-            switch(m_base.num_elements())
-            {
-            case 3:
-                ASSERTL2(Bc!=LibUtilities::NullBasisKey,
-                    "NULL Basis attempting to be used.");
-                m_base[2] = LibUtilities::BasisManager()[Bc];
-
-            case 2:
-                ASSERTL2(Bb!=LibUtilities::NullBasisKey,
-                    "NULL Basis attempting to be used.");
-
-                m_base[1] = LibUtilities::BasisManager()[Bb];
-            case 1:
-                ASSERTL2(Ba!=LibUtilities::NullBasisKey,
-                    "NULL Basis attempting to be used.");
-                m_base[0] = LibUtilities::BasisManager()[Ba];
-                break;
-            default:
-                break;
-//                ASSERTL0(false, "numbases incorrectly specified");
-            };
-
-        } //end constructor
+            m_base = LibUtilities::Foundations::GetBasisManager()[B];
+        }
 
 
         StdExpansion::StdExpansion(const StdExpansion &T):
             m_base(T.m_base),
             m_elmt_id(T.m_elmt_id),
-            m_ncoeffs(T.m_ncoeffs),
             m_stdMatrixManager(T.m_stdMatrixManager),
             m_stdStaticCondMatrixManager(T.m_stdStaticCondMatrixManager),
             m_IndexMapManager(T.m_IndexMapManager)
@@ -107,7 +79,7 @@ namespace Nektar
                                      const Array<OneD, const NekDouble>& sol)
         {
             NekDouble  val;
-            int     ntot = GetTotPoints();
+            int     ntot = m_base->GetPoints().GetNumPoints();
             Array<OneD, NekDouble>  wsp(ntot);
 
             if(sol ==  NullNekDouble1DArray)
@@ -129,7 +101,7 @@ namespace Nektar
                                    const Array<OneD, const NekDouble>& sol)
         {
             NekDouble  val;
-            int     ntot = GetTotPoints();
+            int     ntot = m_base->GetPoints().GetNumPoints();
             Array<OneD, NekDouble> wsp(ntot);
 
             if (sol.num_elements() == 0)
@@ -160,7 +132,7 @@ namespace Nektar
         {
             int         i;
             NekDouble  val;
-            int     ntot = GetTotPoints();
+            int     ntot = m_base->GetPoints().GetNumPoints();
             int     coordim = v_GetCoordim();
             Array<OneD, NekDouble> wsp(3*ntot);
             Array<OneD, NekDouble> wsp_deriv = wsp + ntot;
@@ -196,7 +168,7 @@ namespace Nektar
 
             DNekMatSharedPtr  mat = GetStdMatrix(mkey);
             int nbdry = NumBndryCoeffs(); // also checks to see if this is a boundary interior decomposed expansion
-            int nint = m_ncoeffs - nbdry;
+            int nint = m_base->GetNumModes() - nbdry;
             DNekMatSharedPtr A = MemoryManager<DNekMat>::AllocateSharedPtr(nbdry,nbdry);
             DNekMatSharedPtr B = MemoryManager<DNekMat>::AllocateSharedPtr(nbdry,nint);
             DNekMatSharedPtr C = MemoryManager<DNekMat>::AllocateSharedPtr(nint,nbdry);
@@ -328,7 +300,7 @@ namespace Nektar
             {
             case eInvMass:
                 {
-                    StdMatrixKey masskey(eMass,mkey.GetShapeType(),*this,NullConstFactorMap,NullVarCoeffMap,mkey.GetNodalPointsType());
+                    StdMatrixKey masskey(eMass,mkey.GetShapeType(),*this,NullConstFactorMap,NullVarCoeffMap);
                     DNekMatSharedPtr mmat = GetStdMatrix(masskey);
 
                     returnval = MemoryManager<DNekMat>::AllocateSharedPtr(*mmat); //Populate standard mass matrix.
@@ -337,7 +309,7 @@ namespace Nektar
                 break;
             case eInvNBasisTrans:
                 {
-                    StdMatrixKey tmpkey(eNBasisTrans,mkey.GetShapeType(),*this,NullConstFactorMap,NullVarCoeffMap,mkey.GetNodalPointsType());
+                    StdMatrixKey tmpkey(eNBasisTrans,mkey.GetShapeType(),*this,NullConstFactorMap,NullVarCoeffMap);
                     DNekMatSharedPtr tmpmat = GetStdMatrix(tmpkey);
                     returnval = MemoryManager<DNekMat>::AllocateSharedPtr(*tmpmat); //Populate  matrix.
                     returnval->Invert();
@@ -345,15 +317,16 @@ namespace Nektar
                 break;
             case eBwdTrans:
                 {
-                    int nq = GetTotPoints();
-                    Array<OneD, NekDouble> tmpin(m_ncoeffs);
+                    int nq = m_base->GetPoints().GetNumPoints();
+                    int nc = m_base->GetNumModes();
+                    Array<OneD, NekDouble> tmpin(nc);
                     Array<OneD, NekDouble> tmpout(nq);
 
-                    returnval = MemoryManager<DNekMat>::AllocateSharedPtr(nq,m_ncoeffs);
+                    returnval = MemoryManager<DNekMat>::AllocateSharedPtr(nq,nc);
 
-                    for(int i=0; i<m_ncoeffs; ++i)
+                    for(int i = 0; i < nc; ++i)
                     {
-                        Vmath::Zero(m_ncoeffs, tmpin, 1);
+                        Vmath::Zero(nc, tmpin, 1);
                         tmpin[i] = 1.0;
 
                         BwdTrans_SumFac(tmpin,tmpout);
@@ -365,11 +338,12 @@ namespace Nektar
                 break;
             case eIProductWRTBase:
                 {
-                    int nq = GetTotPoints();
+                    int nq = m_base->GetPoints().GetNumPoints();
+                    int nc = m_base->GetNumModes();
                     Array<OneD, NekDouble> tmpin(nq);
-                    Array<OneD, NekDouble> tmpout(m_ncoeffs);
+                    Array<OneD, NekDouble> tmpout(nc);
 
-                    returnval = MemoryManager<DNekMat>::AllocateSharedPtr(m_ncoeffs,nq);
+                    returnval = MemoryManager<DNekMat>::AllocateSharedPtr(nc,nq);
 
                     for(i=0; i < nq; ++i)
                     {
@@ -378,18 +352,19 @@ namespace Nektar
 
                         IProductWRTBase_SumFac(tmpin,tmpout);
 
-                        Vmath::Vcopy(m_ncoeffs,tmpout.get(),1,
-                                     returnval->GetRawPtr()+i*m_ncoeffs,1);
+                        Vmath::Vcopy(nc,tmpout.get(),1,
+                                     returnval->GetRawPtr()+i*nc,1);
                     }
                 }
                 break;
             case eIProductWRTDerivBase0:
                 {
-                    int nq = GetTotPoints();
+                    int nq = m_base->GetPoints().GetNumPoints();
+                    int nc = m_base->GetNumModes();
                     Array<OneD, NekDouble> tmpin(nq);
-                    Array<OneD, NekDouble> tmpout(m_ncoeffs);
+                    Array<OneD, NekDouble> tmpout(nc);
 
-                    returnval = MemoryManager<DNekMat>::AllocateSharedPtr(nq,m_ncoeffs);
+                    returnval = MemoryManager<DNekMat>::AllocateSharedPtr(nq,nc);
 
                     for(i=0; i < nq; ++i)
                     {
@@ -398,18 +373,19 @@ namespace Nektar
 
                         IProductWRTDerivBase_SumFac(0,tmpin,tmpout);
 
-                        Vmath::Vcopy(m_ncoeffs,tmpout.get(),1,
-                                     returnval->GetRawPtr()+i*m_ncoeffs,1);
+                        Vmath::Vcopy(nc,tmpout.get(),1,
+                                     returnval->GetRawPtr()+i*nc,1);
                     }
                 }
                 break;
             case eIProductWRTDerivBase1:
                 {
-                    int nq = GetTotPoints();
+                    int nq = m_base->GetPoints().GetNumPoints();
+                    int nc = m_base->GetNumModes();
                     Array<OneD, NekDouble> tmpin(nq);
-                    Array<OneD, NekDouble> tmpout(m_ncoeffs);
+                    Array<OneD, NekDouble> tmpout(nc);
 
-                    returnval = MemoryManager<DNekMat>::AllocateSharedPtr(nq,m_ncoeffs);
+                    returnval = MemoryManager<DNekMat>::AllocateSharedPtr(nq,nc);
 
                     for(i=0; i < nq; ++i)
                     {
@@ -418,18 +394,19 @@ namespace Nektar
 
                         IProductWRTDerivBase_SumFac(1,tmpin,tmpout);
 
-                        Vmath::Vcopy(m_ncoeffs,tmpout.get(),1,
-                                     returnval->GetRawPtr()+i*m_ncoeffs,1);
+                        Vmath::Vcopy(nc,tmpout.get(),1,
+                                     returnval->GetRawPtr()+i*nc,1);
                     }
                 }
                 break;
             case eIProductWRTDerivBase2:
                 {
-                    int nq = GetTotPoints();
+                    int nq = m_base->GetPoints().GetNumPoints();
+                    int nc = m_base->GetNumModes();
                     Array<OneD, NekDouble> tmpin(nq);
-                    Array<OneD, NekDouble> tmpout(m_ncoeffs);
+                    Array<OneD, NekDouble> tmpout(nc);
 
-                    returnval = MemoryManager<DNekMat>::AllocateSharedPtr(nq,m_ncoeffs);
+                    returnval = MemoryManager<DNekMat>::AllocateSharedPtr(nq,nc);
 
                     for(i=0; i < nq; ++i)
                     {
@@ -438,19 +415,19 @@ namespace Nektar
 
                         IProductWRTDerivBase_SumFac(2,tmpin,tmpout);
 
-                        Vmath::Vcopy(m_ncoeffs,tmpout.get(),1,
-                                     returnval->GetRawPtr()+i*m_ncoeffs,1);
+                        Vmath::Vcopy(nc,tmpout.get(),1,
+                                     returnval->GetRawPtr()+i*nc,1);
                     }
                 }
                 break;
             case eEquiSpacedToCoeffs:
                 {
                     // check to see if equispaced basis
-                    int nummodes = m_base[0]->GetNumModes();
+                    int nummodes = m_base->GetConstituentBasis(0).GetNumModes();
                     bool equispaced = true;
-                    for(int i = 1; i < m_base.num_elements(); ++i)
+                    for(int i = 1; i < m_base->GetNumConstituentBases(); ++i)
                     {
-                        if(m_base[i]->GetNumModes() != nummodes)
+                        if(m_base->GetConstituentBasis(i).GetNumModes() != nummodes)
                         {
                             equispaced = false;
                         }
@@ -460,14 +437,14 @@ namespace Nektar
                              "Currently need to have same num modes in all "
                              "directionmodes to use EquiSpacedToCoeff method");
 
-                    int ntot = GetTotPoints();
-                    Array<OneD, NekDouble>               qmode(ntot);
-                    Array<OneD, NekDouble>               emode(m_ncoeffs);
+                    int nq = m_base->GetPoints().GetNumPoints();
+                    int nc = m_base->GetNumModes();
+                    Array<OneD, NekDouble>               qmode(nq);
+                    Array<OneD, NekDouble>               emode(nc);
 
                     returnval = MemoryManager<DNekMat>::AllocateSharedPtr(
-                                                        m_ncoeffs,m_ncoeffs);
-                    int cnt = 0;
-                    for(int i = 0; i < m_ncoeffs; ++i)
+                                                        nc,nc);
+                    for(int i = 0; i < nc; ++i)
                     {
                         // Get mode at quadrature points
                         FillMode(i,qmode);
@@ -476,8 +453,8 @@ namespace Nektar
                         PhysInterpToSimplexEquiSpaced(qmode,emode,nummodes);
 
                         // fill matrix
-                        Vmath::Vcopy(m_ncoeffs, &emode[0], 1,
-                                     returnval->GetRawPtr() + i*m_ncoeffs, 1);
+                        Vmath::Vcopy(nc, &emode[0], 1,
+                                     returnval->GetRawPtr() + i*nc, 1);
                     }
                     // invert matrix
                     returnval->Invert();
@@ -501,19 +478,20 @@ namespace Nektar
             case eLinearAdvectionReaction:
             case eLinearAdvectionDiffusionReaction:
                 {
-                    Array<OneD, NekDouble> tmp(m_ncoeffs);
-                    returnval = MemoryManager<DNekMat>::AllocateSharedPtr(m_ncoeffs,m_ncoeffs);
+                    int nc = m_base->GetNumModes();
+                    Array<OneD, NekDouble> tmp(nc);
+                    returnval = MemoryManager<DNekMat>::AllocateSharedPtr(nc,nc);
                     DNekMat &Mat = *returnval;
 
-                    for(i=0; i < m_ncoeffs; ++i)
+                    for(i=0; i < nc; ++i)
                     {
-                        Vmath::Zero(m_ncoeffs, tmp, 1);
+                        Vmath::Zero(nc, tmp, 1);
                         tmp[i] = 1.0;
 
                         GeneralMatrixOp_MatFree(tmp,tmp,mkey);
 
-                        Vmath::Vcopy(m_ncoeffs,&tmp[0],1,
-                                     &(Mat.GetPtr())[0]+i*m_ncoeffs,1);
+                        Vmath::Vcopy(nc,&tmp[0],1,
+                                     &(Mat.GetPtr())[0]+i*nc,1);
                     }
                 }
                 break;
@@ -669,7 +647,7 @@ namespace Nektar
                                                 Array<OneD,NekDouble> &outarray,
                                                 const StdMatrixKey &mkey)
         {
-            int nq = GetTotPoints();
+            int nq = m_base->GetPoints().GetNumPoints();
             Array<OneD, NekDouble> tmp(nq);
 
             v_BwdTrans(inarray,tmp);
@@ -690,7 +668,7 @@ namespace Nektar
             ASSERTL1(k1 >= 0 && k1 < GetCoordim(),"invalid first  argument");
             ASSERTL1(k2 >= 0 && k2 < GetCoordim(),"invalid second argument");
 
-            int nq = GetTotPoints();
+            int nq = m_base->GetPoints().GetNumPoints();
             Array<OneD, NekDouble> tmp(nq);
             Array<OneD, NekDouble> dtmp(nq);
             VarCoeffType varcoefftypes[3][3]
@@ -723,7 +701,7 @@ namespace Nektar
                     }
                     else
                     {
-                        Vmath::Zero(GetNcoeffs(), outarray, 1);
+                        Vmath::Zero(m_base->GetNumModes(), outarray, 1);
                     }
                 }
             }
@@ -748,8 +726,9 @@ namespace Nektar
 
             int i,j;
 
-            Array<OneD,NekDouble> store(m_ncoeffs);
-            Array<OneD,NekDouble> store2(m_ncoeffs,0.0);
+            int nc = m_base->GetNumModes();
+            Array<OneD,NekDouble> store(nc);
+            Array<OneD,NekDouble> store2(nc,0.0);
 
             if(mkey.GetNVarCoeff() == 0||mkey.ConstFactorExists(eFactorSVVDiffCoeff))
             {
@@ -757,7 +736,7 @@ namespace Nektar
                 for(i = 0; i < dim; ++i)
                 {
                     LaplacianMatrixOp(i,i,inarray,store,mkey);
-                    Vmath::Vadd(m_ncoeffs, store, 1, store2, 1, store2, 1);
+                    Vmath::Vadd(nc, store, 1, store2, 1, store2, 1);
                 }
             }
             else
@@ -774,12 +753,12 @@ namespace Nektar
                     {
                         mkeyij = MemoryManager<StdMatrixKey>::AllocateSharedPtr(mkey,mtype[i][j]);
                         LaplacianMatrixOp(i,j,inarray,store,*mkeyij);
-                        Vmath::Vadd(m_ncoeffs, store, 1, store2, 1, store2, 1);
+                        Vmath::Vadd(nc, store, 1, store2, 1, store2, 1);
                     }
                 }
             }
 
-            Vmath::Vcopy(m_ncoeffs,store2.get(),1,outarray.get(),1);
+            Vmath::Vcopy(nc,store2.get(),1,outarray.get(),1);
         }
 
         void StdExpansion::WeakDerivMatrixOp_MatFree(const int k1,
@@ -787,8 +766,8 @@ namespace Nektar
                                                      Array<OneD,NekDouble> &outarray,
                                                      const StdMatrixKey &mkey)
         {
-            Array<OneD, NekDouble> tmp(GetTotPoints());
-            int nq = GetTotPoints();
+            int nq = m_base->GetPoints().GetNumPoints();
+            Array<OneD, NekDouble> tmp(nq);
 
             v_BwdTrans(inarray,tmp);
             v_PhysDeriv(k1,tmp,tmp);
@@ -806,7 +785,7 @@ namespace Nektar
                                                                 Array<OneD,NekDouble> &outarray,
                                                                 const StdMatrixKey &mkey)
         {
-            int nq = GetTotPoints();
+            int nq = m_base->GetPoints().GetNumPoints();
             //            int varsize = ((mkey.GetVariableCoefficient(0)).num_elements())/dim;
             Array<OneD, NekDouble> tmp(nq);
 
@@ -888,7 +867,7 @@ namespace Nektar
             ASSERTL0(ndir,"Must define at least one advection velocity");
 
             NekDouble   lambda = mkey.GetConstFactor(eFactorLambda);
-            int         totpts = GetTotPoints();
+            int         totpts = m_base->GetPoints().GetNumPoints();
             Array<OneD, NekDouble> tmp(3*totpts);
             Array<OneD, NekDouble> tmp_deriv = tmp + totpts;
             Array<OneD, NekDouble> tmp_adv   = tmp_deriv + totpts;
@@ -916,14 +895,15 @@ namespace Nektar
 
             if(addDiffusionTerm)
             {
-                Array<OneD, NekDouble> lap(m_ncoeffs);
-                StdMatrixKey mkeylap(eLaplacian,DetShapeType(),*this);
+                int nc = m_base->GetNumModes();
+                Array<OneD, NekDouble> lap(nc);
+                StdMatrixKey mkeylap(eLaplacian,m_base->GetShapeType(),*this);
                 LaplacianMatrixOp(inarray,lap,mkeylap);
 
                 v_IProductWRTBase(tmp_adv, outarray);
                 // Lap v - u.grad v + lambda*u
                 // => (grad u, grad v) + u.grad v - lambda*u
-                Vmath::Vadd(m_ncoeffs,lap,1,outarray,1,outarray,1);
+                Vmath::Vadd(nc,lap,1,outarray,1,outarray,1);
             }
             else
             {
@@ -938,24 +918,26 @@ namespace Nektar
                                                                  const StdMatrixKey &mkey)
         {
             NekDouble lambda = mkey.GetConstFactor(eFactorLambda);
-            Array<OneD,NekDouble> tmp(m_ncoeffs);
-            StdMatrixKey mkeymass(eMass,DetShapeType(),*this);
-            StdMatrixKey mkeylap(eLaplacian,DetShapeType(),*this);
+            int nc = m_base->GetNumModes();
+            Array<OneD,NekDouble> tmp(m_base->GetNumModes());
+            StdMatrixKey mkeymass(eMass,m_base->GetShapeType(),*this);
+            StdMatrixKey mkeylap(eLaplacian,m_base->GetShapeType(),*this);
 
             MassMatrixOp(inarray,tmp,mkeymass);
             LaplacianMatrixOp(inarray,outarray,mkeylap);
 
-            Blas::Daxpy(m_ncoeffs, lambda, tmp, 1, outarray, 1);
+            Blas::Daxpy(nc, lambda, tmp, 1, outarray, 1);
         }
 
         void StdExpansion::BwdTrans_MatOp(const Array<OneD, const NekDouble>& inarray,
                                           Array<OneD, NekDouble> &outarray)
         {
-            int nq = GetTotPoints();
-            StdMatrixKey      bwdtransmatkey(eBwdTrans,DetShapeType(),*this);
+            int nq = m_base->GetPoints().GetNumPoints();
+            int nc = m_base->GetNumModes();
+            StdMatrixKey      bwdtransmatkey(eBwdTrans,m_base->GetShapeType(),*this);
             DNekMatSharedPtr  bwdtransmat = GetStdMatrix(bwdtransmatkey);
 
-            Blas::Dgemv('N',nq,m_ncoeffs,1.0,bwdtransmat->GetPtr().get(),
+            Blas::Dgemv('N',nq, nc,1.0,bwdtransmat->GetPtr().get(),
                         nq, inarray.get(), 1, 0.0, outarray.get(), 1);
         }
 
@@ -1145,17 +1127,17 @@ namespace Nektar
             return 0;
         }
 
-        const LibUtilities::BasisKey StdExpansion::v_DetEdgeBasisKey(const int i) const
-        {
-            ASSERTL0(false, "This function is not valid or not defined");
-            return LibUtilities::NullBasisKey;
-        }
-
-        const LibUtilities::BasisKey StdExpansion::v_DetFaceBasisKey(const int i, const int k) const
-        {
-            ASSERTL0(false, "This function is not valid or not defined");
-            return LibUtilities::NullBasisKey;
-        }
+//        const LibUtilities::BasisKey StdExpansion::v_DetEdgeBasisKey(const int i) const
+//        {
+//            ASSERTL0(false, "This function is not valid or not defined");
+//            return LibUtilities::NullBasisKey;
+//        }
+//
+//        const LibUtilities::BasisKey StdExpansion::v_DetFaceBasisKey(const int i, const int k) const
+//        {
+//            ASSERTL0(false, "This function is not valid or not defined");
+//            return LibUtilities::NullBasisKey;
+//        }
 
         int StdExpansion::v_GetFaceNumPoints(const int i) const
         {
@@ -1188,31 +1170,25 @@ namespace Nektar
         }
 
 
-        LibUtilities::PointsKey StdExpansion::v_GetFacePointsKey(const int i, const int j) const
-        {
-            ASSERTL0(false, "This function is not valid or not defined");
-            return LibUtilities::NullPointsKey;
-        }
-
-        LibUtilities::BasisType StdExpansion::v_GetEdgeBasisType(const int i) const
-        {
-            ASSERTL0(false, "This function is not valid or not defined");
-            
-            return LibUtilities::eNoBasisType;
-        }
-
-        const LibUtilities::PointsKey StdExpansion::v_GetNodalPointsKey() const
-        {
-            ASSERTL0(false, "This function is not valid or not defined");
-
-            return LibUtilities::NullPointsKey;
-        }
-
-        LibUtilities::ShapeType StdExpansion::v_DetShapeType() const
-        {
-            ASSERTL0(false, "This expansion does not have a shape type defined");
-            return LibUtilities::eNoShapeType;
-        }
+//        LibUtilities::PointsKey StdExpansion::v_GetFacePointsKey(const int i, const int j) const
+//        {
+//            ASSERTL0(false, "This function is not valid or not defined");
+//            return LibUtilities::NullPointsKey;
+//        }
+//
+//        LibUtilities::BasisType StdExpansion::v_GetEdgeBasisType(const int i) const
+//        {
+//            ASSERTL0(false, "This function is not valid or not defined");
+//
+//            return LibUtilities::eNoBasisType;
+//        }
+//
+//        const LibUtilities::PointsKey StdExpansion::v_GetNodalPointsKey() const
+//        {
+//            ASSERTL0(false, "This function is not valid or not defined");
+//
+//            return LibUtilities::NullPointsKey;
+//        }
 
         boost::shared_ptr<StdExpansion> 
         StdExpansion::v_GetStdExp(void) const
@@ -1220,12 +1196,6 @@ namespace Nektar
             ASSERTL0(false,"This method is not defined for this expansion");
             StdExpansionSharedPtr returnval;
             return returnval;
-        }
-
-        int StdExpansion::v_GetShapeDimension() const
-        {
-            ASSERTL0(false, "This function is not valid or not defined");
-            return 0;
         }
 
         bool StdExpansion::v_IsBoundaryInteriorExpansion()
@@ -1763,17 +1733,17 @@ namespace Nektar
             Array<OneD, NekDouble>       &outarray,
             int npset)
         {
-            LibUtilities::ShapeType shape = DetShapeType();
+            LibUtilities::Foundations::ShapeType shape = m_base->GetShapeType();
             DNekMatSharedPtr  intmat;
 
-            int nqtot = GetTotPoints(); 
+            int nqtot = m_base->GetPoints().GetNumPoints();
             int np = 0;
             if(npset == -1) // use values from basis num points()
             {
                 int nqbase;
-                for(int i = 0; i < m_base.num_elements(); ++i)
+                for(int i = 0; i < m_base->GetNumConstituentBases(); ++i)
                 {
-                    nqbase = m_base[i]->GetNumPoints();
+                    nqbase = m_base->GetConstituentBasis(i).GetPoints().GetNumPoints();
                     np     = std::max(np,nqbase);
                 }
                 
@@ -1792,7 +1762,8 @@ namespace Nektar
             }
 
             NekVector<NekDouble> in (nqtot,inarray,eWrapper);
-            NekVector<NekDouble> out(LibUtilities::GetNumberOfCoefficients(shape,np,np,np),outarray,eWrapper);
+            //NekVector<NekDouble> out(LibUtilities::GetNumberOfCoefficients(shape,np,np,np),outarray,eWrapper);
+            NekVector<NekDouble> out(m_base->GetNumModes(),outarray,eWrapper);
             out = (*intmat) * in;
         }
 
@@ -1807,19 +1778,19 @@ namespace Nektar
             const Array<OneD, const NekDouble> &inarray,
                   Array<OneD, NekDouble>       &outarray)
         {
-            LibUtilities::ShapeType shape = DetShapeType();
-
+            LibUtilities::Foundations::ShapeType shape = m_base->GetShapeType();
+            int nc = m_base->GetNumModes();
             // inarray has to be consistent with NumModes definition
             // There is also a check in GetStdMatrix to see if all
             // modes are of the same size
             ConstFactorMap cmap;
 
-            cmap[eFactorConst] = m_base[0]->GetNumModes();
+            cmap[eFactorConst] = m_base->GetConstituentBasis(0).GetNumModes();
             StdMatrixKey      Ikey(eEquiSpacedToCoeffs, shape, *this,cmap);
             DNekMatSharedPtr  intmat = GetStdMatrix(Ikey);
             
-            NekVector<NekDouble> in (m_ncoeffs, inarray, eWrapper);
-            NekVector<NekDouble> out(m_ncoeffs, outarray,eWrapper);
+            NekVector<NekDouble> in (nc, inarray, eWrapper);
+            NekVector<NekDouble> out(nc, outarray,eWrapper);
             out = (*intmat) * in;
         }
 

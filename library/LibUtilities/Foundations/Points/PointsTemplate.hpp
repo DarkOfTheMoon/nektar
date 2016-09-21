@@ -149,8 +149,11 @@ class Points<TData, TShape, std::tuple<TPts...>> : public PointsBase<TData>
                 }
         }
 
-        virtual Array<OneD, TData> v_GetInterpMatrixData(const int& npts, const Array<OneD, const TData>& pts)
+        virtual Array<OneD, TData> v_GetInterpMatrixData(
+                const int& npts,
+                const Array<OneD, const TData>& pts) const
         {
+            ASSERTL0(false, "Interpolation on composite bases not implemented yet.");
             Array<OneD, TData> interp(0);
             return interp;
         }

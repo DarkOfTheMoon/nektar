@@ -104,9 +104,17 @@ class PointsBase
         }
 
         /**
+         * @brief Get the points key
+         */
+        inline const PointsKey& GetKey() const
+        {
+            return m_key;
+        }
+
+        /**
          * @brief Get the coordinates of one of the component point distributions
          */
-        inline const Array<OneD, const TData> GetZ(const int& i = 0)
+        inline const Array<OneD, const TData>& GetZ(const int& i = 0) const
         {
             return v_GetZ(i);
         }
@@ -114,7 +122,7 @@ class PointsBase
         /**
          * @brief Get the quadrature weights
          */
-        inline const Array<OneD, const TData>& GetW()
+        inline const Array<OneD, const TData>& GetW() const
         {
             return m_weights;
         }
@@ -174,9 +182,9 @@ class PointsBase
          *        to the points distribution provided by \pts.
          */
         inline MatrixType GetInterpMatrix(
-                const Array<OneD, const TData>& pts, const int npts = 1 )
+                const Array<OneD, const TData>& pts, const int npts = 1 ) const
         {
-            NekDouble* t = v_GetInterpMatrix(npts, pts).data();
+            NekDouble* t = v_GetInterpMatrixData(npts, pts).data();
             MatrixType returnval(MemoryManager<NekMatrix<NekDouble> >::AllocateSharedPtr(npts,GetNumPoints(),t));
 
             return returnval;
@@ -192,6 +200,25 @@ class PointsBase
         PointsBase(const PointsKey& pKey) {m_key = pKey;}
         PointsBase() {}
 
+        /**
+         * @brief Allocate necessary storage for a composite point distribution
+         */
+        template<typename... TPts>
+        void AllocateArrays() {
+            const unsigned int npts = GetNumberOfPoints<TPts...>();
+            unsigned int i = 0;
+            for (i = 0; i < traits::points_traits<TPts...>::dimension; ++i)
+            {
+                m_points[i] = Array<OneD, TData>(npts);
+            }
+            m_weights = Array<OneD, TData>(npts);
+            for (i = 0; i < traits::points_traits<TPts...>::dimension; ++i)
+            {
+                m_ddata[i] = MemoryManager<NekMatrix<TData> >::AllocateSharedPtr(npts,npts);
+            }
+        }
+
+    private:
         /**
          * @brief Calculate the total number of points in a composite points
          *        distribution using induction.
@@ -214,28 +241,9 @@ class PointsBase
         }
 
         /**
-         * @brief Allocate necessary storage for a composite point distribution
-         */
-        template<typename... TPts>
-        void AllocateArrays() {
-            const unsigned int npts = GetNumberOfPoints<TPts...>();
-            unsigned int i = 0;
-            for (i = 0; i < traits::points_traits<TPts...>::dimension; ++i)
-            {
-                m_points[i] = Array<OneD, TData>(npts);
-            }
-            m_weights = Array<OneD, TData>(npts);
-            for (i = 0; i < traits::points_traits<TPts...>::dimension; ++i)
-            {
-                m_ddata[i] = MemoryManager<NekMatrix<TData> >::AllocateSharedPtr(npts,npts);
-            }
-        }
-
-    private:
-        /**
          * @copydoc PointsBase::GetZ(const int&)
          */
-        virtual const Array<OneD, const TData> v_GetZ(const int& i)
+        virtual const Array<OneD, const TData>& v_GetZ(const int& i) const
         {
             if (i != 0)
             {
@@ -244,7 +252,10 @@ class PointsBase
             return m_points[0];
         }
 
-        virtual Array<OneD, TData> v_GetInterpMatrixData(const int& npts, const Array<OneD, const TData>& pts) = 0;
+        virtual Array<OneD, TData> v_GetInterpMatrixData(
+                const int& npts,
+                const Array<OneD, const TData>& pts) const = 0;
+
 };
 
 /// A shared pointer to a PointsBase object

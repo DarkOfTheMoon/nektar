@@ -42,6 +42,7 @@
 #include <LibUtilities/BasicUtils/NekFactory.hpp>
 #include <LibUtilities/LibUtilitiesDeclspec.h>
 #include <LibUtilities/Foundations/Foundations.hpp>
+#include <LibUtilities/Foundations/Shape.hpp>
 #include <LibUtilities/Foundations/ShapeTypes.hpp>
 #include <LibUtilities/Foundations/Points/PointsTypes.hpp>
 #include <LibUtilities/Foundations/Basis/BasisTypes.hpp>
@@ -57,6 +58,13 @@ namespace LibUtilities
 {
 namespace Foundations
 {
+
+template<typename TData>
+class BasisBase;
+
+/// A shared pointer to a BasisBase object.
+template<typename TData>
+using BasisSharedPtr = boost::shared_ptr<BasisBase<TData>>;
 
 /**
  * @brief Primary template for composite Points classes.
@@ -136,6 +144,7 @@ class Basis<TData, TShape, std::tuple<TPts...>, std::tuple<TBasis...>>
          * @param pKey The key describing the parameters for the basis.
          */
         Basis(const BasisKey& pKey) : BasisBase<TData>(pKey) {
+            BasisBase<TData>::m_typehash = {typeid(TBasis).hash_code()...};
             // Compute full basis data here...
         }
 
@@ -146,6 +155,23 @@ class Basis<TData, TShape, std::tuple<TPts...>, std::tuple<TBasis...>>
         TupleType x;
 
     private:
+        virtual int v_GetShapeDimension() const
+        {
+            return traits::shape_traits<TShape>::dimension;
+        }
+        virtual int v_GetShapeNumBoundaryElements() const
+        {
+            return traits::shape_traits<TShape>::num_bnd_elmts;
+        }
+        virtual bool v_IsBoundaryInterior() const
+        {
+            return traits::basis_traits<TBasis...>::is_boundary_interior;
+        }
+        virtual bool v_IsCollocation() const
+        {
+            return traits::basis_traits<TBasis...>::is_collocation;
+        }
+
         /**
          * @copydoc BasisBase::GetNumConstitutentBases()
          */
@@ -252,6 +278,22 @@ public: \
  */
 #define BASIS_CORE_FUNCTIONS(x) \
 protected: \
+    virtual int v_GetShapeDimension() const \
+    { \
+        return traits::shape_traits<TShape>::dimension; \
+    } \
+    virtual int v_GetShapeNumBoundaryElements() const \
+    { \
+        return traits::shape_traits<TShape>::num_bnd_elmts; \
+    } \
+    virtual bool v_IsBoundaryInterior() const \
+    { \
+        return traits::basis_traits<x>::is_boundary_interior; \
+    } \
+    virtual bool v_IsCollocation() const \
+    { \
+        return traits::basis_traits<x>::is_collocation; \
+    } \
     virtual int v_GetNumConstituentBases() const \
     { \
         return traits::basis_traits<x>::num_constituent_bases; \

@@ -50,10 +50,8 @@ namespace Nektar
         {
         }
 
-        StdExpansion2D::StdExpansion2D(int numcoeffs,
-                       const LibUtilities::BasisKey &Ba,
-                                       const LibUtilities::BasisKey &Bb):
-        StdExpansion(numcoeffs,2, Ba, Bb)
+        StdExpansion2D::StdExpansion2D(const LibUtilities::Foundations::BasisKey &B):
+        StdExpansion(B)
         {
         }
 
@@ -73,12 +71,12 @@ namespace Nektar
                          Array<OneD, NekDouble> &outarray_d0,
                          Array<OneD, NekDouble> &outarray_d1)
         {
-            int nquad0 = m_base[0]->GetNumPoints();
-            int nquad1 = m_base[1]->GetNumPoints();
+            int nquad0 = m_base->GetConstituentBasis(0).GetPoints().GetNumPoints();
+            int nquad1 = m_base->GetConstituentBasis(1).GetPoints().GetNumPoints();
 
             if (outarray_d0.num_elements() > 0) // calculate du/dx_0
             {
-                DNekMatSharedPtr D0 = m_base[0]->GetD();
+                DNekMatSharedPtr D0 = m_base->GetConstituentBasis(0).GetPoints().GetD();
                 if(inarray.data() == outarray_d0.data())
                 {
                     Array<OneD, NekDouble> wsp(nquad0 * nquad1);
@@ -97,7 +95,7 @@ namespace Nektar
 
             if (outarray_d1.num_elements() > 0) // calculate du/dx_1
             {
-                DNekMatSharedPtr D1 = m_base[1]->GetD();
+                DNekMatSharedPtr D1 = m_base->GetConstituentBasis(1).GetPoints().GetD();
                 if(inarray.data() == outarray_d1.data())
                 {
                     Array<OneD, NekDouble> wsp(nquad0 * nquad1);
@@ -125,8 +123,8 @@ namespace Nektar
 
             LocCoordToLocCollapsed(coords,coll);
             
-            I[0] = m_base[0]->GetI(coll);
-            I[1] = m_base[1]->GetI(coll+1);
+            I[0] = m_base->GetConstituentBasis(0).GetPoints().GetInterpMatrix(coll);
+            I[1] = m_base->GetConstituentBasis(1).GetPoints().GetInterpMatrix(coll+1);
 
             return v_PhysEvaluate(I,physvals);
         }
@@ -137,8 +135,8 @@ namespace Nektar
         {
             NekDouble val;
             int i;
-            int nq0 = m_base[0]->GetNumPoints();
-            int nq1 = m_base[1]->GetNumPoints();
+            int nq0 = m_base->GetConstituentBasis(0).GetPoints().GetNumPoints();
+            int nq1 = m_base->GetConstituentBasis(1).GetPoints().GetNumPoints();
             Array<OneD, NekDouble> wsp1(nq1);
 
             // interpolate first coordinate direction
@@ -164,8 +162,9 @@ namespace Nektar
         {
             int i;
             NekDouble Int = 0.0;
-            int nquad0 = m_base[0]->GetNumPoints();
-            int nquad1 = m_base[1]->GetNumPoints();
+            int nquad0 = m_base->GetConstituentBasis(0).GetPoints().GetNumPoints();
+            int nquad1 = m_base->GetConstituentBasis(1).GetPoints().GetNumPoints();
+
             Array<OneD, NekDouble> tmp(nquad0 * nquad1);
 
             // multiply by integration constants
@@ -218,24 +217,28 @@ namespace Nektar
                 &&!mkey.ConstFactorExists(StdRegions::eFactorSVVCutoffRatio))
             {
                 using std::max;
+                auto& b0 = m_base->GetConstituentBasis(0);
+                auto& b1 = m_base->GetConstituentBasis(1);
+                WARNINGL1(false, "Assuming tensor product of 1D bases.");
 
                 // This implementation is only valid when there are no
                 // coefficients associated to the Laplacian operator
-                int       nquad0  = m_base[0]->GetNumPoints();
-                int       nquad1  = m_base[1]->GetNumPoints();
+                int       nquad0  = b0.GetPoints().GetNumPoints();
+                int       nquad1  = b1.GetPoints().GetNumPoints();
                 int       nqtot   = nquad0*nquad1;
-                int       nmodes0 = m_base[0]->GetNumModes();
-                int       nmodes1 = m_base[1]->GetNumModes();
-                int       wspsize = max(max(max(nqtot,m_ncoeffs),nquad1*nmodes0),nquad0*nmodes1);
+                int       nmodes0 = b0.GetNumModes();
+                int       nmodes1 = b1.GetNumModes();
+                int       nctot   = m_base->GetNumModes();
+                int       wspsize = max(max(max(nqtot,nctot),nquad1*nmodes0),nquad0*nmodes1);
 
-                const Array<OneD, const NekDouble>& base0  = m_base[0]->GetBdata();
-                const Array<OneD, const NekDouble>& base1  = m_base[1]->GetBdata();
+                const Array<OneD, const NekDouble>& base0  = b0.GetBdata();
+                const Array<OneD, const NekDouble>& base1  = b1.GetBdata();
 
                 // Allocate temporary storage
                 Array<OneD,NekDouble> wsp0(4*wspsize);      // size wspsize
                 Array<OneD,NekDouble> wsp1(wsp0+wspsize);   // size 3*wspsize
 
-                if(!(m_base[0]->Collocation() && m_base[1]->Collocation()))
+                if(!(b0.IsCollocation() && b1.IsCollocation()))
                 {
                     // LAPLACIAN MATRIX OPERATION
                     // wsp0 = u       = B   * u_hat
@@ -267,26 +270,29 @@ namespace Nektar
                 &&!mkey.ConstFactorExists(StdRegions::eFactorSVVCutoffRatio))
             {
                 using std::max;
-
-                int       nquad0  = m_base[0]->GetNumPoints();
-                int       nquad1  = m_base[1]->GetNumPoints();
+                auto& b0 = m_base->GetConstituentBasis(0);
+                auto& b1 = m_base->GetConstituentBasis(1);
+                WARNINGL1(false, "Assuming tensor product of 1D bases.");
+                int       nquad0  = b0.GetPoints().GetNumPoints();
+                int       nquad1  = b1.GetPoints().GetNumPoints();
                 int       nqtot   = nquad0*nquad1;
-                int       nmodes0 = m_base[0]->GetNumModes();
-                int       nmodes1 = m_base[1]->GetNumModes();
-                int       wspsize = max(max(max(nqtot,m_ncoeffs),nquad1*nmodes0),
+                int       nmodes0 = b0.GetNumModes();
+                int       nmodes1 = b1.GetNumModes();
+                int       nctot   = m_base->GetNumModes();
+                int       wspsize = max(max(max(nqtot,nctot),nquad1*nmodes0),
                                         nquad0*nmodes1);
                 NekDouble lambda  =
                     mkey.GetConstFactor(StdRegions::eFactorLambda);
 
-                const Array<OneD, const NekDouble>& base0 = m_base[0]->GetBdata();
-                const Array<OneD, const NekDouble>& base1 = m_base[1]->GetBdata();
+                const Array<OneD, const NekDouble>& base0  = b0.GetBdata();
+                const Array<OneD, const NekDouble>& base1  = b1.GetBdata();
 
                 // Allocate temporary storage
                 Array<OneD,NekDouble> wsp0(5*wspsize);      // size wspsize
                 Array<OneD,NekDouble> wsp1(wsp0 + wspsize);  // size wspsize
                 Array<OneD,NekDouble> wsp2(wsp0 + 2*wspsize);// size 3*wspsize
 
-                if (!(m_base[0]->Collocation() && m_base[1]->Collocation()))
+                if (!(b0.IsCollocation() && b1.IsCollocation()))
                 {
                     // MASS MATRIX OPERATION
                     // The following is being calculated:
@@ -309,7 +315,7 @@ namespace Nektar
 
                 // outarray = lambda * outarray + wsp1
                 //          = (lambda * M + L ) * u_hat
-                Vmath::Svtvp(m_ncoeffs, lambda, &outarray[0], 1,
+                Vmath::Svtvp(nctot, lambda, &outarray[0], 1,
                               &wsp1[0], 1, &outarray[0], 1);
             }
             else

@@ -38,15 +38,18 @@
 
 #include <iostream>
 #include <type_traits>
+#include <typeinfo>
 
 #include <loki/Singleton.h>
 #include <LibUtilities/BasicUtils/SharedArray.hpp>
 #include <LibUtilities/BasicUtils/NekFactory.hpp>
+#include <LibUtilities/BasicUtils/NekManager.hpp>
 #include <LibUtilities/LibUtilitiesDeclspec.h>
 #include <LibUtilities/Foundations/Basis/BasisTypes.hpp>
 #include <LibUtilities/Foundations/Basis/BasisKey.h>
+#include <LibUtilities/Foundations/Basis/BasisTemplate.hpp>
 #include <LibUtilities/Foundations/Points.hpp>
-
+#include <LibUtilities/Foundations/Shape.hpp>
 
 namespace Nektar
 {
@@ -54,7 +57,6 @@ namespace LibUtilities
 {
 namespace Foundations
 {
-
 
 /**
  * @brief   Basis base class defining interface and storage for basis data.
@@ -82,6 +84,38 @@ class BasisBase
         };
 
         /**
+         * @brief Get the dimension of the native shape for this basis.
+         */
+        inline int GetShapeDimension() const
+        {
+            return v_GetShapeDimension();
+        }
+
+        /**
+         * @brief Get the number of boundary elements for the native shape.
+         */
+        inline int GetShapeNumBoundaryElements() const
+        {
+            return v_GetShapeNumBoundaryElements();
+        }
+
+        /**
+         * @brief Get whether the basis is of boundary-interior type.
+         */
+        inline bool IsBoundaryInterior() const
+        {
+            return v_IsBoundaryInterior();
+        }
+
+        /**
+         * @brief Get whether the basis is of collocation type
+         */
+        inline bool IsCollocation() const
+        {
+            return v_IsCollocation();
+        }
+
+        /**
          * @brief Get number of constituent bases.
          */
         inline int GetNumConstituentBases() const
@@ -98,11 +132,36 @@ class BasisBase
         }
 
         /**
+         * @copydoc BasisBasis::GetConstituentBasis(int)
+         */
+        inline const BasisBase<TData>& operator[](const int i) const
+        {
+            return GetConstituentBasis(i);
+        }
+
+        /**
+         * Compares the typeid hashcode of this polymorphic
+         */
+        template<typename... TBasisRhs>
+        inline const bool IsOfType() const
+        {
+            return (m_typehash == std::vector<size_t>({typeid(TBasisRhs).hash_code()...}));
+        }
+
+        /**
          * @brief Get the points object associated with this basis.
          */
         inline const PointsBase<TData>& GetPoints() const
         {
             return v_GetPoints();
+        }
+
+        /**
+         * @brief Get the basis key
+         */
+        inline const BasisKey& GetKey() const
+        {
+            return m_key;
         }
 
         /**
@@ -130,13 +189,32 @@ class BasisBase
         }
 
         /**
+         * @brief Returns the maximum number of modes of all constituent
+         *        bases.
+         */
+        inline int GetNumModesMax() const
+        {
+            unsigned int& a = m_key.m_nummodes[0];
+            unsigned int& b = m_key.m_nummodes[1];
+            unsigned int& c = m_key.m_nummodes[2];
+            return (a > b ? (a > c ? a : (b > c ? b : c)) : (b > c ? b : (a > c ? a : c)));
+        }
+
+        /**
          * @brief Get basis matrix data \f$ \phi_j(\xi_i) \f$.
          */
-        virtual const Array<OneD, const TData>& GetBdata() const
+        const Array<OneD, const TData>& GetBdata() const
         {
             return m_bdata;
         }
 
+        /**
+         * @brief Get derivative of basis matrix data.
+         */
+        const Array<OneD, const TData>& GetDbdata() const
+        {
+            return m_dbdata;
+        }
 
     protected:
         /// Holds the basis key for this basis.
@@ -148,12 +226,15 @@ class BasisBase
         /// Holds the derivation matrix for the basis.
         Array<OneD, TData>      m_dbdata;
 
+        /// Type index for comparison
+        std::vector<std::size_t> m_typehash;
+
         /**
          * @brief Constructor. This base class can not be instantiated directly.
          */
         BasisBase(const BasisKey& pKey)
+                : m_key(pKey), m_typehash({0})
         {
-            m_key = pKey;
         }
 
         /**
@@ -181,6 +262,27 @@ class BasisBase
         {
             return traits::basis_traits<TBasis>::get_total_modes(m_key.m_nummodes[i]);
         }
+
+
+        /**
+         * @copydoc BasisBase::GetShapeDimension
+         */
+        virtual int v_GetShapeDimension() const = 0;
+
+        /**
+         * @copydoc BasisBase::GetShapeNumBoundaryElements
+         */
+        virtual int v_GetShapeNumBoundaryElements() const = 0;
+
+        /**
+         * @copydoc BasisBase::IsBoundaryInterior()
+         */
+        virtual bool v_IsBoundaryInterior() const = 0;
+
+        /**
+         * @copydoc BasisBase::IsCollocation()
+         */
+        virtual bool v_IsCollocation() const = 0;
 
         /**
          * @copydoc BasisBase::GetNumConstitutentBases()
@@ -217,7 +319,6 @@ class BasisBase
          * @copydoc BasisBase::GetShapeName()
          */
         virtual std::string v_GetShapeName() const = 0;
-
 };
 
 /// A shared pointer to a BasisBase object.
@@ -232,7 +333,14 @@ using BasisFactory = LibUtilities::NekFactory<
 //template<typename TData>
 LIB_UTILITIES_EXPORT BasisFactory<NekDouble>& GetBasisFactory();
 
+/// A manager for Basis objects
+template<typename TData>
+using BasisManager = LibUtilities::NekManager<
+        BasisKey, BasisBase<TData>, BasisKey::opLess>;
 
+LIB_UTILITIES_EXPORT BasisManager<NekDouble>& GetBasisManager();
+
+BasisSharedPtr<NekDouble> BasisCreator(const BasisKey& pKey);
 
 }
 }

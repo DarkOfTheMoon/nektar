@@ -77,6 +77,10 @@ struct shape_traits_base {
         static const bool is_simplex = false;
         static constexpr char name[] = "";
         static const enum ShapeType type = eNoShapeType;
+        static const int num_vertices = 0;
+        static const int num_edges = 0;
+        static const int num_faces = 0;
+        static const int num_bnd_elmts = 0;
 };
 
 // Primary shape traits template
@@ -90,6 +94,8 @@ struct shape_traits<Segment> : public shape_traits_base {
         static const bool is_simplex = false;
         static constexpr char name[] = "Segment";
         static const enum ShapeType type = eSegment;
+        static const int num_vertices = 2;
+        static const int num_bnd_elmts = 2;
 };
 
 template<>
@@ -98,6 +104,9 @@ struct shape_traits<Triangle> : public shape_traits_base {
         static const bool is_simplex = true;
         static constexpr char name[] = "Triangle";
         static const enum ShapeType type = eTriangle;
+        static const int num_vertices = 3;
+        static const int num_edges = 3;
+        static const int num_bnd_elmts = 3;
 };
 
 template<>
@@ -106,6 +115,9 @@ struct shape_traits<Quadrilateral> : public shape_traits_base {
         static const bool is_simplex = false;
         static constexpr char name[] = "Quadrilateral";
         static const enum ShapeType type = eQuadrilateral;
+        static const int num_vertices = 4;
+        static const int num_edges = 4;
+        static const int num_bnd_elmts = 4;
 };
 
 template<>
@@ -114,6 +126,10 @@ struct shape_traits<Tetrahedron> : public shape_traits_base {
         static const bool is_simplex = true;
         static constexpr char name[] = "Tetrahedron";
         static const enum ShapeType type = eTetrahedron;
+        static const int num_vertices = 4;
+        static const int num_edges = 6;
+        static const int num_faces = 4;
+        static const int num_bnd_elmts = 4;
 };
 
 template<>
@@ -122,6 +138,10 @@ struct shape_traits<Prism> : public shape_traits_base {
         static const bool is_simplex = true;
         static constexpr char name[] = "Prism";
         static const enum ShapeType type = ePrism;
+        static const int num_vertices = 6;
+        static const int num_edges = 9;
+        static const int num_faces = 5;
+        static const int num_bnd_elmts = 5;
 };
 
 template<>
@@ -130,6 +150,10 @@ struct shape_traits<Pyramid> : public shape_traits_base {
         static const bool is_simplex = true;
         static constexpr char name[] = "Pyramid";
         static const enum ShapeType type = ePyramid;
+        static const int num_vertices = 5;
+        static const int num_edges = 8;
+        static const int num_faces = 5;
+        static const int num_bnd_elmts = 5;
 };
 
 template<>
@@ -138,6 +162,10 @@ struct shape_traits<Hexahedron> : public shape_traits_base {
         static const bool is_simplex = false;
         static constexpr char name[] = "Hexahedron";
         static const enum ShapeType type = eHexahedron;
+        static const int num_vertices = 8;
+        static const int num_edges = 12;
+        static const int num_faces = 6;
+        static const int num_bnd_elmts = 6;
 };
 
 }

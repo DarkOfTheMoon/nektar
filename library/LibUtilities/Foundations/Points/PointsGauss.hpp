@@ -91,7 +91,9 @@ class Points<TData, TShape, GaussGaussLegendre> : public PointsBase<TData>
         }
 
     private:
-        virtual Array<OneD, TData> v_GetInterpMatrixData(const int& npts, const Array<OneD, const TData>& pts)
+        virtual Array<OneD, TData> v_GetInterpMatrixData(
+                const int& npts,
+                const Array<OneD, const TData>& pts) const
         {
             Array<OneD, TData> interp(npts * BaseType::m_key.m_numpoints[0]);
             Polylib::Imgj(interp.data(), BaseType::m_points[0].data(),
@@ -142,7 +144,7 @@ class Points<TData, TShape, GaussRadauMLegendre> : public PointsBase<TData>
         }
 
     private:
-        virtual Array<OneD, TData> v_GetInterpMatrixData(const int& npts, const Array<OneD, const TData>& pts)
+        virtual Array<OneD, TData> v_GetInterpMatrixData(const int& npts, const Array<OneD, const TData>& pts) const
         {
             Array<OneD, TData> interp(npts * BaseType::m_key.m_numpoints[0]);
             Polylib::Imgrjm(interp.data(), BaseType::m_points[0].data(),

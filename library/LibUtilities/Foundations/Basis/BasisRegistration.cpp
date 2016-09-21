@@ -68,6 +68,25 @@ static std::string bases[] = {
                                                   "Modified basis with Gauss-Gauss-Legendre on Quadrilateral")
 };
 
+/**
+ * @brief Get the singleton Basis factory.
+ */
+BasisManager<NekDouble>& GetBasisManager()
+{
+    typedef Loki::SingletonHolder<BasisManager<NekDouble>,
+                                  Loki::CreateUsingNew,
+                                  Loki::NoDestroy> Type;
+    // Putting Loki::ClassLevelLockable causes an assertion!
+    return Type::Instance();
+}
+
+BasisSharedPtr<NekDouble> BasisCreator(const BasisKey& pKey)
+{
+    return GetBasisFactory().CreateInstance(pKey.m_id, pKey);
+}
+
+static bool basismaninit = GetBasisManager().RegisterGlobalCreator(boost::bind(BasisCreator, _1));
+
 }
 }
 }

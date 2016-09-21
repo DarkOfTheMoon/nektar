@@ -50,8 +50,7 @@ namespace StdRegions
     {
         public:
             STD_REGIONS_EXPORT StdExpansion2D();
-            STD_REGIONS_EXPORT StdExpansion2D(int numcoeffs, const LibUtilities::BasisKey &Ba,
-                           const LibUtilities::BasisKey &Bb);
+            STD_REGIONS_EXPORT StdExpansion2D(const LibUtilities::Foundations::BasisKey &B);
             STD_REGIONS_EXPORT StdExpansion2D(const StdExpansion2D &T);
             STD_REGIONS_EXPORT virtual ~StdExpansion2D();
 
@@ -184,11 +183,6 @@ namespace StdRegions
         private:
 
             // Virtual Functions ----------------------------------------
-            virtual int v_GetShapeDimension() const
-            {
-                return 2;
-            }
-
             virtual int v_GetNfaces() const
             {
                 return 0;

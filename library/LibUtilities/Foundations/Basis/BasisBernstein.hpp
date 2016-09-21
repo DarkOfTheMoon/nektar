@@ -50,7 +50,7 @@ namespace Foundations
  * @brief Specialisation for Bernstein triangle basis.
  */
 template<typename TData, typename TShape, typename TPts>
-class Basis<TData, TShape, TPts, BernsteinTriangle> : public BasisBase<TData>
+class Basis<TData, TShape, TPts, BernsteinTriangle> : public BasisBase<TData>, public Shape<TShape>
 {
         BASIS_DEFINES_VALIDATION(BernsteinTriangle)
         BASIS_CORE_FUNCTIONS(BernsteinTriangle)

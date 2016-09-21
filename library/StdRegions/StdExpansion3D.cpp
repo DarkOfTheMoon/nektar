@@ -49,11 +49,8 @@ namespace Nektar
         {
         }
         
-        StdExpansion3D::StdExpansion3D(int                           numcoeffs, 
-                                       const LibUtilities::BasisKey &Ba,
-                                       const LibUtilities::BasisKey &Bb, 
-                                       const LibUtilities::BasisKey &Bc) :
-            StdExpansion(numcoeffs,3,Ba,Bb,Bc)
+        StdExpansion3D::StdExpansion3D(const LibUtilities::Foundations::BasisKey &B) :
+            StdExpansion(B)
         {
         }
 
@@ -71,9 +68,9 @@ namespace Nektar
                   Array<OneD,       NekDouble> &out_dy,
                   Array<OneD,       NekDouble> &out_dz)
         {
-            const int nquad0 = m_base[0]->GetNumPoints();
-            const int nquad1 = m_base[1]->GetNumPoints();
-            const int nquad2 = m_base[2]->GetNumPoints();
+            const int nquad0 = m_base->GetConstituentBasis(0).GetPoints().GetNumPoints();
+            const int nquad1 = m_base->GetConstituentBasis(1).GetPoints().GetNumPoints();
+            const int nquad2 = m_base->GetConstituentBasis(2).GetPoints().GetNumPoints();
 
             Array<OneD, NekDouble> wsp(nquad0*nquad1*nquad2);
             
@@ -82,7 +79,7 @@ namespace Nektar
             
             if (out_dx.num_elements() > 0)
             {
-                NekDouble  *D0 = &((m_base[0]->GetD())->GetPtr())[0];
+                NekDouble  *D0 = &((m_base->GetConstituentBasis(0).GetPoints().GetD())->GetPtr())[0];
 
                 Blas::Dgemm('N','N', nquad0,nquad1*nquad2,nquad0,1.0,
                             D0,nquad0,&wsp[0],nquad0,0.0,&out_dx[0],nquad0);
@@ -90,7 +87,7 @@ namespace Nektar
 
             if (out_dy.num_elements() > 0) 
             {
-                NekDouble   *D1 = &((m_base[1]->GetD())->GetPtr())[0];
+                NekDouble   *D1 = &((m_base->GetConstituentBasis(1).GetPoints().GetD())->GetPtr())[0];
                 for (int j = 0; j < nquad2; ++j)
                 {
                     Blas::Dgemm('N', 'T', nquad0, nquad1,      nquad1,
@@ -102,7 +99,7 @@ namespace Nektar
 
             if (out_dz.num_elements() > 0) 
             {
-                NekDouble     *D2 = &((m_base[2]->GetD())->GetPtr())[0];
+                NekDouble     *D2 = &((m_base->GetConstituentBasis(2).GetPoints().GetD())->GetPtr())[0];
 
                 Blas::Dgemm('N','T',nquad0*nquad1,nquad2,nquad2,1.0,
                             &wsp[0],nquad0*nquad1,D2,nquad2,0.0,&out_dz[0],
@@ -157,9 +154,9 @@ namespace Nektar
             LocCoordToLocCollapsed(coords,eta);
 
             // Get Lagrange interpolants. 
-            I[0] = m_base[0]->GetI(eta);
-            I[1] = m_base[1]->GetI(eta+1);
-            I[2] = m_base[2]->GetI(eta+2);
+            I[0] = m_base->GetConstituentBasis(0).GetPoints().GetInterpMatrix(eta);
+            I[1] = m_base->GetConstituentBasis(1).GetPoints().GetInterpMatrix(eta+1);
+            I[2] = m_base->GetConstituentBasis(2).GetPoints().GetInterpMatrix(eta+2);
 
             return v_PhysEvaluate(I,physvals);
         }
@@ -170,9 +167,9 @@ namespace Nektar
         {
             NekDouble  value;
             
-            int Qx = m_base[0]->GetNumPoints();
-            int Qy = m_base[1]->GetNumPoints();
-            int Qz = m_base[2]->GetNumPoints();
+            int Qx = m_base->GetConstituentBasis(0).GetPoints().GetNumPoints();
+            int Qy = m_base->GetConstituentBasis(1).GetPoints().GetNumPoints();
+            int Qz = m_base->GetConstituentBasis(2).GetPoints().GetNumPoints();
             
             Array<OneD, NekDouble> sumFactorization_qr = Array<OneD, NekDouble>(Qy*Qz);
             Array<OneD, NekDouble> sumFactorization_r  = Array<OneD, NekDouble>(Qz);
@@ -213,18 +210,19 @@ namespace Nektar
             {
                 // This implementation is only valid when there are no
                 // coefficients associated to the Laplacian operator
-                int nqtot = GetTotPoints();
+                int nqtot = m_base->GetPoints().GetNumPoints();
 
-                const Array<OneD, const NekDouble>& base0  = m_base[0]->GetBdata();
-                const Array<OneD, const NekDouble>& base1  = m_base[1]->GetBdata();
-                const Array<OneD, const NekDouble>& base2  = m_base[2]->GetBdata();
+                const Array<OneD, const NekDouble>& base0  = m_base->GetConstituentBasis(0).GetBdata();
+                const Array<OneD, const NekDouble>& base1  = m_base->GetConstituentBasis(1).GetBdata();
+                const Array<OneD, const NekDouble>& base2  = m_base->GetConstituentBasis(2).GetBdata();
 
                 // Allocate temporary storage
                 Array<OneD,NekDouble> wsp0(7*nqtot);
                 Array<OneD,NekDouble> wsp1(wsp0+nqtot);
 
-                if(!(m_base[0]->Collocation() && m_base[1]->Collocation() &&
-                     m_base[2]->Collocation()))
+                if(!(m_base->GetConstituentBasis(0).IsCollocation() &&
+                     m_base->GetConstituentBasis(1).IsCollocation() &&
+                     m_base->GetConstituentBasis(2).IsCollocation()))
                 {
                     // LAPLACIAN MATRIX OPERATION
                     // wsp0 = u       = B   * u_hat
@@ -253,28 +251,31 @@ namespace Nektar
             if(mkey.GetNVarCoeff() == 0)
             {
                 using std::max;
-
-                int nquad0  = m_base[0]->GetNumPoints();
-                int nquad1  = m_base[1]->GetNumPoints();
-                int nquad2  = m_base[2]->GetNumPoints();
-                int nmodes0 = m_base[0]->GetNumModes();
-                int nmodes1 = m_base[1]->GetNumModes();
-                int nmodes2 = m_base[2]->GetNumModes();
+                auto& b0    = m_base->GetConstituentBasis(0);
+                auto& b1    = m_base->GetConstituentBasis(1);
+                auto& b2    = m_base->GetConstituentBasis(2);
+                int nquad0  = b0.GetPoints().GetNumPoints();
+                int nquad1  = b1.GetPoints().GetNumPoints();
+                int nquad2  = b2.GetPoints().GetNumPoints();
+                int nmodes0 = b0.GetNumModes();
+                int nmodes1 = b1.GetNumModes();
+                int nmodes2 = b2.GetNumModes();
+                int nctot   = m_base->GetNumModes();
                 int wspsize = max(nquad0*nmodes2*(nmodes1+nquad1),
                                   nquad0*nquad1*(nquad2+nmodes0)+
                                   nmodes0*nmodes1*nquad2);
 
                 NekDouble lambda  = mkey.GetConstFactor(StdRegions::eFactorLambda);
 
-                const Array<OneD, const NekDouble>& base0 = m_base[0]->GetBdata ();
-                const Array<OneD, const NekDouble>& base1 = m_base[1]->GetBdata ();
-                const Array<OneD, const NekDouble>& base2 = m_base[2]->GetBdata ();
+                const Array<OneD, const NekDouble>& base0 = b0.GetBdata ();
+                const Array<OneD, const NekDouble>& base1 = b1.GetBdata ();
+                const Array<OneD, const NekDouble>& base2 = b2.GetBdata ();
                 Array<OneD,NekDouble> wsp0(8*wspsize);
                 Array<OneD,NekDouble> wsp1(wsp0+1*wspsize);
                 Array<OneD,NekDouble> wsp2(wsp0+2*wspsize);
 
-                if(!(m_base[0]->Collocation() && m_base[1]->Collocation() &&
-                     m_base[2]->Collocation()))
+                if(!(b0.IsCollocation() && b1.IsCollocation() &&
+                     b2.IsCollocation()))
                 {
                     // MASS MATRIX OPERATION
                     // The following is being calculated:
@@ -298,7 +299,7 @@ namespace Nektar
 
                 // outarray = lambda * outarray + wsp1
                 //          = (lambda * M + L ) * u_hat
-                Vmath::Svtvp(m_ncoeffs,lambda,&outarray[0],1,&wsp1[0],1,
+                Vmath::Svtvp(nctot,lambda,&outarray[0],1,&wsp1[0],1,
                              &outarray[0],1);
             }
             else
@@ -326,8 +327,8 @@ namespace Nektar
         NekDouble StdExpansion3D::v_Integral(
             const Array<OneD, const NekDouble>& inarray)
         {
-            const int nqtot = GetTotPoints();
-            Array<OneD, NekDouble> tmp(GetTotPoints());
+            const int nqtot = m_base->GetPoints().GetNumPoints();
+            Array<OneD, NekDouble> tmp(m_base->GetPoints().GetNumPoints());
             MultiplyByStdQuadratureMetric(inarray, tmp);
             return Vmath::Vsum(nqtot, tmp, 1);
         }
@@ -348,177 +349,177 @@ namespace Nektar
             return m_negatedNormals[face];
         }
 
-        LibUtilities::BasisKey EvaluateQuadFaceBasisKey(
-            const int                     facedir,
-            const LibUtilities::BasisType faceDirBasisType,
-            const int                     numpoints,
-            const int                     nummodes)
-        {
-
-            switch(faceDirBasisType)
-            {
-                case LibUtilities::eModified_A:
-                {
-                    const LibUtilities::PointsKey pkey(
-                        numpoints, LibUtilities::eGaussLobattoLegendre);
-                    return LibUtilities::BasisKey(
-                        LibUtilities::eModified_A, nummodes, pkey);
-                }
-                case LibUtilities::eModified_B:
-                case LibUtilities::eModified_C:
-                {
-                    const LibUtilities::PointsKey pkey(
-                        numpoints+1, LibUtilities::eGaussLobattoLegendre);
-                    return LibUtilities::BasisKey(
-                        LibUtilities::eModified_A, nummodes, pkey);
-                }
-                case LibUtilities::eGLL_Lagrange:
-                {
-                    const LibUtilities::PointsKey pkey(
-                        numpoints, LibUtilities::eGaussLobattoLegendre);
-                    return LibUtilities::BasisKey(
-                        LibUtilities::eGLL_Lagrange, nummodes, pkey);
-                }
-                case LibUtilities::eOrtho_A:
-                {
-                    const LibUtilities::PointsKey pkey(
-                        numpoints, LibUtilities::eGaussLobattoLegendre);
-                    return LibUtilities::BasisKey(
-                        LibUtilities::eOrtho_A, nummodes, pkey);
-                }
-                case LibUtilities::eOrtho_B:
-                case LibUtilities::eOrtho_C:
-                {
-                    const LibUtilities::PointsKey pkey(
-                        numpoints+1, LibUtilities::eGaussLobattoLegendre);
-                    return LibUtilities::BasisKey(
-                        LibUtilities::eOrtho_A, nummodes, pkey);
-                }
-                default:
-                {
-                    ASSERTL0(false, "expansion type unknown");
-                    break;
-                }
-            }
-
-            // Keep things happy by returning a value.
-            return LibUtilities::NullBasisKey;
-        }
-
-        LibUtilities::BasisKey EvaluateTriFaceBasisKey(
-            const int                     facedir,
-            const LibUtilities::BasisType faceDirBasisType,
-            const int                     numpoints,
-            const int                     nummodes)
-        {
-            switch(faceDirBasisType)
-            {
-                case LibUtilities::eModified_A:
-                {
-                    const LibUtilities::PointsKey pkey(
-                        numpoints, LibUtilities::eGaussLobattoLegendre);
-                    return LibUtilities::BasisKey(
-                        LibUtilities::eModified_A, nummodes, pkey);
-                }
-                case LibUtilities::eModified_B:
-                case LibUtilities::eModified_C:
-                {
-                    switch (facedir)
-                    {
-                        case 0:
-                        {
-                            const LibUtilities::PointsKey pkey(
-                                numpoints+1,
-                                LibUtilities::eGaussLobattoLegendre);
-                            return LibUtilities::BasisKey(
-                                LibUtilities::eModified_A, nummodes, pkey);
-                        }
-                        case 1:
-                        {
+//        LibUtilities::BasisKey EvaluateQuadFaceBasisKey(
+//            const int                     facedir,
+//            const LibUtilities::BasisType faceDirBasisType,
+//            const int                     numpoints,
+//            const int                     nummodes)
+//        {
+//
+//            switch(faceDirBasisType)
+//            {
+//                case LibUtilities::eModified_A:
+//                {
+//                    const LibUtilities::PointsKey pkey(
+//                        numpoints, LibUtilities::eGaussLobattoLegendre);
+//                    return LibUtilities::BasisKey(
+//                        LibUtilities::eModified_A, nummodes, pkey);
+//                }
+//                case LibUtilities::eModified_B:
+//                case LibUtilities::eModified_C:
+//                {
+//                    const LibUtilities::PointsKey pkey(
+//                        numpoints+1, LibUtilities::eGaussLobattoLegendre);
+//                    return LibUtilities::BasisKey(
+//                        LibUtilities::eModified_A, nummodes, pkey);
+//                }
+//                case LibUtilities::eGLL_Lagrange:
+//                {
+//                    const LibUtilities::PointsKey pkey(
+//                        numpoints, LibUtilities::eGaussLobattoLegendre);
+//                    return LibUtilities::BasisKey(
+//                        LibUtilities::eGLL_Lagrange, nummodes, pkey);
+//                }
+//                case LibUtilities::eOrtho_A:
+//                {
+//                    const LibUtilities::PointsKey pkey(
+//                        numpoints, LibUtilities::eGaussLobattoLegendre);
+//                    return LibUtilities::BasisKey(
+//                        LibUtilities::eOrtho_A, nummodes, pkey);
+//                }
+//                case LibUtilities::eOrtho_B:
+//                case LibUtilities::eOrtho_C:
+//                {
+//                    const LibUtilities::PointsKey pkey(
+//                        numpoints+1, LibUtilities::eGaussLobattoLegendre);
+//                    return LibUtilities::BasisKey(
+//                        LibUtilities::eOrtho_A, nummodes, pkey);
+//                }
+//                default:
+//                {
+//                    ASSERTL0(false, "expansion type unknown");
+//                    break;
+//                }
+//            }
+//
+//            // Keep things happy by returning a value.
+//            return LibUtilities::NullBasisKey;
+//        }
+//
+//        LibUtilities::BasisKey EvaluateTriFaceBasisKey(
+//            const int                     facedir,
+//            const LibUtilities::BasisType faceDirBasisType,
+//            const int                     numpoints,
+//            const int                     nummodes)
+//        {
+//            switch(faceDirBasisType)
+//            {
+//                case LibUtilities::eModified_A:
+//                {
+//                    const LibUtilities::PointsKey pkey(
+//                        numpoints, LibUtilities::eGaussLobattoLegendre);
+//                    return LibUtilities::BasisKey(
+//                        LibUtilities::eModified_A, nummodes, pkey);
+//                }
+//                case LibUtilities::eModified_B:
+//                case LibUtilities::eModified_C:
+//                {
+//                    switch (facedir)
+//                    {
+//                        case 0:
+//                        {
 //                            const LibUtilities::PointsKey pkey(
 //                                numpoints+1,
 //                                LibUtilities::eGaussLobattoLegendre);
-                            const LibUtilities::PointsKey pkey(
-	 			numpoints, 	
-				LibUtilities::eGaussRadauMAlpha1Beta0);
-                            return LibUtilities::BasisKey(
-                                LibUtilities::eModified_B, nummodes, pkey);
-                        }
-                        default:
-                        {
-
-                            ASSERTL0(false,"invalid value to flag");
-                            break;
-                        }
-                    }
-                }
-
-                case LibUtilities::eGLL_Lagrange:
-                {
-                    switch (facedir)
-                    {
-                        case 0:
-                        {
-                            const LibUtilities::PointsKey pkey(
-                                numpoints,
-                                LibUtilities::eGaussLobattoLegendre);
-                            return LibUtilities::BasisKey(
-                                LibUtilities::eOrtho_A, nummodes, pkey);
-                        }
-                        case 1:
-                        {
-                            const LibUtilities::PointsKey pkey(
-                                numpoints,
-                                LibUtilities::eGaussRadauMAlpha1Beta0);
-                            return LibUtilities::BasisKey(
-                                LibUtilities::eOrtho_B, nummodes, pkey);
-                        }
-                        default:
-                        {
-                            ASSERTL0(false,"invalid value to flag");
-                            break;
-                        }
-                    }
-                }
-
-                case LibUtilities::eOrtho_A:
-                case LibUtilities::eOrtho_B:
-                case LibUtilities::eOrtho_C:
-                {
-                    switch (facedir)
-                    {
-                        case 0:
-                        {
-                            const LibUtilities::PointsKey pkey(
-                                numpoints,
-                                LibUtilities::eGaussLobattoLegendre);
-                            return LibUtilities::BasisKey(
-                                LibUtilities::eOrtho_A, nummodes, pkey);
-                        }
-                        case 1:
-                        {
-                            const LibUtilities::PointsKey pkey(
-                                numpoints,
-                                LibUtilities::eGaussRadauMAlpha1Beta0);
-                            return LibUtilities::BasisKey(
-                                LibUtilities::eOrtho_B, nummodes, pkey);
-                        }
-                        default:
-                        {
-                            ASSERTL0(false,"invalid value to flag");
-                            break;
-                        }
-                    }
-                }
-                default:
-                {
-                    ASSERTL0(false,"expansion type unknown");
-                    break;
-                }
-            }
-
-            // Keep things happy by returning a value.
-            return LibUtilities::NullBasisKey; 
-        }
+//                            return LibUtilities::BasisKey(
+//                                LibUtilities::eModified_A, nummodes, pkey);
+//                        }
+//                        case 1:
+//                        {
+////                            const LibUtilities::PointsKey pkey(
+////                                numpoints+1,
+////                                LibUtilities::eGaussLobattoLegendre);
+//                            const LibUtilities::PointsKey pkey(
+//	 			numpoints,
+//				LibUtilities::eGaussRadauMAlpha1Beta0);
+//                            return LibUtilities::BasisKey(
+//                                LibUtilities::eModified_B, nummodes, pkey);
+//                        }
+//                        default:
+//                        {
+//
+//                            ASSERTL0(false,"invalid value to flag");
+//                            break;
+//                        }
+//                    }
+//                }
+//
+//                case LibUtilities::eGLL_Lagrange:
+//                {
+//                    switch (facedir)
+//                    {
+//                        case 0:
+//                        {
+//                            const LibUtilities::PointsKey pkey(
+//                                numpoints,
+//                                LibUtilities::eGaussLobattoLegendre);
+//                            return LibUtilities::BasisKey(
+//                                LibUtilities::eOrtho_A, nummodes, pkey);
+//                        }
+//                        case 1:
+//                        {
+//                            const LibUtilities::PointsKey pkey(
+//                                numpoints,
+//                                LibUtilities::eGaussRadauMAlpha1Beta0);
+//                            return LibUtilities::BasisKey(
+//                                LibUtilities::eOrtho_B, nummodes, pkey);
+//                        }
+//                        default:
+//                        {
+//                            ASSERTL0(false,"invalid value to flag");
+//                            break;
+//                        }
+//                    }
+//                }
+//
+//                case LibUtilities::eOrtho_A:
+//                case LibUtilities::eOrtho_B:
+//                case LibUtilities::eOrtho_C:
+//                {
+//                    switch (facedir)
+//                    {
+//                        case 0:
+//                        {
+//                            const LibUtilities::PointsKey pkey(
+//                                numpoints,
+//                                LibUtilities::eGaussLobattoLegendre);
+//                            return LibUtilities::BasisKey(
+//                                LibUtilities::eOrtho_A, nummodes, pkey);
+//                        }
+//                        case 1:
+//                        {
+//                            const LibUtilities::PointsKey pkey(
+//                                numpoints,
+//                                LibUtilities::eGaussRadauMAlpha1Beta0);
+//                            return LibUtilities::BasisKey(
+//                                LibUtilities::eOrtho_B, nummodes, pkey);
+//                        }
+//                        default:
+//                        {
+//                            ASSERTL0(false,"invalid value to flag");
+//                            break;
+//                        }
+//                    }
+//                }
+//                default:
+//                {
+//                    ASSERTL0(false,"expansion type unknown");
+//                    break;
+//                }
+//            }
+//
+//            // Keep things happy by returning a value.
+//            return LibUtilities::NullBasisKey;
+//        }
     }//end namespace
 }//end namespace

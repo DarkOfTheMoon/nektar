@@ -54,8 +54,7 @@ namespace Nektar
 
         public:
             STD_REGIONS_EXPORT StdExpansion3D();
-            STD_REGIONS_EXPORT StdExpansion3D(int numcoeffs, const LibUtilities::BasisKey &Ba,
-                           const LibUtilities::BasisKey &Bb, const LibUtilities::BasisKey &Bc);
+            STD_REGIONS_EXPORT StdExpansion3D(const LibUtilities::Foundations::BasisKey &B);
             STD_REGIONS_EXPORT StdExpansion3D(const StdExpansion3D &T);
             STD_REGIONS_EXPORT virtual ~StdExpansion3D();
 
@@ -205,12 +204,6 @@ namespace Nektar
             std::map<int, bool> m_negatedNormals;
 
         private:
-
-            virtual int v_GetShapeDimension() const
-            {
-                return 3;
-            }
-
             virtual int v_GetCoordim(void)
             {
                 return 3;
@@ -220,17 +213,17 @@ namespace Nektar
             
         };
 
-        STD_REGIONS_EXPORT LibUtilities::BasisKey EvaluateTriFaceBasisKey(
-            const int                     facedir,
-            const LibUtilities::BasisType faceDirBasisType,
-            const int                     numpoints,
-            const int                     nummodes);
-
-        STD_REGIONS_EXPORT LibUtilities::BasisKey EvaluateQuadFaceBasisKey(
-            const int                     facedir,
-            const LibUtilities::BasisType faceDirBasisType,
-            const int                     numpoints,
-            const int                     nummodes);
+//        STD_REGIONS_EXPORT LibUtilities::BasisKey EvaluateTriFaceBasisKey(
+//            const int                     facedir,
+//            const LibUtilities::BasisType faceDirBasisType,
+//            const int                     numpoints,
+//            const int                     nummodes);
+//
+//        STD_REGIONS_EXPORT LibUtilities::BasisKey EvaluateQuadFaceBasisKey(
+//            const int                     facedir,
+//            const LibUtilities::BasisType faceDirBasisType,
+//            const int                     numpoints,
+//            const int                     nummodes);
     } //end of namespace
 } //end of namespace
 

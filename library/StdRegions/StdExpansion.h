@@ -74,10 +74,8 @@ namespace Nektar
             STD_REGIONS_EXPORT StdExpansion();
 
             /** \brief Constructor */
-            STD_REGIONS_EXPORT StdExpansion(const int numcoeffs, const int numbases,
-                         const LibUtilities::BasisKey &Ba = LibUtilities::NullBasisKey,
-                         const LibUtilities::BasisKey &Bb = LibUtilities::NullBasisKey,
-                         const LibUtilities::BasisKey &Bc = LibUtilities::NullBasisKey);
+            STD_REGIONS_EXPORT StdExpansion(
+                 const LibUtilities::Foundations::BasisKey &Ba);
 
 
             /** \brief Copy Constructor */
@@ -89,160 +87,13 @@ namespace Nektar
 
             // Standard Expansion Routines Applicable Regardless of Region
 
-            /** \brief This function returns the number of 1D bases used in
-             *  the expansion
-             *
-             *  \return returns the number of 1D bases used in the expansion,
-             *  which is equal to number dimension of the expansion
-             */
-            inline int GetNumBases() const
-            {
-                return m_base.num_elements();
-            }
-
             /** \brief This function gets the shared point to basis
              *
              *  \return returns the shared pointer to the bases
              */
-            inline const Array<OneD, const LibUtilities::BasisSharedPtr>& GetBase() const
+            inline const LibUtilities::Foundations::BasisSharedPtr<NekDouble>& GetBase() const
             {
-                return(m_base);
-            }
-
-            /** \brief This function gets the shared point to basis in
-             *  the \a dir direction
-             *
-             *  \return returns the shared pointer to the basis in
-             *  directin \a dir
-             */
-            inline const LibUtilities::BasisSharedPtr& GetBasis(int dir) const
-            {
-                ASSERTL1(dir < m_base.num_elements(),
-                         "dir is larger than number of bases");
-                return(m_base[dir]);
-            }
-
-            /** \brief This function returns the total number of coefficients
-             *  used in the expansion
-             *
-             *  \return returns the total number of coefficients (which is
-             *  equivalent to the total number of modes) used in the expansion
-             */
-            inline int GetNcoeffs(void) const
-            {
-                return(m_ncoeffs);
-            }
-
-            /** \brief This function returns the total number of quadrature
-             *  points used in the element
-             *
-             *  \return returns the total number of quadrature points
-             */
-            inline  int GetTotPoints() const
-            {
-                int i;
-                int nqtot = 1;
-
-                for(i=0; i < m_base.num_elements(); ++i)
-                {
-                    nqtot *= m_base[i]->GetNumPoints();
-                }
-
-                return  nqtot;
-            }
-
-
-            /** \brief This function returns the type of basis used in the \a dir
-             *  direction
-             *
-             *  The different types of bases implemented in the code are defined
-             *  in the LibUtilities::BasisType enumeration list. As a result, the
-             *  function will return one of the types of this enumeration list.
-             *
-             *  \param dir the direction
-             *  \return returns the type of basis used in the \a dir direction
-             */
-            inline  LibUtilities::BasisType GetBasisType(const int dir) const
-            {
-                ASSERTL1(dir < m_base.num_elements(), "dir is larger than m_numbases");
-                return(m_base[dir]->GetBasisType());
-            }
-
-            /** \brief This function returns the number of expansion modes
-             *  in the \a dir direction
-             *
-             *  \param dir the direction
-             *  \return returns the number of expansion modes in the \a dir
-             *  direction
-             */
-            inline int GetBasisNumModes(const int dir) const
-            {
-                ASSERTL1(dir < m_base.num_elements(),"dir is larger than m_numbases");
-                return(m_base[dir]->GetNumModes());
-            }
-
-
-            /** \brief This function returns the maximum number of
-             *  expansion modes over all local directions
-             *
-             *  \return returns the maximum number of expansion modes
-             *  over all local directions
-             */
-            inline int EvalBasisNumModesMax(void) const
-            {
-                int i;
-                int returnval = 0;
-
-                for(i = 0; i < m_base.num_elements(); ++i)
-                {
-                    returnval = std::max(returnval, m_base[i]->GetNumModes());
-                }
-
-                return returnval;
-            }
-
-            /** \brief This function returns the type of quadrature points used
-             *  in the \a dir direction
-             *
-             *  The different types of quadrature points implemented in the code
-             *  are defined in the LibUtilities::PointsType enumeration list.
-             *  As a result, the function will return one of the types of this
-             *  enumeration list.
-             *
-             *  \param dir the direction
-             *  \return returns the type of quadrature points  used in the \a dir
-             *  direction
-             */
-            inline LibUtilities::PointsType GetPointsType(const int dir)  const
-            {
-                ASSERTL1(dir < m_base.num_elements(), "dir is larger than m_numbases");
-                return(m_base[dir]->GetPointsType());
-            }
-
-            /** \brief This function returns the number of quadrature points
-             *  in the \a dir direction
-             *
-             *  \param dir the direction
-             *  \return returns the number of quadrature points in the \a dir
-             *  direction
-             */
-            inline int GetNumPoints(const int dir) const
-            {
-                ASSERTL1(dir < m_base.num_elements() || dir == 0,
-                         "dir is larger than m_numbases");
-                return(m_base.num_elements() > 0 ? m_base[dir]->GetNumPoints() : 1);
-            }
-
-            /** \brief This function returns a pointer to the array containing
-             *  the quadrature points in \a dir direction
-             *
-             *  \param dir the direction
-             *  \return returns a pointer to the array containing
-             *  the quadrature points in \a dir direction
-             */
-            inline const Array<OneD, const NekDouble>& GetPoints(const int dir) const
-            {
-                return m_base[dir]->GetZ();
+                return m_base;
             }
 
 
@@ -316,15 +167,15 @@ namespace Nektar
                 return v_DetCartesianDirOfEdge(edge);
             }
 
-            const LibUtilities::BasisKey DetEdgeBasisKey(const int i) const
-            {
-                return v_DetEdgeBasisKey(i);
-            }
-
-            const LibUtilities::BasisKey DetFaceBasisKey(const int i, const int k) const
-            {
-                return v_DetFaceBasisKey(i, k);
-            }
+//            const LibUtilities::BasisKey DetEdgeBasisKey(const int i) const
+//            {
+//                return v_DetEdgeBasisKey(i);
+//            }
+//
+//            const LibUtilities::BasisKey DetFaceBasisKey(const int i, const int k) const
+//            {
+//                return v_DetFaceBasisKey(i, k);
+//            }
             /**
              * \brief This function returns the number of quadrature points
              * belonging to the \a i-th face.
@@ -382,10 +233,10 @@ namespace Nektar
             }
 
 
-            LibUtilities::PointsKey GetFacePointsKey(const int i, const int j) const
-            {
-                return v_GetFacePointsKey(i, j);
-            }
+//            LibUtilities::PointsKey GetFacePointsKey(const int i, const int j) const
+//            {
+//                return v_GetFacePointsKey(i, j);
+//            }
 
             int NumBndryCoeffs(void)  const
             {
@@ -397,35 +248,35 @@ namespace Nektar
                 return v_NumDGBndryCoeffs();
             }
 
-            /** \brief This function returns the type of expansion basis on the
-             *  \a i-th edge
-             *
-             *  This function is a wrapper around the virtual function
-             *  \a v_GetEdgeBasisType()
-             *
-             *  The different types of bases implemented in the code are defined
-             *  in the LibUtilities::BasisType enumeration list. As a result, the
-             *  function will return one of the types of this enumeration list.
-             *
-             *  \param i specifies which edge
-             *  \return returns the expansion basis on the \a i-th edge
-             */
-            LibUtilities::BasisType GetEdgeBasisType(const int i) const
-            {
-                return v_GetEdgeBasisType(i);
-            }
-
-            /** \brief This function returns the type of expansion
-             *  Nodal point type if defined 
-             *
-             *  This function is a wrapper around the virtual function
-             *  \a v_GetNodalPointsKey()
-             *
-             */
-            const LibUtilities::PointsKey GetNodalPointsKey() const
-            {
-                return v_GetNodalPointsKey();
-            };
+//            /** \brief This function returns the type of expansion basis on the
+//             *  \a i-th edge
+//             *
+//             *  This function is a wrapper around the virtual function
+//             *  \a v_GetEdgeBasisType()
+//             *
+//             *  The different types of bases implemented in the code are defined
+//             *  in the LibUtilities::BasisType enumeration list. As a result, the
+//             *  function will return one of the types of this enumeration list.
+//             *
+//             *  \param i specifies which edge
+//             *  \return returns the expansion basis on the \a i-th edge
+//             */
+//            LibUtilities::BasisType GetEdgeBasisType(const int i) const
+//            {
+//                return v_GetEdgeBasisType(i);
+//            }
+//
+//            /** \brief This function returns the type of expansion
+//             *  Nodal point type if defined
+//             *
+//             *  This function is a wrapper around the virtual function
+//             *  \a v_GetNodalPointsKey()
+//             *
+//             */
+//            const LibUtilities::PointsKey GetNodalPointsKey() const
+//            {
+//                return v_GetNodalPointsKey();
+//            };
 
             /** \brief This function returns the number of faces of the
              *  expansion domain
@@ -449,38 +300,12 @@ namespace Nektar
              */
             int GetNtrace() const
             {
-                const int nBase = m_base.num_elements();
-                return
-                    nBase == 1 ? 2 :
-                    nBase == 2 ? GetNedges() :
-                    nBase == 3 ? GetNfaces() : 0;
+                return m_base->GetShapeNumBoundaryElements();
             }
 
-            /** \brief This function returns the shape of the expansion domain
-             *
-             *  This function is a wrapper around the virtual function
-             *  \a v_DetShapeType()
-             *
-             *  The different shape types implemented in the code are defined
-             *  in the ::ShapeType enumeration list. As a result, the
-             *  function will return one of the types of this enumeration list.
-             *
-             *  \return returns the shape of the expansion domain
-             */
-            LibUtilities::ShapeType DetShapeType() const
-            {
-                return v_DetShapeType();
-            }
-            
             boost::shared_ptr<StdExpansion> GetStdExp(void) const
             {
                 return v_GetStdExp();
-            }
-
-
-            int GetShapeDimension() const
-            {
-                return v_GetShapeDimension();
             }
 
             bool IsBoundaryInteriorExpansion()
@@ -1325,15 +1150,15 @@ namespace Nektar
                 return v_GetSurfaceNormal(id);
             }
 
-            const LibUtilities::PointsKeyVector GetPointsKeys() const
-            {
-                LibUtilities::PointsKeyVector p;
-                for (int i = 0; i < m_base.num_elements(); ++i)
-                {
-                    p.push_back(m_base[i]->GetPointsKey());
-                }
-                return p;
-            }
+//            const LibUtilities::PointsKeyVector GetPointsKeys() const
+//            {
+//                LibUtilities::PointsKeyVector p;
+//                for (int i = 0; i < m_base.num_elements(); ++i)
+//                {
+//                    p.push_back(m_base[i]->GetPointsKey());
+//                }
+//                return p;
+//            }
 
             STD_REGIONS_EXPORT Array<OneD, unsigned int>
                 GetEdgeInverseBoundaryMap(int eid)
@@ -1419,9 +1244,8 @@ namespace Nektar
             }
 
         protected:
-            Array<OneD, LibUtilities::BasisSharedPtr> m_base; /**< Bases needed for the expansion */
+            LibUtilities::Foundations::BasisSharedPtr<NekDouble> m_base; /**< Bases needed for the expansion */
             int m_elmt_id;
-            int m_ncoeffs;                                   /**< Total number of coefficients used in the expansion */
             LibUtilities::NekManager<StdMatrixKey, DNekMat, StdMatrixKey::opLess> m_stdMatrixManager;
             LibUtilities::NekManager<StdMatrixKey, DNekBlkMat, StdMatrixKey::opLess> m_stdStaticCondMatrixManager;
 	    LibUtilities::NekManager<IndexMapKey, IndexMapValues, IndexMapKey::opLess> m_IndexMapManager;
@@ -1570,9 +1394,9 @@ namespace Nektar
 
             STD_REGIONS_EXPORT virtual int v_DetCartesianDirOfEdge(const int edge);
 
-            STD_REGIONS_EXPORT virtual const LibUtilities::BasisKey v_DetEdgeBasisKey(const int i) const;
-
-            STD_REGIONS_EXPORT virtual const LibUtilities::BasisKey v_DetFaceBasisKey(const int i, const int k) const;
+//            STD_REGIONS_EXPORT virtual const LibUtilities::BasisKey v_DetEdgeBasisKey(const int i) const;
+//
+//            STD_REGIONS_EXPORT virtual const LibUtilities::BasisKey v_DetFaceBasisKey(const int i, const int k) const;
 
             STD_REGIONS_EXPORT virtual int v_GetFaceNumPoints(const int i) const;
 
@@ -1585,18 +1409,14 @@ namespace Nektar
 
             STD_REGIONS_EXPORT virtual int v_GetTraceNcoeffs(const int i) const;
 
-            STD_REGIONS_EXPORT virtual LibUtilities::PointsKey v_GetFacePointsKey(const int i, const int j) const;
-
-            STD_REGIONS_EXPORT virtual LibUtilities::BasisType v_GetEdgeBasisType(const int i) const;
-
-            STD_REGIONS_EXPORT virtual const LibUtilities::PointsKey v_GetNodalPointsKey() const;
-
-            STD_REGIONS_EXPORT virtual LibUtilities::ShapeType v_DetShapeType() const;
+//            STD_REGIONS_EXPORT virtual LibUtilities::PointsKey v_GetFacePointsKey(const int i, const int j) const;
+//
+//            STD_REGIONS_EXPORT virtual LibUtilities::BasisType v_GetEdgeBasisType(const int i) const;
+//
+//            STD_REGIONS_EXPORT virtual const LibUtilities::PointsKey v_GetNodalPointsKey() const;
 
             STD_REGIONS_EXPORT virtual boost::shared_ptr<StdExpansion> 
                 v_GetStdExp(void) const;
-
-            STD_REGIONS_EXPORT virtual int v_GetShapeDimension() const;
 
             STD_REGIONS_EXPORT virtual bool  v_IsBoundaryInteriorExpansion();
 

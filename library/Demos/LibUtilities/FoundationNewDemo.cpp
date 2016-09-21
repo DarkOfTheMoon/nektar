@@ -37,7 +37,6 @@
 #include <type_traits>
 using namespace std;
 
-#include <LibUtilities/BasicUtils/NekManager.hpp>
 #include <LibUtilities/LinearAlgebra/NekTypeDefs.hpp>
 #include <LibUtilities/Foundations/Foundations.hpp>
 #include <LibUtilities/Foundations/Points.hpp>
@@ -52,19 +51,14 @@ using namespace Nektar::LibUtilities::Foundations;
 
 
 /**
- * Creator function for use with Basis manager.
- */
-BasisSharedPtr<double> CreateBasisObject(const BasisKey& bkey)
-{
-    return GetBasisFactory().CreateInstance(bkey.m_id, bkey);
-}
-
-
-/**
  * This program demonstrates and tests the use of the new points and basis
  * classes.
  */
 int main () {
+    // Traits are used to hold information about shapes, bases, point
+    // distributions, etc.
+    cout << "Triangle dim: " << traits::shape_traits<Triangle>::dimension << endl;
+
     // Create a key for instantiating a Points object. This simply holds the
     // number of points in the points distribution in up to three dimensions.
     // Unused dimensions are ignored, so instantiating a 2D points distribution
@@ -171,12 +165,13 @@ int main () {
     BasisSharedPtr<double> bfacptr = GetBasisFactory().CreateInstance("MOD,GGL,Segment", bkey);
     BasisSharedPtr<double> bfacquadptr = GetBasisFactory().CreateInstance("MOD_MOD,GGL_GGL,Quadrilateral", bkey);
 
-    // A manager can also be used to instantiate Bases using the helper function
-    // CreateBasisObject. In this case, the helper function uses the string
-    // stored in the basis key to actually instantiate the object.
-    LibUtilities::NekManager<BasisKey, BasisBase<double>, BasisKey::opLess> bmanager;
-    bmanager.RegisterGlobalCreator(boost::bind(CreateBasisObject, _1));
-    BasisSharedPtr<double> bmanptr = bmanager[bkey];
+    // We can access shape traits through the pointer
+    cout << "Dim of quad is: " << bfacquadptr->GetShapeDimension() << endl;
+
+    // A manager can also be used to instantiate Bases. In this case, the
+    // manager uses the string stored in the basis key to actually instantiate
+    // the object.
+    BasisSharedPtr<double> bmanptr = LibUtilities::Foundations::GetBasisManager()[bkey];
 
     // Finally, we look at the memory footprint of the various classes.
     cout << "Size of points key: " << sizeof(PointsKey) << endl;

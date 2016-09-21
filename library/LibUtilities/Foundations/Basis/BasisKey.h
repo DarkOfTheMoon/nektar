@@ -26,7 +26,7 @@ class BasisKey
     public:
         std::string m_id;
         unsigned int m_dim;
-        unsigned char m_basistype[3][3];
+        //unsigned char m_basistype[3][3];
         unsigned int m_nummodes[3];
         BasisParamList m_params;
         PointsKey m_ptsKey;

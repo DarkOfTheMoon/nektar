@@ -46,8 +46,8 @@ namespace Nektar
         {
         }
 	
-        StdExpansion0D::StdExpansion0D(int numcoeffs, const LibUtilities::BasisKey &Ba):
-            StdExpansion(numcoeffs,1,Ba)
+        StdExpansion0D::StdExpansion0D(const LibUtilities::Foundations::BasisKey &B):
+            StdExpansion(B)
         {
         }
 		
@@ -67,8 +67,8 @@ namespace Nektar
         void StdExpansion0D::PhysTensorDeriv(const Array<OneD, const NekDouble>& inarray,
                                              Array<OneD, NekDouble>& outarray)
         {
-            int nquad = GetTotPoints();
-            DNekMatSharedPtr D = m_base[0]->GetD();
+            int nquad = m_base->GetPoints().GetNumPoints();
+            DNekMatSharedPtr D = m_base->GetPoints().GetD();
             
 #ifdef NEKTAR_USING_DIRECT_BLAS_CALLS
             
@@ -105,9 +105,9 @@ namespace Nektar
 	
         NekDouble StdExpansion0D::v_PhysEvaluate(const Array<OneD, const NekDouble>& Lcoord, const Array<OneD, const NekDouble>& physvals)
         {
-            int    nquad = GetTotPoints();
+            int    nquad = m_base->GetPoints().GetNumPoints();
             NekDouble  val;
-            DNekMatSharedPtr I = m_base[0]->GetI(Lcoord);
+            DNekMatSharedPtr I = m_base->GetPoints().GetInterpMatrix(Lcoord);
             
             ASSERTL2(Lcoord[0] >= -1,"Lcoord[0] < -1");
             ASSERTL2(Lcoord[0] <=  1,"Lcoord[0] >  1");

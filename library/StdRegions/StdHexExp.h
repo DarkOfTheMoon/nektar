@@ -51,13 +51,9 @@ namespace Nektar
         public:
             STD_REGIONS_EXPORT StdHexExp();
             STD_REGIONS_EXPORT StdHexExp(
-                    const  LibUtilities::BasisKey &Ba,
-                    const  LibUtilities::BasisKey &Bb,
-                    const  LibUtilities::BasisKey &Bc);
+                    const  LibUtilities::Foundations::BasisKey &B);
             STD_REGIONS_EXPORT StdHexExp(
-                    const  LibUtilities::BasisKey &Ba,
-                    const  LibUtilities::BasisKey &Bb,
-                    const  LibUtilities::BasisKey &Bc,
+                    const  LibUtilities::Foundations::BasisKey &B,
                     NekDouble *coeffs,
                     NekDouble *phys);
             STD_REGIONS_EXPORT StdHexExp(const StdHexExp &T);
@@ -179,22 +175,21 @@ namespace Nektar
             STD_REGIONS_EXPORT virtual int  v_NumBndryCoeffs() const;
             STD_REGIONS_EXPORT virtual int  v_NumDGBndryCoeffs() const;
             STD_REGIONS_EXPORT virtual int  v_GetEdgeNcoeffs(const int i) const;
- 	    STD_REGIONS_EXPORT virtual int  v_GetTotalEdgeIntNcoeffs() const;
+            STD_REGIONS_EXPORT virtual int  v_GetTotalEdgeIntNcoeffs() const;
             STD_REGIONS_EXPORT virtual int  v_GetFaceNcoeffs(const int i) const;
             STD_REGIONS_EXPORT virtual int  v_GetFaceIntNcoeffs(
                     const int i) const;
- 	    STD_REGIONS_EXPORT virtual int  v_GetTotalFaceIntNcoeffs() const;
+            STD_REGIONS_EXPORT virtual int  v_GetTotalFaceIntNcoeffs() const;
             STD_REGIONS_EXPORT virtual int  v_GetFaceNumPoints(const int i) const;
-            STD_REGIONS_EXPORT virtual LibUtilities::PointsKey v_GetFacePointsKey(
+            STD_REGIONS_EXPORT virtual LibUtilities::Foundations::PointsKey v_GetFacePointsKey(
                     const int i, const int j) const;
             STD_REGIONS_EXPORT virtual int  v_CalcNumberOfCoefficients(
                     const std::vector<unsigned int> &nummodes,
                     int &modes_offset);
-            STD_REGIONS_EXPORT virtual const LibUtilities::BasisKey 
+            STD_REGIONS_EXPORT virtual const LibUtilities::Foundations::BasisKey
                     v_DetFaceBasisKey(const int i, const int k) const;
-            STD_REGIONS_EXPORT virtual LibUtilities::BasisType v_GetEdgeBasisType(
-                    const int i) const;
-            STD_REGIONS_EXPORT virtual bool v_IsBoundaryInteriorExpansion();
+//            STD_REGIONS_EXPORT virtual LibUtilities::BasisType v_GetEdgeBasisType(
+//                    const int i) const;
             STD_REGIONS_EXPORT virtual void v_GetCoords(
                     Array<OneD, NekDouble> &coords_x,
                     Array<OneD, NekDouble> &coords_y,

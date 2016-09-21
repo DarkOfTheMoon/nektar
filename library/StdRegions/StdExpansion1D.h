@@ -53,7 +53,7 @@ namespace Nektar
         public:
 
             STD_REGIONS_EXPORT StdExpansion1D();
-            STD_REGIONS_EXPORT StdExpansion1D(int numcoeffs, const LibUtilities::BasisKey &Ba);
+            STD_REGIONS_EXPORT StdExpansion1D(const LibUtilities::Foundations::BasisKey &B);
             STD_REGIONS_EXPORT StdExpansion1D(const StdExpansion1D &T);
             STD_REGIONS_EXPORT virtual ~StdExpansion1D();
 
@@ -83,11 +83,6 @@ namespace Nektar
             // Virtual Functions ----------------------------------------
 
             virtual int v_GetCoordim(void)
-            {
-                return 1;
-            }
-
-            virtual int v_GetShapeDimension() const
             {
                 return 1;
             }
