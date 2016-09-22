@@ -32,6 +32,8 @@ GlobalLinSysDirectStaticCond.cpp
 GlobalLinSysIterative.cpp
 GlobalLinSysIterativeFull.cpp
 GlobalLinSysIterativeStaticCond.cpp
+GlobalLinSysIterativeKokkos.cpp
+GlobalLinSysIterativeKokkosFull.cpp
 GlobalLinSysStaticCond.cpp
 GlobalMatrix.cpp
 GlobalMatrixKey.cpp
@@ -73,6 +75,8 @@ GlobalLinSysDirectStaticCond.h
 GlobalLinSysIterative.h
 GlobalLinSysIterativeFull.h
 GlobalLinSysIterativeStaticCond.h
+GlobalLinSysIterativeKokkos.h
+GlobalLinSysIterativeKokkosFull.h
 GlobalLinSysStaticCond.h
 GlobalMatrix.h
 GlobalMatrixKey.h

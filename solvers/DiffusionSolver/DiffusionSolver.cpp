@@ -38,11 +38,21 @@
 #include <SpatialDomains/MeshGraph.h>
 #include <MultiRegions/ContField2D.h>
 
+#ifdef NEKTAR_USE_KOKKOS
+    #include <Kokkos_Core.hpp>
+#endif
+
 using namespace std;
 using namespace Nektar;
 
 int main(int argc, char *argv[])
 {
+#ifdef NEKTAR_USE_KOKKOS
+    typedef Kokkos::View<NekDouble*,Kokkos::Threads> device_array;
+
+    Kokkos::initialize( argc , argv );
+#endif
+
     LibUtilities::SessionReaderSharedPtr session;
     LibUtilities::FieldIOSharedPtr       fld;
     SpatialDomains::MeshGraphSharedPtr   graph;
@@ -144,6 +154,10 @@ int main(int argc, char *argv[])
     {
         cout << "Error: " << eStr << endl;
     }
+
+#ifdef NEKTAR_USE_KOKKOS
+    Kokkos::finalize();
+#endif
 
     return 0;
 }

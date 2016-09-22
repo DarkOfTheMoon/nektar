@@ -76,7 +76,8 @@ namespace Nektar
         {
             GlobalSysSolnType solvertype =
                 m_locToGloMap->GetGlobalSysSolnType();
-            if (solvertype == eIterativeFull)
+            if (solvertype == eIterativeFull ||
+                solvertype == eIterativeKokkosFull)
             {
                 DiagonalPreconditionerSum();
             }
@@ -192,7 +193,7 @@ namespace Nektar
             GlobalSysSolnType solvertype = 
                 m_locToGloMap->GetGlobalSysSolnType();            
 
-            int nGlobal = solvertype == eIterativeFull ?
+            int nGlobal = solvertype == eIterativeFull || solvertype == eIterativeKokkosFull ?
                 m_locToGloMap->GetNumGlobalCoeffs() :
                 m_locToGloMap->GetNumGlobalBndCoeffs();
             int nDir    = m_locToGloMap->GetNumGlobalDirBndCoeffs();

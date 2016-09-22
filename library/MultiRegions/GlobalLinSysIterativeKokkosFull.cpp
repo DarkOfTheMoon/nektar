@@ -34,7 +34,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include <map>
-#include <MultiRegions/GlobalLinSysIterativeFull.h>
+#include <MultiRegions/GlobalLinSysIterativeKokkosFull.h>
 #include <MultiRegions/AssemblyMap/AssemblyMapDG.h>
 
 using namespace std;
@@ -54,11 +54,11 @@ namespace Nektar
         /**
          * Registers the class with the Factory.
          */
-        string GlobalLinSysIterativeFull::className
+        string GlobalLinSysIterativeKokkosFull::className
                 = GetGlobalLinSysFactory().RegisterCreatorFunction(
-                    "IterativeFull",
-                    GlobalLinSysIterativeFull::create,
-                    "Iterative solver for full matrix system.");
+                    "IterativeKokkosFull",
+                    GlobalLinSysIterativeKokkosFull::create,
+                    "Iterative solver for full matrix system using Kokkos.");
 
 
         /**
@@ -68,23 +68,56 @@ namespace Nektar
          *                      matrix evaluations.
          * @param   pLocToGloMap Local to global mapping.
          */
-        GlobalLinSysIterativeFull::GlobalLinSysIterativeFull(
+        GlobalLinSysIterativeKokkosFull::GlobalLinSysIterativeKokkosFull(
                     const GlobalLinSysKey &pKey,
                     const boost::weak_ptr<ExpList> &pExp,
                     const boost::shared_ptr<AssemblyMap> &pLocToGloMap)
             : GlobalLinSys         (pKey, pExp, pLocToGloMap),
-              GlobalLinSysIterative(pKey, pExp, pLocToGloMap)
+              GlobalLinSysIterativeKokkos(pKey, pExp, pLocToGloMap)
         {
-            ASSERTL1(m_linSysKey.GetGlobalSysSolnType()==eIterativeFull,
+            ASSERTL1(m_linSysKey.GetGlobalSysSolnType()==eIterativeKokkosFull,
                      "This routine should only be used when using an Iterative "
                      "conjugate gradient matrix solve.");
+
+            // Copy the matrix stuff over into Kokkos Views
+            int nblks = GetNumBlocks();
+            int data_size = 0;
+            m_vecOffset = Kokkos::View<int*>("vecoffset", nblks);
+            m_matOffset = Kokkos::View<int*>("matoffset", nblks);
+            m_matsize   = Kokkos::View<int*>("size", nblks);
+            m_rows      = Kokkos::View<int*>("rows", nblks);
+            DNekScalMatSharedPtr loc_mat;
+
+            for (int b = 0; b < GetNumBlocks(); ++b) {
+                loc_mat = GetBlock(b);
+                int r = loc_mat->GetRows();
+                int c = loc_mat->GetColumns();
+                m_matsize(b) = r*c;
+                m_rows(b) = r;
+                m_vecOffset(b) = (b == 0 ? 0 : m_vecOffset(b-1) + m_rows(b-1));
+                m_matOffset(b) = (b == 0 ? 0 : m_matOffset(b-1) + m_matsize(b-1));
+                data_size += m_matsize(b);
+            }
+
+            m_data = Kokkos::View<NekDouble*>("data", data_size);
+
+            for (int b = 0; b < GetNumBlocks(); ++b) {
+                loc_mat = GetBlock(b);
+                int r = loc_mat->GetRows();
+                int c = loc_mat->GetColumns();
+                for (int i = 0; i < r; ++i) {
+                    for (int j = 0; j < c; ++j) {
+                        m_data(m_matOffset(b) + i*c + j) = (*loc_mat)(i,j);
+                    }
+                }
+            }
         }
 
 
         /**
          *
          */
-        GlobalLinSysIterativeFull::~GlobalLinSysIterativeFull()
+        GlobalLinSysIterativeKokkosFull::~GlobalLinSysIterativeKokkosFull()
         {
 
         }
@@ -108,7 +141,7 @@ namespace Nektar
          * @param           pLocToGloMap    Local to global mapping.
          * @param           pDirForcing Precalculated Dirichlet forcing.
          */
-        void GlobalLinSysIterativeFull::v_Solve(
+        void GlobalLinSysIterativeKokkosFull::v_Solve(
                     const Array<OneD, const NekDouble>  &pInput,
                           Array<OneD,       NekDouble>  &pOutput,
                     const AssemblyMapSharedPtr &pLocToGloMap,
@@ -186,14 +219,79 @@ namespace Nektar
         /**
          *
          */
-        void GlobalLinSysIterativeFull::v_DoMatrixMultiply(
+        void GlobalLinSysIterativeKokkosFull::v_DoMatrixMultiply(
                 const Array<OneD, NekDouble>& pInput,
                       Array<OneD, NekDouble>& pOutput)
         {
             boost::shared_ptr<MultiRegions::ExpList> expList = m_expList.lock();
             // Perform matrix-vector operation A*d_i
-            expList->GeneralMatrixOp(m_linSysKey,
-                                     pInput, pOutput, eGlobal);
+//            expList->GeneralMatrixOp(m_linSysKey,
+//                                     pInput, pOutput, eGlobal);
+
+            // Copy the matrix stuff over into Kokkos Views
+            int nblks = GetNumBlocks();
+//            int data_size = 0;
+//            Kokkos::View<int*> vecOffset("vecoffset", nblks);
+//            Kokkos::View<int*> matOffset("matoffset", nblks);
+//            Kokkos::View<int*> matsize("size", nblks);
+//            Kokkos::View<int*> rows("rows", nblks);
+//            DNekScalMatSharedPtr loc_mat;
+//
+//            for (int b = 0; b < GetNumBlocks(); ++b) {
+//                loc_mat = GetBlock(b);
+//                int r = loc_mat->GetRows();
+//                int c = loc_mat->GetColumns();
+//                matsize(b) = r*c;
+//                rows(b) = r;
+//                vecOffset(b) = (b == 0 ? 0 : vecOffset(b-1) + rows(b-1));
+//                matOffset(b) = (b == 0 ? 0 : matOffset(b-1) + matsize(b-1));
+//                data_size += matsize(b);
+//            }
+//
+//            Kokkos::View<NekDouble*> data("data", data_size);
+//
+//            for (int b = 0; b < GetNumBlocks(); ++b) {
+//                loc_mat = GetBlock(b);
+//                int r = loc_mat->GetRows();
+//                int c = loc_mat->GetColumns();
+//                for (int i = 0; i < r; ++i) {
+//                    for (int j = 0; j < c; ++j) {
+//                        data(matOffset(b) + i*c + j) = (*loc_mat)(i,j);
+//                    }
+//                }
+//            }
+
+            // Copy input
+            int nlocdof = expList->GetNcoeffs();
+            Array<OneD, NekDouble> tmp1(nlocdof);
+            m_locToGloMap->GlobalToLocal(pInput, tmp1);
+
+            Kokkos::View<NekDouble*> input("input", nlocdof);
+            Kokkos::View<NekDouble*> output("output", nlocdof);
+            for (int i = 0; i < nlocdof; ++i) {
+                input(i) = tmp1[i];
+            }
+
+            // Do matrix-vector multiply
+            Kokkos::parallel_for(nblks, [&] (const int& b) {
+                const int elOffset = m_vecOffset(b), nRows = m_rows(b);
+                const int matOff = m_matOffset(b);
+                for (int i = 0; i < nRows; ++i)
+                {
+                    output(i + elOffset) = 0.0;
+                    for (int j = 0; j < nRows; ++j)
+                    {
+                        output(i + elOffset) += m_data(matOff + i*nRows + j) * input(j + elOffset);
+                    }
+                }
+            });
+
+            for (int i = 0; i < nlocdof; ++i)
+            {
+                tmp1[i] = output(i);
+            }
+
+            m_locToGloMap->Assemble(tmp1, pOutput);
 
             // Apply robin boundary conditions to the solution.
             if(m_robinBCInfo.size() > 0)
@@ -245,13 +343,12 @@ namespace Nektar
                 // Add them to the output of the GeneralMatrixOp
                 Vmath::Vadd(nGlobal, pOutput, 1, robin_A, 1, pOutput, 1);
             }
-
         }
 
         /**
          *
          */
-        void GlobalLinSysIterativeFull::v_UniqueMap()
+        void GlobalLinSysIterativeKokkosFull::v_UniqueMap()
         {
             m_map = m_locToGloMap->GetGlobalToUniversalMapUnique();
         }

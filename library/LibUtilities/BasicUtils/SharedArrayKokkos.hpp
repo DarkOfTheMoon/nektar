@@ -204,7 +204,7 @@ namespace Nektar
                 ASSERTL1(static_cast<size_type>(i) < m_size, (std::string("Element ") +
                     boost::lexical_cast<std::string>(i) + std::string(" requested in an array of size ") +
                     boost::lexical_cast<std::string>(m_size)));
-                return m_data[i + m_offset + 1];
+                return m_data(i + m_offset + 1);
             }
 
             /// \brief Returns a c-style pointer to the underlying array.

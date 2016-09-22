@@ -1214,6 +1214,7 @@ namespace Nektar
                 {
                     case eDirectFullMatrix:
                     case eIterativeFull:
+                    case eIterativeKokkosFull:
                     case eIterativeStaticCond:
                     case ePETScStaticCond:
                     case ePETScFullMatrix:

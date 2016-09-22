@@ -41,12 +41,13 @@ IF (NEKTAR_USE_KOKKOS)
         EXTERNALPROJECT_ADD(
             kokkos-master
             GIT_REPOSITORY https://github.com/kokkos/kokkos.git
-            GIT_TAG master
+            GIT_TAG e41193250907211302bdb94aa55044489c8145d0
             STAMP_DIR ${TPBUILD}/stamp
             SOURCE_DIR ${TPSRC}/kokkos-master
             BINARY_DIR ${TPBUILD}/kokkos-master
             TMP_DIR ${TPBUILD}/kokkos-master-tmp
             INSTALL_DIR ${TPDIST}
+            UPDATE_COMMAND ""
             CONFIGURE_COMMAND CC=${CMAKE_C_COMPILER} ${TPSRC}/kokkos-master/generate_makefile.bash ${KOKKOS_OPTIONS}
             BUILD_COMMAND make lib
         )
