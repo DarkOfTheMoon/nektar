@@ -1735,8 +1735,10 @@ using namespace boost::assign;
             
             for(n = 0; n < m_bndCondExpansions.num_elements(); ++n)
             {
-                if(m_bndConditions[n]->GetBoundaryConditionType() == 
-                       SpatialDomains::eDirichlet)
+                if (m_bndConditions[n]->GetBoundaryConditionType() ==
+                        SpatialDomains::eDirichlet ||
+                    m_bndConditions[n]->GetBoundaryConditionType() ==
+                        SpatialDomains::eWeakDirichlet)
                 {
                     for(e = 0; e < m_bndCondExpansions[n]->GetExpSize(); ++e)
                     {
@@ -2176,7 +2178,43 @@ using namespace boost::assign;
          */
         map<int, WeakDirichletBCInfoSharedPtr> DisContField3D::v_GetWeakDirichletBCInfo(void)
         {
-            return map<int, WeakDirichletBCInfoSharedPtr>();
+          int i,cnt;
+          map<int, WeakDirichletBCInfoSharedPtr> returnval;
+          Array<OneD, int> ElmtID,FaceID;
+          GetBoundaryToElmtMap(ElmtID,FaceID);
+
+          for(cnt = i = 0; i < m_bndCondExpansions.num_elements(); ++i)
+          {
+              MultiRegions::ExpListSharedPtr locExpList;
+
+              if(m_bndConditions[i]->GetBoundaryConditionType() ==
+                     SpatialDomains::eWeakDirichlet)
+              {
+                  int e,elmtid;
+                  Array<OneD, NekDouble> Array_tmp;
+
+                  locExpList = m_bndCondExpansions[i];
+
+                  for(e = 0; e < locExpList->GetExpSize(); ++e)
+                  {
+                      WeakDirichletBCInfoSharedPtr dInfo = MemoryManager<WeakDirichletBCInfo>
+                          ::AllocateSharedPtr(
+                              FaceID[cnt+e],
+                              Array_tmp = locExpList->GetPhys() +
+                                          locExpList->GetPhys_Offset(e));
+                      elmtid = ElmtID[cnt+e];
+                      // make link list if necessary
+                      if(returnval.count(elmtid) != 0)
+                      {
+                          dInfo->next = returnval.find(elmtid)->second;
+                      }
+                      returnval[elmtid] = dInfo;
+                  }
+              }
+              cnt += m_bndCondExpansions[i]->GetExpSize();
+          }
+
+          return returnval;
         }
 
         /**
@@ -2546,6 +2584,32 @@ using namespace boost::assign;
                         coeff.Evaluate(x0, x1, x2, time,
                                        locExpList->UpdatePhys());
                         
+                    }
+                    else if (m_bndConditions[i]->GetBoundaryConditionType()
+                             == SpatialDomains::eWeakDirichlet)
+                    {
+                        string filebcs = boost::static_pointer_cast<
+                            SpatialDomains::WeakDirichletBoundaryCondition>
+                                (m_bndConditions[i])->m_filename;
+
+                        if (filebcs != "")
+                        {
+                            ExtractFileBCs(filebcs, varName, locExpList);
+                        }
+                        else
+                        {
+                            LibUtilities::Equation condition =
+                                boost::static_pointer_cast<
+                                    SpatialDomains::WeakDirichletBoundaryCondition>
+                                        (m_bndConditions[i])->
+                                            m_weakDirichletCondition;
+                            condition.Evaluate(x0, x1, x2, time,
+                                               locExpList->UpdatePhys());
+                        }
+
+                        locExpList->IProductWRTBase(
+                            locExpList->GetPhys(),
+                            locExpList->UpdateCoeffs());
                     }
                     else
                     {

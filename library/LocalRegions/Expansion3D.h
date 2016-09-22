@@ -126,6 +126,14 @@ namespace Nektar
                 DNekMatSharedPtr                   &inoutmat);
             virtual StdRegions::Orientation v_GetForient(int face);
 
+	    virtual void v_AddWeakDirichletElementContribution(
+			    const Array<OneD, int>& faceids, DNekMat &inoutmat);
+
+            virtual void v_AddWeakDirichletForcingContribution(
+                 const Array<OneD, int>& faceids,
+                 const Array<OneD, Array<OneD, const NekDouble> >& lambda,
+                 Array<OneD, NekDouble> &coeffs);
+
             virtual void v_GetTracePhysVals(
                 const int                                face,
                 const StdRegions::StdExpansionSharedPtr &FaceExp,

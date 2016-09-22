@@ -1231,6 +1231,204 @@ namespace Nektar
             }
         }
 
+        void Expansion3D::v_AddWeakDirichletElementContribution(
+                        const Array<OneD, int>& faceids, DNekMat &inoutmat)
+        {
+
+          ASSERTL1(IsBoundaryInteriorExpansion(),
+                   "Not set up for non boundary-interior expansions");
+
+          const int coordim = GetCoordim();
+          const int nElemCoeffs = GetNcoeffs();
+
+          // Tags for weak derivatives
+          const StdRegions::MatrixType DerivType[3] = {StdRegions::eWeakDeriv0,
+                                                       StdRegions::eWeakDeriv1,
+                                                       StdRegions::eWeakDeriv2};
+
+          // Evaluate \tilde{E}
+
+          ExpansionSharedPtr FaceExp = GetFaceExp(faceids[0]);
+          int nquad_f = FaceExp->GetNumPoints(0);
+
+          int nFaceCoeffs = FaceExp->GetNcoeffs();
+
+          Array<OneD, NekDouble> elemCoeffs(nElemCoeffs), phys(GetTotPoints());
+          Array<OneD, NekDouble> facePhys  (nquad_f);
+          Array<OneD, NekDouble> faceCoeffs(nFaceCoeffs);
+
+          DNekMatSharedPtr tildeEMatPtr[3];
+          DNekMatSharedPtr tildeEMatSumPtr[3];
+
+          Array<OneD,unsigned int> map;
+          Array<OneD,int> sign;
+
+          for(int dir = 0; dir < coordim; ++dir)
+          {
+              tildeEMatPtr[dir] = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs, nElemCoeffs);
+              tildeEMatSumPtr[dir] = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs, nElemCoeffs);
+
+              Vmath::Zero(nElemCoeffs * nElemCoeffs, (*tildeEMatSumPtr[dir]).GetRawPtr(), 1);
+          }
+
+          // Ia) Edge mass matrix contribution
+
+          StdRegions::VarCoeffMap faceVarCoeffs;
+
+          const NekDouble tau = 1.0;
+
+          for(int f = 0; f < faceids.num_elements(); ++f)
+          {
+              const int iface = faceids[f];
+
+              FaceExp = GetFaceExp(iface);
+
+              LibUtilities::ShapeType shapeType =
+                  FaceExp->DetShapeType();
+
+              LocalRegions::MatrixKey mkey(StdRegions::eMass,
+                                           shapeType,
+                                           *FaceExp,
+                                           StdRegions::NullConstFactorMap,
+                                           faceVarCoeffs);
+
+              const DNekScalMat &faceMass = *FaceExp->GetLocMatrix(mkey);
+
+              GetFaceToElementMap(iface, GetForient(iface), map, sign);
+
+              nquad_f = FaceExp->GetNumPoints(0);
+              nFaceCoeffs = FaceExp->GetNcoeffs();
+
+
+              for(int i = 0; i < nFaceCoeffs; ++i)
+              {
+                  for(int j = 0; j < nFaceCoeffs; ++j)
+                  {
+                      inoutmat(map[i],map[j]) += tau * sign[i]*sign[j]*faceMass(i,j);
+                  }
+              }
+          }
+
+#if 0
+          // II) All other contributions (not mass matrix)
+          for(int f = 0; f < faceids.num_elements(); ++f)
+          {
+              // std::cout << "**********************************************************" << std::endl;
+
+              const int iface = faceids[f];
+
+              FaceExp = GetFaceExp(iface);
+
+              nquad_f = FaceExp->GetNumPoints(0);
+              nFaceCoeffs = FaceExp->GetNcoeffs();
+
+              if ( facePhys.num_elements() != nquad_f)
+              {
+                  facePhys = Array<OneD, NekDouble>(nquad_f);
+              }
+
+              if ( faceCoeffs.num_elements() != nFaceCoeffs )
+              {
+                  faceCoeffs = Array<OneD, NekDouble>(nFaceCoeffs);
+              }
+
+              GetFaceToElementMap(iface, GetForient(iface), map, sign);
+
+              const Array<OneD, const Array<OneD, NekDouble> > & normals = GetFaceNormal(iface);
+
+              for(int dir = 0; dir < coordim; ++dir)
+              {
+                  DNekMat& tildeE = *tildeEMatPtr[dir];
+                  DNekMat& sumTildeE = *tildeEMatSumPtr[dir];
+
+                 // Initialize the matrix tildeE
+                 Vmath::Zero(nElemCoeffs*nElemCoeffs,tildeE.GetPtr(),1);
+
+                 //Vmath::Zero(tmp.num_elements(),tmp.data(),1);
+
+                  for (int i = 0; i < nElemCoeffs; ++i)
+                  {
+                      Vmath::Zero(nElemCoeffs, elemCoeffs, 1);
+                      elemCoeffs[i] = 1.0;
+
+                      BwdTrans(elemCoeffs, phys); // Phys contains values of the i-the mode at all qd. pts?
+                      GetFacePhysVals(iface, FaceExp, phys, facePhys); // Extract values which are nonzero on edge?
+
+                      // Multiply edgePhys by normal here...
+                      Vmath::Vmul(nquad_f, normals[dir], 1, facePhys, 1, facePhys, 1);
+
+                      FaceExp->IProductWRTBase(facePhys, faceCoeffs);
+
+                      // edgeCoeffs forms one row of \tilde{F}^e, hopefully
+
+                      for(int j = 0; j < nFaceCoeffs; ++j)
+                      {
+                          tildeE(i,map[j]) = sign[j] * faceCoeffs[j]; // ???
+                      }
+
+                      //AddEdgeBoundaryInt(dir, EdgeExp, edgePhys, tmp);
+                   }
+
+                   sumTildeE = sumTildeE + tildeE;
+              } // Loop over dimensions
+
+
+           } // Loop over selected boundary edges
+
+
+          // Compute the actual Laplace term
+          // DNekMatSharedPtr LaplacePtr = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs, nElemCoeffs);
+          // DNekMat& Laplace = *LaplacePtr;
+
+          // Mass matrix
+          const DNekScalMat  &invMass = *GetLocMatrix(StdRegions::eInvMass);
+          DNekMatSharedPtr DmatTPtr = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs,nElemCoeffs);
+          DNekMat& DmatT = (*DmatTPtr);
+
+
+          // Evaluate D_1 * inv(M)
+          // Evaluate D_2 * inv(M)
+          // Evaluate D_3 * inv(M)
+          DNekMatSharedPtr weakDGMatPtr[3];
+
+          for(int dim = 0; dim < coordim; ++dim)
+          {
+              weakDGMatPtr[dim] = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs,nElemCoeffs);
+              DNekMat &weakDGMat = *weakDGMatPtr[dim];
+
+              Vmath::Zero(nElemCoeffs * nElemCoeffs, weakDGMat.GetRawPtr(), 1);
+              // Vmath::Zero(nElemCoeffs*nElemCoeffs,weakDGMat.GetPtr(),1);
+
+              DNekScalMat &Dmat = *GetLocMatrix(DerivType[dim]);
+              DmatT = Transpose(Dmat);
+              const DNekMat& sumTildeE = *tildeEMatSumPtr[dim];
+
+              // Laplace = DmatT * invMass * Dmat;
+              // std::cout << "Laplace matrix:" << std::endl;
+              // std::cout << Laplace << std::endl;
+              weakDGMat = sumTildeE * (invMass * sumTildeE - invMass * Dmat) - DmatT * invMass * sumTildeE;
+
+              // Finally add the contributions to inoutmat
+
+              for(int i = 0; i < nElemCoeffs; ++i)
+              {
+                  for(int j = 0; j < nElemCoeffs; ++j)
+                  {
+                      inoutmat(i,j) += weakDGMat(i,j);
+                  }
+              }
+          }
+#endif
+        }
+
+        void Expansion3D::v_AddWeakDirichletForcingContribution(
+             const Array<OneD, int>& faceids,
+             const Array<OneD, Array<OneD, const NekDouble> >& lambda,
+             Array<OneD, NekDouble> &coeffs)
+        {
+
+        }
+
         DNekMatSharedPtr Expansion3D::v_BuildVertexMatrix(
             const DNekScalMatSharedPtr &r_bnd)
         {
