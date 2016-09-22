@@ -41,10 +41,6 @@
 
 #include <boost/circular_buffer.hpp>
 
-#ifdef NEKTAR_USE_KOKKOS
-    #include <Kokkos_Core.hpp>
-#endif
-
 namespace Nektar
 {
 namespace MultiRegions

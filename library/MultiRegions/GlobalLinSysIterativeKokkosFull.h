@@ -37,6 +37,8 @@
 
 #include <MultiRegions/GlobalLinSysIterativeKokkos.h>
 
+#include <Kokkos_Core.hpp>
+
 namespace Nektar
 {
     namespace MultiRegions

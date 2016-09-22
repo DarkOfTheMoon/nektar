@@ -48,8 +48,6 @@ using namespace Nektar;
 int main(int argc, char *argv[])
 {
 #ifdef NEKTAR_USE_KOKKOS
-    typedef Kokkos::View<NekDouble*,Kokkos::Threads> device_array;
-
     Kokkos::initialize( argc , argv );
 #endif
 

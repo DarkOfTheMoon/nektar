@@ -224,42 +224,9 @@ namespace Nektar
                       Array<OneD, NekDouble>& pOutput)
         {
             boost::shared_ptr<MultiRegions::ExpList> expList = m_expList.lock();
-            // Perform matrix-vector operation A*d_i
-//            expList->GeneralMatrixOp(m_linSysKey,
-//                                     pInput, pOutput, eGlobal);
 
             // Copy the matrix stuff over into Kokkos Views
             int nblks = GetNumBlocks();
-//            int data_size = 0;
-//            Kokkos::View<int*> vecOffset("vecoffset", nblks);
-//            Kokkos::View<int*> matOffset("matoffset", nblks);
-//            Kokkos::View<int*> matsize("size", nblks);
-//            Kokkos::View<int*> rows("rows", nblks);
-//            DNekScalMatSharedPtr loc_mat;
-//
-//            for (int b = 0; b < GetNumBlocks(); ++b) {
-//                loc_mat = GetBlock(b);
-//                int r = loc_mat->GetRows();
-//                int c = loc_mat->GetColumns();
-//                matsize(b) = r*c;
-//                rows(b) = r;
-//                vecOffset(b) = (b == 0 ? 0 : vecOffset(b-1) + rows(b-1));
-//                matOffset(b) = (b == 0 ? 0 : matOffset(b-1) + matsize(b-1));
-//                data_size += matsize(b);
-//            }
-//
-//            Kokkos::View<NekDouble*> data("data", data_size);
-//
-//            for (int b = 0; b < GetNumBlocks(); ++b) {
-//                loc_mat = GetBlock(b);
-//                int r = loc_mat->GetRows();
-//                int c = loc_mat->GetColumns();
-//                for (int i = 0; i < r; ++i) {
-//                    for (int j = 0; j < c; ++j) {
-//                        data(matOffset(b) + i*c + j) = (*loc_mat)(i,j);
-//                    }
-//                }
-//            }
 
             // Copy input
             int nlocdof = expList->GetNcoeffs();
@@ -273,7 +240,7 @@ namespace Nektar
             }
 
             // Do matrix-vector multiply
-            Kokkos::parallel_for(nblks, [&] (const int& b) {
+            Kokkos::parallel_for(nblks, KOKKOS_LAMBDA (const int& b) {
                 const int elOffset = m_vecOffset(b), nRows = m_rows(b);
                 const int matOff = m_matOffset(b);
                 for (int i = 0; i < nRows; ++i)
