@@ -603,6 +603,7 @@ namespace Nektar
 
         // Auxiliary variables
         Array<OneD, NekDouble > mu                 (nPts, 0.0);
+        Array<OneD, NekDouble > rhoRef             (nPts, 0.0);
         Array<OneD, NekDouble > thermalConductivity(nPts, 0.0);
         Array<OneD, NekDouble > divVel             (nPts, 0.0);
         Array<OneD, NekDouble > tmp                (nPts, 0.0);
@@ -620,6 +621,18 @@ namespace Nektar
             Vmath::Fill(nPts, m_mu, mu, 1);
             Vmath::Fill(nPts, m_thermalConductivity,
                         thermalConductivity, 1);
+        }
+
+        // Density used in implicit part:
+        //    - rhoInf when using constant coefficients
+        //    - rho    when using variable coefficients
+        if ( m_variableCoeffs)
+        {
+            Vmath::Vcopy(nPts, physfield[nVariables-1], 1, rhoRef, 1);
+        }
+        else
+        {
+            Vmath::Fill(nPts, m_rhoInf, rhoRef, 1);
         }
 
         // Velocity divergence
@@ -670,9 +683,9 @@ namespace Nektar
 
         // Terms for the energy equation
 
-        // Calculate -k*T/rho
+        // Calculate -k*T/rhoRef
         Vmath::Vdiv(nPts, thermalConductivity, 1,
-                            physfield[nVariables-1], 1,
+                            rhoRef, 1,
                             tmp, 1);
         Vmath::Vmul(nPts, tmp, 1,
                             physfield[nVariables-2], 1,
@@ -682,17 +695,49 @@ namespace Nektar
         // Calculate flux for energy equation
         for (i = 0; i < m_spacedim; ++i)
         {
-            // -(k*T/rho)*rho_i
+            // -(k*T/rhoRef)*rho_i
             Vmath::Vmul(nPts, tmp, 1,
                             derivativesO1[i][m_spacedim+1], 1,
                             viscousTensor[i][m_spacedim+1], 1);
 
+            if ( !m_variableCoeffs)
+            {
+                // + k * T_i
+                Vmath::Vvtvp(nPts, thermalConductivity, 1,
+                                derivativesO1[i][m_spacedim], 1,
+                                viscousTensor[i][m_spacedim+1], 1,
+                                viscousTensor[i][m_spacedim+1], 1);
+
+                // - k * rho/rhoRef * T_i
+                Vmath::Vmul(nPts, thermalConductivity, 1,
+                                physfield[nVariables-1], 1,
+                                tmp2, 1);
+                Vmath::Vdiv(nPts, tmp2, 1,
+                                rhoRef, 1,
+                                tmp2, 1);
+                Vmath::Vmul(nPts, derivativesO1[i][m_spacedim], 1,
+                                tmp2, 1,
+                                tmp2, 1);
+                Vmath::Vsub(nPts, viscousTensor[i][m_spacedim+1], 1,
+                                tmp2, 1,
+                                viscousTensor[i][m_spacedim+1], 1);
+            }
+
             for (j = 0; j < m_spacedim; ++j)
             {
-                // - mu*gamma/Pr * u_j * u_j,i
+                // - mu*gamma/Pr * rho/rhoRef * u_j * u_j,i
                 Vmath::Smul(nPts, -m_gamma/m_Prandtl,
                             mu, 1,
                             tmp2, 1);
+                if ( !m_variableCoeffs)
+                {
+                    Vmath::Vmul(nPts, physfield[nVariables-1], 1,
+                                tmp2, 1,
+                                tmp2, 1);
+                    Vmath::Vdiv(nPts, tmp2, 1,
+                                rhoRef, 1,
+                                tmp2, 1);
+                }
                 Vmath::Vmul(nPts, physfield[j], 1,
                             tmp2, 1,
                             tmp2, 1);
@@ -701,12 +746,12 @@ namespace Nektar
                                viscousTensor[i][m_spacedim+1], 1,
                                viscousTensor[i][m_spacedim+1], 1);
 
-                // - mu*gamma/(2*rho*Pr) * u_j*u_j * rho_i
+                // - mu*gamma/(2*rhoRef*Pr) * u_j*u_j * rho_i
                 Vmath::Smul(nPts, -m_gamma/(2*m_Prandtl),
                             mu, 1,
                             tmp2, 1);
                 Vmath::Vdiv(nPts, tmp2, 1,
-                            physfield[nVariables-1], 1,
+                            rhoRef, 1,
                             tmp2, 1);
                 Vmath::Vmul(nPts, physfield[j], 1,
                             tmp2, 1,
@@ -741,23 +786,32 @@ namespace Nektar
                     fac = 1.0;
                 }
 
-                // - fac*mu*u_j,i
+                // - fac*mu* rho/rhoRef * u_j,i
                 Vmath::Vmul(nPts, mu, 1,
                                   derivativesO1[i][j], 1,
                                   tmp2, 1);
                 Vmath::Smul(nPts, fac,
                                   tmp2, 1,
                                   tmp2, 1);
+                if ( !m_variableCoeffs)
+                {
+                    Vmath::Vmul(nPts, physfield[nVariables-1], 1,
+                                tmp2, 1,
+                                tmp2, 1);
+                    Vmath::Vdiv(nPts, tmp2, 1,
+                                rhoRef, 1,
+                                tmp2, 1);
+                }
                 Vmath::Vsub(nPts, viscousTensor[i][j+1], 1,
                                   tmp2, 1,
                                   viscousTensor[i][j+1], 1);
 
-                // - fac*mu*u_j/rho * rho_i
+                // - fac*mu*u_j/rhoRef * rho_i
                 Vmath::Vmul(nPts, mu, 1,
                                   physfield[j], 1,
                                   tmp2, 1);
                 Vmath::Vdiv(nPts, tmp2, 1,
-                                  physfield[nVariables-1], 1,
+                                  rhoRef, 1,
                                   tmp2, 1);
                 Vmath::Vmul(nPts, tmp2, 1,
                                   derivativesO1[i][m_spacedim+1], 1,
