@@ -72,6 +72,15 @@ void CommSerial::v_Finalise()
 /**
  *
  */
+void* CommSerial::v_GetComm()
+{
+    ASSERTL0(false, "Error: Do not call GetComm when in serial. Check with NEKTAR_USE_MPI def.");
+    return 0;
+}
+
+/**
+ *
+ */
 int CommSerial::v_GetRank()
 {
     return 0;

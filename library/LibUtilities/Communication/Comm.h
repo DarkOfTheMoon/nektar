@@ -80,6 +80,8 @@ public:
 
     LIB_UTILITIES_EXPORT inline void Finalise();
 
+    LIB_UTILITIES_EXPORT inline void* GetComm();
+
     /// Returns number of processes
     LIB_UTILITIES_EXPORT inline int GetSize();
     LIB_UTILITIES_EXPORT inline int GetRank();
@@ -126,15 +128,21 @@ public:
     LIB_UTILITIES_EXPORT inline bool TreatAsRankZero(void);
     LIB_UTILITIES_EXPORT inline bool RemoveExistingFiles(void);
 
+    LIB_UTILITIES_EXPORT inline int EnrolSpare();
+    LIB_UTILITIES_EXPORT inline bool IsRecovering();
+    LIB_UTILITIES_EXPORT inline void MarkRecoveryComplete();
+
 protected:
     int m_size;                 ///< Number of processes
     std::string m_type;         ///< Type of communication
     CommSharedPtr m_commRow;    ///< Row communicator
     CommSharedPtr m_commColumn; ///< Column communicator
+    bool m_isRecovering;        ///< True if we are undergoing recovery from failed process
 
     Comm();
 
     virtual void v_Finalise()   = 0;
+    virtual void* v_GetComm()     = 0;
     virtual int v_GetRank()     = 0;
     virtual void v_Block()      = 0;
     virtual NekDouble v_Wtime() = 0;
@@ -172,6 +180,8 @@ protected:
     virtual void v_SplitComm(int pRows, int pColumns) = 0;
     virtual bool v_TreatAsRankZero(void) = 0;
     LIB_UTILITIES_EXPORT virtual bool v_RemoveExistingFiles(void);
+
+    virtual int v_EnrolSpare() = 0;
 };
 
 /**
@@ -180,6 +190,14 @@ protected:
 inline void Comm::Finalise()
 {
     v_Finalise();
+}
+
+/**
+ *
+ */
+inline void* Comm::GetComm()
+{
+    return v_GetComm();
 }
 
 /**
@@ -430,6 +448,21 @@ inline bool Comm::TreatAsRankZero(void)
 inline bool Comm::RemoveExistingFiles(void)
 {
     return v_RemoveExistingFiles();
+}
+
+inline int Comm::EnrolSpare()
+{
+    return v_EnrolSpare();
+}
+
+inline bool Comm::IsRecovering()
+{
+    return m_isRecovering;
+}
+
+inline void Comm::MarkRecoveryComplete()
+{
+    m_isRecovering = false;
 }
 }
 }

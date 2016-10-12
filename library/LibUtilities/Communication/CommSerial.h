@@ -69,6 +69,7 @@ public:
 
 protected:
     LIB_UTILITIES_EXPORT virtual void v_Finalise();
+    LIB_UTILITIES_EXPORT virtual void* v_GetComm();
     LIB_UTILITIES_EXPORT virtual int v_GetRank();
     LIB_UTILITIES_EXPORT virtual bool v_TreatAsRankZero(void);
 
@@ -113,6 +114,8 @@ protected:
 
     LIB_UTILITIES_EXPORT virtual void v_SplitComm(int pRows, int pColumns);
     LIB_UTILITIES_EXPORT virtual CommSharedPtr v_CommCreateIf(int flag);
+
+    LIB_UTILITIES_EXPORT virtual int v_EnrolSpare() {return 0;}
 };
 }
 }

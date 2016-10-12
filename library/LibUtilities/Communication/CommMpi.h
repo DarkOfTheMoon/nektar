@@ -36,6 +36,7 @@
 #define NEKTAR_LIB_UTILITIES_COMMMPI_H
 
 #include <mpi.h>
+#include <mpi-ext.h>
 #include <string>
 
 #include <LibUtilities/Communication/Comm.h>
@@ -57,7 +58,26 @@ class CommMpi;
 /// Pointer to a Communicator object.
 typedef boost::shared_ptr<CommMpi> CommMpiSharedPtr;
 
-/// A global linear system.
+/**
+ * Exception class for Ulfm-detected failure
+ */
+class UlfmFailureDetected: public std::runtime_error
+{
+    public:
+        UlfmFailureDetected(std::string && pError)
+            : std::runtime_error(pError.c_str()), m_error(pError) {}
+
+    private:
+        virtual const char* what() const throw()
+        {
+            return m_error.c_str();
+        }
+
+        std::string m_error;
+};
+
+
+/// A communicator which uses MPI
 class CommMpi : public Comm
 {
 public:
@@ -70,13 +90,14 @@ public:
     /// Name of class
     static std::string className;
 
+    static int nSpares;
+
     CommMpi(int narg, char *arg[]);
     virtual ~CommMpi();
 
-    MPI_Comm GetComm();
-
 protected:
     virtual void v_Finalise();
+    virtual void* v_GetComm();
     virtual int v_GetRank();
     virtual void v_Block();
     virtual double v_Wtime();
@@ -112,9 +133,14 @@ protected:
     virtual void v_SplitComm(int pRows, int pColumns);
     virtual CommSharedPtr v_CommCreateIf(int flag);
 
+    virtual int v_EnrolSpare();
+
 private:
     MPI_Comm m_comm;
+    MPI_Comm m_agreecomm;
     int m_rank;
+
+    static void HandleMpiError(MPI_Comm* pcomm, int* perr, ...);
 
     CommMpi(MPI_Comm pComm);
 };

@@ -41,7 +41,7 @@
 #include <LibUtilities/BasicConst/NektarUnivTypeDefs.hpp>
 #include <LibUtilities/BasicUtils/SharedArray.hpp>
 #ifdef NEKTAR_USE_MPI
-#include <LibUtilities/Communication/CommMpi.h>
+#include <LibUtilities/Communication/Comm.h>
 #endif
 
 namespace Gs
@@ -172,13 +172,13 @@ static inline gs_data *Init(const Nektar::Array<OneD, long> pId,
     {
         return 0;
     }
-    LibUtilities::CommMpiSharedPtr vCommMpi =
-        boost::dynamic_pointer_cast<LibUtilities::CommMpi>(pComm);
-    ASSERTL1(vCommMpi, "Failed to cast MPI Comm object.");
+    //LibUtilities::CommMpiSharedPtr vCommMpi =
+    //    boost::dynamic_pointer_cast<LibUtilities::CommMpi>(pComm);
+    //ASSERTL1(vCommMpi, "Failed to cast MPI Comm object.");
     comm vComm;
-    MPI_Comm_dup(vCommMpi->GetComm(), &vComm.c);
-    vComm.id        = vCommMpi->GetRank();
-    vComm.np        = vCommMpi->GetSize();
+    MPI_Comm_dup((MPI_Comm)(pComm->GetComm()), &vComm.c);
+    vComm.id        = pComm->GetRank();
+    vComm.np        = pComm->GetSize();
     gs_data *result = nektar_gs_setup(pId.get(), pId.num_elements(), &vComm, 0,
                                       gs_auto, (int)verbose);
     MPI_Comm_free(&vComm.c);
@@ -205,13 +205,13 @@ static inline void Unique(const Nektar::Array<OneD, long> pId,
     {
         return;
     }
-    LibUtilities::CommMpiSharedPtr vCommMpi =
-        boost::dynamic_pointer_cast<LibUtilities::CommMpi>(pComm);
-    ASSERTL1(vCommMpi, "Failed to cast MPI Comm object.");
+//    LibUtilities::CommMpiSharedPtr vCommMpi =
+//        boost::dynamic_pointer_cast<LibUtilities::CommMpi>(pComm);
+//    ASSERTL1(vCommMpi, "Failed to cast MPI Comm object.");
     comm vComm;
-    vComm.c  = vCommMpi->GetComm();
-    vComm.id = vCommMpi->GetRank();
-    vComm.np = vCommMpi->GetSize();
+    vComm.c  = (MPI_Comm)(pComm->GetComm());
+    vComm.id = pComm->GetRank();
+    vComm.np = pComm->GetSize();
     nektar_gs_unique(pId.get(), pId.num_elements(), &vComm);
 #endif
 }

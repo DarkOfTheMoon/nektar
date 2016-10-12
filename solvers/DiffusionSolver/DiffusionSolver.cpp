@@ -33,6 +33,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+#include <signal.h>
+
 #include <LibUtilities/BasicUtils/SessionReader.h>
 #include <LibUtilities/BasicUtils/FieldIO.h>
 #include <SpatialDomains/MeshGraph.h>
@@ -87,16 +89,39 @@ int main(int argc, char *argv[])
         // Zero field coefficients for initial guess for linear solver.
         Vmath::Zero(field->GetNcoeffs(), field->UpdateCoeffs(), 1);
 
+        //BackupStaticState();
+
         // Time integrate using backward Euler
         for (unsigned int n = 0; n < nSteps; ++n)
         {
+try {
+            //BackupDynamicState();
+
+            if (session->GetComm()->GetRank() == 1 && n == 5) {
+                raise( SIGKILL );
+            }
+
             Vmath::Smul(nq, -1.0/delta_t/epsilon, field->GetPhys(),    1,
                                                   field->UpdatePhys(), 1);
 
-            field->HelmSolve(field->GetPhys(), field->UpdateCoeffs(),
-                             NullFlagList, factors);
+            //field->HelmSolve(field->GetPhys(), field->UpdateCoeffs(),
+            //                 NullFlagList, factors);
+            session->GetComm()->Block();
 
             field->BwdTrans(field->GetCoeffs(), field->UpdatePhys());
+} catch (...) {
+    try {
+        cout << "Caught an error - trying to invoke a spare." << endl;
+        int x = session->GetComm()->EnrolSpare();
+        cout << "Enroled spare, result: " << x << endl;
+    } catch (...) {
+        cout << "ERROR WHEN PERFORMING ENROLSPARE!!!" << endl;
+    }
+    //RestoreStaticState();
+    //RestoreDynamicState();
+
+}
+
         }
 
         // Write solution to file

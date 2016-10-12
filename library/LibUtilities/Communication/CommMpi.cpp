@@ -46,6 +46,7 @@ namespace LibUtilities
 {
 std::string CommMpi::className = GetCommFactory().RegisterCreatorFunction(
     "ParallelMPI", CommMpi::create, "Parallel communication using MPI.");
+int CommMpi::nSpares = 1;
 
 /**
  *
@@ -62,9 +63,54 @@ CommMpi::CommMpi(int narg, char *arg[]) : Comm(narg, arg)
         ASSERTL0(false, "Failed to initialise MPI");
     }
 
-    m_comm = MPI_COMM_WORLD;
-    MPI_Comm_size(m_comm, &m_size);
-    MPI_Comm_rank(m_comm, &m_rank);
+    int worldSize;
+    int worldRank;
+    MPI_Comm_size(MPI_COMM_WORLD, &worldSize);
+    MPI_Comm_rank(MPI_COMM_WORLD, &worldRank);
+
+    // Set MPI to call our error handler on failrue
+    MPI_Errhandler errh;
+    MPI_Comm_create_errhandler(HandleMpiError, &errh);
+    MPI_Comm_set_errhandler(MPI_COMM_WORLD, errh);
+
+    MPI_Comm_dup(MPI_COMM_WORLD, &m_agreecomm);
+    MPI_Comm_set_errhandler(m_agreecomm, MPI_ERRORS_RETURN);
+
+    // Decide if we are a spare
+    int spare = (worldRank > worldSize - nSpares - 1)? MPI_UNDEFINED : 1;
+
+    // Create a communicator without the spares
+    MPI_Comm_split( MPI_COMM_WORLD, spare, worldRank, &m_comm );
+
+    // If we are a spare, sit and wait
+    if ( MPI_COMM_NULL == m_comm )
+    {
+        std::cout << "Im a spare...rank " << worldRank << std::endl;
+        do
+        {
+            // Always ready to complete
+            int completed = 1;
+            int x = MPIX_Comm_agree( m_agreecomm, &completed );
+            std::cout << "Return value from comm agree is " << x << std::endl;
+            if( completed )
+            {
+                std::cout << "Spare process invoking Finalize" << std::endl;
+                MPI_Finalize();
+                exit(0);
+            }
+            std::cout << "Spare process about to enroll" << std::endl;
+            EnrolSpare();
+            std::cout << "Completed enroll" << std::endl;
+        } while ( MPI_COMM_NULL == m_comm );
+        MPI_Comm_size(m_comm, &m_size);
+        MPI_Comm_rank(m_comm, &m_rank);
+    }
+    else
+    {
+        std::cout << "Active process: rank " << worldRank << std::endl;
+        MPI_Comm_size(m_comm, &m_size);
+        MPI_Comm_rank(m_comm, &m_rank);
+    }
 
 #ifdef NEKTAR_USING_PETSC
     PetscInitializeNoArguments();
@@ -92,13 +138,6 @@ CommMpi::~CommMpi()
 {
 }
 
-/**
- *
- */
-MPI_Comm CommMpi::GetComm()
-{
-    return m_comm;
-}
 
 /**
  *
@@ -112,8 +151,23 @@ void CommMpi::v_Finalise()
     MPI_Finalized(&flag);
     if (!flag)
     {
+        if ( MPI_COMM_NULL != m_comm )
+        {
+            std::cout << "Non-spare process invoked Finalize" << std::endl;
+            int completed = 1;
+            MPIX_Comm_agree(MPI_COMM_WORLD, &completed);
+        }
+        MPI_Comm_free(&m_comm);
         MPI_Finalize();
     }
+}
+
+/**
+ *
+ */
+void* CommMpi::v_GetComm()
+{
+    return (void*)(m_comm);
 }
 
 /**
@@ -145,7 +199,11 @@ bool CommMpi::v_TreatAsRankZero(void)
  */
 void CommMpi::v_Block()
 {
-    MPI_Barrier(m_comm);
+    int rc = MPI_Barrier(m_comm);
+    if (rc != MPI_SUCCESS)
+    {
+        throw 1;
+    }
 }
 
 /**
@@ -370,5 +428,127 @@ CommSharedPtr CommMpi::v_CommCreateIf(int flag)
         return boost::shared_ptr<Comm>(new CommMpi(newComm));
     }
 }
+
+int CommMpi::v_EnrolSpare()
+{
+    // Unlock spares so they join us
+    if (MPI_COMM_NULL != m_comm)
+    {
+        int completed = 0;
+        int x = MPIX_Comm_agree(m_agreecomm, &completed);
+        std::cout << "Return value from comm agree is " << x << std::endl;
+    }
+
+    // First remove the dead process
+    MPI_Comm scomm, newcomm;
+    int rc, flag, ssize, srank, oldsize, oldrank, dsize, drank;
+    MPIX_Comm_shrink(MPI_COMM_WORLD, &scomm);
+    MPI_Comm_set_errhandler( scomm, MPI_ERRORS_RETURN );
+    MPI_Comm_size(scomm, &ssize);
+    MPI_Comm_rank(scomm, &srank);
+
+    // Keep trying until we succeed without further failures
+    do
+    {
+        // I am a surviving rank, work out which ranks failed
+        if (MPI_COMM_NULL != m_comm)
+        {
+            // Get our old rank and size
+            MPI_Comm_size(m_comm, &oldsize);
+            MPI_Comm_rank(m_comm, &oldrank);
+
+            // First check we have enough spares left to replace all those
+            // which have failed
+            if ( oldsize > ssize )
+            {
+                MPI_Abort(MPI_COMM_WORLD, MPI_ERR_PROC_FAILED);
+            }
+
+            // Let rank 0 in the shrunk comm determine new assignments
+            if ( 0 == srank )
+            {
+                MPI_Group cgrp, sgrp, dgrp;
+
+                // Get the group of dead processes
+                MPI_Comm_group(m_comm, &cgrp);
+                MPI_Comm_group(scomm,  &sgrp);
+                MPI_Group_difference(cgrp, sgrp, &dgrp);
+                MPI_Group_size(dgrp, &dsize);
+
+                for(int i = 0; i < ssize - (oldsize - dsize); i++) {
+                    if( i < dsize )
+                    {
+                        MPI_Group_translate_ranks(dgrp, 1, &i, cgrp, &drank);
+                    }
+                    else
+                    {
+                        drank=-1; /* still a spare */
+                    }
+                    // send their new assignment to all spares
+                    MPI_Send(&drank, 1, MPI_INT, i + oldsize - dsize, 1, scomm);
+                }
+
+                MPI_Group_free(&cgrp);
+                MPI_Group_free(&sgrp);
+                MPI_Group_free(&dgrp);
+            }
+        }
+        // I am a spare waiting for my assignment
+        else
+        {
+            MPI_Recv(&oldrank, 1, MPI_INT, 0, 1, scomm, MPI_STATUS_IGNORE);
+            std::cout << "Spare received assignment: " << oldrank << std::endl;
+        }
+
+        // Remove dead process and reassign spare processes to these ranks
+        rc = MPI_Comm_split(scomm, oldrank < 0 ? MPI_UNDEFINED : 1, oldrank, &newcomm);
+
+        flag = MPIX_Comm_agree(scomm, &flag);
+        MPI_Comm_free(&scomm);
+
+        if( MPI_SUCCESS != flag ) {
+            if( MPI_SUCCESS == rc )
+            {
+                MPI_Comm_free(&newcomm);
+            }
+        }
+
+    } while ( MPI_SUCCESS != flag );
+
+    // Replace the original comm
+    if (MPI_COMM_NULL != m_comm)
+    {
+        MPI_Comm_free(&m_comm);
+    }
+    m_comm = newcomm;
+
+    m_isRecovering = true;
+
+    return MPI_SUCCESS;
+}
+
+static void CommMpi::HandleMpiError(MPI_Comm* pcomm, int* perr, ...)
+{
+    MPI_Comm comm = *pcomm;
+    int err = *perr;
+
+    // Get type of error and check if it is a proc failed.
+    int eclass;
+    MPI_Error_class(err, &eclass);
+    if (MPIX_ERR_PROC_FAILED != eclass)
+    {
+        std::cout << "An non-proc-failed MPI error occured..." << std::endl;
+        //MPI_Abort(comm, err);
+    }
+
+    int len;
+    char errstr[MPI_MAX_ERROR_STRING];
+    MPI_Error_string(err, errstr, &len);
+
+    std::cout << "An MPI error occured: " << errstr << std::endl;
+
+    throw 1; //UlfmFailureDetected(std::string(errstr));
+}
+
 }
 }
