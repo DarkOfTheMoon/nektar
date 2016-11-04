@@ -46,7 +46,7 @@ ADD_NEKTAR_TEST(NodalDemo_Tet_Deriv_P8)
 ADD_NEKTAR_TEST(NodalDemo_Tet_Integral_P6)
 ADD_NEKTAR_TEST(NodalDemo_Tet_Interp_P7)
 
-IF(NEKTAR_USE_HDF5)
+IF(NEKTAR_USE_HDF5 OR NEKTAR_USE_SIONLIB)
     ADD_NEKTAR_EXECUTABLE(FieldIOBenchmarker demos FieldIOBenchmarkerSources)
     TARGET_LINK_LIBRARIES(FieldIOBenchmarker LibUtilities)
 ENDIF()
