@@ -82,7 +82,8 @@ FieldIOFactory &GetFieldIOFactory()
 /// Enumerator for auto-detection of FieldIO types.
 enum FieldIOType {
     eXML,
-    eHDF5
+    eHDF5,
+    eSIONLIB
 };
 
 /**
@@ -123,22 +124,43 @@ const std::string FieldIO::GetFileType(const std::string &filename,
         // Read first 8 bytes. If they correspond with magic bytes below it's an
         // HDF5 file. XML is potentially a nightmare with all the different
         // encodings so we'll just assume it's OK if it's not HDF.
-        const unsigned char magic[8] = {
+        const unsigned char hdf5_magic[8] = {
             0x89, 0x48, 0x44, 0x46, 0x0d, 0x0a, 0x1a, 0x0a};
 
-        std::ifstream datafile(datafilename.c_str(), ios_base::binary);
-        ASSERTL0(datafile.good(), "Unable to open file: " + filename);
+        const unsigned char sionlib_magic[8] = {
+            0x73, 0x69, 0x6f, 0x6e, 0x00, 0x00, 0x00, 0x00};
 
-        ioType = eHDF5;
+        std::ifstream datafile(datafilename.c_str(), ios_base::binary);
+
+        int is_hdf5 = 1;
+        int is_sionlib = 1;
         for (unsigned i = 0; i < 8 && datafile.good(); ++i)
         {
             unsigned char byte = datafile.get();
-            if (byte != magic[i])
+            if (is_hdf5 == 1 && byte != hdf5_magic[i])
             {
-                ioType = eXML;
-                break;
+                is_hdf5 = 0;
             }
+	    if (is_sionlib == 1 && byte != sionlib_magic[i])
+            {
+                is_sionlib = 0;
+            }
+
+	    if (is_hdf5 == 0 && is_sionlib == 0)
+	    {
+	        break;
+	    }
         }
+
+	ioType = eXML;
+	if (is_hdf5 == 1)
+	{
+	    ioType = eHDF5;
+        }
+	else if (is_sionlib == 1)
+	{
+	    ioType = eSIONLIB;
+	}
     }
 
     if (size > 1)
@@ -156,6 +178,10 @@ const std::string FieldIO::GetFileType(const std::string &filename,
     else if (ioType == eHDF5)
     {
         iofmt = "Hdf5";
+    }
+    else if (ioType == eSIONLIB)
+    {
+        iofmt = "SIONlib";
     }
     else
     {
@@ -191,10 +217,14 @@ FieldIOSharedPtr FieldIO::CreateDefault(
         iofmt = session->GetCmdLineArgument<std::string>("io-format");
     }
 
-    return GetFieldIOFactory().CreateInstance(
+    FieldIOSharedPtr fieldio = GetFieldIOFactory().CreateInstance(
         iofmt,
         session->GetComm(),
-        session->GetSharedFilesystem());
+        session->DefinesCmdLineArgument("shared-filesystem"));
+
+    fieldio->Init(session);
+    
+    return fieldio;
 }
 
 /**
@@ -214,10 +244,15 @@ FieldIOSharedPtr FieldIO::CreateForFile(
 {
     const std::string iofmt =
         FieldIO::GetFileType(filename, session->GetComm());
-    return GetFieldIOFactory().CreateInstance(
+    
+    FieldIOSharedPtr fieldio = GetFieldIOFactory().CreateInstance(
         iofmt,
         session->GetComm(),
-        session->GetSharedFilesystem());
+        session->DefinesCmdLineArgument("shared-filesystem"));
+
+    fieldio->Init(session);
+    
+    return fieldio;
 }
 
 /**
@@ -230,8 +265,9 @@ FieldIOSharedPtr FieldIO::CreateForFile(
  * @param fielddata     Binary field data that stores the output corresponding
  *                      to @p fielddefs.
  * @param fieldinfomap  Associated field metadata map.
+ * @return The number of bytes written.
  */
-void Write(const std::string &outFile,
+unsigned long Write(const std::string &outFile,
            std::vector<FieldDefinitionsSharedPtr> &fielddefs,
            std::vector<std::vector<NekDouble> > &fielddata,
            const FieldMetaDataMap &fieldinfomap)
@@ -256,7 +292,7 @@ void Write(const std::string &outFile,
 #endif
     CommSharedPtr c    = GetCommFactory().CreateInstance("Serial", 0, 0);
     FieldIOSharedPtr f = GetFieldIOFactory().CreateInstance("Xml", c, false);
-    f->Write(outFile, fielddefs, fielddata, fieldinfomap);
+    return f->Write(outFile, fielddefs, fielddata, fieldinfomap);
 }
 
 /**
@@ -273,8 +309,9 @@ void Write(const std::string &outFile,
  * @param ElementIDs    Element IDs that lie on this processor, which can be
  *                      optionally supplied to avoid reading the entire file on
  *                      each processor.
+ * @return The number of bytes read.
  */
-LIB_UTILITIES_EXPORT void Import(
+LIB_UTILITIES_EXPORT unsigned long Import(
     const std::string &infilename,
     std::vector<FieldDefinitionsSharedPtr> &fielddefs,
     std::vector<std::vector<NekDouble> > &fielddata,
@@ -302,7 +339,7 @@ LIB_UTILITIES_EXPORT void Import(
     CommSharedPtr c    = GetCommFactory().CreateInstance("Serial", 0, 0);
     const std::string iofmt = FieldIO::GetFileType(infilename, c);
     FieldIOSharedPtr f = GetFieldIOFactory().CreateInstance(iofmt, c, false);
-    f->Import(infilename, fielddefs, fielddata, fieldinfomap, ElementIDs);
+    return f->Import(infilename, fielddefs, fielddata, fieldinfomap, ElementIDs);
 }
 
 /**
@@ -459,10 +496,10 @@ std::string FieldIO::SetUpOutput(const std::string outname, bool perRank)
         m_comm->Block();
     }
 
-    if (rank == 0)
-    {
-        cout << "Writing: " << specPath;
-    }
+    //if (rank == 0)
+    //{
+    //    cout << "Writing: " << specPath << std::endl;
+    //}
 
     // serial processing just add ending.
     if (nprocs == 1)
