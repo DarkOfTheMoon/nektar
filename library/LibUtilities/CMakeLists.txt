@@ -62,12 +62,22 @@ SET(BasicUtilsSources
 # HDF5
 IF( NEKTAR_USE_HDF5 )
     SET(BasicUtilsHeaders ${BasicUtilsHeaders}
-	./BasicUtils/H5.h
+        ./BasicUtils/H5.h
         ./BasicUtils/FieldIOHdf5.h)
     SET(BasicUtilsSources ${BasicUtilsSources}
-	./BasicUtils/H5.cpp
+        ./BasicUtils/H5.cpp
         ./BasicUtils/FieldIOHdf5.cpp)
 ENDIF( NEKTAR_USE_HDF5 )
+
+# SIONlib
+IF( NEKTAR_USE_SIONLIB )
+    SET(BasicUtilsHeaders ${BasicUtilsHeaders}
+        ./BasicUtils/SIONlib.h
+        ./BasicUtils/FieldIOSIONlib.h)
+    SET(BasicUtilsSources ${BasicUtilsSources}
+        ./BasicUtils/SIONlib.cpp
+        ./BasicUtils/FieldIOSIONlib.cpp)
+ENDIF( NEKTAR_USE_SIONLIB )
 
 SET(CommunicationHeaders
     ./Communication/Comm.h
@@ -413,7 +423,6 @@ TARGET_LINK_LIBRARIES(LibUtilities LINK_PUBLIC
     ${Boost_FILESYSTEM_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_TIMER_LIBRARY}
-    ${Boost_CHRONO_LIBRARY}
     debug ${ZLIB_LIBRARY_DEBUG} optimized ${ZLIB_LIBRARY_RELEASE}
 )
 
@@ -433,7 +442,7 @@ IF( NEKTAR_USE_MPI )
         SET_TARGET_PROPERTIES(LibUtilities
             PROPERTIES COMPILE_FLAGS "${THE_COMPILE_FLAGS} ${MPI_COMPILE_FLAGS}")
     ENDIF()
-    ADD_DEPENDENCIES(LibUtilities gsmpi-1.2.1)
+    ADD_DEPENDENCIES(LibUtilities gsmpi-1.2)
 ENDIF( NEKTAR_USE_MPI )
 
 # Lapack and Blas
@@ -475,7 +484,7 @@ ENDIF( NEKTAR_USE_BLAS_LAPACK )
 IF( NEKTAR_USE_PETSC )
     TARGET_LINK_LIBRARIES(LibUtilities LINK_PRIVATE ${PETSC_LIBRARIES})
     TARGET_LINK_LIBRARIES(LibUtilities LINK_PUBLIC ${CMAKE_DL_LIBS})
-    ADD_DEPENDENCIES(LibUtilities petsc-3.7.2)
+    ADD_DEPENDENCIES(LibUtilities petsc-3.5.2)
 ENDIF( NEKTAR_USE_PETSC )
 
 # HDF5
@@ -483,6 +492,13 @@ IF( NEKTAR_USE_HDF5 )
     TARGET_LINK_LIBRARIES(LibUtilities LINK_PRIVATE ${HDF5_LIBRARIES})
     ADD_DEPENDENCIES(LibUtilities hdf5-1.8.16)
 ENDIF( NEKTAR_USE_HDF5 )
+
+# SIONlib
+IF( NEKTAR_USE_SIONLIB )
+    SET_SOURCE_FILES_PROPERTIES(./BasicUtils/FieldIOSIONlib.cpp
+        PROPERTY COMPILE_FLAGS "${SIONLIB_COMPILE_FLAGS}")
+    TARGET_LINK_LIBRARIES(LibUtilities LINK_PRIVATE ${SIONLIB_LIBRARIES})
+ENDIF( NEKTAR_USE_SIONLIB )
 
 INSTALL(FILES ${ExpressionTemplates} DESTINATION ${NEKTAR_INCLUDE_DIR}/ExpressionTemplates COMPONENT dev)
 INSTALL(DIRECTORY ./ DESTINATION ${NEKTAR_INCLUDE_DIR}/LibUtilities COMPONENT dev FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
