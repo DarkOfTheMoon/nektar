@@ -2051,6 +2051,7 @@ namespace Nektar
                                 EdgeID[cnt+e],
                                 Array_tmp = locExpList->GetPhys() +
                                             locExpList->GetPhys_Offset(e));
+
                         elmtid = ElmtID[cnt+e];
                         // make link list if necessary
                         if(returnval.count(elmtid) != 0)
@@ -2104,6 +2105,7 @@ namespace Nektar
                                 EdgeID[cnt+e],
                                 Array_tmp = locExpList->GetPhys() + 
                                             locExpList->GetPhys_Offset(e));
+
                         elmtid = ElmtID[cnt+e];
                         // make link list if necessary
                         if(returnval.count(elmtid) != 0)
@@ -2415,14 +2417,23 @@ namespace Nektar
                                 boost::static_pointer_cast<
                                     SpatialDomains::WeakDirichletBoundaryCondition>
                                         (m_bndConditions[i])->
-                                            m_weakDirichletCondition;
+                                            m_weakDirichletFunction;
                             condition.Evaluate(x0, x1, x2, time,
                                                locExpList->UpdatePhys());
                         }
 
+                        LibUtilities::Equation coeff =
+                            boost::static_pointer_cast<
+                                SpatialDomains::WeakDirichletBoundaryCondition>(
+                                    m_bndConditions[i])->m_weakDirichletPrimitiveCoeff;
                         locExpList->IProductWRTBase(
                             locExpList->GetPhys(),
                             locExpList->UpdateCoeffs());
+
+                        // put primitive coefficient into the physical
+                        // space storage
+                        coeff.Evaluate(x0, x1, x2, time,
+                                       locExpList->UpdatePhys());
                     }
                     else
                     {

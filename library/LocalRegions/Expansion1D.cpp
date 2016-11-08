@@ -405,7 +405,8 @@ namespace Nektar
         }
 
         void Expansion1D::v_AddWeakDirichletForcingContribution(const Array<OneD, int>& edgeids,
-                                                                const Array<OneD, Array<OneD, const NekDouble> >& lambda,
+                                                                const Array<OneD, const NekDouble>& lambdaOnTrace,
+                                                                const Array<OneD, const int>& lambdaOffsets,
                                                                 Array<OneD, NekDouble> &coeffs)
         {
         }

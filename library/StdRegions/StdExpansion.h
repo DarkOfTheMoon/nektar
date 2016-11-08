@@ -1116,10 +1116,11 @@ namespace Nektar
             }
 
             void AddWeakDirichletForcingContribution(const Array<OneD, int>& edgeids,
-                                                     const Array<OneD, Array<OneD, const NekDouble> >& lambda,
+                                                     const Array<OneD, const NekDouble>& lambdaOnTrace,
+                                                     const Array<OneD, const int>& lambdaOffsets,
                                                      Array<OneD, NekDouble> &coeffs)
             {
-                v_AddWeakDirichletForcingContribution(edgeids, lambda, coeffs);
+                v_AddWeakDirichletForcingContribution(edgeids, lambdaOnTrace, lambdaOffsets, coeffs);
             }
 
             /** \brief This function evaluates the expansion at a single
@@ -1686,7 +1687,8 @@ namespace Nektar
             STD_REGIONS_EXPORT virtual void v_AddWeakDirichletElementContribution(const Array<OneD, int>& edgeids, DNekMat &inoutmat);
 
             STD_REGIONS_EXPORT virtual void v_AddWeakDirichletForcingContribution(const Array<OneD, int>& edgeids,
-                                                                                  const Array<OneD, Array<OneD, const NekDouble> >& lambda,
+                                                                                  const Array<OneD, const NekDouble>& lambdaOnTrace,
+                                                                                  const Array<OneD, const int>& lambdaOffsets,
                                                                                   Array<OneD, NekDouble> &coeffs);
 
             STD_REGIONS_EXPORT virtual NekDouble v_PhysEvaluate(const Array<OneD, const NekDouble>& coords, const Array<OneD, const NekDouble> & physvals);

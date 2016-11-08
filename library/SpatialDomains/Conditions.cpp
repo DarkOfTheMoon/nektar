@@ -367,7 +367,7 @@ namespace Nektar
                             for (std::vector<std::string>::iterator varIter = vars.begin();
                                 varIter != vars.end(); ++varIter)
                             {
-                                BoundaryConditionShPtr weakDirichletCondition(MemoryManager<WeakDirichletBoundaryCondition>::AllocateSharedPtr(m_session, "0"));
+                                BoundaryConditionShPtr weakDirichletCondition(MemoryManager<WeakDirichletBoundaryCondition>::AllocateSharedPtr(m_session, "0", "0"));
                                 (*boundaryConditions)[*varIter] = weakDirichletCondition;
                             }
                         }
@@ -428,7 +428,7 @@ namespace Nektar
                             else
                             {
                                 // This variable's condition is zero.
-                                BoundaryConditionShPtr weakDirichletCondition(MemoryManager<WeakDirichletBoundaryCondition>::AllocateSharedPtr(m_session, "0"));
+                                BoundaryConditionShPtr weakDirichletCondition(MemoryManager<WeakDirichletBoundaryCondition>::AllocateSharedPtr(m_session, "0", "0"));
                                 (*boundaryConditions)[*iter]  = weakDirichletCondition;
                             }
                         }

@@ -1535,7 +1535,40 @@ namespace Nektar
          */
         map<int, WeakDirichletBCInfoSharedPtr> DisContField1D::v_GetWeakDirichletBCInfo(void)
         {
-            return map<int, WeakDirichletBCInfoSharedPtr>();
+            int i;
+            map<int, WeakDirichletBCInfoSharedPtr> returnval;
+            Array<OneD, int> ElmtID,VertID;
+            GetBoundaryToElmtMap(ElmtID,VertID);
+
+            for (i = 0; i < m_bndCondExpansions.num_elements(); ++i)
+            {
+                MultiRegions::ExpListSharedPtr locExpList;
+
+                if (m_bndConditions[i]->GetBoundaryConditionType() ==
+                   SpatialDomains::eWeakDirichlet)
+                {
+                    int elmtid;
+                    Array<OneD, NekDouble> Array_tmp;
+
+                    locExpList = m_bndCondExpansions[i];
+
+                    WeakDirichletBCInfoSharedPtr wDInfo =
+                        MemoryManager<WeakDirichletBCInfo>::
+                            AllocateSharedPtr(
+                                VertID[i],Array_tmp = locExpList->GetPhys());
+
+                    elmtid = ElmtID[i];
+                    // make link list if necessary (not likely in
+                    // 1D but needed in 2D & 3D)
+                    if(returnval.count(elmtid) != 0)
+                    {
+                        wDInfo->next = returnval.find(elmtid)->second;
+                    }
+                    returnval[elmtid] = wDInfo;
+                }
+            }
+
+            return returnval;
         }
 
         /**
@@ -1544,7 +1577,7 @@ namespace Nektar
          * boundary then store the edge id of the boundary condition
          * and the array of points of the physical space boundary
          * condition which are hold the boundary condition primitive
-         * variable coefficient at the quatrature points
+         * variable coefficient at the quadrature points
          *
          * \return std map containing the robin boundary condition
          * info using a key of the element id

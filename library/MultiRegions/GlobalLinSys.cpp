@@ -193,7 +193,7 @@ namespace Nektar
             m_linSysKey(pKey),
             m_expList(pExpList),
             m_robinBCInfo(m_expList.lock()->GetRobinBCInfo()),
-			      m_weakDirichletBCInfo(m_expList.lock()->GetWeakDirichletBCInfo())
+            m_weakDirichletBCInfo(m_expList.lock()->GetWeakDirichletBCInfo())
         {
         }
 

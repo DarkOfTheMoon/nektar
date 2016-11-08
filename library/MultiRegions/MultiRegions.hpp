@@ -171,7 +171,8 @@ namespace Nektar
             }
 
             virtual ~RobinBCInfo()
-            {}
+            {
+            }
 
             int m_robinID; /// id of which edge/face is robin condition
             Array< OneD, const NekDouble > m_robinPrimitiveCoeffs;
@@ -191,7 +192,8 @@ namespace Nektar
             }
 
             virtual ~WeakDirichletBCInfo()
-            {}
+            {
+            }
 
             int m_weakDirichletID; /// id of which edge/face is weak Dirichlet condition
             Array< OneD, const NekDouble > m_weakDirichletPrimitiveCoeffs;

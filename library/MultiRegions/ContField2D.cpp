@@ -35,6 +35,7 @@
 
 #include <MultiRegions/ContField2D.h>
 #include <MultiRegions/AssemblyMap/AssemblyMapCG.h>
+#include <LocalRegions/Expansion2D.h>
 
 using namespace std;
 
@@ -833,7 +834,236 @@ namespace Nektar
             // be consistent with matrix definition
             Vmath::Neg(contNcoeffs, wsp, 1);
 
+            //----------------------------------
             // Fill weak boundary conditions
+            //----------------------------------
+
+            std::cout << "HELMSOLVE 2D START" << std::endl;
+            std::cout << "Number of boundary regions = " << m_bndCondExpansions.num_elements() << std::endl;
+
+            const std::map<int, WeakDirichletBCInfoSharedPtr> weakDirBCs = this->GetWeakDirichletBCInfo();
+
+            std::map<int, WeakDirichletBCInfoSharedPtr>::const_iterator it;
+
+            const int nLocDofs = this->GetNcoeffs();
+            std::cout << "ContField2D: Number of local degrees of freedom = " << nLocDofs << std::endl;
+            // std::cout << "Number of quadrature points in element = " <<
+            Array<OneD, NekDouble> tmp2(nLocDofs);
+
+            WeakDirichletBCInfoSharedPtr wDBC;
+
+            for (it = weakDirBCs.cbegin(); it != weakDirBCs.cend(); ++it)
+            {
+                const int elmt = it->first;
+                std::cout << "Element: " << elmt << std::endl;
+                // const WeakDirichletBCInfo& weakDirichletBCInfo = *(it->second);
+
+                Array<OneD, NekDouble> elmtDofs = tmp2 + GetCoeff_Offset(elmt);
+                const LocalRegions::Expansion2DSharedPtr exp =
+                   shared_from_this()->GetExp(elmt)->as<LocalRegions::Expansion2D>();
+
+                std::cout << ">>> 2D Expansion number of points [0] = " << exp->GetNumPoints(0) << std::endl;
+                // std::cout << ">>> 2D Expansion number of points [1] = " << exp->GetNumPoints(1) << std::endl;
+
+                /*
+                const LocalRegions::ExpansionSharedPtr baseExpPtr = shared_from_this()->GetExp(elmt);
+                const LocalRegions::Expansion2DSharedPtr exp = baseExpPtr->as<LocalRegions::Expansion2D>();
+                */
+
+                // Collect the IDs of faces that have weak Dirichlet BCs
+                std::cout << "***************************************************" << std::endl;
+                std::cout << "ContField2D: Dirichlet BC values:";
+
+                int numBdryFacets = 0;
+                int numLambdaValues = 0;
+
+                for(wDBC = weakDirBCs.find(elmt)->second; wDBC; wDBC = wDBC->next)
+                {
+                    const int localEdgeId = wDBC->m_weakDirichletID;
+                    const LocalRegions::Expansion1DSharedPtr edgeExp = exp->GetEdgeExp(localEdgeId, false);
+                    const int nEdgeQuadPts = edgeExp->GetNumPoints(0);
+
+                    std::cout << "  Local face id: " << localEdgeId << std::endl;
+                    std::cout << "Number of coefficients of (LOCAL) boundary expansion = " << nEdgeQuadPts << std::endl;
+
+                    numBdryFacets++;
+                    numLambdaValues += nEdgeQuadPts;
+
+                    for(int i = 0; i < nEdgeQuadPts; ++i)
+                    {
+                        std::cout << " " << wDBC->m_weakDirichletPrimitiveCoeffs[i];
+                    }
+                    std::cout << " |";
+                }
+                std::cout << std::endl;
+
+                std::cout << "--------------------------------------------------------" << std::endl;
+                std::cout << "Total number of lambda values = " << numLambdaValues << std::endl;
+                std::cout << "--------------------------------------------------------" << std::endl;
+
+
+                Array<OneD, int> edgeids(numBdryFacets);
+                Array<OneD, NekDouble> lambdaOnTrace(numLambdaValues);
+                Array<OneD, int> lambdaOffsets(numBdryFacets);
+
+                numBdryFacets = 0;
+                int offset = 0;
+
+                for(wDBC = weakDirBCs.find(elmt)->second; wDBC; wDBC = wDBC->next)
+                {
+                    const int localEdgeId = wDBC->m_weakDirichletID;
+                    const LocalRegions::Expansion1DSharedPtr edgeExp = exp->GetEdgeExp(localEdgeId, false);
+                    const int nEdgeQuadPts = edgeExp->GetNumPoints(0);
+
+                    lambdaOffsets[numBdryFacets] = offset;
+
+                    for(int i = 0; i < nEdgeQuadPts; ++i)
+                    {
+                        lambdaOnTrace[offset++] = wDBC->m_weakDirichletPrimitiveCoeffs[i];
+                    }
+
+                    edgeids[numBdryFacets] = localEdgeId;
+                    numBdryFacets++;
+                }
+
+                std::cout << "ContField2D: Boundary edges:" << std::endl;
+                for(int i = 0; i < edgeids.num_elements(); ++i)
+                {
+                  std::cout << " " << edgeids[i];
+                }
+                std::cout << std::endl;
+
+                std::cout << "ContField2D: Offset array for Dirichlet BC values:" << std::endl;
+                for(int i = 0; i < lambdaOffsets.num_elements(); ++i)
+                {
+                  std::cout << " " << lambdaOffsets[i];
+                }
+                std::cout << std::endl;
+
+                std::cout << "ContField2D: Lambda values:" << std::endl;
+                for(int i = 0; i < lambdaOnTrace.num_elements(); ++i)
+                {
+                  std::cout << " " << lambdaOnTrace[i];
+                }
+                std::cout << std::endl;
+
+                std::cout << "***************************************************" << std::endl;
+                std::cout << "Adding RHS contribution due to weak BCs ..." << std::endl;
+                exp->AddWeakDirichletForcingContribution(edgeids, lambdaOnTrace,
+                                                         lambdaOffsets, tmp2);
+
+                std::cout << "Computed WD values:";
+                for(int i = 0; i < tmp2.num_elements(); ++i)
+                {
+                    std::cout << " " << tmp2[i];
+                }
+
+                std::cout << std::endl;
+
+                std::cout << " ... done" << std::endl;
+
+                // exp->Weakstuff();
+           }
+
+
+#if 0
+
+            const MultiRegions::ExpListSharedPtr expList = m_expList.lock();
+
+            const std::map<int, WeakDirichletBCInfoSharedPtr> weakDirBCs = expList->GetWeakDirichletBCInfo();
+            std::map<int, WeakDirichletBCInfoSharedPtr>::const_iterator it;
+
+            const int nLocDofs = expList->GetNcoeffs();
+            std::cout << "GlobalLinSysDirectFull: Number of local degrees of freedom = " << nLocDofs << std::endl;
+            Array<OneD, NekDouble> tmp2(nLocDofs);
+
+            WeakDirichletBCInfoSharedPtr wDBC;
+
+            for (it = weakDirBCs.cbegin(); it != weakDirBCs.cend(); ++it)
+            {
+                const int elmt = it->first;
+                // const WeakDirichletBCInfo& weakDirichletBCInfo = *(it->second);
+
+                Array<OneD, NekDouble> elmtDofs = tmp2 + expList->GetCoeff_Offset(elmt);
+                const LocalRegions::Expansion2DSharedPtr exp =
+                    expList->GetExp(elmt)->as<LocalRegions::Expansion2D>();
+
+                // Collect the IDs of faces that have weak Dirichlet BCs
+                std::cout << "GlobalLinSysDirectFull: Dirichlet BC values:";
+                int numBdryFacets = 0;
+                int numLambdaValues = 0;
+                for(wDBC = weakDirBCs.find(elmt)->second; wDBC; wDBC = wDBC->next)
+                {
+                    numBdryFacets++;
+                    numLambdaValues += wDBC->m_weakDirichletPrimitiveCoeffs.num_elements();
+
+                    for(int i = 0; i < wDBC->m_weakDirichletPrimitiveCoeffs.num_elements(); ++i)
+                    {
+                      std::cout << " " << wDBC->m_weakDirichletPrimitiveCoeffs[i];
+                    }
+                    std::cout << " |";
+                }
+                std::cout << std::endl;
+
+                Array<OneD, int> edgeids(numBdryFacets);
+                Array<OneD, NekDouble> lambdaOnTrace(numLambdaValues);
+                Array<OneD, int> lambdaOffsets(numBdryFacets);
+
+                numBdryFacets = 0;
+                int offset = 0;
+
+                for(wDBC = weakDirBCs.find(elmt)->second; wDBC; wDBC = wDBC->next)
+                {
+                    lambdaOffsets[numBdryFacets] = offset;
+                    for(int i = 0; i < wDBC->m_weakDirichletPrimitiveCoeffs.num_elements(); ++i)
+                    {
+                        lambdaOnTrace[offset++] = wDBC->m_weakDirichletPrimitiveCoeffs[i];
+                    }
+
+                    edgeids[numBdryFacets] = wDBC->m_weakDirichletID;
+                    numBdryFacets++;
+                }
+
+                std::cout << "GlobalLinSysDirectFull: Boundary edges:" << std::endl;
+                for(int i = 0; i < edgeids.num_elements(); ++i)
+                {
+                  std::cout << " " << edgeids[i];
+                }
+                std::cout << std::endl;
+
+                std::cout << "GlobalLinSysDirectFull: Offset array for Dirichlet BC values:" << std::endl;
+                for(int i = 0; i < lambdaOffsets.num_elements(); ++i)
+                {
+                  std::cout << " " << lambdaOffsets[i];
+                }
+                std::cout << std::endl;
+
+                std::cout << "GlobalLinSysDirectFull: Lambda values:" << std::endl;
+                for(int i = 0; i < lambdaOnTrace.num_elements(); ++i)
+                {
+                  std::cout << " " << lambdaOnTrace[i];
+                }
+                std::cout << std::endl;
+
+                /*
+                exp->AddWeakDirichletForcingContribution(edgeids, lambdaOnTrace,
+                                                         lambdaOffsets, tmp2);
+                */
+                // exp->Weakstuff();
+
+
+            }
+
+            std::cout << "HELMSOLVE 2D END" << std::endl;
+
+#endif
+
+
+
+
+
+
+
             int i,j;
             int bndcnt=0;
             Array<OneD, NekDouble> gamma(contNcoeffs, 0.0);

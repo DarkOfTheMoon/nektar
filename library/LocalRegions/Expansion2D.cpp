@@ -1688,7 +1688,8 @@ namespace Nektar
          */
 
         void Expansion2D::v_AddWeakDirichletForcingContribution(const Array<OneD, int>& edgeids,
-                                                                const Array<OneD, Array<OneD, const NekDouble> >& lambda,
+                                                                const Array<OneD, const NekDouble>& lambdaOnTrace,
+                                                                const Array<OneD, const int>& lambdaOffsets,
                                                                 Array<OneD, NekDouble> &coeffs)
         {
             ASSERTL1(IsBoundaryInteriorExpansion(),
@@ -1696,6 +1697,7 @@ namespace Nektar
 
             const int coordim = GetCoordim();
             const int nElemCoeffs = GetNcoeffs();
+
 
             // Tags for weak derivatives
             const StdRegions::MatrixType DerivType[3] = {StdRegions::eWeakDeriv0,
@@ -1715,11 +1717,32 @@ namespace Nektar
             Vmath::Zero(nElemCoeffs, tildeFTimesLambda[0], 1);
             Vmath::Zero(nElemCoeffs, tildeFTimesLambda[1], 1);
 
-            Array<OneD, NekDouble> FTimesLambda;
+            Array<OneD, NekDouble> FTimesLambda(nElemCoeffs);
             Vmath::Zero(nElemCoeffs, FTimesLambda, 1);
 
             Array<OneD, NekDouble> work0(nElemCoeffs);
             Array<OneD, NekDouble> work1(nElemCoeffs);
+
+            std::cout << "Lambda on trace =";
+            for(int ii = 0; ii < lambdaOnTrace.num_elements(); ++ii)
+            {
+              std::cout << " " << lambdaOnTrace[ii];
+            }
+            std::cout << std::endl;
+
+            std::cout << "Lambda offsets =";
+            for(int ii = 0; ii < lambdaOffsets.num_elements(); ++ii)
+            {
+              std::cout << " " << lambdaOffsets[ii];
+            }
+            std::cout << std::endl;
+
+            // ------------------------------------------------------
+            // 1) Evaluate
+            // a) sum(tildeF[X] * lambda) and sum(tildeF[Y] * lambda)
+            // b) sum(tau * F * lambda)
+            // Both sum loop over weak Dirichlet edges
+            // ------------------------------------------------------
 
             for(int ie = 0; ie < edgeids.num_elements(); ++ie)
             {
@@ -1733,6 +1756,7 @@ namespace Nektar
                 Array<OneD, NekDouble> elemCoeffs(nElemCoeffs), phys(GetTotPoints());
                 Array<OneD, NekDouble> edgePhys  (nquad_e);
                 Array<OneD, NekDouble> edgeCoeffs(nEdgeCoeffs);
+                Array<OneD, NekDouble> lambdaExpCoeffs(nEdgeCoeffs);
 
                 GetEdgeToElementMap(iedge, v_GetEorient(iedge), map, sign);
 
@@ -1741,6 +1765,24 @@ namespace Nektar
                 DNekMatSharedPtr tildeFMatPtr = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs, nEdgeCoeffs);
 
                 DNekMat& tildeFMat = *tildeFMatPtr;
+
+                const Array<OneD, const NekDouble> lambdaOneEdge = lambdaOnTrace + lambdaOffsets[ie];
+                std::cout << "Lambda on edge (at quadrature points) " << iedge << std::endl;
+                for(int ii = 0; ii < nquad_e; ++ii)
+                {
+                    std::cout << " " << lambdaOneEdge[ii];
+                }
+                std::cout << std::endl;
+
+                EdgeExp->FwdTrans(lambdaOneEdge, lambdaExpCoeffs);
+
+                std::cout << "Lambda on edge (expansion coefficients) " << iedge << std::endl;
+                for(int ii = 0; ii < lambdaExpCoeffs.num_elements(); ++ii)
+                {
+                    std::cout << " " << lambdaExpCoeffs[ii];
+                }
+                std::cout << "\n" << std::endl;
+
 
                 for(int dir = 0; dir < coordim; ++dir)
                 {
@@ -1771,7 +1813,7 @@ namespace Nektar
                      // Nektar uses column-major storage, lda = number of matrix rows
                      // Multiply tilde(F) * lambda and store in work0
                      Blas::Dgemv('N', nElemCoeffs, nEdgeCoeffs, 1.0, &(tildeFMat.GetPtr())[0],
-                                      nElemCoeffs, &lambda[ie][0], 1, 1, &work0[0], 1 );
+                                      nElemCoeffs, &lambdaOneEdge[0], 1, 1, &work0[0], 1 );
 
                      // Accumulate result to tildeFTimesLambda
                      Vmath::Vadd(nElemCoeffs, &tildeFTimesLambda[dir][0], 1, &work0[0], 1, &tildeFTimesLambda[dir][0], 1);
@@ -1802,16 +1844,22 @@ namespace Nektar
                     }
                 }
 
-
                 // Nektar uses column-major storage, lda = number of matrix rows
                 // Multiply F * lambda and store in work0
                 Blas::Dgemv('N', nElemCoeffs, nEdgeCoeffs, 1.0, &(FMat.GetPtr())[0],
-                                 nElemCoeffs, &lambda[ie][0], 1, 1, &work0[0], 1 );
+                                 nElemCoeffs, &lambdaOneEdge[0], 1, 1, &work0[0], 1 );
 
                 // Accumulate result to FTimesLambda
                 Vmath::Vadd(nElemCoeffs, &FTimesLambda[0], 1, &work0[0], 1, &FTimesLambda[0], 1);
             }
             // Loop over edges
+
+            // ---------------------------------------------------------
+            // 2) Use 1a) to evaluate sum ( D * inv(M) * sum(F*lambda) )
+            //    The inner sum is over weak Dirichlet edges
+            //    The outer sum is over dimensions
+            // ---------------------------------------------------------
+
 
             // Mass matrix
             const DNekScalMat &invMass = *GetLocMatrix(StdRegions::eInvMass);
@@ -1840,8 +1888,8 @@ namespace Nektar
                 Vmath::Vadd(nElemCoeffs, &work1[0], 1, &coeffs[0], 1, &coeffs[0], 1);
             }
 
-            // coeffs -= sum ( F * lambda )
-            Vmath::Vsub(nElemCoeffs, &coeffs[0], 1, &FTimesLambda[0], 1, &coeffs[0], 1);
+            // coeffs += sum ( F * lambda )
+            Vmath::Vadd(nElemCoeffs, &coeffs[0], 1, &FTimesLambda[0], 1, &coeffs[0], 1);
 
         } // v_AddWeakDirichletForcingContribution
 

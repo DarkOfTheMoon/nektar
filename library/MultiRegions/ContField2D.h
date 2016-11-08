@@ -184,7 +184,7 @@ namespace Nektar
             /// (A shared pointer to) a list which collects all the global
             /// matrices being assembled, such that they should be constructed
             /// only once.
-            GlobalMatrixMapShPtr            m_globalMat;
+            GlobalMatrixMapShPtr m_globalMat;
 
             /// A manager which collects all the global
             /// linear systems being assembled, such that they should be

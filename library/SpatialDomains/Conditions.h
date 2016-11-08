@@ -137,18 +137,19 @@ namespace Nektar
 
             WeakDirichletBoundaryCondition(
                 const LibUtilities::SessionReaderSharedPtr &pSession,
-                const std::string& eqn,
+                const std::string& a,
+                const std::string& b,
                 const std::string& userDefined = std::string("NoUserDefined"),
                 const std::string& filename=std::string("")):
                     BoundaryConditionBase(eWeakDirichlet, userDefined),
-                    m_weakDirichletCondition(pSession, eqn),
-                    m_expr(eqn),
+                    m_weakDirichletFunction(pSession, a),
+                    m_weakDirichletPrimitiveCoeff(pSession, b),
                     m_filename(filename)
             {
             }
 
-            LibUtilities::Equation m_weakDirichletCondition;
-            std::string m_expr;
+            LibUtilities::Equation m_weakDirichletFunction;
+            LibUtilities::Equation m_weakDirichletPrimitiveCoeff;
             std::string m_filename;
         };
 
