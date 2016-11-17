@@ -117,8 +117,18 @@ FilterHistoryPoints::FilterHistoryPoints(
 
     // Points
     it = pParams.find("Points");
-    ASSERTL0(it != pParams.end(), "Missing parameter 'Points'.");
-    m_historyPointStream.str(it->second);
+    if(it != pParams.end())
+    {
+        m_historyPointStream.str(it->second);
+    }
+    else
+    {
+        it = pParams.find("PointsFile");
+        ASSERTL0(it != pParams.end(),"found neither a points file or points data.");
+        ifstream in;
+        in.open(it->second.c_str());
+        m_historyPointStream << in.rdbuf();
+    }
     m_index = 0;
 }
 
