@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-//  File: ProcessVorticity.h
+//  File: ProcessNonConservativeVariables.h
 //
 //  For more information, please see: http://www.nektar.info/
 //
@@ -29,12 +29,12 @@
 //  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 //  DEALINGS IN THE SOFTWARE.
 //
-//  Description: ProcessChangeVariables
+//  Description: Process Non-Conservative Variables
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef SOLVER_COMPRESSIBLEFLOW_FIELDCONVERT_PROCESSCHANGE
-#define SOLVER_COMPRESSIBLEFLOW_FIELDCONVERT_PROCESSCHANGE
+#ifndef SOLVER_COMPRESSIBLEFLOW_FIELDCONVERT_PROCESSNONCONSERVATIVEVAR
+#define SOLVER_COMPRESSIBLEFLOW_FIELDCONVERT_PROCESSNONCONSERVATIVEVAR
 
 #include "../../../../library/FieldUtils/Module.h"
 
@@ -46,24 +46,24 @@ namespace FieldUtils
  * @brief This processing module calculates the vorticity and adds it
  * as an extra-field to the output file.
  */
-class ProcessChangeVariables : public ProcessModule
+class ProcessNonConservativeVariables : public ProcessModule
 {
     public:
         /// Creates an instance of this class
         static boost::shared_ptr<Module> create(FieldSharedPtr f) {
-            return MemoryManager<ProcessChangeVariables>::AllocateSharedPtr(f);
+            return MemoryManager<ProcessNonConservativeVariables>::AllocateSharedPtr(f);
         }
         static ModuleKey className;
 
-        ProcessChangeVariables(FieldSharedPtr f);
-        virtual ~ProcessChangeVariables();
+        ProcessNonConservativeVariables(FieldSharedPtr f);
+        virtual ~ProcessNonConservativeVariables();
 
         /// Write mesh to output file.
         virtual void Process(po::variables_map &vm);
 
         virtual std::string GetModuleName()
         {
-            return "ProcessChangeVariables";
+            return "ProcessNonConservativeVariables";
         }
 };
 

@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-//  File: ProcessVorticity.cpp
+//  File: ProcessNonConservativeVariables.cpp
 //
 //  For more information, please see: http://www.nektar.info/
 //
@@ -29,7 +29,7 @@
 //  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 //  DEALINGS IN THE SOFTWARE.
 //
-//  Description: Computes vorticity field.
+//  Description: Computes non-conservative variables
 //
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -37,7 +37,7 @@
 #include <iostream>
 using namespace std;
 
-#include "ProcessChangeVariables.h"
+#include "ProcessNonConservativeVariables.h"
 
 #include <LibUtilities/BasicUtils/SharedArray.hpp>
 #include <LibUtilities/BasicUtils/ParseUtils.hpp>
@@ -47,24 +47,24 @@ namespace Nektar
 namespace FieldUtils
 {
 
-ModuleKey ProcessChangeVariables::className =
+ModuleKey ProcessNonConservativeVariables::className =
     GetModuleFactory().RegisterCreatorFunction(
-                                               ModuleKey(eProcessModule, "changevariables"),
-                                               ProcessChangeVariables::create, "Redefine conservative variables into non-conservative variables");
+                                               ModuleKey(eProcessModule, "nonconservativevariables"),
+                                               ProcessNonConservativeVariables::create, "Redefine conservative variables into non-conservative variables");
 
-    ProcessChangeVariables::ProcessChangeVariables(FieldSharedPtr f) : ProcessModule(f)
+    ProcessNonConservativeVariables::ProcessNonConservativeVariables(FieldSharedPtr f) : ProcessModule(f)
     {
     }
 
-    ProcessChangeVariables::~ProcessChangeVariables()
+    ProcessNonConservativeVariables::~ProcessNonConservativeVariables()
     {
     }
 
-    void ProcessChangeVariables::Process(po::variables_map &vm)
+    void ProcessNonConservativeVariables::Process(po::variables_map &vm)
     {
         if (m_f->m_verbose)
         {
-            cout << "ProcessChangeVariables: Reddefine CFS variables..." << endl;
+            cout << "ProcessNonConservativeVariables: Process non-conservative variables..." << endl;
         }
 
         int i, j, s;

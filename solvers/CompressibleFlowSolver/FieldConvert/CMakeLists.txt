@@ -1,6 +1,6 @@
 SET(FieldConvertSources
         ../../../utilities/FieldConvert/FieldConvert.cpp
-        ./ProcessModules/ProcessChangeVariables.cpp
+        ./ProcessModules/ProcessNonConservativeVariables.cpp
     )       
 
 ADD_SOLVER_EXECUTABLE(FieldConvert solvers ${FieldConvertSources})
