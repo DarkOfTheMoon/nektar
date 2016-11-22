@@ -53,17 +53,17 @@ ModuleKey ProcessAddFieldFromString::className =
         ModuleKey(eProcessModule, "addfieldfromstring"),
         ProcessAddFieldFromString::create,
         "Create a new field from the existing field as specified by a string"
-        " through specifying fieldstr=\"x + y + u\" ");
+        " using a required qrgument of the form fieldstr=\"x + y + u\" ");
 
 ProcessAddFieldFromString::ProcessAddFieldFromString(FieldSharedPtr f)
     : ProcessModule(f)
 {
 
     m_config["fieldstr"] =
-        ConfigOption(false, "NotSet", "string of isocontour to be extracted");
+        ConfigOption(false, "NotSet", "string of new field to be added (required)");
     m_config["fieldname"] =
         ConfigOption(false, "newfield", "name for isocontour if fieldstr "
-                                      "specified, default is isocon");
+                                      "specified, default is newfield (optional)");
 }
 
 ProcessAddFieldFromString::~ProcessAddFieldFromString(void)

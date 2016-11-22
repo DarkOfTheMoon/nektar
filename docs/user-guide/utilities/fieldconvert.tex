@@ -105,10 +105,10 @@ stands for \inltt{m}odule)..
 Specifically, FieldConvert has these additional functionalities
 %
 \begin{enumerate}
-\item \inltt{C0Projection}: Computes the C0 projection of a given output file;
-\item \inltt{QCriterion}: Computes the Q-Criterion for a given output file;
 \item \inltt{addcompositeid}: Adds the composite ID of an element as an additional field;
+\item \inltt{addfieldfromstring}: Add a new field to file using an input string definition defined by required ``fieldstr'' argument;
 \item \inltt{addFld}: Sum two .fld files;
+\item \inltt{C0Projection}: Computes the C0 projection of a given output file;
 \item \inltt{combineAvg}: Combine two \nekpp binary output (.chk or .fld) field file containing averages of fields (and
 possibly also Reynolds stresses) into single file;
 \item \inltt{concatenate}: Concatenate a \nekpp binary output (.chk or .fld) field file into single file;
@@ -122,11 +122,12 @@ possibly also Reynolds stresses) into single file;
 \item \inltt{interppoints}: Interpolates a set of points to another, requires fromfld and fromxml to be defined, a line or plane of points can be defined;
 \item \inltt{isocontour}: Extract an isocontour of ``fieldid'' variable and at value ``fieldvalue''. Optionally ``fieldstr'' can be specified for a string defiition or ``smooth'' for smoothing;
 \item \inltt{jacobianenergy}: Shows high frequency energy of Jacobian;
-\item \inltt{qualitymetric}: Evaluate a quality metric of the underlying mesh to show mesh quality;
 \item \inltt{meanmode}: Extract mean mode (plane zero) of 3DH1D expansions;
 \item \inltt{pointdatatofld}: Given discrete data at quadrature points
   project them onto an expansion basis and output fld file; 
 \item \inltt{printfldnorms}: Print L2 and LInf norms to stdout;
+\item \inltt{QCriterion}: Computes the Q-Criterion for a given output file;
+\item \inltt{qualitymetric}: Evaluate a quality metric of the underlying mesh to show mesh quality;
 \item \inltt{scalargrad}: Computes scalar gradient field;
 \item \inltt{scaleinputfld}: Rescale input field by a constant factor;
 \item \inltt{shear}: Computes time-averaged shear stress metrics: TAWSS, OSI, transWSS, TAAFI, TACFI, WSSG;
@@ -145,6 +146,64 @@ In the following we will detail the usage of each module.
 %
 %
 
+
+\subsection{Add composite ID: \textit{addcompositeid} module}
+When dealing with a geometry that has many surfaces, we need to identify the
+composites to assign boundary conditions. To assist in this, FieldConvert has a
+\inltt{addcompositeid} module, which adds the composite ID of every element as a
+new field. To use this we simply run
+%
+\begin{lstlisting}[style=BashInputStyle]
+  FieldConvert -m addcompositeid mesh.xml out.dat
+\end{lstlisting}
+%
+In this case, we have produced a Tecplot file which contains the mesh and a
+variable that contains the composite ID. To assist in boundary identification,
+the input file \inlsh{mesh.xml} should be a surface XML file that can be
+obtained through the \mc \inltt{extract} module (see section
+\ref{s:utilities:nekmesh:extract}).
+
+\subsection{Add new fields from a string: \textit{addfieldfromstring} module}
+This module will add a new field variable using a given string
+definition. The new field can be a combination of the coordinates
+``x,y,z'' and the variables of the fld file that is provided. For
+example if file1.fld contains the variables ``{\em u,v,p}'' you can add a
+new field defined as ``{\em x + y + u}'' by specifying the required argument
+\inltt{fieldstr} using the command:
+
+\begin{lstlisting}[style=BashInputStyle]
+  FieldConvert -m addfieldfromstring:fieldstr=''x+y+u'' file1.xml file1.fld \
+               file2.fld
+\end{lstlisting}
+
+
+There is also an optional argument \inltt{fieldname} which allows you to give the new field a specified name, i..e
+
+\begin{lstlisting}[style=BashInputStyle]
+  FieldConvert -m addfieldfromstring:fieldstr=''x+y+u'':fieldname=''myvar'' \
+               file1.xml file1.fld file2.fld
+\end{lstlisting}
+
+\subsection{Sum two .fld files: \textit{addFld} module}
+To sum two .fld files one can use the \inltt{addFld} module of FieldConvert
+%
+\begin{lstlisting}[style=BashInputStyle]
+  FieldConvert -m addfld:fromfld=file1.fld:scale=-1 file1.xml file2.fld \
+  file3.fld
+\end{lstlisting}
+%
+In this case we use it in conjunction with the command \inltt{scale}
+which multiply the values of a given .fld file by a constant \inltt{value}.
+\inltt{file1.fld} is the file multiplied by \inltt{value}, \inltt{file1.xml}
+is the associated session file, \inltt{file2.fld} is the .fld file which
+is summed to \inltt{file1.fld} and finally \inltt{file3.fld} is the output
+which contain the sum of the two .fld files.
+\inltt{file3.fld} can be processed in a similar way as described 
+in section \ref{s:utilities:fieldconvert:sub:convert} to visualise 
+the result either in Tecplot, Paraview or VisIt.
+%
+%
+%
 \subsection{Smooth the data: \textit{C0Projection} module}
 To smooth the data of a given .fld file one can
 use the \inltt{C0Projection} module of FieldConvert
@@ -184,57 +243,6 @@ halved or more. Since this form of the Helmholtz operator is not
 possitive definite, currently a direct solver is necessary and so this
 smoother is mainly of use in two-dimensions.
 
-\subsection{Calculate Q-Criterion: \textit{QCriterion} module}
-To perform the Q-criterion calculation and obtain an output
-data containing the Q-criterion solution, the user can run
-%
-\begin{lstlisting}[style=BashInputStyle]
-FieldConvert -m QCriterion test.xml test.fld test-QCrit.fld
-\end{lstlisting}
-%
-where the file \inltt{test-QCrit.fld} can be processed in a similar
-way as described in section \ref{s:utilities:fieldconvert:sub:convert}
-to visualise the result either in Tecplot, Paraview or VisIt.
-%
-%
-%
-
-\subsection{Add composite ID: \textit{addcompositeid} module}
-When dealing with a geometry that has many surfaces, we need to identify the
-composites to assign boundary conditions. To assist in this, FieldConvert has a
-\inltt{addcompositeid} module, which adds the composite ID of every element as a
-new field. To use this we simply run
-%
-\begin{lstlisting}[style=BashInputStyle]
-  FieldConvert -m addcompositeid mesh.xml out.dat
-\end{lstlisting}
-%
-In this case, we have produced a Tecplot file which contains the mesh and a
-variable that contains the composite ID. To assist in boundary identification,
-the input file \inlsh{mesh.xml} should be a surface XML file that can be
-obtained through the \mc \inltt{extract} module (see section
-\ref{s:utilities:nekmesh:extract}).
-
-\subsection{Sum two .fld files: \textit{addFld} module}
-To sum two .fld files one can use the \inltt{addFld} module of FieldConvert
-%
-\begin{lstlisting}[style=BashInputStyle]
-  FieldConvert -m addfld:fromfld=file1.fld:scale=-1 file1.xml file2.fld \
-  file3.fld
-\end{lstlisting}
-%
-In this case we use it in conjunction with the command \inltt{scale}
-which multiply the values of a given .fld file by a constant \inltt{value}.
-\inltt{file1.fld} is the file multiplied by \inltt{value}, \inltt{file1.xml}
-is the associated session file, \inltt{file2.fld} is the .fld file which
-is summed to \inltt{file1.fld} and finally \inltt{file3.fld} is the output
-which contain the sum of the two .fld files.
-\inltt{file3.fld} can be processed in a similar way as described 
-in section \ref{s:utilities:fieldconvert:sub:convert} to visualise 
-the result either in Tecplot, Paraview or VisIt.
-%
-%
-%
 \subsection{Combine two .fld files containing time averages: \textit{combineAvg} module}
 To combine two .fld files obtained through the AverageFields or ReynoldsStresses filters,
 use the \inltt{combineAvg} module of FieldConvert
@@ -630,42 +638,6 @@ The output file \inltt{jacenergy.fld} can be processed in a similar
 way as described in section \ref{s:utilities:fieldconvert:sub:convert}
 to visualise the result either in Tecplot, Paraview or VisIt. 
 
-\subsection{Calculate mesh quality: \textit{qualitymetric} module}
-
-The \inltt{qualitymetric} module assesses the quality of the mesh by calculating
-a per-element quality metric and adding an additional field to any resulting
-output. This does not require any field input, therefore an example usage looks
-like
-
-\begin{lstlisting}[style=BashInputStyle]
-FieldConvert -m qualitymetric mesh.xml mesh-with-quality.dat
-\end{lstlisting}
-
-Two quality metrics are implemented that produce scalar fields $Q$:
-
-\begin{itemize}
-  \item By default a metric outlined in~\cite{GaRoPeSa15} is produced, where all
-  straight sided elements have quality $Q = 1$ and $Q < 1$ shows the deformation
-  between the curved element and the straight-sided element. If $Q = 0$ then the
-  element is invalid. Note that $Q$ varies over the volume of the element but is
-  not guaranteed to be continuous between elements.
-  \item Alternatively, if the \inlsh{scaled} option is passed through to the
-  module, then the scaled Jacobian
-  \[
-    J_s =
-    \frac{\min_{\xi\in\Omega_{\text{st}}}J(\xi)}{\max_{\xi\in\Omega_{\text{st}}}J(\xi)}
-  \]
-  (i.e. the ratio of the minimum to maximum Jacobian of each element) is
-  calculated. Again $Q = 1$ denotes an ideal element, but now invalid elements
-  are shown by $Q < 0$. Any elements with $Q$ near zero are determined to be low
-  quality.
-\end{itemize}
-
-
-%
-%
-%
-
 \subsection{Extract mean mode of 3DH1D expansion: \textit{meanmode} module}
 
 To obtain a 2D expansion containing the mean mode (plane zero in Fourier space) of a
@@ -757,6 +729,54 @@ FieldConvert -m printfldnorms test.xml test.fld out.stdout
 This module does not create an output file which is reinforced by the
 out.stdout option. The L2 and LInf norms for each field variable are
 then printed to the stdout.
+%
+%
+%
+
+\subsection{Calculate Q-Criterion: \textit{QCriterion} module}
+To perform the Q-criterion calculation and obtain an output
+data containing the Q-criterion solution, the user can run
+%
+\begin{lstlisting}[style=BashInputStyle]
+FieldConvert -m QCriterion test.xml test.fld test-QCrit.fld
+\end{lstlisting}
+%
+where the file \inltt{test-QCrit.fld} can be processed in a similar
+way as described in section \ref{s:utilities:fieldconvert:sub:convert}
+to visualise the result either in Tecplot, Paraview or VisIt.
+%
+%
+%
+\subsection{Calculate mesh quality: \textit{qualitymetric} module}
+
+The \inltt{qualitymetric} module assesses the quality of the mesh by calculating
+a per-element quality metric and adding an additional field to any resulting
+output. This does not require any field input, therefore an example usage looks
+like
+
+\begin{lstlisting}[style=BashInputStyle]
+FieldConvert -m qualitymetric mesh.xml mesh-with-quality.dat
+\end{lstlisting}
+
+Two quality metrics are implemented that produce scalar fields $Q$:
+
+\begin{itemize}
+  \item By default a metric outlined in~\cite{GaRoPeSa15} is produced, where all
+  straight sided elements have quality $Q = 1$ and $Q < 1$ shows the deformation
+  between the curved element and the straight-sided element. If $Q = 0$ then the
+  element is invalid. Note that $Q$ varies over the volume of the element but is
+  not guaranteed to be continuous between elements.
+  \item Alternatively, if the \inlsh{scaled} option is passed through to the
+  module, then the scaled Jacobian
+  \[
+    J_s =
+    \frac{\min_{\xi\in\Omega_{\text{st}}}J(\xi)}{\max_{\xi\in\Omega_{\text{st}}}J(\xi)}
+  \]
+  (i.e. the ratio of the minimum to maximum Jacobian of each element) is
+  calculated. Again $Q = 1$ denotes an ideal element, but now invalid elements
+  are shown by $Q < 0$. Any elements with $Q$ near zero are determined to be low
+  quality.
+\end{itemize}
 %
 %
 %
