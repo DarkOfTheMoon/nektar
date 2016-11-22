@@ -41,6 +41,8 @@
 #include <MultiRegions/AssemblyMap/AssemblyMapDG.h>
 #include <SolverUtils/UnsteadySystem.h>
 
+using namespace std;
+
 namespace Nektar
 {	
     namespace SolverUtils
@@ -86,6 +88,8 @@ namespace Nektar
                                        m_explicitAdvection,true);
             m_session->MatchSolverInfo("REACTIONADVANCEMENT", "Explicit",
                                        m_explicitReaction, true);
+
+            m_session->LoadParameter("CheckNanSteps", m_nanSteps, 1);
 
             // For steady problems, we do not initialise the time integration
             if (m_session->DefinesSolverInfo("TIMEINTEGRATIONMETHOD"))
@@ -276,12 +280,12 @@ namespace Nektar
                 }
                 
                 // Perform any solver-specific pre-integration steps
+                timer.Start();
                 if (v_PreIntegrate(step))
                 {
                     break;
                 }
 
-                timer.Start();
                 fields = m_intScheme->TimeIntegrate(
                     step, m_timestep, m_intSoln, m_ode);
                 timer.Stop();
@@ -315,9 +319,12 @@ namespace Nektar
                 for (i = 0; i < nvariables; ++i)
                 {
                     m_fields[m_intVariables[i]]->SetPhys(fields[i]);
-                    m_fields[m_intVariables[i]]->FwdTrans_IterPerExp(
-                        fields[i],
-                        m_fields[m_intVariables[i]]->UpdateCoeffs());
+                    if( v_RequireFwdTrans() )
+                    {
+                        m_fields[m_intVariables[i]]->FwdTrans_IterPerExp(
+                            fields[i],
+                            m_fields[m_intVariables[i]]->UpdateCoeffs());
+                    }
                     m_fields[m_intVariables[i]]->SetPhysState(false);
                 }
 
@@ -328,23 +335,22 @@ namespace Nektar
                 }
 
                 // search for NaN and quit if found
-                bool nanFound = false;
-                for (i = 0; i < nvariables; ++i)
+                if (m_nanSteps && !((step+1) % m_nanSteps) )
                 {
-                    if (Vmath::Nnan(fields[i].num_elements(), fields[i], 1) > 0)
+                    int nanFound = 0;
+                    for (i = 0; i < nvariables; ++i)
                     {
-                        cout << "NaN found in variable \""
-                             << m_session->GetVariable(i)
-                             << "\", terminating" << endl;
-                        nanFound = true;
+                        if (Vmath::Nnan(fields[i].num_elements(),
+                                fields[i], 1) > 0)
+                        {
+                            nanFound = 1;
+                        }
                     }
+                    m_session->GetComm()->AllReduce(nanFound,
+                                LibUtilities::ReduceMax);
+                    ASSERTL0 (!nanFound,
+                                "NaN found during time integration.");
                 }
-
-                if (nanFound)
-                {
-                    break;
-                }
-
                 // Update filters
                 std::vector<FilterSharedPtr>::iterator x;
                 for (x = m_filters.begin(); x != m_filters.end(); ++x)
@@ -353,7 +359,7 @@ namespace Nektar
                 }
 
                 // Write out checkpoint files
-                if ((m_checksteps && step && !((step + 1) % m_checksteps)) ||
+                if ((m_checksteps && !((step + 1) % m_checksteps)) ||
                      doCheckTime)
                 {
                     if(m_HomogeneousType == eHomogeneous1D)
@@ -464,10 +470,17 @@ namespace Nektar
             EquationSystem::v_GenerateSummary(s);
             AddSummaryItem(s, "Advection",
                            m_explicitAdvection ? "explicit" : "implicit");
+
+            if(m_session->DefinesSolverInfo("AdvectionType"))
+            {
+                AddSummaryItem(s, "AdvectionType",
+                               m_session->GetSolverInfo("AdvectionType"));
+            }
+
             AddSummaryItem(s, "Diffusion",
                            m_explicitDiffusion ? "explicit" : "implicit");
 
-            if (m_session->GetSolverInfo("EQTYPE") 
+            if (m_session->GetSolverInfo("EQTYPE")
                     == "SteadyAdvectionDiffusionReaction")
             {
                 AddSummaryItem(s, "Reaction",
@@ -708,7 +721,10 @@ namespace Nektar
                             fs::path fullpath = pfilename / metafile;
                             filename = LibUtilities::PortablePath(fullpath);
                         }
-                        m_fld->ImportFieldMetaData(filename, m_fieldMetaDataMap);
+                        LibUtilities::FieldIOSharedPtr fld =
+                            LibUtilities::FieldIO::CreateForFile(
+                                m_session, filename);
+                        fld->ImportFieldMetaData(filename, m_fieldMetaDataMap);
 
                         // check to see if time defined
                         if (m_fieldMetaDataMap !=
@@ -921,6 +937,47 @@ namespace Nektar
         bool UnsteadySystem::v_SteadyStateCheck(int step)
         {
             return false;
+        }
+
+        void UnsteadySystem::SVVVarDiffCoeff(
+            const Array<OneD, Array<OneD, NekDouble> >  vel,
+                  StdRegions::VarCoeffMap              &varCoeffMap)
+        {
+            int phystot = m_fields[0]->GetTotPoints();
+            int nvel = vel.num_elements();
+
+            Array<OneD, NekDouble> varcoeff(phystot),tmp;
+
+            // calculate magnitude of v
+            Vmath::Vmul(phystot,vel[0],1,vel[0],1,varcoeff,1);
+            for(int n = 1; n < nvel; ++n)
+            {
+                Vmath::Vvtvp(phystot,vel[n],1,vel[n],1,varcoeff,1,varcoeff,1);
+            }
+            Vmath::Vsqrt(phystot,varcoeff,1,varcoeff,1);
+
+            for(int i = 0; i < m_fields[0]->GetNumElmts(); ++i)
+            {
+                int offset = m_fields[0]->GetPhys_Offset(i);
+                int nq = m_fields[0]->GetExp(i)->GetTotPoints();
+                Array<OneD, NekDouble> unit(nq,1.0);
+
+                int nmodes = 0;
+
+                for(int n = 0; n < m_fields[0]->GetExp(i)->GetNumBases(); ++n)
+                {
+                    nmodes = max(nmodes,
+                                 m_fields[0]->GetExp(i)->GetBasisNumModes(n));
+                }
+
+                NekDouble h = m_fields[0]->GetExp(i)->Integral(unit);
+                h = pow(h,(NekDouble) (1.0/nvel))/((NekDouble) nmodes);
+
+                Vmath::Smul(nq,h,varcoeff+offset,1,tmp = varcoeff+offset,1);
+            }
+
+            // set up map with eVarCoffLaplacian key
+            varCoeffMap[StdRegions::eVarCoeffLaplacian] = varcoeff;
         }
     }
 }

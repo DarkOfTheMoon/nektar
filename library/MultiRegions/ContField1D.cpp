@@ -459,6 +459,14 @@ namespace Nektar
          * \f$N_{\mathrm{eof}}\times N_{\mathrm{dof}}\f$ permutation matrix.
          *
          */
+        void ContField1D::v_LocalToGlobal(
+            const Array<OneD, const NekDouble> &inarray,
+            Array<OneD,NekDouble> &outarray)
+        {
+            m_locToGloMap->LocalToGlobal(inarray, outarray);
+        }
+
+
         void ContField1D::v_LocalToGlobal(void)
         {
             m_locToGloMap->LocalToGlobal(m_coeffs,m_coeffs);
@@ -484,6 +492,13 @@ namespace Nektar
          * \f$N_{\mathrm{eof}}\times N_{\mathrm{dof}}\f$ permutation matrix.
          *
          */
+        void ContField1D::v_GlobalToLocal(
+            const Array<OneD, const NekDouble> &inarray,
+            Array<OneD,NekDouble> &outarray)
+        {
+            m_locToGloMap->GlobalToLocal(inarray, outarray);
+        }
+
         void ContField1D::v_GlobalToLocal(void)
         {
             m_locToGloMap->GlobalToLocal(m_coeffs,m_coeffs);
@@ -618,6 +633,16 @@ namespace Nektar
             {
                 GeneralMatrixOp_IterPerExp(gkey,inarray,outarray);
             }
+        }
+
+
+
+        /**
+         * Reset the GlobalLinSys Manager 
+         */
+        void ContField1D::v_ClearGlobalLinSysManager(void)
+        {
+            m_globalLinSysManager.ClearManager("GlobalLinSys");
         }
 
     } // end of namespace

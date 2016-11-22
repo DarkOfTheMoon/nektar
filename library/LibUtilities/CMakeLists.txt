@@ -13,6 +13,7 @@ SET(BasicUtilsHeaders
     ./BasicUtils/CompressData.h
     ./BasicUtils/Equation.h
     ./BasicUtils/FieldIO.h
+    ./BasicUtils/FieldIOXml.h
     ./BasicUtils/FileSystem.h
     ./BasicUtils/ErrorUtil.hpp
     ./BasicUtils/MeshEntities.hpp
@@ -44,6 +45,7 @@ SET(BasicUtilsSources
     ./BasicUtils/CompressData.cpp
     ./BasicUtils/Equation.cpp
     ./BasicUtils/FieldIO.cpp
+    ./BasicUtils/FieldIOXml.cpp
     ./BasicUtils/FileSystem.cpp
     ./BasicUtils/MeshPartition.cpp
     ./BasicUtils/MeshPartitionMetis.cpp
@@ -57,9 +59,20 @@ SET(BasicUtilsSources
     ./BasicUtils/XmlUtil.cpp
 )
 
+# HDF5
+IF( NEKTAR_USE_HDF5 )
+    SET(BasicUtilsHeaders ${BasicUtilsHeaders}
+	./BasicUtils/H5.h
+        ./BasicUtils/FieldIOHdf5.h)
+    SET(BasicUtilsSources ${BasicUtilsSources}
+	./BasicUtils/H5.cpp
+        ./BasicUtils/FieldIOHdf5.cpp)
+ENDIF( NEKTAR_USE_HDF5 )
+
 SET(CommunicationHeaders
     ./Communication/Comm.h
     ./Communication/CommSerial.h
+    ./Communication/CommDataType.h
     ./Communication/GsLib.hpp
     ./Communication/Transposition.h
     ./Communication/Xxt.hpp
@@ -67,6 +80,7 @@ SET(CommunicationHeaders
 
 SET(CommunicationSources
     ./Communication/Comm.cpp
+    ./Communication/CommDataType.cpp
     ./Communication/CommSerial.cpp
     ./Communication/Transposition.cpp
 )
@@ -317,25 +331,6 @@ SOURCE_GROUP("TimeIntegration Sources" FILES ${TimeIntegrationSources})
 SOURCE_GROUP("FFT Headers" FILES ${FFTHeaders})
 SOURCE_GROUP("FFT Sources" FILES ${FFTSources})
 
-IF(NEKTAR_USE_OCC)
-    SET(CADSystemSources
-        ./CADSystem/CADSystem.cpp
-        ./CADSystem/CADCurve.cpp
-        ./CADSystem/CADSurf.cpp
-        )
-
-    SET(CADSystemHeaders
-        ./CADSystem/CADSystem.h
-        ./CADSystem/CADCurve.h
-        ./CADSystem/CADSurf.h
-        ./CADSystem/OpenCascade.h
-        )
-
-    SOURCE_GROUP("CAD System Headers" FILES ${CADSystemHeaders})
-    SOURCE_GROUP("CAD System Sources" FILES ${CADSystemSources})
-
-ENDIF(NEKTAR_USE_OCC)
-
 SOURCE_GROUP("Base" FILES ${BaseHeaders})
 
 SET(LibUtilityHeaders
@@ -418,6 +413,7 @@ TARGET_LINK_LIBRARIES(LibUtilities LINK_PUBLIC
     ${Boost_FILESYSTEM_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_TIMER_LIBRARY}
+    ${Boost_CHRONO_LIBRARY}
     debug ${ZLIB_LIBRARY_DEBUG} optimized ${ZLIB_LIBRARY_RELEASE}
 )
 
@@ -437,7 +433,7 @@ IF( NEKTAR_USE_MPI )
         SET_TARGET_PROPERTIES(LibUtilities
             PROPERTIES COMPILE_FLAGS "${THE_COMPILE_FLAGS} ${MPI_COMPILE_FLAGS}")
     ENDIF()
-    ADD_DEPENDENCIES(LibUtilities gsmpi-1.2)
+    ADD_DEPENDENCIES(LibUtilities gsmpi-1.2.1)
 ENDIF( NEKTAR_USE_MPI )
 
 # Lapack and Blas
@@ -478,15 +474,15 @@ ENDIF( NEKTAR_USE_BLAS_LAPACK )
 
 IF( NEKTAR_USE_PETSC )
     TARGET_LINK_LIBRARIES(LibUtilities LINK_PRIVATE ${PETSC_LIBRARIES})
-    ADD_DEPENDENCIES(LibUtilities petsc-3.5.2)
+    TARGET_LINK_LIBRARIES(LibUtilities LINK_PUBLIC ${CMAKE_DL_LIBS})
+    ADD_DEPENDENCIES(LibUtilities petsc-3.7.2)
 ENDIF( NEKTAR_USE_PETSC )
 
-IF(NEKTAR_USE_OCC)
-    SET(OCC_DEF LIN LININTEL HAVE_WOK_CONFIG_H HAVE_CONFIG_H CSFDB)
-    SET_TARGET_PROPERTIES(LibUtilities PROPERTIES COMPILE_DEFINITIONS "${OCC_DEF}")
-    TARGET_LINK_LIBRARIES(LibUtilities LINK_PUBLIC ${OCC_LIBS})
-    ADD_DEPENDENCIES(LibUtilities opencascade-6.8)
-ENDIF(NEKTAR_USE_OCC)
+# HDF5
+IF( NEKTAR_USE_HDF5 )
+    TARGET_LINK_LIBRARIES(LibUtilities LINK_PRIVATE ${HDF5_LIBRARIES})
+    ADD_DEPENDENCIES(LibUtilities hdf5-1.8.16)
+ENDIF( NEKTAR_USE_HDF5 )
 
 INSTALL(FILES ${ExpressionTemplates} DESTINATION ${NEKTAR_INCLUDE_DIR}/ExpressionTemplates COMPONENT dev)
 INSTALL(DIRECTORY ./ DESTINATION ${NEKTAR_INCLUDE_DIR}/LibUtilities COMPONENT dev FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")

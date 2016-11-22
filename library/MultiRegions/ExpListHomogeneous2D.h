@@ -62,7 +62,7 @@ namespace Nektar
 
         /// A map between homo matrix keys and their associated block
         /// matrices.
-        typedef map< Homogeneous2DMatType, DNekBlkMatSharedPtr> Homo2DBlockMatrixMap;
+        typedef std::map< Homogeneous2DMatType, DNekBlkMatSharedPtr> Homo2DBlockMatrixMap;
         /// A shared pointer to a BlockMatrixMap.
         typedef boost::shared_ptr<Homo2DBlockMatrixMap> Homo2DBlockMatrixMapShPtr;
 
@@ -116,12 +116,7 @@ namespace Nektar
                                             CoeffState coeffstate = eLocal,
                                             bool Shuff = true,
                                             bool UnShuff = true);
-            
-            inline void DealiasedProd(const Array<OneD, NekDouble> &inarray1,
-                                      const Array<OneD, NekDouble> &inarray2,
-                                      Array<OneD, NekDouble> &outarray, 
-                                      CoeffState coeffstate = eLocal);
-            
+
             MULTI_REGIONS_EXPORT void SetPaddingBase(void);
             
             MULTI_REGIONS_EXPORT void PhysDeriv(const Array<OneD, const NekDouble> &inarray,
@@ -216,7 +211,13 @@ namespace Nektar
                                          const Array<OneD, NekDouble> &inarray2,
                                          Array<OneD, NekDouble> &outarray, 
                                          CoeffState coeffstate = eLocal);
-            
+
+            virtual void v_DealiasedDotProd(
+                const Array<OneD, Array<OneD, NekDouble> > &inarray1,
+                const Array<OneD, Array<OneD, NekDouble> > &inarray2,
+                      Array<OneD, Array<OneD, NekDouble> > &outarray,
+                      CoeffState coeffstate = eLocal);
+
             virtual void v_PhysDeriv(const Array<OneD, const NekDouble> &inarray,
                                      Array<OneD, NekDouble> &out_d0,
                                      Array<OneD, NekDouble> &out_d1, 
@@ -253,15 +254,7 @@ namespace Nektar
         {
             v_HomogeneousBwdTrans(inarray,outarray,coeffstate,Shuff,UnShuff);
         }
-    
-        inline void ExpListHomogeneous2D::DealiasedProd(const Array<OneD, NekDouble> &inarray1,
-                                                        const Array<OneD, NekDouble> &inarray2,
-                                                        Array<OneD, NekDouble> &outarray, 
-                                                        CoeffState coeffstate)
-        {
-            v_DealiasedProd(inarray1,inarray2,outarray,coeffstate);
-        }
-        
+
     } //end of namespace
 } //end of namespace
 
