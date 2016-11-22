@@ -28,6 +28,7 @@ IF( NEKTAR_SOLVER_COMPRESSIBLE_FLOW )
 			${CompressibleFlowSolverSource})
 
     SUBDIRS(Utilities)
+    SUBDIRS(FieldConvert)
    
     ADD_NEKTAR_TEST        (CylinderSubsonic_FRDG_SEM)
     ADD_NEKTAR_TEST        (CylinderSubsonic_FRDG_GAUSS)

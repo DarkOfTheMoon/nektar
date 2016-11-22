@@ -44,13 +44,13 @@ using namespace std;
 
 namespace Nektar
 {
-namespace Utilities
+namespace FieldUtils
 {
 
 ModuleKey ProcessChangeVariables::className =
     GetModuleFactory().RegisterCreatorFunction(
         ModuleKey(eProcessModule, "changevariables"),
-        ProcessChangeVariables::create, "Redefine CFS variables");
+        ProcessChangeVariables::create, "Redefine conservative variables into non-conservative variables");
 
 ProcessChangeVariables::ProcessChangeVariables(FieldSharedPtr f) : ProcessModule(f)
 {
@@ -76,95 +76,81 @@ void ProcessChangeVariables::Process(po::variables_map &vm)
         spacedim = 3;
     }
     int nfields = m_f->m_fielddef[0]->m_fields.size();
-    int newfields = spacedim + 1;
 
     int npoints = m_f->m_exp[0]->GetNpoints();
-    Array<OneD, Array<OneD, NekDouble> > grad(nfields*nfields);
-    Array<OneD, Array<OneD, NekDouble> > outfield(newfields);
+    Array<OneD, Array<OneD, NekDouble> > outfield(nfields);
 
     int nstrips;
-    NekDouble gamma;
-    
     m_f->m_session->LoadParameter("Strip_Z",nstrips,1);
+    ASSERTL0(nstrips == 1,"Routine not set up for strips");
+
+    NekDouble gamma;    
     m_f->m_session->LoadParameter("Gamma", gamma, 1.4);
     
     NekDouble gammaMinusOne    = gamma - 1.0;
     
     m_f->m_exp.resize(nfields*nstrips);
     
-    for (i = 0; i < newfields; ++i)
+    for (i = 0; i < nfields; ++i)
     {
         outfield[i] = Array<OneD, NekDouble>(npoints);
     }
     
-    vector<MultiRegions::ExpListSharedPtr> Exp(nstrips*newfields);
     Array<OneD, NekDouble> tmp(npoints, 0.0);
     
-    for(s = 0; s < nstrips; ++s) //homogeneous strip varient
-    {
-        // Calculate velocity
-        for (i = 0; i < newfields-1; ++i)
-        {
-            Vmath::Vdiv(npoints,
-                        m_f->m_exp[s*nfields+i+1]->GetPhys(), 1,
-                        m_f->m_exp[s*nfields]->GetPhys(), 1,
-                        outfield[i], 1);
-        }
-        
-        //Calculate pressure
-        for (i = 0; i < spacedim; i++)
-        {
-            Vmath::Vmul(npoints,
-                        m_f->m_exp[s*nfields + i + 1]->GetPhys(), 1,
-                        m_f->m_exp[s*nfields + i + 1]->GetPhys(), 1,
-                        tmp,1);
-        
-        
-            Vmath::Smul(npoints, 0.5,
-                        tmp, 1,
-                        tmp, 1);
-            
-            Vmath::Vadd(npoints,
-                        outfield[newfields-1], 1,
-                        tmp, 1,
-                        outfield[newfields-1], 1);
-        }
-        
-        Vmath::Vdiv(npoints,
-                    outfield[newfields-1], 1,
-                    m_f->m_exp[s*nfields]->GetPhys(), 1,
-                    outfield[newfields-1],1);
-        
-        Vmath::Vsub(npoints,
-                    m_f->m_exp[s*nfields + spacedim + 1]->GetPhys(), 1,
-                    outfield[newfields-1], 1,
-                    outfield[newfields-1],1);
-        
-        Vmath::Smul(npoints, gammaMinusOne,
-                    outfield[newfields-1], 1,
-                    outfield[newfields-1], 1);
-        
-        for (i = 0; i < newfields; ++i)
-        {
-            int n = s*newfields + i;
-            Exp[n] = m_f->AppendExpList(m_f->m_fielddef[0]->m_numHomogeneousDir);
-            Exp[n]->UpdatePhys() = outfield[i];
-            Exp[n]->FwdTrans_IterPerExp(outfield[i],
-                                        Exp[n]->UpdateCoeffs());
-        }
-    }
+    // Keep rho
+    Vmath::Vcopy(npoints,m_f->m_exp[0]->GetPhys(),1,outfield[0],1);
     
-    vector<MultiRegions::ExpListSharedPtr>::iterator it;
-    for(s = 0; s < nstrips; ++s)
+    // Calculate velocity
+    for (i = 1; i < nfields-1; ++i)
     {
-        for(i = 0; i < newfields; ++i)
-        {
-            it = m_f->m_exp.begin()+s*(nfields+newfields)+nfields+i;
-            m_f->m_exp.insert(it, Exp[s*newfields+i]);
-        }
+        Vmath::Vdiv(npoints,
+                    m_f->m_exp[i]->GetPhys(), 1,
+                    m_f->m_exp[0]->GetPhys(), 1,
+                    outfield[i], 1);
+    }
+        
+    //Calculate pressure
+    for (i = 0; i < spacedim; i++)
+    {
+        Vmath::Vmul(npoints,
+                    m_f->m_exp[i + 1]->GetPhys(), 1,
+                    m_f->m_exp[i + 1]->GetPhys(), 1,
+                    tmp,1);
+        
+        
+        Vmath::Smul(npoints, 0.5,
+                    tmp, 1,tmp, 1);
+            
+        Vmath::Vadd(npoints,
+                    outfield[nfields-1], 1,
+                    tmp, 1,
+                    outfield[nfields-1], 1);
+    }
+        
+    Vmath::Vdiv(npoints,
+                outfield[nfields-1], 1,
+                m_f->m_exp[0]->GetPhys(), 1,
+                outfield[nfields-1],1);
+    
+    Vmath::Vsub(npoints,
+                m_f->m_exp[spacedim + 1]->GetPhys(), 1,
+                outfield[nfields-1], 1,
+                outfield[nfields-1], 1);
+        
+    Vmath::Smul(npoints, gammaMinusOne,
+                outfield[nfields-1], 1,
+                outfield[nfields-1], 1);
+        
+    for (i = 0; i < nfields; ++i)
+    {
+        m_f->m_exp[i]->SetPhys(outfield[i]);
+        m_f->m_exp[i]->FwdTrans_IterPerExp(outfield[i],
+                                           m_f->m_exp[i]->UpdateCoeffs());
     }
     
     vector<string > outname;
+    outname.push_back("rho");
     if (spacedim == 1)
     {
         outname.push_back("u");
@@ -188,23 +174,18 @@ void ProcessChangeVariables::Process(po::variables_map &vm)
     }
     
     std::vector<LibUtilities::FieldDefinitionsSharedPtr> FieldDef
-    = m_f->m_exp[0]->GetFieldDefinitions();
+        = m_f->m_exp[0]->GetFieldDefinitions();
     std::vector<std::vector<NekDouble> > FieldData(FieldDef.size());
     
     
-    for(s = 0; s < nstrips; ++s) //homogeneous strip varient
+    for (j = 0; j <  nfields; ++j)
     {
-        for (j = 0; j <  newfields; ++j)
+        for (i = 0; i < FieldDef.size(); ++i)
         {
-            for (i = 0; i < FieldDef.size()/nstrips; ++i)
-            {
-                int n = s * FieldDef.size()/nstrips + i;
-                FieldDef[n]->m_fields.push_back(outname[j]);
-                m_f->m_exp[s*(nfields + newfields)+ nfields + j]->AppendFieldData(FieldDef[n], FieldData[n]);
-            }
+            FieldDef[i]->m_fields[i] = outname[j];
+            m_f->m_exp[j]->AppendFieldData(FieldDef[i], FieldData[i]);
         }
     }
-
     m_f->m_fielddef = FieldDef;
     m_f->m_data     = FieldData;
 }

@@ -33,14 +33,14 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef UTILITIES_PREPROCESSING_FIELDCONVERT_PROCESSCHANGE
-#define UTILITIES_PREPROCESSING_FIELDCONVERT_PROCESSCHANGE
+#ifndef SOLVER_COMPRESSIBLEFLOW_FIELDCONVERT_PROCESSCHANGE
+#define SOLVER_COMPRESSIBLEFLOW_FIELDCONVERT_PROCESSCHANGE
 
-#include "../Module.h"
+#include "../../../../library/FieldUtils/Module.h"
 
 namespace Nektar
 {
-namespace Utilities
+namespace FieldUtils
 {
 /**
  * @brief This processing module calculates the vorticity and adds it
@@ -60,6 +60,11 @@ class ProcessChangeVariables : public ProcessModule
 
         /// Write mesh to output file.
         virtual void Process(po::variables_map &vm);
+
+        virtual std::string GetModuleName()
+        {
+            return "ProcessChangeVariables";
+        }
 };
 
 }
