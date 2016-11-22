@@ -10,6 +10,7 @@ IF( NEKTAR_SOLVER_COMPRESSIBLE_FLOW )
        ./EquationSystems/EulerADCFE.cpp
        ./EquationSystems/NavierStokesCFE.cpp
        ./Filters/FilterEnergy.cpp
+       ./Filters/FilterAverageFieldsCFS.cpp
        ./RiemannSolvers/AverageSolver.cpp
        ./RiemannSolvers/AUSM0Solver.cpp
        ./RiemannSolvers/AUSM1Solver.cpp
