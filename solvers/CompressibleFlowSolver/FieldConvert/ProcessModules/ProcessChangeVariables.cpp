@@ -49,146 +49,146 @@ namespace FieldUtils
 
 ModuleKey ProcessChangeVariables::className =
     GetModuleFactory().RegisterCreatorFunction(
-        ModuleKey(eProcessModule, "changevariables"),
-        ProcessChangeVariables::create, "Redefine conservative variables into non-conservative variables");
+                                               ModuleKey(eProcessModule, "changevariables"),
+                                               ProcessChangeVariables::create, "Redefine conservative variables into non-conservative variables");
 
-ProcessChangeVariables::ProcessChangeVariables(FieldSharedPtr f) : ProcessModule(f)
-{
-}
-
-ProcessChangeVariables::~ProcessChangeVariables()
-{
-}
-
-void ProcessChangeVariables::Process(po::variables_map &vm)
-{
-    if (m_f->m_verbose)
+    ProcessChangeVariables::ProcessChangeVariables(FieldSharedPtr f) : ProcessModule(f)
     {
-        cout << "ProcessChangeVariables: Reddefine CFS variables..." << endl;
     }
 
-    int i, j, s;
-    int expdim    = m_f->m_graph->GetMeshDimension();
-    int spacedim  = expdim;
-    if ((m_f->m_fielddef[0]->m_numHomogeneousDir) == 1 ||
-        (m_f->m_fielddef[0]->m_numHomogeneousDir) == 2)
+    ProcessChangeVariables::~ProcessChangeVariables()
     {
-        spacedim = 3;
-    }
-    int nfields = m_f->m_fielddef[0]->m_fields.size();
-
-    int npoints = m_f->m_exp[0]->GetNpoints();
-    Array<OneD, Array<OneD, NekDouble> > outfield(nfields);
-
-    int nstrips;
-    m_f->m_session->LoadParameter("Strip_Z",nstrips,1);
-    ASSERTL0(nstrips == 1,"Routine not set up for strips");
-
-    NekDouble gamma;    
-    m_f->m_session->LoadParameter("Gamma", gamma, 1.4);
-    
-    NekDouble gammaMinusOne    = gamma - 1.0;
-    
-    m_f->m_exp.resize(nfields*nstrips);
-    
-    for (i = 0; i < nfields; ++i)
-    {
-        outfield[i] = Array<OneD, NekDouble>(npoints);
-    }
-    
-    Array<OneD, NekDouble> tmp(npoints, 0.0);
-    
-    // Keep rho
-    Vmath::Vcopy(npoints,m_f->m_exp[0]->GetPhys(),1,outfield[0],1);
-    
-    // Calculate velocity
-    for (i = 1; i < nfields-1; ++i)
-    {
-        Vmath::Vdiv(npoints,
-                    m_f->m_exp[i]->GetPhys(), 1,
-                    m_f->m_exp[0]->GetPhys(), 1,
-                    outfield[i], 1);
-    }
-        
-    //Calculate pressure
-    for (i = 0; i < spacedim; i++)
-    {
-        Vmath::Vmul(npoints,
-                    m_f->m_exp[i + 1]->GetPhys(), 1,
-                    m_f->m_exp[i + 1]->GetPhys(), 1,
-                    tmp,1);
-        
-        
-        Vmath::Smul(npoints, 0.5,
-                    tmp, 1,tmp, 1);
-            
-        Vmath::Vadd(npoints,
-                    outfield[nfields-1], 1,
-                    tmp, 1,
-                    outfield[nfields-1], 1);
-    }
-        
-    Vmath::Vdiv(npoints,
-                outfield[nfields-1], 1,
-                m_f->m_exp[0]->GetPhys(), 1,
-                outfield[nfields-1],1);
-    
-    Vmath::Vsub(npoints,
-                m_f->m_exp[spacedim + 1]->GetPhys(), 1,
-                outfield[nfields-1], 1,
-                outfield[nfields-1], 1);
-        
-    Vmath::Smul(npoints, gammaMinusOne,
-                outfield[nfields-1], 1,
-                outfield[nfields-1], 1);
-        
-    for (i = 0; i < nfields; ++i)
-    {
-        m_f->m_exp[i]->SetPhys(outfield[i]);
-        m_f->m_exp[i]->FwdTrans_IterPerExp(outfield[i],
-                                           m_f->m_exp[i]->UpdateCoeffs());
-    }
-    
-    vector<string > outname;
-    outname.push_back("rho");
-    if (spacedim == 1)
-    {
-        outname.push_back("u");
-        outname.push_back("p");
     }
 
-    if (spacedim == 2)
+    void ProcessChangeVariables::Process(po::variables_map &vm)
     {
-        outname.push_back("u");
-        outname.push_back("v");
-        outname.push_back("p");
-    }
-    
-    if (spacedim == 3)
-    {
-        outname.push_back("u");
-        outname.push_back("v");
-        outname.push_back("w");
-        outname.push_back("p");
-
-    }
-    
-    std::vector<LibUtilities::FieldDefinitionsSharedPtr> FieldDef
-        = m_f->m_exp[0]->GetFieldDefinitions();
-    std::vector<std::vector<NekDouble> > FieldData(FieldDef.size());
-    
-    
-    for (j = 0; j <  nfields; ++j)
-    {
-        for (i = 0; i < FieldDef.size(); ++i)
+        if (m_f->m_verbose)
         {
-            FieldDef[i]->m_fields[i] = outname[j];
-            m_f->m_exp[j]->AppendFieldData(FieldDef[i], FieldData[i]);
+            cout << "ProcessChangeVariables: Reddefine CFS variables..." << endl;
         }
+
+        int i, j, s;
+        int expdim    = m_f->m_graph->GetMeshDimension();
+        int spacedim  = expdim;
+        if ((m_f->m_fielddef[0]->m_numHomogeneousDir) == 1 ||
+            (m_f->m_fielddef[0]->m_numHomogeneousDir) == 2)
+        {
+            spacedim = 3;
+        }
+        int nfields = m_f->m_fielddef[0]->m_fields.size();
+
+        int npoints = m_f->m_exp[0]->GetNpoints();
+        Array<OneD, Array<OneD, NekDouble> > outfield(nfields);
+
+        int nstrips;
+        m_f->m_session->LoadParameter("Strip_Z",nstrips,1);
+        ASSERTL0(nstrips == 1,"Routine not set up for strips");
+
+        NekDouble gamma;    
+        m_f->m_session->LoadParameter("Gamma", gamma, 1.4);
+    
+        NekDouble gammaMinusOne    = gamma - 1.0;
+    
+        m_f->m_exp.resize(nfields*nstrips);
+    
+        for (i = 0; i < nfields; ++i)
+        {
+            outfield[i] = Array<OneD, NekDouble>(npoints);
+        }
+    
+        Array<OneD, NekDouble> tmp(npoints, 0.0);
+    
+        // Keep rho
+        Vmath::Vcopy(npoints,m_f->m_exp[0]->GetPhys(),1,outfield[0],1);
+    
+        // Calculate velocity
+        for (i = 1; i < nfields-1; ++i)
+        {
+            Vmath::Vdiv(npoints,
+                        m_f->m_exp[i]->GetPhys(), 1,
+                        m_f->m_exp[0]->GetPhys(), 1,
+                        outfield[i], 1);
+        }
+        
+        //Calculate pressure
+        for (i = 0; i < spacedim; i++)
+        {
+            Vmath::Vmul(npoints,
+                        m_f->m_exp[i + 1]->GetPhys(), 1,
+                        m_f->m_exp[i + 1]->GetPhys(), 1,
+                        tmp,1);
+        
+        
+            Vmath::Smul(npoints, 0.5,
+                        tmp, 1,tmp, 1);
+            
+            Vmath::Vadd(npoints,
+                        outfield[nfields-1], 1,
+                        tmp, 1,
+                        outfield[nfields-1], 1);
+        }
+        
+        Vmath::Vdiv(npoints,
+                    outfield[nfields-1], 1,
+                    m_f->m_exp[0]->GetPhys(), 1,
+                    outfield[nfields-1],1);
+    
+        Vmath::Vsub(npoints,
+                    m_f->m_exp[spacedim + 1]->GetPhys(), 1,
+                    outfield[nfields-1], 1,
+                    outfield[nfields-1], 1);
+        
+        Vmath::Smul(npoints, gammaMinusOne,
+                    outfield[nfields-1], 1,
+                    outfield[nfields-1], 1);
+        
+        for (i = 0; i < nfields; ++i)
+        {
+            m_f->m_exp[i]->SetPhys(outfield[i]);
+            m_f->m_exp[i]->FwdTrans_IterPerExp(outfield[i],
+                                               m_f->m_exp[i]->UpdateCoeffs());
+        }
+    
+        vector<string > outname;
+        outname.push_back("rho");
+        if (spacedim == 1)
+        {
+            outname.push_back("u");
+            outname.push_back("p");
+        }
+
+        if (spacedim == 2)
+        {
+            outname.push_back("u");
+            outname.push_back("v");
+            outname.push_back("p");
+        }
+    
+        if (spacedim == 3)
+        {
+            outname.push_back("u");
+            outname.push_back("v");
+            outname.push_back("w");
+            outname.push_back("p");
+
+        }
+    
+        std::vector<LibUtilities::FieldDefinitionsSharedPtr> FieldDef
+            = m_f->m_exp[0]->GetFieldDefinitions();
+        std::vector<std::vector<NekDouble> > FieldData(FieldDef.size());
+    
+    
+        for (j = 0; j <  nfields; ++j)
+        {
+            for (i = 0; i < FieldDef.size(); ++i)
+            {
+                FieldDef[i]->m_fields.push_back(outname[j]);
+                m_f->m_exp[j]->AppendFieldData(FieldDef[i], FieldData[i]);
+            }
+        }
+        m_f->m_fielddef = FieldDef;
+        m_f->m_data     = FieldData;
     }
-    m_f->m_fielddef = FieldDef;
-    m_f->m_data     = FieldData;
 }
     
-}
 }
