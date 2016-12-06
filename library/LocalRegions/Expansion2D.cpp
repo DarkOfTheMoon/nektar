@@ -1363,13 +1363,10 @@ namespace Nektar
             // Evaluate \tilde{E}
 
             ExpansionSharedPtr EdgeExp = GetEdgeExp(edgeids[0]);
-            int nquad_e = EdgeExp->GetNumPoints(0);
-
-            int nEdgeCoeffs = EdgeExp->GetNcoeffs();
 
             Array<OneD, NekDouble> elemCoeffs(nElemCoeffs), phys(GetTotPoints());
-            Array<OneD, NekDouble> edgePhys  (nquad_e);
-            Array<OneD, NekDouble> edgeCoeffs(nEdgeCoeffs);
+            Array<OneD, NekDouble> edgePhys;
+            Array<OneD, NekDouble> edgeCoeffs;
 
             DNekMatSharedPtr tildeEMatPtr[2];
             DNekMatSharedPtr tildeEMatSumPtr[2];
@@ -1385,9 +1382,7 @@ namespace Nektar
                 Vmath::Zero(nElemCoeffs * nElemCoeffs, (*tildeEMatSumPtr[dir]).GetRawPtr(), 1);
             }
 
-
             // -------------------------------------------------
-
 
             // Ia) Edge mass matrix contribution - first approach
 
@@ -1404,15 +1399,13 @@ namespace Nektar
 
                 GetEdgeToElementMap(iedge, v_GetEorient(iedge), map, sign);
 
-                nquad_e = EdgeExp->GetNumPoints(0);
-                nEdgeCoeffs = EdgeExp->GetNcoeffs();
-
+                const int nEdgeCoeffs = EdgeExp->GetNcoeffs();
 
                 for(int i = 0; i < nEdgeCoeffs; ++i)
                 {
                     for(int j = 0; j < nEdgeCoeffs; ++j)
                     {
-                        inoutmat(map[i],map[j]) += tau * sign[i]*sign[j]*eMass(i,j);
+                        inoutmat(map[i],map[j]) += tau * sign[i] * sign[j] * eMass(i,j);
                     }
                 }
             }
@@ -1481,33 +1474,15 @@ namespace Nektar
 
                 EdgeExp = GetEdgeExp(iedge);
 
-                nquad_e = EdgeExp->GetNumPoints(0);
-                nEdgeCoeffs = EdgeExp->GetNcoeffs();
+                const int nquad_e = EdgeExp->GetNumPoints(0);
+                const int nEdgeCoeffs = EdgeExp->GetNcoeffs();
 
-                if ( edgePhys.num_elements() != nquad_e)
-                {
-                    edgePhys = Array<OneD, NekDouble>(nquad_e);
-                }
-
-                if ( edgeCoeffs.num_elements() != nEdgeCoeffs )
-                {
-                    edgeCoeffs = Array<OneD, NekDouble>(nEdgeCoeffs);
-                }
+                edgePhys = Array<OneD, NekDouble>(nquad_e);
+                edgeCoeffs = Array<OneD, NekDouble>(nEdgeCoeffs);
 
                 GetEdgeToElementMap(iedge, v_GetEorient(iedge), map, sign);
 
                 const Array<OneD, const Array<OneD, NekDouble> > & normals = GetEdgeNormal(iedge);
-                /*
-                for(int i =0; i < normals.num_elements(); ++i)
-                {
-                    std::cout << "n[" << i << "] =";
-                    for(int j = 0; j < normals[i].num_elements(); ++j)
-                    {
-                        std::cout << " " << normals[i][j];
-                    }
-                    std::cout << std::endl;
-                }
-                */
 
                 for(int dir = 0; dir < coordim; ++dir)
                 {
@@ -1541,7 +1516,6 @@ namespace Nektar
 
                         //AddEdgeBoundaryInt(dir, EdgeExp, edgePhys, tmp);
                      }
-
 
                      sumTildeE = sumTildeE + tildeE;
                 } // Loop over dimensions
@@ -1690,20 +1664,6 @@ namespace Nektar
             Array<OneD, NekDouble> work0(nElemCoeffs);
             Array<OneD, NekDouble> work1(nElemCoeffs);
 
-            std::cout << "Lambda on trace =";
-            for(int ii = 0; ii < lambdaOnTrace.num_elements(); ++ii)
-            {
-              std::cout << " " << lambdaOnTrace[ii];
-            }
-            std::cout << std::endl;
-
-            std::cout << "Lambda offsets =";
-            for(int ii = 0; ii < lambdaOffsets.num_elements(); ++ii)
-            {
-              std::cout << " " << lambdaOffsets[ii];
-            }
-            std::cout << std::endl;
-
             // ------------------------------------------------------
             // 1) Evaluate
             // a) sum(tildeF[X] * lambda) and sum(tildeF[Y] * lambda)
@@ -1742,10 +1702,10 @@ namespace Nektar
                     // Initialize the matrix tildeF
                     Vmath::Zero(nElemCoeffs*nEdgeCoeffs, tildeFMat.GetPtr(),1);
 
-                    for (int i = 0; i < nElemCoeffs; ++i)
+                    for (int i = 0; i < nEdgeCoeffs; ++i)
                     {
                         Vmath::Zero(nElemCoeffs, elemCoeffs, 1);
-                        elemCoeffs[i] = 1.0;
+                        elemCoeffs[map[i]] = 1.0;
 
                         // Phys contains values of the i-the mode at all qd. pts
                         BwdTrans(elemCoeffs, phys);
@@ -1761,7 +1721,8 @@ namespace Nektar
 
                         for(int j = 0; j < nEdgeCoeffs; ++j)
                         {
-                            tildeFMat(i,j) = sign[j] * edgeCoeffs[j]; // ???
+                            // std::cout << "    [" << map[i] << "," << j << "] = " << sign[j] * edgeCoeffs[j] << std::endl;
+                            tildeFMat(map[i],j) = sign[j] * edgeCoeffs[j]; // ???
                         }
                      }
 
@@ -1770,7 +1731,7 @@ namespace Nektar
                      Blas::Dgemv('N', nElemCoeffs, nEdgeCoeffs, 1.0, &(tildeFMat.GetPtr())[0],
                                       nElemCoeffs, &lambdaExpCoeffs[0], 1, 0.0, &work0[0], 1 );
 
-                     // Accumulate result to tildeFTimesLambda
+                      // Accumulate result to tildeFTimesLambda
                      Vmath::Vadd(nElemCoeffs, &tildeFTimesLambda[dir][0], 1, &work0[0], 1, &tildeFTimesLambda[dir][0], 1);
                 }
                 // Loop over directions
@@ -1818,14 +1779,6 @@ namespace Nektar
             // Mass matrix
             const DNekScalMat &invMass = *GetLocMatrix(StdRegions::eInvMass);
 
-            // Evaluate D * inv(M) * ( sum( F * lambda )
-            /*
-            if ( coeffs.num_elements() != nElemCoeffs )
-            {
-                coeffs = Array<OneD, NekDouble>(nElemCoeffs);
-            }
-            */
-
             //Vmath::Zero(nElemCoeffs, &coeffs[0], 1);
 
             for(int dim = 0; dim < coordim; ++dim)
@@ -1844,9 +1797,8 @@ namespace Nektar
                 Vmath::Vadd(nElemCoeffs, &work1[0], 1, &coeffs[0], 1, &coeffs[0], 1);
             }
 
-            // coeffs += sum ( F * lambda )
+            // coeffs += sum ( tau * F * lambda )
             Vmath::Vadd(nElemCoeffs, &coeffs[0], 1, &FTimesLambda[0], 1, &coeffs[0], 1);
-
 
         } // v_AddWeakDirichletForcingContribution
 

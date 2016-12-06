@@ -850,7 +850,7 @@ namespace Nektar
             {
                 const int elmt = it->first;
 
-                const LocalRegions::Expansion2DSharedPtr exp =
+                const LocalRegions::Expansion2DSharedPtr elemExp =
                    shared_from_this()->GetExp(elmt)->as<LocalRegions::Expansion2D>();
 
                 // Collect the IDs of faces that have weak Dirichlet BCs
@@ -861,7 +861,7 @@ namespace Nektar
                 for(wDBC = weakDirBCs.find(elmt)->second; wDBC; wDBC = wDBC->next)
                 {
                     const int localEdgeId = wDBC->m_weakDirichletID;
-                    const LocalRegions::Expansion1DSharedPtr edgeExp = exp->GetEdgeExp(localEdgeId, false);
+                    const LocalRegions::Expansion1DSharedPtr edgeExp = elemExp->GetEdgeExp(localEdgeId, false);
                     const int nEdgeQuadPts = edgeExp->GetNumPoints(0);
 
                     numBdryFacets++;
@@ -878,7 +878,7 @@ namespace Nektar
                 for(wDBC = weakDirBCs.find(elmt)->second; wDBC; wDBC = wDBC->next)
                 {
                     const int localEdgeId = wDBC->m_weakDirichletID;
-                    const LocalRegions::Expansion1DSharedPtr edgeExp = exp->GetEdgeExp(localEdgeId, false);
+                    const LocalRegions::Expansion1DSharedPtr edgeExp = elemExp->GetEdgeExp(localEdgeId, false);
                     const int nEdgeQuadPts = edgeExp->GetNumPoints(0);
 
                     lambdaOffsets[numBdryFacets] = offset;
@@ -892,23 +892,23 @@ namespace Nektar
                     numBdryFacets++;
                 }
 
-                 Array<OneD, NekDouble> elmtDofs(exp->GetNcoeffs());
+                 Array<OneD, NekDouble> elmtDofs(elemExp->GetNcoeffs());
                 Vmath::Zero(elmtDofs.num_elements(), elmtDofs.data(), 1);
                 // = wsp + GetCoeff_Offset(elmt);
-                exp->AddWeakDirichletForcingContribution(edgeids, lambdaOnTrace,
-                                                         lambdaOffsets, elmtDofs);
+                elemExp->AddWeakDirichletForcingContribution(edgeids, lambdaOnTrace,
+                                                             lambdaOffsets, elmtDofs);
 
                 const int elem_offset = GetCoeff_Offset(elmt);
 
-                for(int i = 0; i < exp->GetNcoeffs(); ++i)
+                for(int i = 0; i < elemExp->GetNcoeffs(); ++i)
                 {
                     const int idx = elem_offset + i;
                     const int gid = m_locToGloMap->GetLocalToGlobalMap(idx);
                     const int sign = m_locToGloMap->GetLocalToGlobalSign(idx);
                     wsp[gid] += sign * elmtDofs[i];
                 }
-
             } // Loop over weak boundary conditions
+
 
             int i,j;
             int bndcnt=0;
@@ -916,7 +916,8 @@ namespace Nektar
 
             for(i = 0; i < m_bndCondExpansions.num_elements(); ++i)
             {
-                if(m_bndConditions[i]->GetBoundaryConditionType() != SpatialDomains::eDirichlet)
+                if((m_bndConditions[i]->GetBoundaryConditionType() != SpatialDomains::eDirichlet) &&
+                   (m_bndConditions[i]->GetBoundaryConditionType() != SpatialDomains::eWeakDirichlet))
                 {
                     for(j = 0; j < (m_bndCondExpansions[i])->GetNcoeffs(); j++)
                     {
@@ -933,7 +934,6 @@ namespace Nektar
             
             m_locToGloMap->UniversalAssemble(gamma);
 
-            // Add weak boundary conditions to forcing
             Vmath::Vadd(contNcoeffs, wsp, 1, gamma, 1, wsp, 1);
 
             GlobalLinSysKey key(StdRegions::eHelmholtz,m_locToGloMap,factors,varcoeff);
