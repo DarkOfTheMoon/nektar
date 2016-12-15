@@ -66,6 +66,7 @@ OutputGmsh::OutputGmsh(MeshSharedPtr m) : OutputModule(m)
     }
 
     m_config["order"] = ConfigOption(false, "-1", "Enforce a polynomial order");
+    m_config["pyfr"] = ConfigOption(true, "0", "write tags in pyfr mode");
 }
 
 OutputGmsh::~OutputGmsh()
@@ -203,10 +204,32 @@ void OutputGmsh::Process()
             // themselves.
             vector<int> tags = e->GetTagList();
 
-            if (tags.size() == 1)
+            if(m_config["pyfr"].beenSet)
             {
-                tags.push_back(tags[0]);
-                tags.push_back(0);
+                if (tags.size() == 1)
+                {
+                    if(d == m_mesh->m_spaceDim)
+                    {
+                        tags.insert(tags.begin(),0);
+                    }
+                    else
+                    {
+                        tags.push_back(0);
+                    }
+
+                }
+                else
+                {
+                    ASSERTL0(false,"more than one tag");
+                }
+            }
+            else
+            {
+                if (tags.size() == 1)
+                {
+                    tags.push_back(tags[0]);
+                    tags.push_back(0);
+                }
             }
 
             m_mshFile << tags.size() << " ";
