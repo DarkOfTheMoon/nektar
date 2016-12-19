@@ -1526,7 +1526,6 @@ namespace Nektar
 
              } // Loop over selected boundary edges
 
-
             // Compute the actual Laplace term
             // DNekMatSharedPtr LaplacePtr = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs, nElemCoeffs);
             // DNekMat& Laplace = *LaplacePtr;
@@ -1554,7 +1553,10 @@ namespace Nektar
                 const DNekMat& sumTildeE = *tildeEMatSumPtr[dim];
 
                 // Laplace = DmatT * invMass * Dmat;
-                weakDGMat = sumTildeE * (invMass * sumTildeE - invMass * Dmat) - DmatT * invMass * sumTildeE;
+                //weakDGMat = sumTildeE * (invMass * sumTildeE - invMass * Dmat) - DmatT * invMass * sumTildeE;
+                weakDGMat = Dmat * invMass * sumTildeE - sumTildeE * invMass * Dmat;
+
+                //std::cout << "sum(tildeE) * ( inv(M) * sum(tildeE)"
 
                 // Finally add the contributions to inoutmat
 
@@ -1769,6 +1771,11 @@ namespace Nektar
                 Vmath::Vadd(nElemCoeffs, &FTimesLambda[0], 1, &work0[0], 1, &FTimesLambda[0], 1);
             }
             // Loop over edges
+
+            /*
+            std::cout << "\ntildeFTimesLambda[0] = " << tildeFTimesLambda[xDir] << std::endl;
+            std::cout << "\ntildeFTimesLambda[1] = " << tildeFTimesLambda[yDir] << std::endl;
+            */
 
             // ---------------------------------------------------------
             // 2) Use 1a) to evaluate sum ( D * inv(M) * sum(F*lambda) )
