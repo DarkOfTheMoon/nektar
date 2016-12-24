@@ -37,8 +37,20 @@
 #include "petscsys.h"
 #endif
 
+#include <iostream>
+using namespace std;
+
+#include <boost/mpi/environment.hpp>
+#include <boost/mpi/communicator.hpp>
+#include <boost/serialization/string.hpp>
+#include <boost/serialization/queue.hpp>
+#include <boost/serialization/deque.hpp>
+#include <boost/serialization/vector.hpp>
+namespace mpi = boost::mpi;
+
 #include <LibUtilities/BasicUtils/SharedArray.hpp>
 #include <LibUtilities/Communication/CommMpi.h>
+
 
 namespace Nektar
 {
@@ -53,6 +65,8 @@ int CommMpi::nSpares = 1;
  */
 CommMpi::CommMpi(int narg, char *arg[]) : Comm(narg, arg)
 {
+    m_isRecovering = false;
+
     int init = 0;
     MPI_Initialized(&init);
     ASSERTL0(!init, "MPI has already been initialised.");
@@ -136,6 +150,7 @@ CommMpi::CommMpi(MPI_Comm pComm) : Comm()
  */
 CommMpi::~CommMpi()
 {
+    MPI_Comm_free(&m_comm);
 }
 
 
@@ -199,6 +214,11 @@ bool CommMpi::v_TreatAsRankZero(void)
  */
 void CommMpi::v_Block()
 {
+    if (IsRecovering())
+    {
+        return;
+    }
+
     int rc = MPI_Barrier(m_comm);
     if (rc != MPI_SUCCESS)
     {
@@ -219,6 +239,11 @@ double CommMpi::v_Wtime()
  */
 void CommMpi::v_Send(void *buf, int count, CommDataType dt, int dest)
 {
+    if (IsRecovering())
+    {
+        return;
+    }
+
     if (MPISYNC)
     {
         MPI_Ssend(buf, count, dt, dest, 0, m_comm);
@@ -234,9 +259,20 @@ void CommMpi::v_Send(void *buf, int count, CommDataType dt, int dest)
  */
 void CommMpi::v_Recv(void *buf, int count, CommDataType dt, int source)
 {
+    if (IsRecovering())
+    {
+        cout << "IMPLEMENTATION NEEDED" << endl;
+    }
+cout << "Recv" << endl;
     MPI_Recv(buf, count, dt, source, 0, m_comm, MPI_STATUS_IGNORE);
     // ASSERTL0(status.MPI_ERROR == MPI_SUCCESS,
     //         "MPI error receiving data.");
+    int size;
+    MPI_Type_size(dt, &size);
+    std::vector<char> x(count * size);
+    x.assign((char*)buf, (char*)buf + count*size);
+    m_data.push(x);
+    cout << "Received " << count * size << " bytes." << endl;
 }
 
 /**
@@ -249,7 +285,7 @@ void CommMpi::v_SendRecv(void *sendbuf, int sendcount, CommDataType sendtype,
     MPI_Status status;
     int retval = MPI_Sendrecv(sendbuf, sendcount, sendtype, dest, 0, recvbuf,
                               recvcount, recvtype, source, 0, m_comm, &status);
-
+cout << "SendRecv" << endl;
     ASSERTL0(retval == MPI_SUCCESS,
              "MPI error performing send-receive of data.");
 }
@@ -279,6 +315,20 @@ void CommMpi::v_AllReduce(void *buf, int count, CommDataType dt,
         return;
     }
 
+    int dtsize;
+    MPI_Type_size(dt, &dtsize);
+
+    if (m_isRecovering)
+    {
+        ASSERTL0(!m_data.empty(), "QUEUE IS EMPTY!!");
+
+        std::vector<char> x = m_data.front();
+        m_data.pop();
+
+        memcpy(buf, &x[0], count*dtsize);
+        return;
+    }
+
     MPI_Op vOp;
     switch (pOp)
     {
@@ -296,6 +346,14 @@ void CommMpi::v_AllReduce(void *buf, int count, CommDataType dt,
     int retval = MPI_Allreduce(MPI_IN_PLACE, buf, count, dt, vOp, m_comm);
 
     ASSERTL0(retval == MPI_SUCCESS, "MPI error performing All-reduce.");
+
+    if (m_isLogging)
+    {
+        std::vector<char> x;
+        x.assign((char*)buf, (char*)buf+count*dtsize);
+        m_data.push(x);
+        cout << "AllReduce: Appended " << dtsize << " bytes of data." << endl;
+    }
 }
 
 /**
@@ -306,7 +364,7 @@ void CommMpi::v_AlltoAll(void *sendbuf, int sendcount, CommDataType sendtype,
 {
     int retval = MPI_Alltoall(sendbuf, sendcount, sendtype, recvbuf, recvcount,
                               recvtype, m_comm);
-
+cout << "AllToAll" << endl;
     ASSERTL0(retval == MPI_SUCCESS, "MPI error performing All-to-All.");
 }
 
@@ -326,8 +384,30 @@ void CommMpi::v_AlltoAllv(void *sendbuf, int sendcounts[], int sdispls[],
 
 void CommMpi::v_Bcast(void *buffer, int count, CommDataType dt, int root)
 {
+    int dtsize;
+    MPI_Type_size(dt, &dtsize);
+
+    if (m_isRecovering)
+    {
+        ASSERTL0(!m_data.empty(), "QUEUE IS EMPTY!!");
+
+        std::vector<char> x = m_data.front();
+        m_data.pop();
+
+        memcpy(buffer, &x[0], count*dtsize);
+        return;
+    }
+
     int retval = MPI_Bcast(buffer, count, dt, root, m_comm);
     ASSERTL0(retval == MPI_SUCCESS, "MPI error performing Bcast-v.");
+
+    if (m_isLogging)
+    {
+        std::vector<char> x;
+        x.assign((char*)buffer, (char*)buffer+count*dtsize);
+        m_data.push(x);
+        cout << "BCast: Appended " << dtsize << " bytes of data." << endl;
+    }
 }
 
 void CommMpi::v_Exscan(Array<OneD, unsigned long long> &pData,
@@ -384,6 +464,12 @@ void CommMpi::v_Scatter(void *sendbuf, int sendcount, CommDataType sendtype,
  */
 void CommMpi::v_SplitComm(int pRows, int pColumns)
 {
+    if (m_isRecovering)
+    {
+        cout << "Assuming split comm already sorted by enrolspare." << endl;
+        return;
+    }
+
     ASSERTL0(pRows * pColumns == m_size,
              "Rows/Columns do not match comm size.");
 
@@ -411,22 +497,34 @@ void CommMpi::v_SplitComm(int pRows, int pColumns)
  */
 CommSharedPtr CommMpi::v_CommCreateIf(int flag)
 {
-    MPI_Comm newComm;
-    // color == MPI_UNDEF => not in the new communicator
-    // key == 0 on all => use rank to order them. OpenMPI, at least,
-    // implies this is faster than ordering them ourselves.
-    MPI_Comm_split(m_comm, flag ? 0 : MPI_UNDEFINED, 0, &newComm);
-
-    if (flag == 0)
+    CommSharedPtr c;
+    if (m_isRecovering)
     {
-        // flag == 0 => get back MPI_COMM_NULL, return a null ptr instead.
-        return boost::shared_ptr<Comm>();
+        c = m_derivedComm[m_derivedRecoverIndex++];
     }
     else
     {
-        // Return a real communicator
-        return boost::shared_ptr<Comm>(new CommMpi(newComm));
+        MPI_Comm newComm;
+        // color == MPI_UNDEF => not in the new communicator
+        // key == 0 on all => use rank to order them. OpenMPI, at least,
+        // implies this is faster than ordering them ourselves.
+        MPI_Comm_split(m_comm, flag ? 0 : MPI_UNDEFINED, 0, &newComm);
+
+        if (flag == 0)
+        {
+            // flag == 0 => get back MPI_COMM_NULL, return a null ptr instead.
+            c = boost::shared_ptr<Comm>();
+        }
+        else
+        {
+            // Return a real communicator
+            c = boost::shared_ptr<Comm>(new CommMpi(newComm));
+        }
+
+        m_derivedComm.push_back(c);
+        m_derivedCommFlag.push_back(flag);
     }
+    return c;
 }
 
 int CommMpi::v_EnrolSpare()
@@ -439,13 +537,22 @@ int CommMpi::v_EnrolSpare()
         std::cout << "Return value from comm agree is " << x << std::endl;
     }
 
-    // First remove the dead process
+    // =============================
+    // First remove the dead process from our world (active + spare)
     MPI_Comm scomm, newcomm;
     int rc, flag, ssize, srank, oldsize, oldrank, dsize, drank;
+    // Create a shunk comm from those live processes (scomm)
     MPIX_Comm_shrink(MPI_COMM_WORLD, &scomm);
+    // Make sure we handle any new errors on scomm
     MPI_Comm_set_errhandler( scomm, MPI_ERRORS_RETURN );
+    // Get size and rank
     MPI_Comm_size(scomm, &ssize);
     MPI_Comm_rank(scomm, &srank);
+
+    // Get number of rows and columns if split comm
+    int pRows    = (m_commColumn.get() ? m_commColumn->GetSize() : 0);
+    int pColumns = (m_commRow.get() ? m_commRow->GetSize() : 0);
+    int pDerived = m_derivedComm.size();
 
     // Keep trying until we succeed without further failures
     do
@@ -486,6 +593,11 @@ int CommMpi::v_EnrolSpare()
                     }
                     // send their new assignment to all spares
                     MPI_Send(&drank, 1, MPI_INT, i + oldsize - dsize, 1, scomm);
+                    MPI_Send(&pRows, 1, MPI_INT, i + oldsize - dsize, 2, scomm);
+                    MPI_Send(&pColumns, 1, MPI_INT, i + oldsize - dsize, 3, scomm);
+                    MPI_Send(&pDerived, 1, MPI_INT, i + oldsize - dsize, 4, scomm);
+                    MPI_Send(&m_derivedCommFlag[0], pDerived,
+                                MPI_INT, i + oldsize - dsize, 5, scomm);
                 }
 
                 MPI_Group_free(&cgrp);
@@ -497,7 +609,18 @@ int CommMpi::v_EnrolSpare()
         else
         {
             MPI_Recv(&oldrank, 1, MPI_INT, 0, 1, scomm, MPI_STATUS_IGNORE);
+            MPI_Recv(&pRows, 1, MPI_INT, 0, 2, scomm, MPI_STATUS_IGNORE);
+            MPI_Recv(&pColumns, 1, MPI_INT, 0, 3, scomm, MPI_STATUS_IGNORE);
+            MPI_Recv(&pDerived, 1, MPI_INT, 0, 4, scomm, MPI_STATUS_IGNORE);
+            m_derivedCommFlag.resize(pDerived);
+            MPI_Recv(&m_derivedCommFlag[0], pDerived, MPI_INT, 0, 5, scomm, MPI_STATUS_IGNORE);
+            m_derivedRecoverIndex = 0;
+
             std::cout << "Spare received assignment: " << oldrank << std::endl;
+            std::cout << "Split: " << pRows << " x " << pColumns << endl;
+            std::cout << "Num of derived comms: " << pDerived << endl;
+
+            m_isRecovering = true;
         }
 
         // Remove dead process and reassign spare processes to these ranks
@@ -512,7 +635,6 @@ int CommMpi::v_EnrolSpare()
                 MPI_Comm_free(&newcomm);
             }
         }
-
     } while ( MPI_SUCCESS != flag );
 
     // Replace the original comm
@@ -522,14 +644,121 @@ int CommMpi::v_EnrolSpare()
     }
     m_comm = newcomm;
 
-    m_isRecovering = true;
+    // Update rank and size
+    MPI_Comm_rank(m_comm, &m_rank);
+    MPI_Comm_size(m_comm, &m_size);
+
+    // Fix split comm
+    // --------------
+    // First, free old row and column communicators
+    if (m_commColumn.get())
+    {
+        m_commColumn.reset();
+    }
+    if (m_commRow.get())
+    {
+        m_commRow.reset();
+    }
+
+    if (pRows > 0 && pColumns > 0)
+    {
+        ASSERTL0(pRows * pColumns == m_size,
+                 "Rows/Columns do not match comm size.");
+
+        MPI_Comm tmpComm;
+
+        // Compute row and column in grid.
+        int myCol = m_rank % pColumns;
+        int myRow = (m_rank - myCol) / pColumns;
+
+        // Split Comm into rows - all processes with same myRow are put in
+        // the same communicator. The rank within this communicator is the
+        // column index.
+        MPI_Comm_split(m_comm, myRow, myCol, &tmpComm);
+        m_commRow = boost::shared_ptr<Comm>(new CommMpi(tmpComm));
+
+        // Split Comm into columns - all processes with same myCol are put
+        // in the same communicator. The rank within this communicator is
+        // the row index.
+        MPI_Comm_split(m_comm, myCol, myRow, &tmpComm);
+        m_commColumn = boost::shared_ptr<Comm>(new CommMpi(tmpComm));
+    }
+
+    // Fix derived comms
+    // -----------------
+    for (int i = 0; i < pDerived; ++i)
+    {
+        MPI_Comm tmpComm;
+        int flag = m_derivedCommFlag[i];
+        MPI_Comm_split(m_comm, flag ? 0 : MPI_UNDEFINED, 0, &tmpComm);
+        if (m_isRecovering) // Recovering spare node
+        {
+            // Create a derived communicator from scratch
+            CommSharedPtr c;
+            if (flag == 0)
+            {
+                // flag == 0 => get back MPI_COMM_NULL, return a null ptr instead.
+                c = boost::shared_ptr<Comm>();
+            }
+            else
+            {
+                // Return a real communicator
+                c = boost::shared_ptr<Comm>(new CommMpi(tmpComm));
+            }
+            m_derivedComm.push_back(c);
+        }
+        else // surviving node
+        {
+            m_derivedComm[i]->v_ReplaceComm((void*)(tmpComm));
+        }
+    }
+
+    // Perform restore
+    mpi::communicator c(m_comm, mpi::comm_attach);
+    int rank = c.rank();
+    int size = c.size();
+    int recv_rank = (rank + 1) % size;
+    int send_rank = (rank + size - 1) % size;
+    mpi::request reqs[2];
+    cout << "Restore: Receiving from " << recv_rank << endl;
+    reqs[0] = c.irecv(recv_rank, 0, m_data);
+    cout << "Restore: Sending " << m_dataBackup.size() << " items." << endl;
+    cout << "Restore: Sending my backup copy to " << send_rank << endl;
+    reqs[1] = c.isend(send_rank, 0, m_dataBackup);
+    cout << "Restore: Waiting for data from " << recv_rank << endl;
+    reqs[0].wait();
+    cout << "Restore: Complete" << endl;
+    cout << "Restore: Received " << m_data.size() << " items in queue." << endl;
 
     return MPI_SUCCESS;
 }
 
+void CommMpi::v_BackupState()
+{
+    mpi::communicator c(m_comm, mpi::comm_attach);
+    mpi::request reqs[2];
+    int rank = c.rank();
+    int size = c.size();
+    int recv_rank = (rank + size - 1) % size;
+    int send_rank = (rank + 1) % size;
+    cout << "Backup: Sending " << m_data.size() << " items in queue." << endl;
+    reqs[0] = c.isend(send_rank, 0, m_data);
+    cout << "Backup: Sent to " << send_rank << endl;
+    reqs[1] = c.irecv(recv_rank, 0, m_dataBackup);
+    cout << "Backup: Waiting for data from " << recv_rank << endl;
+    reqs[1].wait();
+    cout << "Backup: Received " << m_dataBackup.size() << " items." << endl;
+//    cout << "Backup: Sending " << m_data.size() << " items in queue." << endl;
+//    c.send((rank + 1) % size, 0, m_data);
+//    cout << "Backup: Sent to " << (rank + 1) % size << endl;
+//    cout << "Backup: Waiting for data from " << (rank + 1) % size << endl;
+//    c.recv((rank - 1) % size, 0, m_dataBackup);
+//    cout << "Backup: Received " << m_dataBackup.size() << " items." << endl;
+
+}
+
 static void CommMpi::HandleMpiError(MPI_Comm* pcomm, int* perr, ...)
 {
-    MPI_Comm comm = *pcomm;
     int err = *perr;
 
     // Get type of error and check if it is a proc failed.
@@ -548,6 +777,11 @@ static void CommMpi::HandleMpiError(MPI_Comm* pcomm, int* perr, ...)
     std::cout << "An MPI error occured: " << errstr << std::endl;
 
     throw 1; //UlfmFailureDetected(std::string(errstr));
+}
+
+void CommMpi::v_ReplaceComm(void* commptr)
+{
+    m_comm = (MPI_Comm)(commptr);
 }
 
 }

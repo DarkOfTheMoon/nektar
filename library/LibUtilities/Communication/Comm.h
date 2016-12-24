@@ -131,13 +131,37 @@ public:
     LIB_UTILITIES_EXPORT inline int EnrolSpare();
     LIB_UTILITIES_EXPORT inline bool IsRecovering();
     LIB_UTILITIES_EXPORT inline void MarkRecoveryComplete();
+    LIB_UTILITIES_EXPORT inline void BeginTransactionLog()
+    {
+        m_isLogging = true;
+    }
+    LIB_UTILITIES_EXPORT inline void EndTransactionLog()
+    {
+        m_isLogging = false;
+        if (m_isRecovering)
+        {
+            m_isRecovering = false;
+            for (int i = 0; i < m_derivedComm.size(); ++i)
+            {
+                m_derivedComm[i]->m_isRecovering = false;
+            }
+        }
+        v_BackupState();
+    }
 
 protected:
+    typedef std::vector<CommSharedPtr>  DerivedCommType;
+    typedef std::vector<int>            DerivedCommFlagType;
+
     int m_size;                 ///< Number of processes
     std::string m_type;         ///< Type of communication
     CommSharedPtr m_commRow;    ///< Row communicator
     CommSharedPtr m_commColumn; ///< Column communicator
     bool m_isRecovering;        ///< True if we are undergoing recovery from failed process
+    bool m_isLogging;           ///< True if logging MPI output
+    DerivedCommType m_derivedComm;
+    DerivedCommFlagType m_derivedCommFlag;
+    int m_derivedRecoverIndex;
 
     Comm();
 
@@ -182,6 +206,11 @@ protected:
     LIB_UTILITIES_EXPORT virtual bool v_RemoveExistingFiles(void);
 
     virtual int v_EnrolSpare() = 0;
+    virtual bool v_IsRecovering() {return m_isRecovering;}
+    virtual void v_BackupState() = 0;
+
+public:
+    virtual void v_ReplaceComm(void* commptr) {}
 };
 
 /**
@@ -396,7 +425,12 @@ template <class T> T Comm::Scatter(const int rootProc, T &pData)
  */
 inline CommSharedPtr Comm::CommCreateIf(int flag)
 {
-    return v_CommCreateIf(flag);
+    CommSharedPtr c = v_CommCreateIf(flag);
+    if (m_isRecovering)
+    {
+        c->m_isRecovering = true;
+    }
+    return c;
 }
 
 /**

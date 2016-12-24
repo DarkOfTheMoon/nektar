@@ -116,6 +116,7 @@ protected:
     LIB_UTILITIES_EXPORT virtual CommSharedPtr v_CommCreateIf(int flag);
 
     LIB_UTILITIES_EXPORT virtual int v_EnrolSpare() {return 0;}
+    LIB_UTILITIES_EXPORT virtual void v_BackupState() {}
 };
 }
 }

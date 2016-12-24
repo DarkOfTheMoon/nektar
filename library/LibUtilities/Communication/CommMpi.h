@@ -38,6 +38,8 @@
 #include <mpi.h>
 #include <mpi-ext.h>
 #include <string>
+#include <queue>
+#include <vector>
 
 #include <LibUtilities/Communication/Comm.h>
 #include <LibUtilities/Memory/NekMemoryManager.hpp>
@@ -134,15 +136,23 @@ protected:
     virtual CommSharedPtr v_CommCreateIf(int flag);
 
     virtual int v_EnrolSpare();
+    virtual void v_BackupState();
 
 private:
+    typedef std::queue<std::vector<char>> StorageType;
+
     MPI_Comm m_comm;
     MPI_Comm m_agreecomm;
     int m_rank;
 
+    StorageType m_data;
+    StorageType m_dataBackup;
+
     static void HandleMpiError(MPI_Comm* pcomm, int* perr, ...);
 
     CommMpi(MPI_Comm pComm);
+
+    virtual void v_ReplaceComm(void* commptr);
 };
 }
 }

@@ -194,6 +194,8 @@ namespace Nektar
             // Create communicator
             CreateComm(argc, argv);
 
+            m_comm->BeginTransactionLog();
+
             TestSharedFilesystem();
 
             // If running in parallel change the default global sys solution

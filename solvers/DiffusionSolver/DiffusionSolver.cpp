@@ -89,6 +89,7 @@ int main(int argc, char *argv[])
         // Zero field coefficients for initial guess for linear solver.
         Vmath::Zero(field->GetNcoeffs(), field->UpdateCoeffs(), 1);
 
+        session->GetComm()->EndTransactionLog();
         //BackupStaticState();
 
         // Time integrate using backward Euler
