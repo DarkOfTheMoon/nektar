@@ -40,6 +40,8 @@
 #include <string>
 #include <queue>
 #include <vector>
+#include <list>
+
 
 #include <LibUtilities/Communication/Comm.h>
 #include <LibUtilities/Memory/NekMemoryManager.hpp>
@@ -135,24 +137,36 @@ protected:
     virtual void v_SplitComm(int pRows, int pColumns);
     virtual CommSharedPtr v_CommCreateIf(int flag);
 
-    virtual int v_EnrolSpare();
-    virtual void v_BackupState();
-
 private:
     typedef std::queue<std::vector<char>> StorageType;
+    typedef std::list<CommMpiSharedPtr>   DerivedCommType;
+    typedef std::queue<int>               DerivedCommFlagType;
 
     MPI_Comm m_comm;
     MPI_Comm m_agreecomm;
     int m_rank;
 
+    bool m_isRecovering;        ///< True if we are undergoing recovery from failed process
+    bool m_isLogging;           ///< True if logging MPI output
     StorageType m_data;
     StorageType m_dataBackup;
+    DerivedCommType m_derivedComm; ///< Temporary derived comm list used during restore
+    DerivedCommFlagType m_derivedCommFlag; ///< Log derived comm flags
+    DerivedCommFlagType m_derivedCommFlagBackup; ///< Backup of neighbour flags
+
 
     static void HandleMpiError(MPI_Comm* pcomm, int* perr, ...);
 
     CommMpi(MPI_Comm pComm);
 
-    virtual void v_ReplaceComm(void* commptr);
+    virtual int v_EnrolSpare();
+    virtual void v_BeginTransactionLog();
+    virtual void v_EndTransactionLog();
+
+    void BackupState();
+    void RestoreState();
+    void ReplaceComm(MPI_Comm commptr);
+
 };
 }
 }

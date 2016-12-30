@@ -1910,11 +1910,11 @@ namespace Nektar
                 int nProcSem = m_comm->GetSize() / nProcSm;
 
                 m_comm->SplitComm(nProcSm,nProcSem);
-                m_comm->GetColumnComm()->SplitComm(nProcZ/nStripZ,nStripZ);
-                m_comm->GetColumnComm()->GetColumnComm()->SplitComm(
-                                            (nProcY*nProcX),nProcZ/nStripZ);
-                m_comm->GetColumnComm()->GetColumnComm()->GetColumnComm()
-                                            ->SplitComm(nProcX,nProcY);
+//                m_comm->GetColumnComm()->SplitComm(nProcZ/nStripZ,nStripZ);
+//                m_comm->GetColumnComm()->GetColumnComm()->SplitComm(
+//                                            (nProcY*nProcX),nProcZ/nStripZ);
+//                m_comm->GetColumnComm()->GetColumnComm()->GetColumnComm()
+//                                            ->SplitComm(nProcX,nProcY);
             }
         }
 

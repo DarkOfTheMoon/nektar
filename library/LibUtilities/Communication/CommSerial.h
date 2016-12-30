@@ -117,6 +117,7 @@ protected:
 
     LIB_UTILITIES_EXPORT virtual int v_EnrolSpare() {return 0;}
     LIB_UTILITIES_EXPORT virtual void v_BackupState() {}
+    LIB_UTILITIES_EXPORT virtual void v_RestoreState() {}
 };
 }
 }

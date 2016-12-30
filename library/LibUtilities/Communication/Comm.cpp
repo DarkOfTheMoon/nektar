@@ -42,7 +42,6 @@ namespace LibUtilities
 {
 Comm::Comm(int narg, char *arg[])
 {
-    m_isRecovering = false;
 }
 
 Comm::Comm()

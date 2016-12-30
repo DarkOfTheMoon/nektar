@@ -119,7 +119,7 @@ public:
     template <class T> T Gather(const int rootProc, T &val);
     template <class T> T Scatter(const int rootProc, T &pData);
 
-    LIB_UTILITIES_EXPORT inline CommSharedPtr CommCreateIf(int flag);
+    LIB_UTILITIES_EXPORT inline CommSharedPtr CommCreateIf(int colour);
 
     LIB_UTILITIES_EXPORT inline void SplitComm(int pRows, int pColumns);
     LIB_UTILITIES_EXPORT inline CommSharedPtr GetRowComm();
@@ -129,39 +129,14 @@ public:
     LIB_UTILITIES_EXPORT inline bool RemoveExistingFiles(void);
 
     LIB_UTILITIES_EXPORT inline int EnrolSpare();
-    LIB_UTILITIES_EXPORT inline bool IsRecovering();
-    LIB_UTILITIES_EXPORT inline void MarkRecoveryComplete();
-    LIB_UTILITIES_EXPORT inline void BeginTransactionLog()
-    {
-        m_isLogging = true;
-    }
-    LIB_UTILITIES_EXPORT inline void EndTransactionLog()
-    {
-        m_isLogging = false;
-        if (m_isRecovering)
-        {
-            m_isRecovering = false;
-            for (int i = 0; i < m_derivedComm.size(); ++i)
-            {
-                m_derivedComm[i]->m_isRecovering = false;
-            }
-        }
-        v_BackupState();
-    }
+    LIB_UTILITIES_EXPORT inline void BeginTransactionLog();
+    LIB_UTILITIES_EXPORT inline void EndTransactionLog();
 
 protected:
-    typedef std::vector<CommSharedPtr>  DerivedCommType;
-    typedef std::vector<int>            DerivedCommFlagType;
-
     int m_size;                 ///< Number of processes
     std::string m_type;         ///< Type of communication
     CommSharedPtr m_commRow;    ///< Row communicator
     CommSharedPtr m_commColumn; ///< Column communicator
-    bool m_isRecovering;        ///< True if we are undergoing recovery from failed process
-    bool m_isLogging;           ///< True if logging MPI output
-    DerivedCommType m_derivedComm;
-    DerivedCommFlagType m_derivedCommFlag;
-    int m_derivedRecoverIndex;
 
     Comm();
 
@@ -200,17 +175,15 @@ protected:
                            void *recvbuf, int recvcount, CommDataType recvtype,
                            int root) = 0;
 
-    virtual CommSharedPtr v_CommCreateIf(int flag) = 0;
+    virtual CommSharedPtr v_CommCreateIf(int colour) = 0;
     virtual void v_SplitComm(int pRows, int pColumns) = 0;
     virtual bool v_TreatAsRankZero(void) = 0;
     LIB_UTILITIES_EXPORT virtual bool v_RemoveExistingFiles(void);
 
     virtual int v_EnrolSpare() = 0;
-    virtual bool v_IsRecovering() {return m_isRecovering;}
-    virtual void v_BackupState() = 0;
+    virtual void v_BeginTransactionLog() {}
+    virtual void v_EndTransactionLog() {}
 
-public:
-    virtual void v_ReplaceComm(void* commptr) {}
 };
 
 /**
@@ -423,14 +396,9 @@ template <class T> T Comm::Scatter(const int rootProc, T &pData)
 /**
  * @brief If the flag is non-zero create a new communicator.
  */
-inline CommSharedPtr Comm::CommCreateIf(int flag)
+inline CommSharedPtr Comm::CommCreateIf(int colour)
 {
-    CommSharedPtr c = v_CommCreateIf(flag);
-    if (m_isRecovering)
-    {
-        c->m_isRecovering = true;
-    }
-    return c;
+    return v_CommCreateIf(colour);
 }
 
 /**
@@ -489,15 +457,16 @@ inline int Comm::EnrolSpare()
     return v_EnrolSpare();
 }
 
-inline bool Comm::IsRecovering()
+inline void Comm::BeginTransactionLog()
 {
-    return m_isRecovering;
+    v_BeginTransactionLog();
 }
 
-inline void Comm::MarkRecoveryComplete()
+inline void Comm::EndTransactionLog()
 {
-    m_isRecovering = false;
+    v_EndTransactionLog();
 }
+
 }
 }
 
