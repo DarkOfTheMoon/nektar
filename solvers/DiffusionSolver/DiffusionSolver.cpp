@@ -90,40 +90,34 @@ int main(int argc, char *argv[])
         Vmath::Zero(field->GetNcoeffs(), field->UpdateCoeffs(), 1);
 
         session->GetComm()->EndTransactionLog();
-        //BackupStaticState();
 
         // Time integrate using backward Euler
         for (unsigned int n = 0; n < nSteps; ++n)
         {
-try {
-            //BackupDynamicState();
+            cout << "Time step: " << n << endl;
+            try {
+                Vmath::Smul(nq, -1.0/delta_t/epsilon, field->GetPhys(),    1,
+                                                      field->UpdatePhys(), 1);
 
-            if (session->GetComm()->GetRank() == 1 && n == 5) {
-                raise( SIGKILL );
+                field->HelmSolve(field->GetPhys(), field->UpdateCoeffs(),
+                                 NullFlagList, factors);
+
+                field->BwdTrans(field->GetCoeffs(), field->UpdatePhys());
+            } catch (...) {
+                try {
+                    cout << "Caught an error - trying to invoke a spare." << endl;
+                    int x = session->GetComm()->EnrolSpare();
+                    cout << "Enroled spare, result: " << x << endl;
+                    --n; // need to roll back to previous time step here...
+                } catch (...) {
+                    cout << "ERROR WHEN PERFORMING ENROLSPARE!!!" << endl;
+                    exit(-1);
+                }
             }
-
-            Vmath::Smul(nq, -1.0/delta_t/epsilon, field->GetPhys(),    1,
-                                                  field->UpdatePhys(), 1);
-
-            //field->HelmSolve(field->GetPhys(), field->UpdateCoeffs(),
-            //                 NullFlagList, factors);
-            session->GetComm()->Block();
-
-            field->BwdTrans(field->GetCoeffs(), field->UpdatePhys());
-} catch (...) {
-    try {
-        cout << "Caught an error - trying to invoke a spare." << endl;
-        int x = session->GetComm()->EnrolSpare();
-        cout << "Enroled spare, result: " << x << endl;
-    } catch (...) {
-        cout << "ERROR WHEN PERFORMING ENROLSPARE!!!" << endl;
-    }
-    //RestoreStaticState();
-    //RestoreDynamicState();
-
-}
-
+            cout << "Completed iteration" << endl;
         }
+
+        session->GetComm()->Block();
 
         // Write solution to file
         std::vector<LibUtilities::FieldDefinitionsSharedPtr> FieldDef

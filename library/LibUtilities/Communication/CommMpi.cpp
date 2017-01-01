@@ -154,11 +154,6 @@ CommMpi::CommMpi(MPI_Comm pComm) : Comm()
  */
 CommMpi::~CommMpi()
 {
-    for (unsigned int i = 0; i < m_gsHandles.size(); ++i)
-    {
-        Gs::Finalise(m_gsHandles[i]);
-    }
-    MPI_Comm_free(&m_comm);
 }
 
 
@@ -178,9 +173,14 @@ void CommMpi::v_Finalise()
         {
             std::cout << "Non-spare process invoked Finalize" << std::endl;
             int completed = 1;
-            MPIX_Comm_agree(MPI_COMM_WORLD, &completed);
+            MPIX_Comm_agree(m_agreecomm, &completed);
+        }
+        for (unsigned int i = 0; i < m_gsHandles.size(); ++i)
+        {
+            Gs::Finalise(m_gsHandles[i]);
         }
         MPI_Comm_free(&m_comm);
+        MPI_Comm_free(&m_agreecomm);
         MPI_Finalize();
     }
 }
@@ -477,8 +477,7 @@ GsHandle CommMpi::v_GsInit(const Nektar::Array<OneD, long> pId,
     {
         GsHandle x;
         x.comm = shared_from_this();
-        x.idx = m_gsInitHandles.front();
-        m_gsInitHandles.pop();
+        x.idx = (m_gsHandlesRestoreIt++) - m_gsHandles.begin();
         return x;
     }
     else
@@ -491,7 +490,7 @@ GsHandle CommMpi::v_GsInit(const Nektar::Array<OneD, long> pId,
                 x.assign((char*)(&pId[0]), (char*)(&pId[0])+count*dtsize);
             }
             m_gsInitData.push(x);
-            cout << "GsInit: Appended " << dtsize << " bytes of data." << endl;
+            cout << "GsInit: Appended " << count*dtsize << " bytes of data, array size: " << count << endl;
         }
 
         Gs::gs_data * handle = Gs::Init(pId, m_comm, verbose);
@@ -540,7 +539,7 @@ void CommMpi::v_GsUnique(
                 x.assign((char*)(&pId[0]), (char*)(&pId[0])+count*dtsize);
             }
             m_data.push(x);
-            cout << "GsInit: Appended " << dtsize << " bytes of data." << endl;
+            cout << "GsUnique: Appended " << dtsize << " bytes of data." << endl;
         }
     }
 }
@@ -563,7 +562,7 @@ void CommMpi::v_GsGather(
 
         std::vector<char> x = m_data.front();
         m_data.pop();
-
+cout << "GsGather: Recover " << count << " values." << endl;
         if (count > 0)
         {
             memcpy(&pU[0], &x[0], count*dtsize);
@@ -599,10 +598,8 @@ void CommMpi::v_SplitComm(int pRows, int pColumns)
     if (m_isRecovering)
     {
         cout << "Recovering row and column comm" << endl;
-        m_commRow = m_derivedComm.front();
-        m_derivedComm.pop_front();
-        m_commColumn = m_derivedComm.front();
-        m_derivedComm.pop_front();
+        m_commRow    = *(m_derivedCommRestoreIt++);
+        m_commColumn = *(m_derivedCommRestoreIt++);
         ASSERTL1(m_commRow->GetSize() == pColumns, "Row size does not match.");
         ASSERTL1(m_commColumn->GetSize() == pRows, "Column size does not match.");
         cout << "END SPLITCOMM (Recovering)" << endl;
@@ -654,8 +651,7 @@ CommSharedPtr CommMpi::v_CommCreateIf(int flag)
     CommMpiSharedPtr c;
     if (m_isRecovering)
     {
-        c = m_derivedComm.front();
-        m_derivedComm.pop_front();
+        c = *(m_derivedCommRestoreIt++);
     }
     else
     {
@@ -969,6 +965,7 @@ cout << "Colour is " << colour << endl;
             derivedCommIt++;
         }
     }
+    m_derivedCommRestoreIt = m_derivedComm.begin();
 
     // Fix GSLib handles
     CommDataType dt = CommDataTypeTraits<long>::GetDataType();
@@ -978,6 +975,10 @@ cout << "Colour is " << colour << endl;
     int n = m_gsInitData.size();
     StorageType vInitData = m_gsInitData;
 cout << "Restoring " << n << " GS handles" << endl;
+
+    // All processes get fresh handles to GS data structure
+    m_gsHandles.clear();
+
     for (int i = 0; i < n; ++i)
     {
         std::vector<char> x = vInitData.front();
@@ -993,11 +994,9 @@ cout << "Data size was " << x.size() << ", Array size: " << count << endl;
 
         Gs::gs_data * handle = Gs::Init(pId, m_comm, false);
 
-        if (!m_isRecovering)
-        {
-            m_gsHandles.push_back(handle);
-        }
+        m_gsHandles.push_back(handle);
     }
+    m_gsHandlesRestoreIt = m_gsHandles.begin();
 }
 
 static void CommMpi::HandleMpiError(MPI_Comm* pcomm, int* perr, ...)
@@ -1035,8 +1034,10 @@ void CommMpi::v_BeginTransactionLog()
 
 void CommMpi::v_EndTransactionLog()
 {
+    cout << endl << "END TRANSACTION LOG" << endl;
     m_isLogging = false;
 
+    cout << " -> There are " << m_derivedComm.size() << " derived comms." << endl;
     for (auto x : m_derivedComm)
     {
         std::cout << "Ending transaction log on derived comm." << std::endl;
@@ -1046,6 +1047,7 @@ void CommMpi::v_EndTransactionLog()
     if (m_isRecovering)
     {
         m_isRecovering = false;
+        cout << "Disabling recovery" << endl;
     }
     else
     {

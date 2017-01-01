@@ -147,10 +147,15 @@ protected:
     virtual void v_SplitComm(int pRows, int pColumns);
     virtual CommSharedPtr v_CommCreateIf(int flag);
 
+    virtual int v_EnrolSpare();
+    virtual void v_BeginTransactionLog();
+    virtual void v_EndTransactionLog();
+
 private:
     typedef std::queue<std::vector<char>> StorageType;
     typedef std::list<CommMpiSharedPtr>   DerivedCommType;
     typedef std::queue<int>               DerivedCommFlagType;
+    typedef std::vector<Gs::gs_data*>     GsHandlesType;
 
     MPI_Comm m_comm;
     MPI_Comm m_agreecomm;
@@ -161,21 +166,18 @@ private:
     StorageType m_data;
     StorageType m_dataBackup;
     DerivedCommType m_derivedComm; ///< Temporary derived comm list used during restore
+    DerivedCommType::iterator m_derivedCommRestoreIt; /// Iterator for restoring comm
     DerivedCommFlagType m_derivedCommFlag; ///< Log derived comm flags
     DerivedCommFlagType m_derivedCommFlagBackup; ///< Backup of neighbour flags
     StorageType m_gsInitData;
     StorageType m_gsInitDataBackup;
-    std::queue<GsHandleId> m_gsInitHandles;
-    std::vector<Gs::gs_data*> m_gsHandles; ///< Handles to Gs library
+    GsHandlesType::iterator m_gsHandlesRestoreIt;
+    GsHandlesType m_gsHandles; ///< Handles to Gs library
 
 
     static void HandleMpiError(MPI_Comm* pcomm, int* perr, ...);
 
     CommMpi(MPI_Comm pComm);
-
-    virtual int v_EnrolSpare();
-    virtual void v_BeginTransactionLog();
-    virtual void v_EndTransactionLog();
 
     void BackupState();
     void RestoreState();
