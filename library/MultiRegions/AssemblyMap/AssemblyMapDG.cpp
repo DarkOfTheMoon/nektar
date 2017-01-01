@@ -704,8 +704,8 @@ namespace Nektar
             {
                 tmp[i] = m_globalToUniversalBndMap[i];
             }
-            m_bndGsh = m_gsh = Gs::Init(tmp, m_comm);
-            Gs::Unique(tmp, m_comm);
+            m_bndGsh = m_gsh = m_comm->GsInit(tmp);
+            m_comm->GsUnique(tmp);
             for (i = 0; i < m_globalToUniversalBndMap.num_elements(); ++i)
             {
                 m_globalToUniversalBndMapUnique[i] = (tmp[i] >= 0 ? 1 : 0);
@@ -829,8 +829,8 @@ namespace Nektar
             {
                 tmp2[i] = m_traceToUniversalMap[i];
             }
-            m_traceGsh = Gs::Init(tmp2, m_comm);
-            Gs::Unique(tmp2, m_comm);
+            m_traceGsh = m_comm->GsInit(tmp2);
+            m_comm->GsUnique(tmp2);
             for (int i = 0; i < nTracePhys; ++i)
             {
                 m_traceToUniversalMapUnique[i] = tmp2[i];
@@ -920,7 +920,7 @@ namespace Nektar
         void AssemblyMapDG::UniversalTraceAssemble(
             Array<OneD, NekDouble> &pGlobal) const
         {
-            Gs::Gather(pGlobal, Gs::gs_add, m_traceGsh);
+            m_traceGsh.Gather(pGlobal, Gs::gs_add);
         }
 
         int AssemblyMapDG::v_GetLocalToGlobalMap(const int i) const
@@ -1004,7 +1004,7 @@ namespace Nektar
         void AssemblyMapDG::v_UniversalAssemble(
                       Array<OneD,     NekDouble>& pGlobal) const
         {
-            Gs::Gather(pGlobal, Gs::gs_add, m_gsh);
+            m_gsh.Gather(pGlobal, Gs::gs_add);
         }
 
         void AssemblyMapDG::v_UniversalAssemble(

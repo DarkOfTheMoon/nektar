@@ -783,8 +783,8 @@ namespace Nektar
             if(nNonDirVerts!=0)
             {
                 //Exchange vertex data over different processes
-                Gs::gs_data *tmp = Gs::Init(VertBlockToUniversalMap, m_comm, verbose);
-                Gs::Gather(vertArray, Gs::gs_add, tmp);
+                LibUtilities::GsHandle tmp = m_comm->GsInit(VertBlockToUniversalMap, verbose);
+                tmp.Gather(vertArray, Gs::gs_add);
                 
             }
             
@@ -799,8 +799,8 @@ namespace Nektar
             }
 
             //Exchange edge data over different processes
-            Gs::gs_data *tmp1 = Gs::Init(EdgeBlockToUniversalMap, m_comm, verbose);
-            Gs::Gather(GlobalEdgeBlock, Gs::gs_add, tmp1);
+            LibUtilities::GsHandle tmp1 = m_comm->GsInit(EdgeBlockToUniversalMap, verbose);
+            tmp1.Gather(GlobalEdgeBlock, Gs::gs_add);
 
             Array<OneD, NekDouble> GlobalFaceBlock(ntotalfaceentries,0.0);
             if(ntotalfaceentries)
@@ -813,8 +813,8 @@ namespace Nektar
             }
 
             //Exchange face data over different processes
-            Gs::gs_data *tmp2 = Gs::Init(FaceBlockToUniversalMap, m_comm, verbose);
-            Gs::Gather(GlobalFaceBlock, Gs::gs_add, tmp2);
+            LibUtilities::GsHandle tmp2 = m_comm->GsInit(FaceBlockToUniversalMap, verbose);
+            tmp2.Gather(GlobalFaceBlock, Gs::gs_add);
             
             // Populate vertex block
             for (int i = 0; i < nNonDirVerts; ++i)

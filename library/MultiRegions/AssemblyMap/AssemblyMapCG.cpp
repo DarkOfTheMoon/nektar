@@ -1119,27 +1119,27 @@ namespace Nektar
                 // the vertices and edges respectively to identify those
                 // vertices and edges which are located on partition boundary.
                 Array<OneD, long> vertArray(unique_verts, &procVerts[0]);
-                Gs::gs_data *tmp1 = Gs::Init(vertArray, vComm, verbose);
+                LibUtilities::GsHandle tmp1 = vComm->GsInit(vertArray, verbose);
                 Array<OneD, NekDouble> tmp4(unique_verts, 1.0);
                 Array<OneD, NekDouble> tmp5(unique_edges, 1.0);
                 Array<OneD, NekDouble> tmp6(unique_faces, 1.0);
-                Gs::Gather(tmp4, Gs::gs_add, tmp1);
-                Gs::Finalise(tmp1);
+                tmp1.Gather(tmp4, Gs::gs_add);
+                //Gs::Finalise(tmp1);
 
                 if (unique_edges > 0)
                 {
                     Array<OneD, long> edgeArray(unique_edges, &procEdges[0]);
-                    Gs::gs_data *tmp2 = Gs::Init(edgeArray, vComm, verbose);
-                    Gs::Gather(tmp5, Gs::gs_add, tmp2);
-                    Gs::Finalise(tmp2);
+                    LibUtilities::GsHandle tmp2 = vComm->GsInit(edgeArray, verbose);
+                    tmp2.Gather(tmp5, Gs::gs_add);
+                    //Gs::Finalise(tmp2);
                 }
 
                 if (unique_faces > 0)
                 {
                     Array<OneD, long> faceArray(unique_faces, &procFaces[0]);
-                    Gs::gs_data *tmp3 = Gs::Init(faceArray, vComm, verbose);
-                    Gs::Gather(tmp6, Gs::gs_add, tmp3);
-                    Gs::Finalise(tmp3);
+                    LibUtilities::GsHandle tmp3 = vComm->GsInit(faceArray, verbose);
+                    tmp3.Gather(tmp6, Gs::gs_add);
+                    //Gs::Finalise(tmp3);
                 }
 
                 // Finally, fill the partVerts set with all non-Dirichlet
@@ -1438,9 +1438,9 @@ namespace Nektar
                 edgeId[i] = dofIt->first + 1;
                 edgeDof[i] = (NekDouble) dofIt->second;
             }
-            Gs::gs_data *tmp = Gs::Init(edgeId, vComm, verbose);
-            Gs::Gather(edgeDof, Gs::gs_min, tmp);
-            Gs::Finalise(tmp);
+            LibUtilities::GsHandle tmp = vComm->GsInit(edgeId, verbose);
+            tmp.Gather(edgeDof, Gs::gs_min);
+            //Gs::Finalise(tmp);
             for (i=0; i < dofs[1].size(); i++)
             {
                 dofs[1][edgeId[i]-1] = (int) (edgeDof[i]+0.5);
@@ -1469,10 +1469,10 @@ namespace Nektar
                 faceP[i] = (NekDouble) dofIt->second;
                 faceQ[i] = (NekDouble) dofIt2->second;
             }
-            Gs::gs_data *tmp2 = Gs::Init(faceId, vComm, verbose);
-            Gs::Gather(faceP, Gs::gs_min, tmp2);
-            Gs::Gather(faceQ, Gs::gs_min, tmp2);
-            Gs::Finalise(tmp2);
+            LibUtilities::GsHandle tmp2 = vComm->GsInit(faceId, verbose);
+            tmp2.Gather(faceP, Gs::gs_min);
+            tmp2.Gather(faceQ, Gs::gs_min);
+            //Gs::Finalise(tmp2);
             for (i=0; i < faceModes[0].size(); i++)
             {
                 faceModes[0][faceId[i]-1] = (int) (faceP[i]+0.5);
@@ -2048,8 +2048,8 @@ namespace Nektar
          */
         AssemblyMapCG::~AssemblyMapCG()
         {
-            Gs::Finalise(m_gsh);
-            Gs::Finalise(m_bndGsh);
+//            Gs::Finalise(m_gsh);
+//            Gs::Finalise(m_bndGsh);
         }
 
         /**
@@ -2363,9 +2363,9 @@ namespace Nektar
                 tmp[i] = m_globalToUniversalMap[i];
             }
 
-            m_gsh = Gs::Init(tmp, vCommRow, verbose);
-            m_bndGsh = Gs::Init(tmp2, vCommRow, verbose);
-            Gs::Unique(tmp, vCommRow);
+            m_gsh = vCommRow->GsInit(tmp, verbose);
+            m_bndGsh = vCommRow->GsInit(tmp2, verbose);
+            vCommRow->GsUnique(tmp);
             for (unsigned int i = 0; i < m_numGlobalCoeffs; ++i)
             {
                 m_globalToUniversalMapUnique[i] = (tmp[i] >= 0 ? 1 : 0);
@@ -2491,8 +2491,8 @@ namespace Nektar
                 {
                     tmp[i] = returnval->m_globalToUniversalMap[i];
                 }
-                returnval->m_gsh = Gs::Init(tmp, vCommRow, verbose);
-                Gs::Unique(tmp, vCommRow);
+                returnval->m_gsh = vCommRow->GsInit(tmp, verbose);
+                vCommRow->GsUnique(tmp);
                 for (unsigned int i = 0; i < nglocoeffs; ++i)
                 {
                     returnval->m_globalToUniversalMapUnique[i]
@@ -2637,7 +2637,7 @@ namespace Nektar
             }
 
             // ensure all values are unique by calling a max
-            Gs::Gather(global, Gs::gs_max, m_gsh);
+            m_gsh.Gather(global, Gs::gs_max);
         }
 
         void AssemblyMapCG::v_LocalToGlobal(
@@ -2717,7 +2717,7 @@ namespace Nektar
         void AssemblyMapCG::v_UniversalAssemble(
                       Array<OneD,     NekDouble>& pGlobal) const
         {
-            Gs::Gather(pGlobal, Gs::gs_add, m_gsh);
+            m_gsh.Gather(pGlobal, Gs::gs_add);
         }
 
         void AssemblyMapCG::v_UniversalAssemble(

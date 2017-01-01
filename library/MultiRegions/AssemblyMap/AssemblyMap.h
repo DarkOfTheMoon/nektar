@@ -376,8 +376,8 @@ namespace Nektar
             /// sucessive RHS  for iterative solver
             int  m_successiveRHS;
 
-            Gs::gs_data * m_gsh;
-            Gs::gs_data * m_bndGsh;
+            LibUtilities::GsHandle m_gsh;
+            LibUtilities::GsHandle m_bndGsh;
 
             /// The level of recursion in the case of multi-level static
             /// condensation.

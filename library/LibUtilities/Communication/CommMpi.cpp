@@ -154,6 +154,10 @@ CommMpi::CommMpi(MPI_Comm pComm) : Comm()
  */
 CommMpi::~CommMpi()
 {
+    for (unsigned int i = 0; i < m_gsHandles.size(); ++i)
+    {
+        Gs::Finalise(m_gsHandles[i]);
+    }
     MPI_Comm_free(&m_comm);
 }
 
@@ -460,6 +464,128 @@ void CommMpi::v_Scatter(void *sendbuf, int sendcount, CommDataType sendtype,
     ASSERTL0(retval == MPI_SUCCESS, "MPI error performing Scatter.");
 }
 
+
+GsHandle CommMpi::v_GsInit(const Nektar::Array<OneD, long> pId,
+                        bool verbose)
+{
+    CommDataType dt = CommDataTypeTraits<long>::GetDataType();
+    int count = pId.num_elements();
+    int dtsize;
+    MPI_Type_size(dt, &dtsize);
+
+    if (m_isRecovering)
+    {
+        GsHandle x;
+        x.comm = shared_from_this();
+        x.idx = m_gsInitHandles.front();
+        m_gsInitHandles.pop();
+        return x;
+    }
+    else
+    {
+        if (m_isLogging)
+        {
+            std::vector<char> x;
+            if (count > 0)
+            {
+                x.assign((char*)(&pId[0]), (char*)(&pId[0])+count*dtsize);
+            }
+            m_gsInitData.push(x);
+            cout << "GsInit: Appended " << dtsize << " bytes of data." << endl;
+        }
+
+        Gs::gs_data * handle = Gs::Init(pId, m_comm, verbose);
+
+        GsHandle x;
+        x.idx = m_gsHandles.size();
+        x.comm = shared_from_this();
+
+        m_gsHandles.push_back(handle);
+
+        return x;
+    }
+}
+
+void CommMpi::v_GsUnique(
+        Nektar::Array<OneD, long> pId)
+{
+    CommDataType dt = CommDataTypeTraits<long>::GetDataType();
+    int count = pId.num_elements();
+    int dtsize;
+    MPI_Type_size(dt, &dtsize);
+
+    if (m_isRecovering)
+    {
+        // For recovery, just pull out the resulting data from the store
+        ASSERTL0(!m_data.empty(), "QUEUE IS EMPTY!!");
+
+        std::vector<char> x = m_data.front();
+        m_data.pop();
+
+        if (count > 0)
+        {
+            memcpy(&pId[0], &x[0], count*dtsize);
+        }
+    }
+    else
+    {
+        Gs::Unique(pId, m_comm);
+
+        // Record the result in case we need to recover
+        if (m_isLogging)
+        {
+            std::vector<char> x;
+            if (count > 0)
+            {
+                x.assign((char*)(&pId[0]), (char*)(&pId[0])+count*dtsize);
+            }
+            m_data.push(x);
+            cout << "GsInit: Appended " << dtsize << " bytes of data." << endl;
+        }
+    }
+}
+
+void CommMpi::v_GsGather(
+        Nektar::Array<OneD, NekDouble> pU,
+        Gs::gs_op pOp,
+        GsHandleId pGsh,
+        Nektar::Array<OneD, NekDouble> pBuffer)
+{
+    CommDataType dt = CommDataTypeTraits<NekDouble>::GetDataType();
+    int count = pU.num_elements();
+    int dtsize;
+    MPI_Type_size(dt, &dtsize);
+
+    if (m_isRecovering)
+    {
+        // For recovery, just pull out the resulting data from the store
+        ASSERTL0(!m_data.empty(), "QUEUE IS EMPTY!!");
+
+        std::vector<char> x = m_data.front();
+        m_data.pop();
+
+        if (count > 0)
+        {
+            memcpy(&pU[0], &x[0], count*dtsize);
+        }
+    }
+    else
+    {
+        Gs::Gather(pU, pOp, m_gsHandles[pGsh], pBuffer);
+
+        if (m_isLogging)
+        {
+            std::vector<char> x;
+            if (count > 0)
+            {
+                x.assign((char*)(&pU[0]), (char*)(&pU[0])+count*dtsize);
+            }
+            m_data.push(x);
+            cout << "GsGather: Appended " << dtsize << " bytes of data." << endl;
+        }
+    }
+}
+
 /**
  * Processes are considered as a grid of size pRows*pColumns. Comm
  * objects are created corresponding to the rows and columns of this
@@ -689,7 +815,7 @@ int CommMpi::v_EnrolSpare()
 void CommMpi::BackupState()
 {
     mpi::communicator c(m_comm, mpi::comm_attach);
-    mpi::request reqs[4];
+    mpi::request reqs[6];
     int rank = c.rank();
     int size = c.size();
 
@@ -700,13 +826,16 @@ void CommMpi::BackupState()
         cout << "Backup: Sending " << m_data.size() << " items in queue." << endl;
         reqs[0] = c.isend(send_rank, 0, m_data);
         reqs[1] = c.isend(send_rank, 1, m_derivedCommFlag);
-        reqs[2] = c.irecv(recv_rank, 0, m_dataBackup);
-        reqs[3] = c.irecv(recv_rank, 1, m_derivedCommFlagBackup);
+        reqs[2] = c.isend(send_rank, 2, m_gsInitData);
+        reqs[3] = c.irecv(recv_rank, 0, m_dataBackup);
+        reqs[4] = c.irecv(recv_rank, 1, m_derivedCommFlagBackup);
+        reqs[5] = c.irecv(recv_rank, 2, m_gsInitDataBackup);
         cout << "Backup: Sent to " << send_rank << endl;
         cout << "Backup: Waiting for data from " << recv_rank << endl;
-        mpi::wait_all(reqs, reqs + 4);
+        mpi::wait_all(reqs, reqs + 6);
         cout << "Backup: Received " << m_dataBackup.size() << " items." << endl;
         cout << "Backup: Received " << m_derivedCommFlagBackup.size() << " derived comm flags." << endl;
+        cout << "Backup: Received " << m_gsInitDataBackup.size() << " gs init items." << endl;
     }
     else
     {
@@ -744,7 +873,7 @@ void CommMpi::RestoreState()
         // a) backup of the recovering process's data for its recovery
         // b) replacement copy of this processes backup data
         // c) queue of flags for recovering derived communicators on recovering process
-        const int nReq = 4;
+        const int nReq = 6;
         if (sendRecoveryData)
         {
             cout << "Restore: Sending " << m_dataBackup.size() << " backup items." << endl;
@@ -754,6 +883,8 @@ void CommMpi::RestoreState()
             reqs[1] = c.isend(send_rank, 1, m_data);
             reqs[2] = c.isend(send_rank, 2, m_derivedCommFlagBackup);
             reqs[3] = c.isend(send_rank, 3, m_derivedCommFlag);
+            reqs[4] = c.isend(send_rank, 4, m_gsInitDataBackup);
+            reqs[5] = c.isend(send_rank, 5, m_gsInitData);
             cout << "Restore: Waiting for data to be sent to " << send_rank << endl;
             mpi::wait_all(reqs, reqs + nReq);
             cout << "Restore: Complete" << endl;
@@ -769,6 +900,8 @@ void CommMpi::RestoreState()
             reqs[1] = c.irecv(recv_rank, 1, m_dataBackup);
             reqs[2] = c.irecv(recv_rank, 2, m_derivedCommFlag);
             reqs[3] = c.irecv(recv_rank, 3, m_derivedCommFlagBackup);
+            reqs[4] = c.irecv(recv_rank, 4, m_gsInitData);
+            reqs[5] = c.irecv(recv_rank, 5, m_gsInitDataBackup);
             cout << "Restore: Waiting for data from " << recv_rank << endl;
             mpi::wait_all(reqs, reqs + nReq);
             cout << "Restore: Complete" << endl;
@@ -835,7 +968,35 @@ cout << "Colour is " << colour << endl;
             cout << "### Finished restore of sub-communicator ###" << endl << endl;
             derivedCommIt++;
         }
+    }
 
+    // Fix GSLib handles
+    CommDataType dt = CommDataTypeTraits<long>::GetDataType();
+    int dtsize;
+    MPI_Type_size(dt, &dtsize);
+
+    int n = m_gsInitData.size();
+    StorageType vInitData = m_gsInitData;
+cout << "Restoring " << n << " GS handles" << endl;
+    for (int i = 0; i < n; ++i)
+    {
+        std::vector<char> x = vInitData.front();
+        vInitData.pop();
+
+        int count = x.size() / dtsize;
+        Array<OneD, long> pId(count);
+cout << "Data size was " << x.size() << ", Array size: " << count << endl;
+        if (count > 0)
+        {
+            memcpy(&pId[0], &x[0], x.size());
+        }
+
+        Gs::gs_data * handle = Gs::Init(pId, m_comm, false);
+
+        if (!m_isRecovering)
+        {
+            m_gsHandles.push_back(handle);
+        }
     }
 }
 
@@ -875,7 +1036,6 @@ void CommMpi::v_BeginTransactionLog()
 void CommMpi::v_EndTransactionLog()
 {
     m_isLogging = false;
-    m_isRecovering = false;
 
     for (auto x : m_derivedComm)
     {
@@ -883,7 +1043,14 @@ void CommMpi::v_EndTransactionLog()
         x->EndTransactionLog();
     }
 
-    BackupState();
+    if (m_isRecovering)
+    {
+        m_isRecovering = false;
+    }
+    else
+    {
+        BackupState();
+    }
 }
 
 void CommMpi::ReplaceComm(MPI_Comm commptr)

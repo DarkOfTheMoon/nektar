@@ -134,6 +134,16 @@ protected:
                            void *recvbuf, int recvcount, CommDataType recvtype,
                            int root);
 
+    virtual GsHandle v_GsInit(const Nektar::Array<OneD, long> pId,
+                            bool verbose);
+    virtual void v_GsUnique(
+            const Nektar::Array<OneD, long> pId);
+    virtual void v_GsGather(
+            Nektar::Array<OneD, NekDouble> pU,
+            Gs::gs_op pOp,
+            GsHandleId pGsh,
+            Nektar::Array<OneD, NekDouble> pBuffer);
+
     virtual void v_SplitComm(int pRows, int pColumns);
     virtual CommSharedPtr v_CommCreateIf(int flag);
 
@@ -153,6 +163,10 @@ private:
     DerivedCommType m_derivedComm; ///< Temporary derived comm list used during restore
     DerivedCommFlagType m_derivedCommFlag; ///< Log derived comm flags
     DerivedCommFlagType m_derivedCommFlagBackup; ///< Backup of neighbour flags
+    StorageType m_gsInitData;
+    StorageType m_gsInitDataBackup;
+    std::queue<GsHandleId> m_gsInitHandles;
+    std::vector<Gs::gs_data*> m_gsHandles; ///< Handles to Gs library
 
 
     static void HandleMpiError(MPI_Comm* pcomm, int* perr, ...);

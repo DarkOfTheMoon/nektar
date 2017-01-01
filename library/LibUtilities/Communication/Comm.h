@@ -37,6 +37,7 @@
 
 #include <vector>
 
+#include <LibUtilities/Communication/GsLib.hpp>
 #include <LibUtilities/BasicUtils/NekFactory.hpp>
 #include <LibUtilities/LibUtilitiesDeclspec.h>
 #include <boost/enable_shared_from_this.hpp>
@@ -70,6 +71,9 @@ enum ReduceOperator
     ReduceMax,
     ReduceMin
 };
+
+typedef int GsHandleId;
+struct GsHandle;
 
 /// Base communications class
 class Comm : public boost::enable_shared_from_this<Comm>
@@ -128,6 +132,17 @@ public:
     LIB_UTILITIES_EXPORT inline bool TreatAsRankZero(void);
     LIB_UTILITIES_EXPORT inline bool RemoveExistingFiles(void);
 
+    LIB_UTILITIES_EXPORT inline GsHandle GsInit(
+            const Nektar::Array<OneD, long> pId,
+            bool verbose = true);
+    LIB_UTILITIES_EXPORT inline void GsUnique(
+            const Nektar::Array<OneD, long> pId);
+    LIB_UTILITIES_EXPORT inline void GsGather(
+            Nektar::Array<OneD, NekDouble> pU,
+            Gs::gs_op pOp,
+            GsHandleId pGsh,
+            Nektar::Array<OneD, NekDouble> pBuffer = NullNekDouble1DArray);
+
     LIB_UTILITIES_EXPORT inline int EnrolSpare();
     LIB_UTILITIES_EXPORT inline void BeginTransactionLog();
     LIB_UTILITIES_EXPORT inline void EndTransactionLog();
@@ -175,6 +190,16 @@ protected:
                            void *recvbuf, int recvcount, CommDataType recvtype,
                            int root) = 0;
 
+    virtual GsHandle v_GsInit(const Nektar::Array<OneD, long> pId,
+                            bool verbose) = 0;
+    virtual void v_GsUnique(
+            const Nektar::Array<OneD, long> pId) = 0;
+    virtual void v_GsGather(
+            Nektar::Array<OneD, NekDouble> pU,
+            Gs::gs_op pOp,
+            GsHandleId pGsh,
+            Nektar::Array<OneD, NekDouble> pBuffer) = 0;
+
     virtual CommSharedPtr v_CommCreateIf(int colour) = 0;
     virtual void v_SplitComm(int pRows, int pColumns) = 0;
     virtual bool v_TreatAsRankZero(void) = 0;
@@ -185,6 +210,26 @@ protected:
     virtual void v_EndTransactionLog() {}
 
 };
+
+struct GsHandle {
+
+    GsHandle() : comm(CommSharedPtr()), idx(0) {}
+    GsHandle(const GsHandle& pSrc) : comm(pSrc.comm), idx(pSrc.idx) {}
+    GsHandle(CommSharedPtr pComm, GsHandleId pId)
+        : comm(pComm), idx(pId) {}
+
+    void Gather( Nektar::Array<OneD, NekDouble> pU,
+            Gs::gs_op pOp,
+            Nektar::Array<OneD, NekDouble> pBuffer = NullNekDouble1DArray) const
+    {
+        comm->GsGather(pU, pOp, idx, pBuffer);
+    }
+
+    CommSharedPtr comm;
+    GsHandleId idx;
+
+};
+
 
 /**
  *
@@ -392,6 +437,30 @@ template <class T> T Comm::Scatter(const int rootProc, T &pData)
               CommDataTypeTraits<T>::GetDataType(), rootProc);
     return ans;
 }
+
+
+inline GsHandle Comm::GsInit(
+        const Nektar::Array<OneD, long> pId,
+        bool verbose)
+{
+    return v_GsInit(pId, verbose);
+}
+
+inline void Comm::GsUnique(
+        const Nektar::Array<OneD, long> pId)
+{
+    v_GsUnique(pId);
+}
+
+inline void Comm::GsGather(
+        Nektar::Array<OneD, NekDouble> pU,
+        Gs::gs_op pOp,
+        GsHandleId pGsh,
+        Nektar::Array<OneD, NekDouble> pBuffer)
+{
+    v_GsGather(pU, pOp, pGsh, pBuffer);
+}
+
 
 /**
  * @brief If the flag is non-zero create a new communicator.

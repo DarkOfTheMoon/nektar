@@ -453,10 +453,10 @@ namespace Nektar
                 globalToUniversal.size(), &globalToUniversal[0]);
 
             // Use GS to assemble data between processors.
-            Gs::gs_data *tmpGs = Gs::Init(
-                globalToUniversalMap, m_comm,
+            LibUtilities::GsHandle tmpGs = m_comm->GsInit(
+                globalToUniversalMap,
                 expList->GetSession()->DefinesCmdLineArgument("verbose"));
-            Gs::Gather(storageData, Gs::gs_add, tmpGs);
+            tmpGs.Gather(storageData, Gs::gs_add);
 
             // Figure out what storage we need in the block matrix.
             Array<OneD, unsigned int> n_blks(
@@ -662,10 +662,10 @@ namespace Nektar
             }
 
             // Assemble matrices across partitions.
-            Gs::gs_data *gsh = Gs::Init(
-                uniIds, m_comm,
+            LibUtilities::GsHandle gsh = m_comm->GsInit(
+                uniIds,
                 expList->GetSession()->DefinesCmdLineArgument("verbose"));
-            Gs::Gather(tmpStore, Gs::gs_add, gsh);
+            gsh.Gather(tmpStore, Gs::gs_add);
 
             // Set up diagonal block matrix
             Array<OneD, unsigned int> n_blks(nTrace - nDir);

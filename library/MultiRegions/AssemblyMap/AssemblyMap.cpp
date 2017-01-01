@@ -87,8 +87,8 @@ namespace Nektar
             m_solnType(eNoSolnType),
             m_bndSystemBandWidth(0),
             m_successiveRHS(0),
-            m_gsh(0),
-            m_bndGsh(0)
+            m_gsh(),
+            m_bndGsh()
         {
         }
 
@@ -104,8 +104,8 @@ namespace Nektar
             m_numGlobalDirBndCoeffs(0),
             m_bndSystemBandWidth(0),
             m_successiveRHS(0),
-            m_gsh(0),
-            m_bndGsh(0)
+            m_gsh(),
+            m_bndGsh()
         {
             // Default value from Solver Info
             m_solnType = pSession->GetSolverInfoAsEnum<GlobalSysSolnType>(
@@ -1130,7 +1130,7 @@ namespace Nektar
         {
             ASSERTL1(pGlobal.num_elements() == m_numGlobalBndCoeffs,
                      "Wrong size.");
-            Gs::Gather(pGlobal, Gs::gs_add, m_bndGsh);
+            m_bndGsh.Gather(pGlobal, Gs::gs_add);
         }
 
         void AssemblyMap::UniversalAssembleBnd(

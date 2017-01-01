@@ -172,7 +172,7 @@ static inline struct crs_data *Init(
         boost::dynamic_pointer_cast<LibUtilities::CommMpi>(pComm);
     ASSERTL1(vCommMpi, "Failed to cast MPI Comm object.");
     comm vComm;
-    MPI_Comm_dup(vCommMpi->GetComm(), &vComm.c);
+    MPI_Comm_dup((MPI_Comm)(vCommMpi->GetComm()), &vComm.c);
     vComm.id         = vCommMpi->GetRank();
     vComm.np         = vCommMpi->GetSize();
     crs_data *result = nektar_crs_setup(pRank, &pId[0], nz, &pAi[0], &pAj[0],

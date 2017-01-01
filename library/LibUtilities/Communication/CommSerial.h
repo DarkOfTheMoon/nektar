@@ -37,6 +37,7 @@
 
 #include <string>
 
+#include <LibUtilities/Communication/GsLib.hpp>
 #include <LibUtilities/Communication/Comm.h>
 #include <LibUtilities/LibUtilitiesDeclspec.h>
 #include <LibUtilities/Memory/NekMemoryManager.hpp>
@@ -111,6 +112,21 @@ protected:
                                                 void *recvbuf, int recvcount,
                                                 CommDataType recvtype,
                                                 int root);
+
+    virtual GsHandle v_GsInit(const Nektar::Array<OneD, long> pId,
+                            bool verbose) {
+        GsHandle x;
+        x.comm = shared_from_this();
+        x.idx = 0;
+        return x;
+    }
+    virtual void v_GsUnique(
+            const Nektar::Array<OneD, long> pId) {}
+    virtual void v_GsGather(
+            Nektar::Array<OneD, NekDouble> pU,
+            Gs::gs_op pOp,
+            GsHandleId pGsh,
+            Nektar::Array<OneD, NekDouble> pBuffer) {}
 
     LIB_UTILITIES_EXPORT virtual void v_SplitComm(int pRows, int pColumns);
     LIB_UTILITIES_EXPORT virtual CommSharedPtr v_CommCreateIf(int flag);
