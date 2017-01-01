@@ -109,6 +109,9 @@ int main(int argc, char *argv[])
                     int x = session->GetComm()->EnrolSpare();
                     cout << "Enroled spare, result: " << x << endl;
                     --n; // need to roll back to previous time step here...
+                    Vmath::Smul(nq, -delta_t*epsilon, field->GetPhys(),    1,
+                                                          field->UpdatePhys(), 1);
+
                 } catch (...) {
                     cout << "ERROR WHEN PERFORMING ENROLSPARE!!!" << endl;
                     exit(-1);
