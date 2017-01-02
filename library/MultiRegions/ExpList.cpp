@@ -2680,7 +2680,14 @@ namespace Nektar
                      "This method is not defined or valid for this class type");
         }
 
+        void ExpList::v_Assemble(const Array<OneD, const NekDouble> &inarray,
+                                 Array<OneD,NekDouble> &outarray)
+        {
+            ASSERTL0(false,
+                     "This method is not defined or valid for this class type");
+        }
 
+                                      
         void ExpList::v_BwdTrans(const Array<OneD, const NekDouble> &inarray,
                                  Array<OneD,       NekDouble> &outarray,
                                  CoeffState coeffstate)
@@ -2828,7 +2835,7 @@ namespace Nektar
             {
                 offsetBnd = GetBndCondExpansions()[i]->GetPhys_Offset(n);
                 
-                elmt   = GetExp(ElmtID[cnt+n]);
+                elmt = GetExp(ElmtID[cnt+n]);
                 elmt->GetTracePhysVals(EdgeID[cnt+n],
                                       GetBndCondExpansions()[i]->GetExp(n),
                                       tmp1 = element + offsetElmt,

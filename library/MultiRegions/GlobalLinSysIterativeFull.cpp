@@ -192,10 +192,59 @@ namespace Nektar
                       Array<OneD, NekDouble>& pOutput)
         {
             boost::shared_ptr<MultiRegions::ExpList> expList = m_expList.lock();
-            // Perform matrix-vector operation A*d_i
-            expList->GeneralMatrixOp(m_linSysKey,
-                                     pInput, pOutput, eGlobal);
 
+            switch(m_linSysKey.GetMatrixType())
+            {
+                // use calls to collection functions
+            case StdRegions::eHelmholtz:
+            case StdRegions::eLaplacian:
+                {
+                    ASSERTL1(m_linSysKey.GetNVarCoeffs(),
+                             "Not set up for variable coefficient currently");
+                    ASSERTL1(m_linSysKey.GetConstFactors().
+                             count(StdRegions::eFactorSVVDiffCoeff),
+                             "Not set up for SVV");
+                    
+                    int ncoeffs = expList->GetNcoeffs();
+                    int npoints = expList->GetTotPoints();
+                    
+                    Array<OneD,NekDouble> tmp1(2*ncoeffs);
+                    Array<OneD,NekDouble> tmp2(tmp1+ncoeffs);
+
+                    Array<OneD, Array<OneD, NekDouble> > Deriv(3);
+
+                    Deriv[0] = Array<OneD, NekDouble>(npoints);
+                    Deriv[1] = Array<OneD, NekDouble>(npoints);
+                    Deriv[2] = Array<OneD, NekDouble>(npoints);
+                    
+                    expList->GlobalToLocal(pInput,tmp1);
+                    expList->BwdTrans(tmp1,expList->UpdatePhys());
+                    
+                    expList->PhysDeriv(expList->GetPhys(),
+                                       Deriv[0],Deriv[1],Deriv[2]);
+                    expList->IProductWRTDerivBase(Deriv,tmp2);
+                    
+                    
+                    // Add mass matrix if lambda defined
+                    if(m_linSysKey.GetConstFactors().
+                       count(StdRegions::eFactorLambda))
+                    {
+                        NekDouble lambda = m_linSysKey.
+                            GetConstFactor(StdRegions::eFactorLambda);
+                        expList->IProductWRTBase(expList->GetPhys(),tmp1);
+                        Vmath::Svtvp(ncoeffs,lambda,tmp1,1,tmp2,1,tmp2,1);
+                    }
+
+                    expList->Assemble(tmp2,pOutput);
+                }
+                break;
+            default:
+                {
+                    // Perform matrix-vector operation A*d_i
+                    expList->GeneralMatrixOp(m_linSysKey,
+                                             pInput, pOutput, eGlobal);
+                }
+            }
             // Apply robin boundary conditions to the solution.
             if(m_robinBCInfo.size() > 0)
             {

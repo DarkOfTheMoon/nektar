@@ -245,7 +245,7 @@ namespace Nektar
                 {
                     Array<OneD, NekDouble> wsp(m_ncoeffs);
                     IProductWRTBase_IterPerExp(inarray,wsp);
-                    Assemble(wsp,outarray);
+                    v_Assemble(wsp,outarray);
                 }
             }
             else
@@ -310,11 +310,11 @@ namespace Nektar
               {
                   Array<OneD,NekDouble> tmp(inarray.num_elements());
                   Vmath::Vcopy(inarray.num_elements(),inarray,1,tmp,1);
-                  Assemble(tmp,outarray);
+                  v_Assemble(tmp,outarray);
               }
               else
               {
-                  Assemble(inarray,outarray);
+                  v_Assemble(inarray,outarray);
               }
               
               GlobalSolve(key,outarray,globaltmp);
@@ -572,6 +572,14 @@ namespace Nektar
           m_locToGloMap->GlobalToLocal(inarray, outarray);
       }
 
+      void ContField3D::v_Assemble(
+                const Array<OneD, const NekDouble> &inarray,
+                Array<OneD,NekDouble> &outarray)
+      {
+          m_locToGloMap->Assemble(inarray, outarray);
+      }
+
+      
 
       void ContField3D::v_HelmSolve(
                                     const Array<OneD, const NekDouble> &inarray,
@@ -591,7 +599,7 @@ namespace Nektar
           }
           else
           {
-              Assemble(inarray,wsp);
+              v_Assemble(inarray,wsp);
           }
 
           // Note -1.0 term necessary to invert forcing function to
@@ -662,7 +670,7 @@ namespace Nektar
                   Array<OneD,NekDouble> tmp2(tmp1+m_ncoeffs);
                   GlobalToLocal(inarray,tmp1);
                   GeneralMatrixOp_IterPerExp(gkey,tmp1,tmp2);
-                  Assemble(tmp2,outarray);
+                  v_Assemble(tmp2,outarray);
               }
           }
           else

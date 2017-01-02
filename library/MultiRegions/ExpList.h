@@ -502,6 +502,10 @@ namespace Nektar
                 const Array<OneD, const NekDouble> &inarray,
                 Array<OneD,NekDouble> &outarray);
 
+            MULTI_REGIONS_EXPORT inline void Assemble(
+                const Array<OneD, const NekDouble> &inarray,
+                Array<OneD,NekDouble> &outarray);
+
             /// Get the \a i th value  (coefficient) of #m_coeffs
             inline NekDouble GetCoeff(int i);
 
@@ -1229,6 +1233,10 @@ namespace Nektar
             virtual void v_GlobalToLocal(void);
 
             virtual void v_GlobalToLocal(
+                const Array<OneD, const NekDouble> &inarray,
+                Array<OneD,NekDouble> &outarray);
+
+            virtual void v_Assemble(
                 const Array<OneD, const NekDouble> &inarray,
                 Array<OneD,NekDouble> &outarray);
 
@@ -1982,6 +1990,13 @@ namespace Nektar
             v_GlobalToLocal();
         }
 
+        inline void ExpList::Assemble(
+                const Array<OneD, const NekDouble> &inarray,
+                Array<OneD,NekDouble> &outarray)
+        {
+            v_Assemble(inarray,outarray);
+        }
+        
         /**
          * This operation is evaluated as:
          * \f{tabbing}

@@ -88,10 +88,6 @@ namespace Nektar
 
             inline void Assemble();
 
-            inline void Assemble(
-                    const Array<OneD, const NekDouble> &inarray,
-                          Array<OneD,NekDouble> &outarray);
-
             inline const AssemblyMapCGSharedPtr& GetLocalToGlobalMap()
                                                                         const;
 
@@ -171,6 +167,11 @@ namespace Nektar
                 Array<OneD,NekDouble> &outarray);
 
 
+            virtual void v_Assemble(
+                 const Array<OneD, const NekDouble> &inarray,
+                 Array<OneD,NekDouble> &outarray);
+
+
             virtual void v_MultiplyByInvMassMatrix(
                     const Array<OneD, const NekDouble> &inarray,
                           Array<OneD,       NekDouble> &outarray,
@@ -215,13 +216,6 @@ namespace Nektar
         inline void ContField3D::Assemble()
         {
             m_locToGloMap->Assemble(m_coeffs, m_coeffs);
-        }
-
-        inline void ContField3D::Assemble(
-                const Array<OneD, const NekDouble> &inarray,
-                Array<OneD,NekDouble> &outarray)
-        {
-            m_locToGloMap->Assemble(inarray, outarray);
         }
 
         inline const AssemblyMapCGSharedPtr&
