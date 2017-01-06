@@ -1249,13 +1249,10 @@ namespace Nektar
           // Evaluate \tilde{E}
 
           ExpansionSharedPtr FaceExp = GetFaceExp(faceids[0]);
-          int nquad_f = FaceExp->GetNumPoints(0);
-
-          int nFaceCoeffs = FaceExp->GetNcoeffs();
 
           Array<OneD, NekDouble> elemCoeffs(nElemCoeffs), phys(GetTotPoints());
-          Array<OneD, NekDouble> facePhys  (nquad_f);
-          Array<OneD, NekDouble> faceCoeffs(nFaceCoeffs);
+          Array<OneD, NekDouble> facePhys;
+          Array<OneD, NekDouble> faceCoeffs;
 
           DNekMatSharedPtr tildeEMatPtr[3];
           DNekMatSharedPtr tildeEMatSumPtr[3];
@@ -1282,23 +1279,11 @@ namespace Nektar
               const int iface = faceids[f];
 
               FaceExp = GetFaceExp(iface);
-
-              LibUtilities::ShapeType shapeType =
-                  FaceExp->DetShapeType();
-
-              LocalRegions::MatrixKey mkey(StdRegions::eMass,
-                                           shapeType,
-                                           *FaceExp,
-                                           StdRegions::NullConstFactorMap,
-                                           faceVarCoeffs);
-
-              const DNekScalMat &faceMass = *FaceExp->GetLocMatrix(mkey);
+              const DNekScalMat &faceMass = *FaceExp->GetLocMatrix(StdRegions::eMass, StdRegions::NullConstFactorMap, faceVarCoeffs);
 
               GetFaceToElementMap(iface, GetForient(iface), map, sign);
 
-              nquad_f = FaceExp->GetNumPoints(0);
-              nFaceCoeffs = FaceExp->GetNcoeffs();
-
+              const int nFaceCoeffs = FaceExp->GetNcoeffs();
 
               for(int i = 0; i < nFaceCoeffs; ++i)
               {
@@ -1309,7 +1294,6 @@ namespace Nektar
               }
           }
 
-#if 0
           // II) All other contributions (not mass matrix)
           for(int f = 0; f < faceids.num_elements(); ++f)
           {
@@ -1319,22 +1303,17 @@ namespace Nektar
 
               FaceExp = GetFaceExp(iface);
 
-              nquad_f = FaceExp->GetNumPoints(0);
-              nFaceCoeffs = FaceExp->GetNcoeffs();
+              const int nquad_f = FaceExp->GetNumPoints(0);
+              const int nFaceCoeffs = FaceExp->GetNcoeffs();
 
-              if ( facePhys.num_elements() != nquad_f)
-              {
-                  facePhys = Array<OneD, NekDouble>(nquad_f);
-              }
+              facePhys = Array<OneD, NekDouble>(nquad_f);
+              faceCoeffs = Array<OneD, NekDouble>(nFaceCoeffs);
 
-              if ( faceCoeffs.num_elements() != nFaceCoeffs )
-              {
-                  faceCoeffs = Array<OneD, NekDouble>(nFaceCoeffs);
-              }
-
-              GetFaceToElementMap(iface, GetForient(iface), map, sign);
+              GetFaceToElementMap(iface, v_GetForient(iface), map, sign);
 
               const Array<OneD, const Array<OneD, NekDouble> > & normals = GetFaceNormal(iface);
+
+
 
               for(int dir = 0; dir < coordim; ++dir)
               {
@@ -1373,7 +1352,7 @@ namespace Nektar
               } // Loop over dimensions
 
 
-           } // Loop over selected boundary edges
+           } // Loop over selected boundary faces
 
 
           // Compute the actual Laplace term
@@ -1406,7 +1385,8 @@ namespace Nektar
               // Laplace = DmatT * invMass * Dmat;
               // std::cout << "Laplace matrix:" << std::endl;
               // std::cout << Laplace << std::endl;
-              weakDGMat = sumTildeE * (invMass * sumTildeE - invMass * Dmat) - DmatT * invMass * sumTildeE;
+              //weakDGMat = sumTildeE * (invMass * sumTildeE - invMass * Dmat) - DmatT * invMass * sumTildeE;
+              weakDGMat = Dmat * invMass * sumTildeE - sumTildeE * invMass * Dmat;
 
               // Finally add the contributions to inoutmat
 
@@ -1418,7 +1398,6 @@ namespace Nektar
                   }
               }
           }
-#endif
         }
 
         void Expansion3D::v_AddWeakDirichletForcingContribution(

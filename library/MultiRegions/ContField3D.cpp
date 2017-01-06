@@ -35,6 +35,8 @@
 
 #include <MultiRegions/ContField3D.h>
 #include <MultiRegions/AssemblyMap/AssemblyMapCG.h>
+#include <LocalRegions/Expansion2D.h>
+#include <LocalRegions/Expansion3D.h>
 
 #include <LibUtilities/BasicUtils/DBUtils.hpp>
 
@@ -529,14 +531,91 @@ namespace Nektar
           // be consistent with matrix definition
           Vmath::Neg(contNcoeffs, wsp, 1);
           
-          // Forcing function with weak boundary conditions
+          //----------------------------------
+          // Fill weak boundary conditions
+          //----------------------------------
+
+          const std::map<int, WeakDirichletBCInfoSharedPtr> weakDirBCs = this->GetWeakDirichletBCInfo();
+          std::map<int, WeakDirichletBCInfoSharedPtr>::const_iterator it;
+
+          WeakDirichletBCInfoSharedPtr wDBC;
+
+          for (it = weakDirBCs.cbegin(); it != weakDirBCs.cend(); ++it)
+          {
+              const int elmt = it->first;
+
+              const LocalRegions::Expansion3DSharedPtr elemExp =
+                 shared_from_this()->GetExp(elmt)->as<LocalRegions::Expansion3D>();
+
+              // Collect the IDs of faces that have weak Dirichlet BCs
+
+              int numBdryFacets = 0;
+              int numLambdaPts = 0;
+
+              for(wDBC = weakDirBCs.find(elmt)->second; wDBC; wDBC = wDBC->next)
+              {
+                  const int localFaceId = wDBC->m_weakDirichletID;
+                  const LocalRegions::Expansion2DSharedPtr faceExp = elemExp->GetFaceExp(localFaceId);
+                  const int nFaceQuadPts = faceExp->GetNumPoints(0);
+
+                  numBdryFacets++;
+                  numLambdaPts += nFaceQuadPts;
+              }
+
+              Array<OneD, int> faceids(numBdryFacets);
+              Array<OneD, NekDouble> lambdaOnTrace(numLambdaPts);
+              Array<OneD, int> lambdaOffsets(numBdryFacets);
+
+              numBdryFacets = 0;
+              int offset = 0;
+
+              for(wDBC = weakDirBCs.find(elmt)->second; wDBC; wDBC = wDBC->next)
+              {
+                  const int localFaceId = wDBC->m_weakDirichletID;
+                  const LocalRegions::Expansion2DSharedPtr faceExp = elemExp->GetFaceExp(localFaceId);
+                  const int nFaceQuadPts = faceExp->GetNumPoints(0);
+
+                  lambdaOffsets[numBdryFacets] = offset;
+
+                  for(int i = 0; i < nFaceQuadPts; ++i)
+                  {
+                      lambdaOnTrace[offset++] = wDBC->m_weakDirichletPrimitiveCoeffs[i];
+                  }
+
+                  faceids[numBdryFacets] = localFaceId;
+                  numBdryFacets++;
+              }
+
+               Array<OneD, NekDouble> elmtDofs(elemExp->GetNcoeffs());
+              Vmath::Zero(elmtDofs.num_elements(), elmtDofs.data(), 1);
+              // = wsp + GetCoeff_Offset(elmt);
+              elemExp->AddWeakDirichletForcingContribution(faceids, lambdaOnTrace,
+                                                           lambdaOffsets, elmtDofs);
+
+              const int elem_offset = GetCoeff_Offset(elmt);
+
+              for(int i = 0; i < elemExp->GetNcoeffs(); ++i)
+              {
+                  const int idx = elem_offset + i;
+                  const int gid = m_locToGloMap->GetLocalToGlobalMap(idx);
+
+                  if ( gid >= m_locToGloMap->GetNumGlobalDirBndCoeffs())
+                  {
+                      const int sign = m_locToGloMap->GetLocalToGlobalSign(idx);
+                      wsp[gid] += sign * elmtDofs[i];
+                  }
+              }
+          } // Loop over weak boundary conditions
+
+
           int i,j;
           int bndcnt = 0;
           NekDouble sign;
           Array<OneD, NekDouble> gamma(contNcoeffs, 0.0);
           for(i = 0; i < m_bndCondExpansions.num_elements(); ++i)
           {
-              if(m_bndConditions[i]->GetBoundaryConditionType() != SpatialDomains::eDirichlet)
+              if((m_bndConditions[i]->GetBoundaryConditionType() != SpatialDomains::eDirichlet) &&
+                 (m_bndConditions[i]->GetBoundaryConditionType() != SpatialDomains::eWeakDirichlet))
               {
                   for(j = 0; j < (m_bndCondExpansions[i])->GetNcoeffs(); j++)
                   {

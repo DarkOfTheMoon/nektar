@@ -904,8 +904,12 @@ namespace Nektar
                 {
                     const int idx = elem_offset + i;
                     const int gid = m_locToGloMap->GetLocalToGlobalMap(idx);
-                    const int sign = m_locToGloMap->GetLocalToGlobalSign(idx);
-                    wsp[gid] += sign * elmtDofs[i];
+
+                    if ( gid >= m_locToGloMap->GetNumGlobalDirBndCoeffs())
+                    {
+                        const int sign = m_locToGloMap->GetLocalToGlobalSign(idx);
+                        wsp[gid] += sign * elmtDofs[i];
+                    }
                 }
             } // Loop over weak boundary conditions
 

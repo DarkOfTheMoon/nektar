@@ -1544,9 +1544,9 @@ namespace Nektar
             {
                 weakDGMatPtr[dim] = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs,nElemCoeffs);
                 DNekMat &weakDGMat = *weakDGMatPtr[dim];
-                Vmath::Zero(nElemCoeffs * nElemCoeffs, weakDGMat.GetRawPtr(), 1);
 
-                Vmath::Zero(nElemCoeffs*nElemCoeffs,weakDGMat.GetPtr(),1);
+                Vmath::Zero(nElemCoeffs * nElemCoeffs, weakDGMat.GetRawPtr(), 1);
+                //Vmath::Zero(nElemCoeffs*nElemCoeffs,weakDGMat.GetPtr(),1);
 
                 DNekScalMat &Dmat = *GetLocMatrix(DerivType[dim]);
                 DmatT = Transpose(Dmat);
