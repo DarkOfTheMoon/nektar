@@ -199,10 +199,10 @@ namespace Nektar
             case StdRegions::eHelmholtz:
             case StdRegions::eLaplacian:
                 {
-                    ASSERTL1(m_linSysKey.GetNVarCoeffs(),
+                    ASSERTL1(m_linSysKey.GetNVarCoeffs()==0,
                              "Not set up for variable coefficient currently");
                     ASSERTL1(m_linSysKey.GetConstFactors().
-                             count(StdRegions::eFactorSVVDiffCoeff),
+                             count(StdRegions::eFactorSVVDiffCoeff) == 0,
                              "Not set up for SVV");
                     
                     int ncoeffs = expList->GetNcoeffs();
