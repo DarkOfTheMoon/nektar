@@ -1268,6 +1268,8 @@ namespace Nektar
               Vmath::Zero(nElemCoeffs * nElemCoeffs, (*tildeEMatSumPtr[dir]).GetRawPtr(), 1);
           }
 
+          // -------------------------------------------------
+
           // Ia) Edge mass matrix contribution
 
           StdRegions::VarCoeffMap faceVarCoeffs;
@@ -1282,6 +1284,7 @@ namespace Nektar
               const DNekScalMat &faceMass = *FaceExp->GetLocMatrix(StdRegions::eMass, StdRegions::NullConstFactorMap, faceVarCoeffs);
 
               GetFaceToElementMap(iface, GetForient(iface), map, sign);
+              //GetFaceToElementMap(iface, GetForient(iface), map, sign, GetBasisNumModes(0), GetBasisNumModes(1));
 
               const int nFaceCoeffs = FaceExp->GetNcoeffs();
 
@@ -1289,10 +1292,12 @@ namespace Nektar
               {
                   for(int j = 0; j < nFaceCoeffs; ++j)
                   {
-                      inoutmat(map[i],map[j]) += tau * sign[i]*sign[j]*faceMass(i,j);
+                      inoutmat(map[i],map[j]) += tau * sign[i] * sign[j] * faceMass(i,j);
                   }
               }
           }
+
+#if 0
 
           // II) All other contributions (not mass matrix)
           for(int f = 0; f < faceids.num_elements(); ++f)
@@ -1303,7 +1308,8 @@ namespace Nektar
 
               FaceExp = GetFaceExp(iface);
 
-              const int nquad_f = FaceExp->GetNumPoints(0);
+              // const int nquad_f = FaceExp->GetNumPoints(0) * FaceExp->GetNumPoints(1);
+              const int nquad_f = FaceExp->GetTotPoints();
               const int nFaceCoeffs = FaceExp->GetNcoeffs();
 
               facePhys = Array<OneD, NekDouble>(nquad_f);
@@ -1312,8 +1318,6 @@ namespace Nektar
               GetFaceToElementMap(iface, v_GetForient(iface), map, sign);
 
               const Array<OneD, const Array<OneD, NekDouble> > & normals = GetFaceNormal(iface);
-
-
 
               for(int dir = 0; dir < coordim; ++dir)
               {
@@ -1354,6 +1358,7 @@ namespace Nektar
 
            } // Loop over selected boundary faces
 
+#endif
 
           // Compute the actual Laplace term
           // DNekMatSharedPtr LaplacePtr = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs, nElemCoeffs);
@@ -1364,6 +1369,7 @@ namespace Nektar
           DNekMatSharedPtr DmatTPtr = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs,nElemCoeffs);
           DNekMat& DmatT = (*DmatTPtr);
 
+#if 0
 
           // Evaluate D_1 * inv(M)
           // Evaluate D_2 * inv(M)
@@ -1398,16 +1404,208 @@ namespace Nektar
                   }
               }
           }
+#endif
         }
 
+        /**
+         * @brief Expansion3D::v_AddWeakDirichletForcingContribution: evaluate -D_1*inv(M) * \sum(\tilde{F}_1 * \lambda)
+         *                                                                     -D_2*inv(M) * \sum(\tilde{F}_2 * \lambda)
+         *                                                                 and -D_3*inv(M) * \sum(\tilde{F}_3 * \lambda)
+         *                                                            summation is performed over local faces specified
+         *                                                            by the faceids parameter
+         * @param  faceids    ... array of local face ids which contribute to the weak BC
+         * @param  lambda     ... Dirichlet values on boundary: each array holds values for one face on
+         *                        which the boundary condition should be imposed
+         *                        lambda must have the same size as faceids
+         * @return coeffs     ... coeficients representing forcing values due to weakly imposed BC
+         *                        coeffs should be added to the RHS of linear system
+         */
+
         void Expansion3D::v_AddWeakDirichletForcingContribution(
-            const Array<OneD, int>& edgeids,
+            const Array<OneD, int>& faceids,
             const Array<OneD, const NekDouble>& lambdaOnTrace,
             const Array<OneD, const int>& lambdaOffsets,
             Array<OneD, NekDouble> &coeffs)
         {
+          ASSERTL1(IsBoundaryInteriorExpansion(),
+                   "Not set up for non boundary-interior expansions");
 
-        }
+          const int coordim = GetCoordim();
+          const int nElemCoeffs = GetNcoeffs();
+
+          // Tags for weak derivatives
+          const StdRegions::MatrixType DerivType[3] = {StdRegions::eWeakDeriv0,
+                                                       StdRegions::eWeakDeriv1,
+                                                       StdRegions::eWeakDeriv2};
+
+          Array<OneD,unsigned int> map;
+          Array<OneD,int> sign;
+          StdRegions::VarCoeffMap faceVarCoeffs;
+
+          // Array to hold the product sum ( tilde(F_k) * lambda ), where
+          // the sum goes over all edges incident to the Dirichlet boundary
+          // and k = 1,2,3
+          Array<OneD, NekDouble> tildeFTimesLambda[3] = { Array<OneD, NekDouble>(nElemCoeffs),
+                                                          Array<OneD, NekDouble>(nElemCoeffs),
+                                                          Array<OneD, NekDouble>(nElemCoeffs) };
+
+          Vmath::Zero(nElemCoeffs, tildeFTimesLambda[xDir], 1);
+          Vmath::Zero(nElemCoeffs, tildeFTimesLambda[yDir], 1);
+          Vmath::Zero(nElemCoeffs, tildeFTimesLambda[zDir], 1);
+
+          Array<OneD, NekDouble> FTimesLambda(nElemCoeffs);
+          Vmath::Zero(nElemCoeffs, FTimesLambda, 1);
+
+          Array<OneD, NekDouble> work0(nElemCoeffs);
+          Array<OneD, NekDouble> work1(nElemCoeffs);
+
+          // ------------------------------------------------------
+          // 1) Evaluate
+          // a) sum(tildeF[X] * lambda), sum(tildeF[Y] * lambda)
+          //                         and sum(tildeF[Z] * lambda)
+          // b) sum(tau * F * lambda)
+          // Both sum loop over weak Dirichlet faces
+          // ------------------------------------------------------
+
+          for(int f = 0; f < faceids.num_elements(); ++f)
+          {
+              const int iface = faceids[f];
+
+              //ExpansionSharedPtr FaceExp = GetFaceExp(faceids[0]);
+              ExpansionSharedPtr FaceExp = GetFaceExp(iface);
+
+              // const int nquad_f = FaceExp->GetNumPoints(0) * FaceExp->GetNumPoints(1);
+              const int nquad_f = FaceExp->GetTotPoints();
+              const int nFaceCoeffs = FaceExp->GetNcoeffs();
+
+              Array<OneD, NekDouble> elemCoeffs(nElemCoeffs), phys(GetTotPoints());
+              Array<OneD, NekDouble> facePhys  (nquad_f);
+              Array<OneD, NekDouble> faceCoeffs(nFaceCoeffs);
+              Array<OneD, NekDouble> lambdaExpCoeffs(nFaceCoeffs);
+
+              GetFaceToElementMap(iface, GetForient(iface), map, sign);
+
+              const Array<OneD, const Array<OneD, NekDouble> > & normals = GetFaceNormal(iface);
+
+              DNekMatSharedPtr tildeFMatPtr = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs, nFaceCoeffs);
+
+              DNekMat& tildeFMat = *tildeFMatPtr;
+
+              const Array<OneD, const NekDouble> lambdaOneFace = lambdaOnTrace + lambdaOffsets[f];
+
+              FaceExp->FwdTrans(lambdaOneFace, lambdaExpCoeffs);
+
+              for(int dir = 0; dir < coordim; ++dir)
+              {
+                  // Initialize the matrix tildeF
+                  Vmath::Zero(nElemCoeffs*nFaceCoeffs, tildeFMat.GetPtr(),1);
+
+                  for (int i = 0; i < nFaceCoeffs; ++i)
+                  {
+                      Vmath::Zero(nFaceCoeffs, elemCoeffs, 1);
+                      elemCoeffs[map[i]] = 1.0;
+
+                      // Phys contains values of the i-the mode at all qd. pts
+                      BwdTrans(elemCoeffs, phys);
+                      // Extract values which are nonzero on edge
+                      GetFacePhysVals(iface, FaceExp, phys, facePhys);
+
+                      // Multiply edgePhys by normal here...
+                      Vmath::Vmul(nquad_f, normals[dir], 1, facePhys, 1, facePhys, 1);
+
+                      FaceExp->IProductWRTBase(facePhys, faceCoeffs);
+
+                      // edgeCoeffs forms one row of \tilde{F}^e, hopefully
+
+                      for(int j = 0; j < nFaceCoeffs; ++j)
+                      {
+                          // std::cout << "    [" << map[i] << "," << j << "] = " << sign[j] * edgeCoeffs[j] << std::endl;
+                          tildeFMat(map[i],j) = sign[j] * faceCoeffs[j]; // ???
+                      }
+                   }
+
+                   // Nektar uses column-major storage, lda = number of matrix rows
+                   // Multiply tilde(F) * lambda and store in work0
+                   Blas::Dgemv('N', nElemCoeffs, nFaceCoeffs, 1.0, &(tildeFMat.GetPtr())[0],
+                                    nElemCoeffs, &lambdaExpCoeffs[0], 1, 0.0, &work0[0], 1 );
+
+                    // Accumulate result to tildeFTimesLambda
+                   Vmath::Vadd(nElemCoeffs, &tildeFTimesLambda[dir][0], 1, &work0[0], 1, &tildeFTimesLambda[dir][0], 1);
+              }
+              // Loop over directions
+
+              // Evaluate matrix F
+
+              const NekDouble tau = 1.0;
+
+              /// @FIXME: does edgeVarCoeffs need to be filled properly ???
+
+              const DNekScalMat &fMass = *FaceExp->GetLocMatrix(StdRegions::eMass, StdRegions::NullConstFactorMap, faceVarCoeffs);
+              DNekMatSharedPtr FMatPtr = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs, nFaceCoeffs);
+              DNekMat& FMat = *FMatPtr;
+              // Initialize F
+              Vmath::Zero(nElemCoeffs * nFaceCoeffs, FMat.GetRawPtr(), 1);
+
+
+              // Fmat has dimensions nElemCoeffs * nEdgeCoeffs, but the outer loop goes
+              // over 0,...,nEdgeCoeffs -> some rows of Fmat will just be full of zeros
+              for (int i = 0; i < nFaceCoeffs; ++i)
+              {
+                  for(int j = 0; j < nFaceCoeffs; ++j)
+                  {
+                      FMat(map[i],j) = tau * sign[i] * sign[j] * fMass(i,j);
+                  }
+              }
+
+              // Nektar uses column-major storage, lda = number of matrix rows
+              // Multiply F * lambda and store in work0
+              Blas::Dgemv('N', nElemCoeffs, nFaceCoeffs, 1.0, &(FMat.GetPtr())[0],
+                               nElemCoeffs, &lambdaExpCoeffs[0], 1, 0.0, &work0[0], 1 );
+
+              // Accumulate result to FTimesLambda
+              Vmath::Vadd(nElemCoeffs, &FTimesLambda[0], 1, &work0[0], 1, &FTimesLambda[0], 1);
+          }
+          // Loop over faces
+
+          /*
+          std::cout << "\ntildeFTimesLambda[0] = " << tildeFTimesLambda[xDir] << std::endl;
+          std::cout << "\ntildeFTimesLambda[1] = " << tildeFTimesLambda[yDir] << std::endl;
+          std::cout << "\ntildeFTimesLambda[2] = " << tildeFTimesLambda[zDir] << std::endl;
+          */
+
+          // ---------------------------------------------------------
+          // 2) Use 1a) to evaluate sum ( D * inv(M) * sum(F*lambda) )
+          //    The inner sum is over weak Dirichlet edges
+          //    The outer sum is over dimensions
+          // ---------------------------------------------------------
+
+          // Mass matrix
+          const DNekScalMat &invMass = *GetLocMatrix(StdRegions::eInvMass);
+
+          //Vmath::Zero(nElemCoeffs, &coeffs[0], 1);
+
+          for(int dim = 0; dim < coordim; ++dim)
+          {
+              DNekScalMat &Dmat = *GetLocMatrix(DerivType[dim]);
+
+              // work0 = invMass * tildeFTimesLambda
+              Blas::Dgemv('N', nElemCoeffs, nElemCoeffs, 1.0, (invMass.GetOwnedMatrix())->GetPtr().get(),
+                               nElemCoeffs, &tildeFTimesLambda[dim][0], 1, 0.0, &work0[0], 1 );
+
+              // work1 = D * work0 = D * invMass * tildeFTimesLambda
+              Blas::Dgemv('N', nElemCoeffs, nElemCoeffs, 1.0, (Dmat.GetOwnedMatrix())->GetPtr().get(),
+                               nElemCoeffs, &work0[0], 1, 0.0, &work1[0], 1 );
+
+              // coeffs += work1
+              Vmath::Vadd(nElemCoeffs, &work1[0], 1, &coeffs[0], 1, &coeffs[0], 1);
+          }
+
+          // coeffs += sum ( tau * F * lambda )
+          Vmath::Vadd(nElemCoeffs, &coeffs[0], 1, &FTimesLambda[0], 1, &coeffs[0], 1);
+
+        } // v_AddWeakDirichletForcingContribution
+
+
 
         DNekMatSharedPtr Expansion3D::v_BuildVertexMatrix(
             const DNekScalMatSharedPtr &r_bnd)

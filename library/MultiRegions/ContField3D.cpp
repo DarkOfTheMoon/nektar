@@ -522,6 +522,9 @@ namespace Nektar
                                     const StdRegions::VarCoeffMap &varcoeff,
                                     const Array<OneD, const NekDouble> &dirForcing)
       {
+          //----------------------------------
+          //  Setup RHS Inner product
+          //----------------------------------
           // Inner product of forcing
           int contNcoeffs = m_locToGloMap->GetNumGlobalCoeffs();
           Array<OneD,NekDouble> wsp(contNcoeffs);
@@ -556,7 +559,8 @@ namespace Nektar
               {
                   const int localFaceId = wDBC->m_weakDirichletID;
                   const LocalRegions::Expansion2DSharedPtr faceExp = elemExp->GetFaceExp(localFaceId);
-                  const int nFaceQuadPts = faceExp->GetNumPoints(0);
+                  // const int nFaceQuadPts = faceExp->GetNumPoints(0) * faceExp->GetNumPoints(1);
+                  const int nFaceQuadPts = faceExp->GetTotPoints();
 
                   numBdryFacets++;
                   numLambdaPts += nFaceQuadPts;
@@ -573,7 +577,8 @@ namespace Nektar
               {
                   const int localFaceId = wDBC->m_weakDirichletID;
                   const LocalRegions::Expansion2DSharedPtr faceExp = elemExp->GetFaceExp(localFaceId);
-                  const int nFaceQuadPts = faceExp->GetNumPoints(0);
+                  // const int nFaceQuadPts = faceExp->GetNumPoints(0) * faceExp->GetNumPoints(1);
+                  const int nFaceQuadPts = faceExp->GetTotPoints();
 
                   lambdaOffsets[numBdryFacets] = offset;
 
@@ -612,6 +617,7 @@ namespace Nektar
           int bndcnt = 0;
           NekDouble sign;
           Array<OneD, NekDouble> gamma(contNcoeffs, 0.0);
+
           for(i = 0; i < m_bndCondExpansions.num_elements(); ++i)
           {
               if((m_bndConditions[i]->GetBoundaryConditionType() != SpatialDomains::eDirichlet) &&
@@ -619,9 +625,15 @@ namespace Nektar
               {
                   for(j = 0; j < (m_bndCondExpansions[i])->GetNcoeffs(); j++)
                   {
+                      /*
                       sign = m_locToGloMap->GetBndCondCoeffsToGlobalCoeffsSign(bndcnt);
                       gamma[m_locToGloMap->GetBndCondCoeffsToGlobalCoeffsMap(bndcnt++)] +=
                           sign * (m_bndCondExpansions[i]->GetCoeffs())[j];
+                      */
+
+                      gamma[m_locToGloMap
+                          ->GetBndCondCoeffsToGlobalCoeffsMap(bndcnt++)]
+                          += (m_bndCondExpansions[i]->GetCoeffs())[j];
                   }
               }
               else
@@ -629,6 +641,7 @@ namespace Nektar
                   bndcnt += m_bndCondExpansions[i]->GetNcoeffs();
               }
           }
+
           m_locToGloMap->UniversalAssemble(gamma);
           
           // Add weak boundary conditions to forcing

@@ -130,7 +130,7 @@ namespace Nektar
 			    const Array<OneD, int>& faceids, DNekMat &inoutmat);
 
             virtual void v_AddWeakDirichletForcingContribution(
-                const Array<OneD, int>& edgeids,
+                const Array<OneD, int>& faceids,
                 const Array<OneD, const NekDouble>& lambdaOnTrace,
                 const Array<OneD, const int>& lambdaOffsets,
                 Array<OneD, NekDouble> &coeffs);

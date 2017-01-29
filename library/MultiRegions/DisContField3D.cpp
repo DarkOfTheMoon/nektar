@@ -2603,7 +2603,6 @@ using namespace boost::assign;
                                     SpatialDomains::WeakDirichletBoundaryCondition>
                                         (m_bndConditions[i])->
                                             m_weakDirichletFunction;
-
                             condition.Evaluate(x0, x1, x2, time,
                                                locExpList->UpdatePhys());
                         }

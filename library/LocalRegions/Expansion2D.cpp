@@ -1641,7 +1641,6 @@ namespace Nektar
             const int coordim = GetCoordim();
             const int nElemCoeffs = GetNcoeffs();
 
-
             // Tags for weak derivatives
             const StdRegions::MatrixType DerivType[3] = {StdRegions::eWeakDeriv0,
                                                          StdRegions::eWeakDeriv1,
@@ -1677,7 +1676,7 @@ namespace Nektar
             {
                 const int iedge = edgeids[ie];
 
-                ExpansionSharedPtr EdgeExp = GetEdgeExp(edgeids[0]);
+                ExpansionSharedPtr EdgeExp = GetEdgeExp(iedge);
 
                 const int nquad_e = EdgeExp->GetNumPoints(0);
                 const int nEdgeCoeffs = EdgeExp->GetNcoeffs();
