@@ -431,8 +431,8 @@ namespace Nektar
                 tmp_mat = loc_mat->GetBlock(0,0);
 
                 // declare local matrix from scaled matrix.
-                int rows = tmp_mat->GetRows();
-                int cols = tmp_mat->GetColumns();
+                const int rows = tmp_mat->GetRows();
+                const int cols = tmp_mat->GetColumns();
                 const NekDouble *dat = tmp_mat->GetRawPtr();
                 DNekMatSharedPtr new_mat = MemoryManager<DNekMat>::
                     AllocateSharedPtr(rows, cols, dat);

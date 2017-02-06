@@ -1297,7 +1297,7 @@ namespace Nektar
               }
           }
 
-#if 0
+#if 1
 
           // II) All other contributions (not mass matrix)
           for(int f = 0; f < faceids.num_elements(); ++f)
@@ -1369,7 +1369,7 @@ namespace Nektar
           DNekMatSharedPtr DmatTPtr = MemoryManager<DNekMat>::AllocateSharedPtr(nElemCoeffs,nElemCoeffs);
           DNekMat& DmatT = (*DmatTPtr);
 
-#if 0
+#if 1
 
           // Evaluate D_1 * inv(M)
           // Evaluate D_2 * inv(M)
@@ -1471,6 +1471,9 @@ namespace Nektar
           {
               const int iface = faceids[f];
 
+              std::cout << "**************************************************" << std::endl;
+              std::cout << "Face: " << iface << std::endl;
+
               //ExpansionSharedPtr FaceExp = GetFaceExp(faceids[0]);
               ExpansionSharedPtr FaceExp = GetFaceExp(iface);
 
@@ -1484,6 +1487,28 @@ namespace Nektar
               Array<OneD, NekDouble> lambdaExpCoeffs(nFaceCoeffs);
 
               GetFaceToElementMap(iface, GetForient(iface), map, sign);
+
+              std::cout << "Face to element map:";
+              for(int i = 0; i < map.num_elements(); ++i)
+              {
+                  std::cout << " [" << map[i] << "," << sign[i] << "] ";
+              }
+              std::cout << std::endl;
+
+              /*
+              StdRegions::IndexMapKey ikey(
+                  StdRegions::eFaceToElement, DetShapeType(),
+                  GetBasisNumModes(0), GetBasisNumModes(1), GetBasisNumModes(2),
+                  iface, GetForient(iface));
+              StdRegions::IndexMapValuesSharedPtr idx_map =
+                  StdExpansion::GetIndexMap(ikey);
+              std::cout << "Map2:";
+              for(int i = 0; i < idx_map->num_elements(); ++i)
+              {
+                  std::cout << " [" << (*idx_map)[i].index << "," << (*idx_map)[i].sign << "] ";
+              }
+              std::cout << std::endl;
+              */
 
               const Array<OneD, const Array<OneD, NekDouble> > & normals = GetFaceNormal(iface);
 
@@ -1519,10 +1544,12 @@ namespace Nektar
 
                       for(int j = 0; j < nFaceCoeffs; ++j)
                       {
-                          // std::cout << "    [" << map[i] << "," << j << "] = " << sign[j] * edgeCoeffs[j] << std::endl;
+                          std::cout << "    [" << map[i] << "," << j << "] = " << sign[j] * faceCoeffs[j] << std::endl;
                           tildeFMat(map[i],j) = sign[j] * faceCoeffs[j]; // ???
                       }
                    }
+
+                  std::cout << "tilde(F)[" << dir << "] = \n" << tildeFMat << std::endl;
 
                    // Nektar uses column-major storage, lda = number of matrix rows
                    // Multiply tilde(F) * lambda and store in work0
