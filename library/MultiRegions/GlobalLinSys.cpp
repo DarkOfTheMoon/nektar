@@ -435,6 +435,10 @@ namespace Nektar
                const DNekScalMatSharedPtr loc_fullmat =
                   vExp->as<LocalRegions::Expansion>()->GetLocMatrix(matkey);
 
+               std::cout << "LOCAL FULL MATRIX = \n" << *loc_fullmat << std::endl;
+
+               const LibUtilities::PointsKeyVector ptsKeys = vExp->GetPointsKeys();
+
                const int rows = loc_fullmat->GetRows();
                const int cols = loc_fullmat->GetColumns();
 
@@ -450,25 +454,31 @@ namespace Nektar
                    numBdryFacets++;
                }
 
-               Array<OneD, int> edgeids(numBdryFacets);
+               Array<OneD, int> faceids(numBdryFacets);
 
+               numBdryFacets = 0;
                for(wDBC = m_weakDirichletBCInfo.find(n)->second; wDBC; wDBC = wDBC->next)
                {
-                   edgeids[numBdryFacets] = wDBC->m_weakDirichletID;
+                   faceids[numBdryFacets] = wDBC->m_weakDirichletID;
                    numBdryFacets++;
                }
 
-                vExp->AddWeakDirichletElementContribution(edgeids, *new_mat);
+                vExp->AddWeakDirichletElementContribution(faceids, *new_mat);
+
+                std::cout << "NEW MAT = " << std::endl;
+                std::cout << *new_mat << std::endl;
 
                 // set up block matrix system
                 unsigned int nbdry = vExp->NumBndryCoeffs();
                 unsigned int nint = (unsigned int)(vExp->GetNcoeffs() - nbdry);
                 unsigned int exp_size[] = {nbdry, nint};
                 unsigned int nblks=2;
+
                 loc_mat = MemoryManager<DNekScalBlkMat>::AllocateSharedPtr(nblks, nblks, exp_size, exp_size);
                 {
                     int i,j;
                     const NekDouble factor = 1.0;
+                    // const NekDouble factor = vExp->GetMetricInfo()->GetJac(ptsKeys)[0];
                     NekDouble            invfactor = 1.0/factor;
                     NekDouble            one = 1.0;
                     DNekMat &mat = *new_mat;
