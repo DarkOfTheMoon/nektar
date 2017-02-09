@@ -424,58 +424,106 @@ namespace Nektar
                 loc_mat = new_loc_mat;
             }
 
-			if(m_weakDirichletBCInfo.count(n) != 0) // add weak Dirichlet matrix
+            if(m_weakDirichletBCInfo.count(n) != 0) // add weak Dirichlet matrix
             {
                WeakDirichletBCInfoSharedPtr wDBC;
 
-                tmp_mat = loc_mat->GetBlock(0,0);
+               /*
+               DNekScalMatSharedPtr loc_fullmat = vExp->GetLocMatrix(matkey);
+               */
 
-                // declare local matrix from scaled matrix.
-                const int rows = tmp_mat->GetRows();
-                const int cols = tmp_mat->GetColumns();
-                const NekDouble *dat = tmp_mat->GetRawPtr();
-                DNekMatSharedPtr new_mat = MemoryManager<DNekMat>::
-                    AllocateSharedPtr(rows, cols, dat);
-                Blas::Dscal(rows*cols,tmp_mat->Scale(),new_mat->GetRawPtr(),1);
+               const DNekScalMatSharedPtr loc_fullmat =
+                  vExp->as<LocalRegions::Expansion>()->GetLocMatrix(matkey);
 
+               const int rows = loc_fullmat->GetRows();
+               const int cols = loc_fullmat->GetColumns();
 
-                // add local matrix contribution
-                int numBdryFacets = 0;
-                for(wDBC = m_weakDirichletBCInfo.find(n)->second; wDBC; wDBC = wDBC->next)
+               const NekDouble *dat = loc_fullmat->GetRawPtr();
+               DNekMatSharedPtr new_mat = MemoryManager<DNekMat>::
+                   AllocateSharedPtr(rows,cols,dat);
+               Blas::Dscal(rows*cols,loc_fullmat->Scale(),new_mat->GetRawPtr(),1);
+
+               // add local matrix contribution
+               int numBdryFacets = 0;
+               for(wDBC = m_weakDirichletBCInfo.find(n)->second; wDBC; wDBC = wDBC->next)
+               {
+                   numBdryFacets++;
+               }
+
+               Array<OneD, int> edgeids(numBdryFacets);
+
+               for(wDBC = m_weakDirichletBCInfo.find(n)->second; wDBC; wDBC = wDBC->next)
+               {
+                   edgeids[numBdryFacets] = wDBC->m_weakDirichletID;
+                   numBdryFacets++;
+               }
+
+                vExp->AddWeakDirichletElementContribution(edgeids, *new_mat);
+
+                // set up block matrix system
+                unsigned int nbdry = vExp->NumBndryCoeffs();
+                unsigned int nint = (unsigned int)(vExp->GetNcoeffs() - nbdry);
+                unsigned int exp_size[] = {nbdry, nint};
+                unsigned int nblks=2;
+                loc_mat = MemoryManager<DNekScalBlkMat>::AllocateSharedPtr(nblks, nblks, exp_size, exp_size);
                 {
-                    numBdryFacets++;
+                    int i,j;
+                    const NekDouble factor = 1.0;
+                    NekDouble            invfactor = 1.0/factor;
+                    NekDouble            one = 1.0;
+                    DNekMat &mat = *new_mat;
+                    DNekMatSharedPtr A = MemoryManager<DNekMat>::AllocateSharedPtr(nbdry,nbdry);
+                    DNekMatSharedPtr B = MemoryManager<DNekMat>::AllocateSharedPtr(nbdry,nint);
+                    DNekMatSharedPtr C = MemoryManager<DNekMat>::AllocateSharedPtr(nint,nbdry);
+                    DNekMatSharedPtr D = MemoryManager<DNekMat>::AllocateSharedPtr(nint,nint);
+
+                    Array<OneD,unsigned int> bmap(nbdry);
+                    Array<OneD,unsigned int> imap(nint);
+                    vExp->GetBoundaryMap(bmap);
+                    vExp->GetInteriorMap(imap);
+
+                    for(i = 0; i < nbdry; ++i)
+                    {
+                        for(j = 0; j < nbdry; ++j)
+                        {
+                            (*A)(i,j) = mat(bmap[i],bmap[j]);
+                        }
+
+                        for(j = 0; j < nint; ++j)
+                        {
+                            (*B)(i,j) = mat(bmap[i],imap[j]);
+                        }
+                    }
+
+                    for(i = 0; i < nint; ++i)
+                    {
+                        for(j = 0; j < nbdry; ++j)
+                        {
+                            (*C)(i,j) = mat(imap[i],bmap[j]);
+                        }
+
+                        for(j = 0; j < nint; ++j)
+                        {
+                            (*D)(i,j) = mat(imap[i],imap[j]);
+                        }
+                    }
+
+                    // Calculate static condensed system
+                    if(nint)
+                    {
+                        D->Invert();
+                        (*B) = (*B)*(*D);
+                        (*A) = (*A) - (*B)*(*C);
+                    }
+
+                    DNekScalMatSharedPtr     Atmp;
+
+                    loc_mat->SetBlock(0,0,Atmp = MemoryManager<DNekScalMat>::AllocateSharedPtr(factor,A));
+                    loc_mat->SetBlock(0,1,Atmp = MemoryManager<DNekScalMat>::AllocateSharedPtr(one,B));
+                    loc_mat->SetBlock(1,0,Atmp = MemoryManager<DNekScalMat>::AllocateSharedPtr(factor,C));
+                    loc_mat->SetBlock(1,1,Atmp = MemoryManager<DNekScalMat>::AllocateSharedPtr(invfactor,D));
+
                 }
-
-                Array<OneD, int> edgeids(numBdryFacets);
-
-                for(wDBC = m_weakDirichletBCInfo.find(n)->second; wDBC; wDBC = wDBC->next)
-                {
-                    edgeids[numBdryFacets] = wDBC->m_weakDirichletID;
-                    numBdryFacets++;
-                }
-
-                 vExp->AddWeakDirichletElementContribution(edgeids, *new_mat);
-
-                // redeclare loc_mat to point to new_mat plus the scalar.
-                tmp_mat = MemoryManager<DNekScalMat>::AllocateSharedPtr(
-                    1.0, new_mat);
-                loc_mat->SetBlock(0,0,tmp_mat);
-
-				/*
-				DNekScalBlkMatSharedPtr new_loc_mat;
-                unsigned int exp_size[] = {tmp_mat->GetRows(), loc_mat->GetBlock(1,1)->GetRows()};
-                unsigned int nblks = 2;
-                new_loc_mat = MemoryManager<DNekScalBlkMat>::AllocateSharedPtr(nblks, nblks, exp_size, exp_size);
-
-
-                new_loc_mat->SetBlock(0,0,tmp_mat);
-                new_loc_mat->SetBlock(0,1,loc_mat->GetBlock(0,1));
-                new_loc_mat->SetBlock(1,0,loc_mat->GetBlock(1,0));
-                new_loc_mat->SetBlock(1,1,loc_mat->GetBlock(1,1));
-                loc_mat = new_loc_mat;
-				*/
-
-
             }
 
             return loc_mat;

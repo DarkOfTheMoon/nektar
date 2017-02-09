@@ -1544,7 +1544,7 @@ namespace Nektar
 
                       for(int j = 0; j < nFaceCoeffs; ++j)
                       {
-                          std::cout << "    [" << map[i] << "," << j << "] = " << sign[j] * faceCoeffs[j] << std::endl;
+                          //std::cout << "    [" << map[i] << "," << j << "] = " << sign[j] * faceCoeffs[j] << std::endl;
                           tildeFMat(map[i],j) = sign[j] * faceCoeffs[j]; // ???
                       }
                    }
