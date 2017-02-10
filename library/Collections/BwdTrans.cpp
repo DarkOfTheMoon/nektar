@@ -33,6 +33,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+#include <omp.h>
 #include <loki/Singleton.h>
 #include <Collections/Operator.h>
 #include <Collections/Collection.h>
@@ -609,44 +610,60 @@ class BwdTrans_SumFac_Hex : public Operator
                       Array<OneD,       NekDouble> &output2,
                       Array<OneD,       NekDouble> &wsp)
         {
+            int s = 0;
 
-            if(m_colldir0 && m_colldir1 && m_colldir2)
+#pragma omp parallel for schedule(dynamic)
+            for (int n = 0; n < m_numElmt; ++n)
             {
-                Vmath::Vcopy(m_numElmt * m_nmodes0 * m_nmodes1 * m_nmodes2,
-                             input.get(),  1,
-                             output.get(), 1);
-            }
-            else
-            {
-                ASSERTL1(wsp.num_elements() == m_wspSize,
-                         "Incorrect workspace size");
+                Array<OneD, NekDouble> fpq(m_nmodes0 * m_nmodes1);
+                Array<OneD, NekDouble> fp (m_nmodes0);
 
-                // Assign second half of workspace for 2nd DGEMM operation.
-                int totmodes  = m_nmodes0*m_nmodes1*m_nmodes2;
-
-                Array<OneD, NekDouble> wsp2
-                                = wsp + m_nmodes0*m_nmodes1*m_nquad2*m_numElmt;
-
-                //loop over elements  and do bwd trans wrt c
-                for(int n = 0; n < m_numElmt; ++n)
+                for (int k = 0; k < m_nquad2; ++k)
                 {
-                    Blas::Dgemm('N', 'T', m_nquad2, m_nmodes0*m_nmodes1,
-                                m_nmodes2, 1.0, m_base2.get(), m_nquad2,
-                                &input[n*totmodes], m_nmodes0*m_nmodes1, 0.0,
-                                &wsp[n*m_nquad2], m_nquad2*m_numElmt);
+                    int cnt = 0, cnt2 = 0;
+
+                    for (int p = 0; p < m_nmodes0; ++p)
+                    {
+                        for (int q = 0; q < m_nmodes1; ++q)
+                        {
+                            NekDouble sum = 0.0;
+                            #pragma omp simd
+                            for (int r = 0; r < m_nmodes2; ++r)
+                            {
+                                sum += input[cnt2++] * m_base2[k + m_nmodes2 * r];
+                            }
+                            fpq[cnt++] = sum;
+                        }
+                    }
+
+                    for (int j = 0; j < m_nquad1; ++j)
+                    {
+                        cnt = cnt2 = 0;
+
+                        for (int p = 0; p < m_nmodes0; ++p)
+                        {
+                            NekDouble sum = 0.0;
+                            #pragma omp simd
+                            for (int q = 0; q < m_nmodes1; ++q)
+                            {
+                                sum += m_base1[j + m_nquad1*q] * fpq[cnt++];
+                            }
+                            fp[cnt2++] = sum;
+                        }
+
+                        for (int i = 0; i < m_nquad0; ++i)
+                        {
+                            cnt2 = 0;
+                            NekDouble sum = 0.0;
+                            #pragma omp simd
+                            for (int p = 0; p < m_nmodes0; ++p)
+                            {
+                                sum += m_base0[i + m_nmodes0 * p] * fp[cnt2++];
+                            }
+                            output[s++] = sum;
+                        }
+                    }
                 }
-
-                // trans wrt b
-                Blas::Dgemm('N', 'T', m_nquad1, m_nquad2*m_numElmt*m_nmodes0,
-                            m_nmodes1, 1.0, m_base1.get(), m_nquad1,
-                            wsp.get(), m_nquad2*m_numElmt*m_nmodes0, 0.0,
-                            wsp2.get(), m_nquad1);
-
-                // trans wrt a
-                Blas::Dgemm('N', 'T', m_nquad0, m_nquad1*m_nquad2*m_numElmt,
-                            m_nmodes0, 1.0, m_base0.get(), m_nquad0,
-                            wsp2.get(), m_nquad1*m_nquad2*m_numElmt, 0.0,
-                            output.get(), m_nquad0);
             }
         }
 

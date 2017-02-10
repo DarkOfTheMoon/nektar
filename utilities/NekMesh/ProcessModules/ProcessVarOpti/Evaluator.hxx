@@ -348,8 +348,8 @@ NekDouble NodeOpti::GetFunctional(NekDouble &minJacNew, bool gradient)
 
     minJacNew          = std::numeric_limits<double>::max();
     NekDouble integral = 0.0;
-    NekDouble ep =
-        m_minJac < 0.0 ? sqrt(1e-8 + 0.04 * m_minJac * m_minJac) : 1e-4;
+    NekDouble ep = 1e-2;
+    //    m_minJac < 0.0 ? sqrt(1e-8 + 0.04 * m_minJac * m_minJac) : 1e-4;
     NekDouble jacIdeal[DIM][DIM], jacDet;
     m_grad = Array<OneD, NekDouble>(DIM == 2 ? 5 : 9, 0.0);
 
@@ -527,7 +527,7 @@ NekDouble NodeOpti::GetFunctional(NekDouble &minJacNew, bool gradient)
 
         case eHypEl:
         {
-            const NekDouble nu = 0.45;
+            const NekDouble nu = 0.48;
             const NekDouble mu = 1.0 / 2.0 / (1.0 + nu);
             const NekDouble K  = 1.0 / 3.0 / (1.0 - 2.0 * nu);
 

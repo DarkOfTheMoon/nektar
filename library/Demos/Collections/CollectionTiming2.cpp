@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
         "data", "d", "Print in data format");
     LibUtilities::SessionReaderSharedPtr session
         = LibUtilities::SessionReader::CreateInstance(argc, argv);
-    LibUtilities::CommSharedPtr vComm = vSession->GetComm();
+    LibUtilities::CommSharedPtr vComm = session->GetComm();
 
     bool fmt = session->DefinesCmdLineArgument("data");
 
@@ -124,14 +124,18 @@ int main(int argc, char *argv[])
     int nQ = order + 2;
 
     // flops: 3 matrix-matrix multiplications
-    long long flop = (nElmt*(nM*nM*nM*nQ + nQ*nQ*nM*nM + nQ*nQ*nQ*nM));
-    NekDouble gflop = flop / 1024.0 / 1024.0 / 1024.0;
+    long long flop = (2*nElmt*(nM*nM*nM*nQ + nQ*nQ*nM*nM + nQ*nQ*nQ*nM));
+    NekDouble gflop = Ntest * flop / 1024.0 / 1024.0 / 1024.0;
     NekDouble elapsed = t.TimePerTest(1);
 
     vComm->AllReduce(gflop, LibUtilities::ReduceSum);
 
     if (vComm->GetRank() == 0)
     {
-        cout << "Time: " << elapsed << " GFLOP/s: " << gflop << endl;
+        cout << "Time: " << elapsed << " FLOP: " << flop << " GFLOP/s: " << gflop / elapsed << endl;
     }
+
+    vComm->Finalise();
+
+    return 0;
 }
