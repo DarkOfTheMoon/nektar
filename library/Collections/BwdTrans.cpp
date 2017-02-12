@@ -33,7 +33,6 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#include <omp.h>
 #include <loki/Singleton.h>
 #include <Collections/Operator.h>
 #include <Collections/Collection.h>
@@ -610,60 +609,41 @@ class BwdTrans_SumFac_Hex : public Operator
                       Array<OneD,       NekDouble> &output2,
                       Array<OneD,       NekDouble> &wsp)
         {
-            int s = 0;
 
-#pragma omp parallel for schedule(dynamic)
-            for (int n = 0; n < m_numElmt; ++n)
+            // BwdTrans in each direction using DGEMM
+            int cnt = 0, cnt2 = 0;
+            int nqTot = m_nquad0 * m_nquad1 * m_nquad2;
+            int nmTot = m_nmodes0 * m_nmodes1 * m_nmodes2;
+
+            for (int i = 0; i < m_numElmt; ++i)
             {
-                Array<OneD, NekDouble> fpq(m_nmodes0 * m_nmodes1);
-                Array<OneD, NekDouble> fp (m_nmodes0);
+                Blas::Dgemm('N', 'N', m_nmodes1*m_nmodes2, m_nquad0, m_nmodes0,
+                            1.0, &input[0],     m_nmodes1*m_nmodes2,
+                                 m_base0.get(), m_nmodes0,
+                            0.0, &m_wsp[0],     m_nmodes1*m_nmodes2);
+                Blas::Dgemm('N', 'N', m_nquad0*m_nmodes2, m_nquad1, m_nmodes1,
+                            1.0, &m_wsp[0],     m_nquad0*m_nmodes2,
+                                 m_base1.get(), m_nmodes1,
+                            0.0, &m_wsp2[0],    m_nquad0*m_nmodes2);
+                Blas::Dgemm('N', 'N', m_nquad0*m_nquad1, m_nquad2, m_nmodes2,
+                            1.0, &m_wsp2[0],    m_nquad0*m_nquad1,
+                                 m_base2.get(), m_nmodes2,
+                            0.0, &output[0],    m_nquad0*m_nquad1);
+                // Blas::Dgemm('T','T', m_nmodes1*m_nmodes2, m_nquad0, m_nmodes0,
+                //             1.0, &input[0],     m_nmodes0,
+                //                  m_base0.get(), m_nquad0,
+                //             0.0, &m_wsp[0],     m_nmodes1*m_nmodes2);
+                // Blas::Dgemm('T','T', m_nquad0*m_nmodes2, m_nquad1, m_nmodes1,
+                //             1.0, &m_wsp[0],     m_nmodes1,
+                //                  m_base1.get(), m_nquad1,
+                //             0.0, &m_wsp2[0],    m_nquad0*m_nmodes2);
+                // Blas::Dgemm('T','T', m_nquad0*m_nquad1, m_nquad2, m_nmodes2,
+                //             1.0, &m_wsp2[0],    m_nmodes2,
+                //                  m_base2.get(), m_nquad2,
+                //             0.0, &output[0],    m_nquad0*m_nquad1);
 
-                for (int k = 0; k < m_nquad2; ++k)
-                {
-                    int cnt = 0, cnt2 = 0;
-
-                    for (int p = 0; p < m_nmodes0; ++p)
-                    {
-                        for (int q = 0; q < m_nmodes1; ++q)
-                        {
-                            NekDouble sum = 0.0;
-                            #pragma omp simd
-                            for (int r = 0; r < m_nmodes2; ++r)
-                            {
-                                sum += input[cnt2++] * m_base2[k + m_nmodes2 * r];
-                            }
-                            fpq[cnt++] = sum;
-                        }
-                    }
-
-                    for (int j = 0; j < m_nquad1; ++j)
-                    {
-                        cnt = cnt2 = 0;
-
-                        for (int p = 0; p < m_nmodes0; ++p)
-                        {
-                            NekDouble sum = 0.0;
-                            #pragma omp simd
-                            for (int q = 0; q < m_nmodes1; ++q)
-                            {
-                                sum += m_base1[j + m_nquad1*q] * fpq[cnt++];
-                            }
-                            fp[cnt2++] = sum;
-                        }
-
-                        for (int i = 0; i < m_nquad0; ++i)
-                        {
-                            cnt2 = 0;
-                            NekDouble sum = 0.0;
-                            #pragma omp simd
-                            for (int p = 0; p < m_nmodes0; ++p)
-                            {
-                                sum += m_base0[i + m_nmodes0 * p] * fp[cnt2++];
-                            }
-                            output[s++] = sum;
-                        }
-                    }
-                }
+                cnt  += nqTot;
+                cnt2 += nmTot;
             }
         }
 
@@ -689,6 +669,7 @@ class BwdTrans_SumFac_Hex : public Operator
         const bool                      m_colldir0;
         const bool                      m_colldir1;
         const bool                      m_colldir2;
+    Array<OneD, NekDouble> m_wsp, m_wsp2;
 
     private:
         BwdTrans_SumFac_Hex(
@@ -710,6 +691,9 @@ class BwdTrans_SumFac_Hex : public Operator
         {
             m_wspSize =  m_numElmt*m_nmodes0*(m_nmodes1*m_nquad2 +
                                               m_nquad1*m_nquad2);
+            m_wsp = Array<OneD, NekDouble>(
+                m_nmodes0*(m_nmodes1*m_nquad2 + m_nquad1*m_nquad2));
+            m_wsp2 = m_wsp + m_nquad0*m_nmodes1*m_nmodes2;
         }
 };
 
