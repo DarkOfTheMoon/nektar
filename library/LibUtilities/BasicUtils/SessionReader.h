@@ -460,7 +460,7 @@ namespace Nektar
             /// Solver information properties.
             SolverInfoMap                             m_solverInfo;
             /// Biological cell model information properties.
-            CellInfoMap                               m_cellInfo; // Is tword 'cell' ambiguous?
+            CellInfoMap                               m_cellInfo; // Is the word 'cell' ambiguous?
             /// Geometric information properties.
             GeometricInfoMap                          m_geometricInfo;
             /// Expressions.

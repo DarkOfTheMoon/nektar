@@ -143,6 +143,12 @@ namespace Nektar
             return solverInfoMap;
         }
 
+        CellInfoMap& SessionReader::GetCellInfoDefaults()
+        {
+            static CellInfoMap cellInfoMap;
+            return cellInfoMap;
+        }
+
 
         /**
          * List of values for GlobalSysSoln parameters to be used to override
@@ -2137,11 +2143,66 @@ namespace Nektar
             }
         }
 
+        /**
+         *
+         */
+         
+        void SessionReader::ReadCellInfo(TiXmlElement *conditions)
+        {
+            m_cellInfo.clear();
+            m_cellInfo = GetCellInfoDefaults();
 
+            if (!conditions)
+            {
+                return;
+            }
+
+            TiXmlElement *cellInfoElement =
+                conditions->FirstChildElement("CELLMODELINFO");
+
+            if (cellInfoElement)
+            {
+                TiXmlElement *cellInfo =
+                    cellInfoElement->FirstChildElement("I");
+
+                while (cellInfo)
+                {
+                    std::stringstream tagcontent;
+                    tagcontent << *cellInfo;
+                    // read the property name
+                    ASSERTL0(cellInfo->Attribute("PROPERTY"),
+                             "Missing PROPERTY attribute in cell info "
+                             "XML element: \n\t'" + tagcontent.str() + "'");
+                    std::string cellProperty =
+                        cellInfo->Attribute("PROPERTY");
+                    ASSERTL0(!cellProperty.empty(),
+                             "PROPERTY attribute must be non-empty in XML "
+                             "element: \n\t'" + tagcontent.str() + "'");
+
+                    // make sure that cell property is capitalised
+                    std::string cellPropertyUpper =
+                        boost::to_upper_copy(cellProperty);
+
+                    // read the value
+                    ASSERTL0(cellInfo->Attribute("VALUE"),
+                            "Missing VALUE attribute in cell info "
+                            "XML element: \n\t'" + tagcontent.str() + "'");
+                    std::string cellValue    = cellInfo->Attribute("VALUE");
+                    ASSERTL0(!cellValue.empty(),
+                             "VALUE attribute must be non-empty in XML "
+                             "element: \n\t'" + tagcontent.str() + "'");
+
+                    // Set Variable
+                    m_cellInfo[cellPropertyUpper] = cellValue;
+                    cellInfo = cellInfo->NextSiblingElement("I");
+                }
+            }
+        }
 
         /**
          *
          */
+
         void SessionReader::ReadGlobalSysSolnInfo(TiXmlElement *conditions)
         {
             GetGloSysSolnList().clear();
@@ -2166,7 +2227,7 @@ namespace Nektar
                 std::stringstream tagcontent;
                 tagcontent << *VarInfo;
                 ASSERTL0(VarInfo->Attribute("VAR"),
-                         "Missing VAR attribute in GobalSysSolnInfo XML "
+                         "Missing VAR attribute in GlobalSysSolnInfo XML "
                          "element: \n\t'" + tagcontent.str() + "'");
 
                 std::string VarList = VarInfo->Attribute("VAR");
