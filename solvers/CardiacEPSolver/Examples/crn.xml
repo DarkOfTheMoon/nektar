@@ -518,16 +518,20 @@
             <P> Chi = 28 </P>   <!-- larger: wavefront moves slower -->
             <P> Cm = 0.125 </P> <!-- smaller: higher peak mag. of act. -->
             <P> Substeps = 4 </P> <!-- Courtemanche needs about dt=0.005 -->
+	    <P> o_max = 0.13341 </P>
         </PARAMETERS>
         
         <SOLVERINFO>
             <I PROPERTY="EQTYPE" VALUE="Monodomain" />
-            <I PROPERTY="CellModel" VALUE="CourtemancheRamirezNattel98" />
-            <I PROPERTY="CellModelVariant" VALUE="Original" />
             <I PROPERTY="Projection" VALUE="Continuous"/>
             <I PROPERTY="DiffusionAdvancement" VALUE="Implicit"/>
             <I PROPERTY="TimeIntegrationMethod" VALUE="IMEXdirk_3_4_3"/>
         </SOLVERINFO>
+
+        <CELLMODELINFO>
+            <I PROPERTY="CellModel" VALUE="CourtemancheRamirezNattel98" />
+            <I PROPERTY="CellModelVariant" VALUE="Original" />
+        </CELLMODELINFO>
         
         <VARIABLES>
             <V ID="0"> u </V>
@@ -548,7 +552,7 @@
         </FUNCTION>
         
         <FUNCTION NAME="IsotropicConductivity">
-            <E VAR="intensity" VALUE="0.13341" />
+            <E VAR="intensity" VALUE="1" />
         </FUNCTION>
         
         

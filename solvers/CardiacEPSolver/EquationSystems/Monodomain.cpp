@@ -88,7 +88,7 @@ namespace Nektar
         m_session->LoadParameter("Cm",         m_capMembrane);
 
         std::string vCellModel;
-        m_session->LoadSolverInfo("CELLMODEL", vCellModel, "");
+        m_session->LoadCellInfo("CELLMODEL", vCellModel, "");
 
         ASSERTL0(vCellModel != "", "Cell Model not specified.");
 

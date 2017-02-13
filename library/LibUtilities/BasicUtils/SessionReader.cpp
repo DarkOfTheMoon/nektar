@@ -861,7 +861,6 @@ namespace Nektar
             }
         }
 
-
         /**
          *
          */
@@ -903,10 +902,73 @@ namespace Nektar
             return false;
         }
 
+        /**
+         *
+         */
+
+        bool SessionReader::DefinesCellInfo(const std::string &pName) const
+        {
+            std::string vName = boost::to_upper_copy(pName);
+            CellInfoMap::const_iterator infoIter = m_cellInfo.find(vName);
+            return (infoIter != m_cellInfo.end());
+        }
 
         /**
          *
          */
+
+        const std::string& SessionReader::GetCellInfo(
+            const std::string &pProperty) const
+        {
+            std::string vProperty = boost::to_upper_copy(pProperty);
+            CellInfoMap::const_iterator iter = m_cellInfo.find(vProperty);
+
+            ASSERTL1(iter != m_cellInfo.end(),
+                     "Unable to find requested property: " + pProperty);
+
+            return iter->second;
+        }        
+
+        /**
+         *
+         */
+        void SessionReader::SetCellInfo(
+            const std::string &pProperty, const std::string &pValue)
+        {
+            std::string vProperty = boost::to_upper_copy(pProperty);
+            CellInfoMap::iterator iter = m_cellInfo.find(vProperty);
+
+            ASSERTL1(iter != m_cellInfo.end(),
+                     "Unable to find requested property: " + pProperty);
+
+            iter->second = pValue;
+        }
+
+        /**
+         *
+         */
+
+        void SessionReader::LoadCellInfo(
+            const std::string &pName,
+                  NekDouble   &pVar,
+            const NekDouble   &pDefault) const
+        {
+            std::string vName = boost::to_upper_copy(pName);
+            CellInfoMap::const_iterator infoIter = m_cellInfo.find(vName);
+            if(infoIter != m_parameters.end())
+            {
+                pVar = infoIter->second;
+            }
+            else
+            {
+                pVar = pDefault;
+            }
+        }
+
+        /**
+         *
+         */
+
         bool SessionReader::DefinesGlobalSysSolnInfo(const std::string &pVariable,
                                                      const std::string &pProperty) const
         {
