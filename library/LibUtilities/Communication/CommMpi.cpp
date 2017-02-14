@@ -47,6 +47,7 @@ using namespace std;
 #include <boost/serialization/queue.hpp>
 #include <boost/serialization/deque.hpp>
 #include <boost/serialization/vector.hpp>
+#include <boost/serialization/map.hpp>
 namespace mpi = boost::mpi;
 
 #include <LibUtilities/BasicUtils/SharedArray.hpp>
@@ -869,7 +870,7 @@ void CommMpi::RestoreState()
         // a) backup of the recovering process's data for its recovery
         // b) replacement copy of this processes backup data
         // c) queue of flags for recovering derived communicators on recovering process
-        const int nReq = 6;
+        const int nReq = 8;
         if (sendRecoveryData)
         {
             cout << "Restore: Sending " << m_dataBackup.size() << " backup items." << endl;
@@ -881,6 +882,8 @@ void CommMpi::RestoreState()
             reqs[3] = c.isend(send_rank, 3, m_derivedCommFlag);
             reqs[4] = c.isend(send_rank, 4, m_gsInitDataBackup);
             reqs[5] = c.isend(send_rank, 5, m_gsInitData);
+            reqs[6] = c.isend(send_rank, 6, m_stateDataBackup);
+            reqs[7] = c.isend(send_rank, 7, m_stateData);
             cout << "Restore: Waiting for data to be sent to " << send_rank << endl;
             mpi::wait_all(reqs, reqs + nReq);
             cout << "Restore: Complete" << endl;
@@ -898,6 +901,8 @@ void CommMpi::RestoreState()
             reqs[3] = c.irecv(recv_rank, 3, m_derivedCommFlagBackup);
             reqs[4] = c.irecv(recv_rank, 4, m_gsInitData);
             reqs[5] = c.irecv(recv_rank, 5, m_gsInitDataBackup);
+            reqs[6] = c.irecv(recv_rank, 6, m_stateData);
+            reqs[7] = c.irecv(recv_rank, 7, m_stateDataBackup);
             cout << "Restore: Waiting for data from " << recv_rank << endl;
             mpi::wait_all(reqs, reqs + nReq);
             cout << "Restore: Complete" << endl;
@@ -1052,6 +1057,95 @@ void CommMpi::v_EndTransactionLog()
     else
     {
         BackupState();
+    }
+}
+
+bool CommMpi::v_IsRecovering()
+{
+    return m_isRecovering;
+}
+
+void CommMpi::v_StateAdd(const std::string& name, const int& data)
+{
+    std::vector<char> x;
+    int dtsize = sizeof(int);
+    x.assign((char*)(&data), (char*)(&data)+dtsize);
+    m_stateData[name] = x;
+}
+
+void CommMpi::v_StateAdd(const std::string& name, const NekDouble* data, const int n)
+{
+    std::vector<char> x;
+    int dtsize = sizeof(NekDouble);
+    x.assign((char*)data, (char*)data+n*dtsize);
+    m_stateData[name] = x;
+}
+
+void CommMpi::v_StateGet(const std::string& name, int& data)
+{
+    ASSERTL0(m_stateData.count(name), "STATE ITEM DOES NOT EXIST!!");
+
+    std::vector<char> x = m_stateData[name];
+
+    memcpy(&data, &x[0], sizeof(int));
+}
+
+void CommMpi::v_StateGet(const std::string& name, NekDouble* data, const int n)
+{
+    ASSERTL0(m_stateData.count(name), "STATE ITEM DOES NOT EXIST!!");
+
+    std::vector<char> x = m_stateData[name];
+
+    memcpy(data, &x[0], n*sizeof(NekDouble));
+}
+
+void CommMpi::v_StateCommit()
+{
+    mpi::communicator c(m_comm, mpi::comm_attach);
+    mpi::request reqs[2];
+    int rank = c.rank();
+    int size = c.size();
+
+    if (size > 1)
+    {
+        int recv_rank = (rank + size - 1) % size;
+        int send_rank = (rank + 1) % size;
+        cout << "StateCommit: Sending " << m_stateData.size() << " items in queue." << endl;
+        reqs[0] = c.isend(send_rank, 0, m_stateData);
+        reqs[1] = c.irecv(recv_rank, 0, m_stateDataBackup);
+        cout << "StateCommit: Sent to " << send_rank << endl;
+        cout << "StateCommit: Waiting for data from " << recv_rank << endl;
+        mpi::wait_all(reqs, reqs + 2);
+        cout << "StateCommit: Received " << m_stateDataBackup.size() << " items." << endl;
+    }
+    else
+    {
+        cout << "StateCommit: Not backing up as comm of size 1" << endl;
+    }
+}
+
+void CommMpi::v_StateRestore()
+{
+    mpi::communicator c(m_comm, mpi::comm_attach);
+    mpi::request reqs[2];
+    int rank = c.rank();
+    int size = c.size();
+
+    if (size > 1)
+    {
+        int send_rank = (rank + size - 1) % size;
+        int recv_rank = (rank + 1) % size;
+        cout << "StateRestore: Sending " << m_stateDataBackup.size() << " items in queue." << endl;
+        reqs[0] = c.isend(send_rank, 0, m_stateDataBackup);
+        reqs[1] = c.irecv(recv_rank, 0, m_stateData);
+        cout << "StateRestore: Sent to " << send_rank << endl;
+        cout << "StateRestore: Waiting for data from " << recv_rank << endl;
+        mpi::wait_all(reqs, reqs + 2);
+        cout << "StateRestore: Received " << m_stateData.size() << " items." << endl;
+    }
+    else
+    {
+        cout << "StateRestore: Not restoring up as comm of size 1" << endl;
     }
 }
 

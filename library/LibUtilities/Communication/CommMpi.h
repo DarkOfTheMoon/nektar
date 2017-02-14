@@ -150,12 +150,21 @@ protected:
     virtual int v_EnrolSpare();
     virtual void v_BeginTransactionLog();
     virtual void v_EndTransactionLog();
+    virtual bool v_IsRecovering();
+
+    virtual void v_StateAdd(const std::string& name, const int& data);
+    virtual void v_StateAdd(const std::string& name, const NekDouble* data, const int n);
+    virtual void v_StateGet(const std::string& name, int& data);
+    virtual void v_StateGet(const std::string& name, NekDouble* data, const int n);
+    virtual void v_StateCommit();
+    virtual void v_StateRestore();
 
 private:
     typedef std::queue<std::vector<char>> StorageType;
     typedef std::list<CommMpiSharedPtr>   DerivedCommType;
     typedef std::queue<int>               DerivedCommFlagType;
     typedef std::vector<Gs::gs_data*>     GsHandlesType;
+    typedef std::map<std::string, std::vector<char>>   StateStorageType;
 
     MPI_Comm m_comm;
     MPI_Comm m_agreecomm;
@@ -173,7 +182,8 @@ private:
     StorageType m_gsInitDataBackup;
     GsHandlesType::iterator m_gsHandlesRestoreIt;
     GsHandlesType m_gsHandles; ///< Handles to Gs library
-
+    StateStorageType m_stateData;
+    StateStorageType m_stateDataBackup;
 
     static void HandleMpiError(MPI_Comm* pcomm, int* perr, ...);
 

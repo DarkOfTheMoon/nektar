@@ -40,6 +40,15 @@
 #include <SpatialDomains/MeshGraph.h>
 #include <MultiRegions/ContField2D.h>
 
+#include <boost/mpi/environment.hpp>
+#include <boost/mpi/communicator.hpp>
+#include <boost/mpi/nonblocking.hpp>
+#include <boost/serialization/string.hpp>
+#include <boost/serialization/queue.hpp>
+#include <boost/serialization/deque.hpp>
+#include <boost/serialization/vector.hpp>
+namespace mpi = boost::mpi;
+
 using namespace std;
 using namespace Nektar;
 
@@ -89,10 +98,17 @@ int main(int argc, char *argv[])
         // Zero field coefficients for initial guess for linear solver.
         Vmath::Zero(field->GetNcoeffs(), field->UpdateCoeffs(), 1);
 
-        session->GetComm()->EndTransactionLog();
+//        int n = 0;
+//        if (session->GetComm()->IsRecovering())
+//        {
+////            session->GetComm()->StateRestore();
+////            session->GetComm()->StateGet("n", n);
+////            session->GetComm()->StateGet("Field", &field->UpdatePhys()[0], nq);
+//            n++;
+//        }
 
         // Time integrate using backward Euler
-        for (unsigned int n = 0; n < nSteps; ++n)
+        for (int n = 0 ; n < nSteps; ++n)
         {
             cout << "Time step: " << n << endl;
             try {
@@ -103,15 +119,46 @@ int main(int argc, char *argv[])
                                  NullFlagList, factors);
 
                 field->BwdTrans(field->GetCoeffs(), field->UpdatePhys());
+
+                if (session->GetComm()->IsRecovering())
+                {
+                    cout << "Restoring field data back to last step" << endl;
+                    session->GetComm()->StateGet("n", n);
+                    session->GetComm()->StateGet("Field", &field->UpdatePhys()[0], nq);
+                }
+                else
+                {
+                    cout << "Add field state data" << endl;
+                    session->GetComm()->StateAdd("Field", &field->GetPhys()[0], nq);
+                    cout << "Add time step data" << endl;
+                    session->GetComm()->StateAdd("n", n);
+                    cout << "Commit state" << endl;
+                    session->GetComm()->StateCommit();
+                }
+
+                if (n == 0 || session->GetComm()->IsRecovering()) {
+                    cout << "Ending transaction log" << endl;
+                    session->GetComm()->EndTransactionLog();
+                }
             } catch (...) {
                 try {
                     cout << "Caught an error - trying to invoke a spare." << endl;
                     int x = session->GetComm()->EnrolSpare();
                     cout << "Enroled spare, result: " << x << endl;
-                    --n; // need to roll back to previous time step here...
-                    Vmath::Smul(nq, -delta_t*epsilon, field->GetPhys(),    1,
-                                                          field->UpdatePhys(), 1);
-
+//                    --n; // need to roll back to previous time step here...
+//                    Vmath::Smul(nq, -delta_t*epsilon, field->GetPhys(),    1,
+//                                                          field->UpdatePhys(), 1);
+//                    cout << "Recover state" << endl;
+//                    session->GetComm()->StateGet("Field",
+//                                    &field->UpdatePhys()[0],
+//                                    field->GetTotPoints());
+//                    session->GetComm()->StateGet("n", n);
+//                    cout << "Finished recovering state" << endl;
+                    cout << "Restoring last state" << endl;
+//                    session->GetComm()->StateRestore();
+                    session->GetComm()->StateGet("n", n);
+                    session->GetComm()->StateGet("Field", &field->UpdatePhys()[0], nq);
+                    cout << "Completed restoring last state" << endl;
                 } catch (...) {
                     cout << "ERROR WHEN PERFORMING ENROLSPARE!!!" << endl;
                     exit(-1);

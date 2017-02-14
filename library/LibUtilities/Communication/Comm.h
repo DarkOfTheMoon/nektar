@@ -146,6 +146,14 @@ public:
     LIB_UTILITIES_EXPORT inline int EnrolSpare();
     LIB_UTILITIES_EXPORT inline void BeginTransactionLog();
     LIB_UTILITIES_EXPORT inline void EndTransactionLog();
+    LIB_UTILITIES_EXPORT inline bool IsRecovering();
+
+    LIB_UTILITIES_EXPORT inline void StateAdd(const std::string& name, const int& data);
+    LIB_UTILITIES_EXPORT inline void StateAdd(const std::string& name, const NekDouble* data, const int n);
+    LIB_UTILITIES_EXPORT inline void StateGet(const std::string& name, int& data);
+    LIB_UTILITIES_EXPORT inline void StateGet(const std::string& name, NekDouble* data, const int n);
+    LIB_UTILITIES_EXPORT inline void StateCommit();
+    LIB_UTILITIES_EXPORT inline void StateRestore();
 
 protected:
     int m_size;                 ///< Number of processes
@@ -208,6 +216,14 @@ protected:
     virtual int v_EnrolSpare() = 0;
     virtual void v_BeginTransactionLog() {}
     virtual void v_EndTransactionLog() {}
+    virtual bool v_IsRecovering() { return false; }
+
+    virtual void v_StateAdd(const std::string& name, const int& data) {}
+    virtual void v_StateAdd(const std::string& name, const NekDouble* data, const int n) {}
+    virtual void v_StateGet(const std::string& name, int& data) {}
+    virtual void v_StateGet(const std::string& name, NekDouble* data, const int n) {}
+    virtual void v_StateCommit() {}
+    virtual void v_StateRestore() {}
 
 };
 
@@ -534,6 +550,41 @@ inline void Comm::BeginTransactionLog()
 inline void Comm::EndTransactionLog()
 {
     v_EndTransactionLog();
+}
+
+inline bool Comm::IsRecovering()
+{
+    return v_IsRecovering();
+}
+
+inline void Comm::StateAdd(const std::string& name, const int& data)
+{
+    v_StateAdd(name, data);
+}
+
+inline void Comm::StateAdd(const std::string& name, const NekDouble* data, const int n)
+{
+    v_StateAdd(name, data, n);
+}
+
+inline void Comm::StateGet(const std::string& name, int& data)
+{
+    v_StateGet(name, data);
+}
+
+inline void Comm::StateGet(const std::string& name, NekDouble* data, const int n)
+{
+    v_StateGet(name, data, n);
+}
+
+inline void Comm::StateCommit()
+{
+    v_StateCommit();
+}
+
+inline void Comm::StateRestore()
+{
+    v_StateRestore();
 }
 
 }
