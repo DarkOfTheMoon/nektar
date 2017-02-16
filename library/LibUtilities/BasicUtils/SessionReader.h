@@ -57,7 +57,6 @@ namespace Nektar
     {
         typedef std::map<std::string, std::string>  SolverInfoMap;
         typedef std::map<std::string, NekDouble>    ParameterMap;
-        typedef std::map<std::string, std::string>  CellInfoMap;
         typedef std::map<std::string, std::string>  GeometricInfoMap;
         typedef std::map<std::string, std::string>  ExpressionMap;
         typedef std::vector<std::string>            VariableList;
@@ -283,22 +282,7 @@ namespace Nektar
                 RegisterDefaultSolverInfo(
                 const std::string &pName,
                 const std::string &pValue);
-
-            /* ----BioCellModelInfo ------ */
-            /// Checks if a cell info property is specified.
-            LIB_UTILITIES_EXPORT bool DefinesCellInfo(
-                const std::string &name) const;
-            /// Returns the value of the specified cell info property.
-            LIB_UTILITIES_EXPORT const std::string& GetCellInfo(
-                const std::string &pProperty) const;
-            /// Sets the value of the specified cell info property.
-            LIB_UTILITIES_EXPORT void SetCellInfo(
-                const std::string &pProperty, const std::string &pValue);
-            /// Check for and load a cell info property.
-            LIB_UTILITIES_EXPORT void LoadCellInfo(
-                const std::string &name,
-                      std::string &var,
-                const std::string &def = "") const;
+                
 
             /* ----GlobalSysSolnInfo ----- */
             LIB_UTILITIES_EXPORT bool DefinesGlobalSysSolnInfo(
@@ -459,8 +443,6 @@ namespace Nektar
             ParameterMap                              m_parameters;
             /// Solver information properties.
             SolverInfoMap                             m_solverInfo;
-            /// Biological cell model information properties.
-            CellInfoMap                               m_cellInfo; // Is the word 'cell' ambiguous?
             /// Geometric information properties.
             GeometricInfoMap                          m_geometricInfo;
             /// Expressions.
@@ -536,8 +518,6 @@ namespace Nektar
             LIB_UTILITIES_EXPORT void ReadParameters(TiXmlElement *conditions);
             /// Reads the SOLVERINFO section of the XML document.
             LIB_UTILITIES_EXPORT void ReadSolverInfo(TiXmlElement *conditions);
-            /// Reads the CELLMODELINFO section of the XML document.
-            LIB_UTILITIES_EXPORT void ReadCellInfo(TiXmlElement *conditions);
             /// Reads the GLOBALSYSSOLNINFO section of the XML document.
             LIB_UTILITIES_EXPORT void ReadGlobalSysSolnInfo(
                     TiXmlElement *conditions);

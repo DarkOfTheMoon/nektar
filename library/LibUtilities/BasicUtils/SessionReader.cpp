@@ -143,13 +143,6 @@ namespace Nektar
             return solverInfoMap;
         }
 
-        CellInfoMap& SessionReader::GetCellInfoDefaults()
-        {
-            static CellInfoMap cellInfoMap;
-            return cellInfoMap;
-        }
-
-
         /**
          * List of values for GlobalSysSoln parameters to be used to override
          * details given in SolverInfo
@@ -908,68 +901,6 @@ namespace Nektar
             return false;
         }
 
-        /**
-         *
-         */
-
-        bool SessionReader::DefinesCellInfo(const std::string &pName) const
-        {
-            std::string vName = boost::to_upper_copy(pName);
-            CellInfoMap::const_iterator infoIter = m_cellInfo.find(vName);
-            return (infoIter != m_cellInfo.end());
-        }
-
-        /**
-         *
-         */
-
-        const std::string& SessionReader::GetCellInfo(
-            const std::string &pProperty) const
-        {
-            std::string vProperty = boost::to_upper_copy(pProperty);
-            CellInfoMap::const_iterator iter = m_cellInfo.find(vProperty);
-
-            ASSERTL1(iter != m_cellInfo.end(),
-                     "Unable to find requested property: " + pProperty);
-
-            return iter->second;
-        }        
-
-        /**
-         *
-         */
-        void SessionReader::SetCellInfo(
-            const std::string &pProperty, const std::string &pValue)
-        {
-            std::string vProperty = boost::to_upper_copy(pProperty);
-            CellInfoMap::iterator iter = m_cellInfo.find(vProperty);
-
-            ASSERTL1(iter != m_cellInfo.end(),
-                     "Unable to find requested property: " + pProperty);
-
-            iter->second = pValue;
-        }
-
-        /**
-         *
-         */
-
-        void SessionReader::LoadCellInfo(
-            const std::string &pName,
-                  NekDouble   &pVar,
-            const NekDouble   &pDefault) const
-        {
-            std::string vName = boost::to_upper_copy(pName);
-            CellInfoMap::const_iterator infoIter = m_cellInfo.find(vName);
-            if(infoIter != m_parameters.end())
-            {
-                pVar = infoIter->second;
-            }
-            else
-            {
-                pVar = pDefault;
-            }
-        }
 
         /**
          *
@@ -2140,62 +2071,6 @@ namespace Nektar
                     m_solverInfo["GLOBALSYSSOLN"] ==
                         "PETScMultiLevelStaticCond",
                     "A parallel solver must be used when run in parallel.");
-            }
-        }
-
-        /**
-         *
-         */
-         
-        void SessionReader::ReadCellInfo(TiXmlElement *conditions)
-        {
-            m_cellInfo.clear();
-            m_cellInfo = GetCellInfoDefaults();
-
-            if (!conditions)
-            {
-                return;
-            }
-
-            TiXmlElement *cellInfoElement =
-                conditions->FirstChildElement("CELLMODELINFO");
-
-            if (cellInfoElement)
-            {
-                TiXmlElement *cellInfo =
-                    cellInfoElement->FirstChildElement("I");
-
-                while (cellInfo)
-                {
-                    std::stringstream tagcontent;
-                    tagcontent << *cellInfo;
-                    // read the property name
-                    ASSERTL0(cellInfo->Attribute("PROPERTY"),
-                             "Missing PROPERTY attribute in cell info "
-                             "XML element: \n\t'" + tagcontent.str() + "'");
-                    std::string cellProperty =
-                        cellInfo->Attribute("PROPERTY");
-                    ASSERTL0(!cellProperty.empty(),
-                             "PROPERTY attribute must be non-empty in XML "
-                             "element: \n\t'" + tagcontent.str() + "'");
-
-                    // make sure that cell property is capitalised
-                    std::string cellPropertyUpper =
-                        boost::to_upper_copy(cellProperty);
-
-                    // read the value
-                    ASSERTL0(cellInfo->Attribute("VALUE"),
-                            "Missing VALUE attribute in cell info "
-                            "XML element: \n\t'" + tagcontent.str() + "'");
-                    std::string cellValue    = cellInfo->Attribute("VALUE");
-                    ASSERTL0(!cellValue.empty(),
-                             "VALUE attribute must be non-empty in XML "
-                             "element: \n\t'" + tagcontent.str() + "'");
-
-                    // Set Variable
-                    m_cellInfo[cellPropertyUpper] = cellValue;
-                    cellInfo = cellInfo->NextSiblingElement("I");
-                }
             }
         }
 

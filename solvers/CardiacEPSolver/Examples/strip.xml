@@ -748,11 +748,11 @@
             <I PROPERTY="GlobalSysSoln" VALUE="IterativeStaticCond" />
         </SOLVERINFO>
             
-        <CELLMODELINFO>
+        <!--<CELLMODELINFO>
             <I PROPERTY="CellModel" VALUE="CourtemancheRamirezNattel98" />
             <I PROPERTY="CellModelVariant" VALUE="Original" />
-        </CELLMODELINFO>
-        
+        </CELLMODELINFO> -->
+
         <VARIABLES>
             <V ID="0"> u </V>
         </VARIABLES>
@@ -776,6 +776,13 @@
         </FUNCTION>
         
     </CONDITIONS>
+
+    <CELLMODEL>
+        <NAME>CourtemancheRamirezNattel98</NAME>
+        <VARIANT>Original</VARIANT>
+        <E VAR='g_Na'/>
+    </CELLMODEL>
+        
     
     <STIMULI>
         <STIMULUS ID="0" TYPE = "StimulusRect">
