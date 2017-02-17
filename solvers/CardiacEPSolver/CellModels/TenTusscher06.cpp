@@ -60,7 +60,7 @@ std::string TenTusscher06::lookupIds[4] = {
 
 std::string TenTusscher06::def =
         LibUtilities::SessionReader::RegisterDefaultSolverInfo(
-                "CellModelVariant", "eEpicardium");
+                "CellModelVariant", "Epicardium");
 
 /**
  *
@@ -70,6 +70,7 @@ TenTusscher06::TenTusscher06(
         const MultiRegions::ExpListSharedPtr& pField):
                     CellModel(pSession, pField)
 {
+    // Declare map here
     model_variant = pSession->GetSolverInfoAsEnum<
             TenTusscher06::Variants>("CellModelVariant");
 

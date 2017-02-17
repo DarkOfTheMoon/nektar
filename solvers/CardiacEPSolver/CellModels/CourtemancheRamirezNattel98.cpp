@@ -48,7 +48,7 @@ namespace Nektar
                         "CourtemancheRamirezNattel98",
                         CourtemancheRamirezNattel98::create,
                          "Ionic model of human atrial cell electrophysiology.");
-    
+    /* Old Code
     // Register cell model variants
     std::string CourtemancheRamirezNattel98::lookupIds[2] = {
             LibUtilities::SessionReader::RegisterEnumValue("CellModelVariant",
@@ -61,7 +61,8 @@ namespace Nektar
     std::string CourtemancheRamirezNattel98::def =
             LibUtilities::SessionReader::RegisterDefaultSolverInfo(
                     "CellModelVariant", "Original");
-
+    */ 
+    
     /**
     *
     */
@@ -70,8 +71,33 @@ namespace Nektar
                 const MultiRegions::ExpListSharedPtr& pField)
             : CellModel(pSession, pField)
     {
-        model_variant = pSession->GetSolverInfoAsEnum<
-                CourtemancheRamirezNattel98::Variants>("CellModelVariant");
+        std::map<string,Variants> VariantMap;
+        VariantMap["Original"] = eOriginal;
+        VariantMap["AF"] = eAF;
+
+        //model_variant = pSession->GetSolverInfoAsEnum<
+        //        CourtemancheRamirezNattel98::Variants>("CellModelVariant");
+
+        TiXmlElement* vCellModel = m_session->GetElement("Nektar/CellModel");
+        ASSERTL0(vCellModel, "Cell Model information missing from XML.");
+
+        std::string vCellModelVariant = vCellModel->FirstChildElement("VARIANT")->GetText();
+        
+        if (VariantMap.count(vCellModelVariant) == 0) {
+            vCellModelVariant = "default";
+        }
+
+        model_variant = VariantMap[vCellModelVariant];
+
+        /* Alternative solution
+        if (VariantMap.count(vCellModelVariant) == 1) {
+            model_variant = VariantMap[vCellModelVariant];
+        }
+        else {
+            // Use default
+            model_variant = VariantMap["Original"];
+        }
+        */
 
         C_m = 100;      // picoF
         g_Na = 7.8;     // nanoS_per_picoF
@@ -573,7 +599,7 @@ namespace Nektar
     void CourtemancheRamirezNattel98::v_GenerateSummary(SummaryList& s)
     {
         SolverUtils::AddSummaryItem(s, "Cell model","CourtemancheRamirezNattel98");
-        SolverUtils::AddSummaryItem(s, "Cell model var.", lookupIds[model_variant]);
+        //SolverUtils::AddSummaryItem(s, "Cell model var.", lookupIds[model_variant]);
     }
 
 

@@ -518,7 +518,7 @@
             <P> Chi = 28 </P>   <!-- larger: wavefront moves slower -->
             <P> Cm = 0.125 </P> <!-- smaller: higher peak mag. of act. -->
             <P> Substeps = 4 </P> <!-- Courtemanche needs about dt=0.005 -->
-	    <P> o_max = 0.13341 </P>
+	      <P> o_max = 0.13341 </P>
         </PARAMETERS>
         
         <SOLVERINFO>
@@ -527,11 +527,6 @@
             <I PROPERTY="DiffusionAdvancement" VALUE="Implicit"/>
             <I PROPERTY="TimeIntegrationMethod" VALUE="IMEXdirk_3_4_3"/>
         </SOLVERINFO>
-
-        <CELLMODELINFO>
-            <I PROPERTY="CellModel" VALUE="CourtemancheRamirezNattel98" />
-            <I PROPERTY="CellModelVariant" VALUE="Original" />
-        </CELLMODELINFO>
         
         <VARIABLES>
             <V ID="0"> u </V>
@@ -558,6 +553,12 @@
         
     </CONDITIONS>
     
+    <CELLMODEL>
+        <NAME>CourtemancheRamirezNattel98</NAME>
+        <VARIANT>Original</VARIANT>
+        <E VAR='g_Na'/>
+    </CELLMODEL>
+
     <STIMULI>
         <STIMULUS ID="0" TYPE = "StimulusRect">
             <p_x1> 0.3</p_x1>

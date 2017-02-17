@@ -80,7 +80,7 @@ namespace Nektar
 
     private:
         NekDouble C_m;
-        NekDouble g_Na;
+        NekDouble g_Na; // Vector form: Array<OneD, NekDouble> g_Na;
         NekDouble g_K1;
         NekDouble g_to;
         NekDouble g_Kr;

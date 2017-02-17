@@ -87,13 +87,21 @@ namespace Nektar
         m_session->LoadParameter("Chi",        m_chi);
         m_session->LoadParameter("Cm",         m_capMembrane);
 
-        std::string vCellModel;
-        m_session->LoadCellInfo("CELLMODEL", vCellModel, "");
+        //Old code:
+        //std::string vCellModel;
+        //m_session->LoadSolverInfo("CELLMODEL", vCellModel, "");
+        
+        /** __New Code Starts Here__ */
+        //
 
-        ASSERTL0(vCellModel != "", "Cell Model not specified.");
+        TiXmlElement* vCellModel = m_session->GetElement("Nektar/CellModel");
+        ASSERTL0(vCellModel, "Cell Model information missing from XML.")
+
+        std::string vCellModelName = vCellModel->FirstChildElement("NAME")->GetText();
+        ASSERTL0(vCellModelName != "", "Cell Model not specified.");
 
         m_cell = GetCellModelFactory().CreateInstance(
-                                        vCellModel, m_session, m_fields[0]);
+                                        vCellModelName, m_session, m_fields[0]);
 
         m_intVariables.push_back(0);
 

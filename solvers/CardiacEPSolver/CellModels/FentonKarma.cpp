@@ -49,7 +49,7 @@ namespace Nektar
                                                     FentonKarma::create,
                                                     "Phenomenological Model.");
 
-    // Register cell model variants
+    /*// Register cell model variants
     std::string FentonKarma::lookupIds[10] = {
             LibUtilities::SessionReader::RegisterEnumValue("CellModelVariant",
                     "BR",   FentonKarma::eBR),
@@ -77,7 +77,7 @@ namespace Nektar
     std::string FentonKarma::def =
             LibUtilities::SessionReader::RegisterDefaultSolverInfo(
                     "CellModelVariant","BR");
-    
+    */
     /**
      * Initialise Fenton-Karma model parameters.
      * k1 is k in the original model.
@@ -90,8 +90,36 @@ namespace Nektar
             const MultiRegions::ExpListSharedPtr& pField)
         : CellModel(pSession, pField)
     {
+        std::map<string,Variants> VariantMap;
+        VariantMap["default"] = eBR;
+        VariantMap["BR"] = eBR;
+        VariantMap["MBR"] = eMBR;
+        VariantMap["MLR1"] = eMLR1;
+        VariantMap["GP"] = eGP;
+        VariantMap["CF1"] = eCF1;
+        VariantMap["CF2a"] = eCF2a;
+        VariantMap["CF2b"] = eCF2b;
+        VariantMap["CF2c"] = eCF2c;
+        VariantMap["CF3a"] = eCF3a;
+        VariantMap["CF3b"] = eCF3b;
+
+        //model_variant = pSession->GetSolverInfoAsEnum<
+        //        CourtemancheRamirezNattel98::Variants>("CellModelVariant");
+
+        TiXmlElement* vCellModel = m_session->GetElement("Nektar/CellModel");
+        ASSERTL0(vCellModel, "Cell Model information missing from XML.");
+
+        std::string vCellModelVariant = vCellModel->FirstChildElement("VARIANT")->GetText();
+        if (VariantMap.count(vCellModelVariant) == 0) {
+            vCellModelVariant = "default";
+        }
+        
+        model_variant = VariantMap[vCellModelVariant];
+        
+        /**
         model_variant = pSession->GetSolverInfoAsEnum<FentonKarma::Variants>(
                                                             "CellModelVariant");
+        */
 
         C_m  =  1; // picoF
         V_0  = -85;
@@ -392,7 +420,7 @@ namespace Nektar
     void FentonKarma::v_GenerateSummary(SummaryList& s)
     {
         SolverUtils::AddSummaryItem(s, "Cell model", "Fenton Karma");
-        SolverUtils::AddSummaryItem(s, "Cell model var.", lookupIds[model_variant]);
+        //SolverUtils::AddSummaryItem(s, "Cell model var.", lookupIds[model_variant]);
     }
     
     
