@@ -182,6 +182,138 @@ class BwdTrans_IterPerExp : public Operator
         }
 };
 
+class BwdTrans_IterPerExp_Hex : public Operator
+{
+    public:
+        OPERATOR_CREATE(BwdTrans_IterPerExp_Hex)
+
+        virtual ~BwdTrans_IterPerExp_Hex()
+        {
+        }
+
+        virtual void operator()(
+                const Array<OneD, const NekDouble> &input,
+                      Array<OneD,       NekDouble> &output,
+                      Array<OneD,       NekDouble> &output1,
+                      Array<OneD,       NekDouble> &output2,
+                      Array<OneD,       NekDouble> &wsp)
+        {
+            const int nqTot = m_nquad0 * m_nquad1 * m_nquad2;
+            const int nmTot = m_nmodes0 * m_nmodes1 * m_nmodes2;
+            const int nm12 = m_nmodes1 * m_nmodes2;
+            const int nq0nm1 = m_nquad0 * m_nmodes1;
+            const int nq01 = m_nquad0 * m_nquad1;
+
+            const NekDouble *in = &input[0];
+            NekDouble *out = &output[0], *tmp1, *tmp2;
+
+            for (int i = 0; i < m_numElmt; ++i)
+            {
+                tmp1 = &m_wsp[0];
+                tmp2 = &m_wsp2[0];
+
+                // Direction 1
+                Blas::Dgemm('N', 'N', m_nquad0, nm12, m_nmodes0,
+                            1.0, m_base0.get(), m_nquad0,
+                                 in,            m_nmodes0,
+                            0.0, tmp1,          m_nquad0);
+
+                // Loop for direction 2
+                for (int r = 0; r < m_nmodes2; ++r)
+                {
+                    Blas::Dgemm('N', 'N', m_nquad0, m_nquad1, m_nmodes1,
+                                1.0, tmp1,           m_nquad0,
+                                     m_base1T.get(), m_nmodes1,
+                                0.0, tmp2,           m_nquad0);
+
+                    tmp1 += nq0nm1;
+                    tmp2 += nq01;
+                }
+
+                // Third direction
+                Blas::Dgemm('N', 'N', nq01, m_nquad2, m_nmodes2,
+                            1.0, &m_wsp2[0],     nq01,
+                                 m_base2T.get(), m_nmodes2,
+                            0.0, out,            nq01);
+
+                in  += nmTot;
+                out += nqTot;
+            }
+        }
+
+        virtual void operator()(
+                      int                           dir,
+                const Array<OneD, const NekDouble> &input,
+                      Array<OneD,       NekDouble> &output,
+                      Array<OneD,       NekDouble> &wsp)
+        {
+            ASSERTL0(false, "Not valid for this operator.");
+        }
+
+    protected:
+        const int                       m_nquad0;
+        const int                       m_nquad1;
+        const int                       m_nquad2;
+        const int                       m_nmodes0;
+        const int                       m_nmodes1;
+        const int                       m_nmodes2;
+        Array<OneD, const NekDouble>    m_base0;
+        Array<OneD, NekDouble>          m_base1T;
+        Array<OneD, NekDouble>          m_base2T;
+        const bool                      m_colldir0;
+        const bool                      m_colldir1;
+        const bool                      m_colldir2;
+        std::vector<NekDouble>          m_wsp;
+        std::vector<NekDouble>          m_wsp2;
+
+    private:
+        BwdTrans_IterPerExp_Hex(
+                vector<StdRegions::StdExpansionSharedPtr> pCollExp,
+                CoalescedGeomDataSharedPtr                pGeomData)
+            : Operator  (pCollExp, pGeomData),
+              m_nquad0  (pCollExp[0]->GetNumPoints(0)),
+              m_nquad1  (pCollExp[0]->GetNumPoints(1)),
+              m_nquad2  (pCollExp[0]->GetNumPoints(2)),
+              m_nmodes0 (pCollExp[0]->GetBasisNumModes(0)),
+              m_nmodes1 (pCollExp[0]->GetBasisNumModes(1)),
+              m_nmodes2 (pCollExp[0]->GetBasisNumModes(2)),
+              m_base0   (pCollExp[0]->GetBasis(0)->GetBdata()),
+              m_base1T  (m_nmodes1 * m_nquad1),
+              m_base2T  (m_nmodes2 * m_nquad2),
+              m_colldir0(pCollExp[0]->GetBasis(0)->Collocation()),
+              m_colldir1(pCollExp[0]->GetBasis(1)->Collocation()),
+              m_colldir2(pCollExp[0]->GetBasis(2)->Collocation())
+        {
+            m_wspSize =  m_numElmt*m_nmodes0*(m_nmodes1*m_nquad2 +
+                                              m_nquad1*m_nquad2);
+
+            m_wsp .resize(m_nquad0 * m_nmodes1 * m_nmodes2);
+            m_wsp2.resize(m_nquad0 * m_nquad1 * m_nmodes2);
+
+            // Pre-transpose base1/base2
+            Array<OneD, const NekDouble> base1 =
+                pCollExp[0]->GetBasis(1)->GetBdata();
+            Array<OneD, const NekDouble> base2 =
+                pCollExp[0]->GetBasis(2)->GetBdata();
+
+            for (int j = 0; j < m_nmodes1; ++j)
+            {
+                for (int i = 0; i < m_nquad1; ++i)
+                {
+                    m_base1T[j + i * m_nmodes1] = base1[i + j * m_nquad1];
+                }
+            }
+
+            for (int j = 0; j < m_nmodes2; ++j)
+            {
+                for (int i = 0; i < m_nquad2; ++i)
+                {
+                    m_base2T[j + i * m_nmodes2] = base2[i + j * m_nquad2];
+                }
+            }
+        }
+};
+
 /// Factory initialisation for the BwdTrans_IterPerExp operators
 OperatorKey BwdTrans_IterPerExp::m_typeArr[] = {
     GetOperatorFactory().RegisterCreatorFunction(
@@ -213,7 +345,7 @@ OperatorKey BwdTrans_IterPerExp::m_typeArr[] = {
         BwdTrans_IterPerExp::create, "BwdTrans_IterPerExp_NodalPrism"),
     GetOperatorFactory().RegisterCreatorFunction(
         OperatorKey(eHexahedron,    eBwdTrans, eIterPerExp,false),
-        BwdTrans_IterPerExp::create, "BwdTrans_IterPerExp_Hex"),
+        BwdTrans_IterPerExp_Hex::create, "BwdTrans_IterPerExp_Hex"),
 };
 
 
@@ -591,17 +723,14 @@ OperatorKey BwdTrans_SumFac_Tri::m_type = GetOperatorFactory().
         OperatorKey(eTriangle, eBwdTrans, eSumFac,false),
         BwdTrans_SumFac_Tri::create, "BwdTrans_SumFac_Tri");
 
-
 /// Backward transform operator using sum-factorisation (Hex)
 class BwdTrans_SumFac_Hex : public Operator
 {
     public:
         OPERATOR_CREATE(BwdTrans_SumFac_Hex)
-
         virtual ~BwdTrans_SumFac_Hex()
         {
         }
-
         virtual void operator()(
                 const Array<OneD, const NekDouble> &input,
                       Array<OneD,       NekDouble> &output,
@@ -609,44 +738,40 @@ class BwdTrans_SumFac_Hex : public Operator
                       Array<OneD,       NekDouble> &output2,
                       Array<OneD,       NekDouble> &wsp)
         {
-
-            // BwdTrans in each direction using DGEMM
-            int cnt = 0, cnt2 = 0;
-            int nqTot = m_nquad0 * m_nquad1 * m_nquad2;
-            int nmTot = m_nmodes0 * m_nmodes1 * m_nmodes2;
-
-            for (int i = 0; i < m_numElmt; ++i)
+            if(m_colldir0 && m_colldir1 && m_colldir2)
             {
-                Blas::Dgemm('N', 'N', m_nmodes1*m_nmodes2, m_nquad0, m_nmodes0,
-                            1.0, &input[0],     m_nmodes1*m_nmodes2,
-                                 m_base0.get(), m_nmodes0,
-                            0.0, &m_wsp[0],     m_nmodes1*m_nmodes2);
-                Blas::Dgemm('N', 'N', m_nquad0*m_nmodes2, m_nquad1, m_nmodes1,
-                            1.0, &m_wsp[0],     m_nquad0*m_nmodes2,
-                                 m_base1.get(), m_nmodes1,
-                            0.0, &m_wsp2[0],    m_nquad0*m_nmodes2);
-                Blas::Dgemm('N', 'N', m_nquad0*m_nquad1, m_nquad2, m_nmodes2,
-                            1.0, &m_wsp2[0],    m_nquad0*m_nquad1,
-                                 m_base2.get(), m_nmodes2,
-                            0.0, &output[0],    m_nquad0*m_nquad1);
-                // Blas::Dgemm('T','T', m_nmodes1*m_nmodes2, m_nquad0, m_nmodes0,
-                //             1.0, &input[0],     m_nmodes0,
-                //                  m_base0.get(), m_nquad0,
-                //             0.0, &m_wsp[0],     m_nmodes1*m_nmodes2);
-                // Blas::Dgemm('T','T', m_nquad0*m_nmodes2, m_nquad1, m_nmodes1,
-                //             1.0, &m_wsp[0],     m_nmodes1,
-                //                  m_base1.get(), m_nquad1,
-                //             0.0, &m_wsp2[0],    m_nquad0*m_nmodes2);
-                // Blas::Dgemm('T','T', m_nquad0*m_nquad1, m_nquad2, m_nmodes2,
-                //             1.0, &m_wsp2[0],    m_nmodes2,
-                //                  m_base2.get(), m_nquad2,
-                //             0.0, &output[0],    m_nquad0*m_nquad1);
-
-                cnt  += nqTot;
-                cnt2 += nmTot;
+                Vmath::Vcopy(m_numElmt * m_nmodes0 * m_nmodes1 * m_nmodes2,
+                             input.get(),  1,
+                             output.get(), 1);
+            }
+            else
+            {
+                ASSERTL1(wsp.num_elements() == m_wspSize,
+                         "Incorrect workspace size");
+                // Assign second half of workspace for 2nd DGEMM operation.
+                int totmodes  = m_nmodes0*m_nmodes1*m_nmodes2;
+                Array<OneD, NekDouble> wsp2
+                                = wsp + m_nmodes0*m_nmodes1*m_nquad2*m_numElmt;
+                //loop over elements  and do bwd trans wrt c
+                for(int n = 0; n < m_numElmt; ++n)
+                {
+                    Blas::Dgemm('N', 'T', m_nquad2, m_nmodes0*m_nmodes1,
+                                m_nmodes2, 1.0, m_base2.get(), m_nquad2,
+                                &input[n*totmodes], m_nmodes0*m_nmodes1, 0.0,
+                                &wsp[n*m_nquad2], m_nquad2*m_numElmt);
+                }
+                // trans wrt b
+                Blas::Dgemm('N', 'T', m_nquad1, m_nquad2*m_numElmt*m_nmodes0,
+                            m_nmodes1, 1.0, m_base1.get(), m_nquad1,
+                            wsp.get(), m_nquad2*m_numElmt*m_nmodes0, 0.0,
+                            wsp2.get(), m_nquad1);
+                // trans wrt a
+                Blas::Dgemm('N', 'T', m_nquad0, m_nquad1*m_nquad2*m_numElmt,
+                            m_nmodes0, 1.0, m_base0.get(), m_nquad0,
+                            wsp2.get(), m_nquad1*m_nquad2*m_numElmt, 0.0,
+                            output.get(), m_nquad0);
             }
         }
-
         virtual void operator()(
                       int                           dir,
                 const Array<OneD, const NekDouble> &input,
@@ -655,7 +780,6 @@ class BwdTrans_SumFac_Hex : public Operator
         {
             ASSERTL0(false, "Not valid for this operator.");
         }
-
     protected:
         const int                       m_nquad0;
         const int                       m_nquad1;
@@ -669,8 +793,6 @@ class BwdTrans_SumFac_Hex : public Operator
         const bool                      m_colldir0;
         const bool                      m_colldir1;
         const bool                      m_colldir2;
-    Array<OneD, NekDouble> m_wsp, m_wsp2;
-
     private:
         BwdTrans_SumFac_Hex(
                 vector<StdRegions::StdExpansionSharedPtr> pCollExp,
@@ -691,9 +813,6 @@ class BwdTrans_SumFac_Hex : public Operator
         {
             m_wspSize =  m_numElmt*m_nmodes0*(m_nmodes1*m_nquad2 +
                                               m_nquad1*m_nquad2);
-            m_wsp = Array<OneD, NekDouble>(
-                m_nmodes0*(m_nmodes1*m_nquad2 + m_nquad1*m_nquad2));
-            m_wsp2 = m_wsp + m_nquad0*m_nmodes1*m_nmodes2;
         }
 };
 

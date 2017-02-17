@@ -103,21 +103,24 @@ int main(int argc, char *argv[])
     }
 
     // BwdTrans operator
-    Collections::ImplementationType impType = Collections::eSumFac;
+    Collections::ImplementationType impType = Collections::eIterPerExp;
 
     expList = SetupExpList(order, session, graph, impType);
     Array<OneD, NekDouble> input (expList->GetNcoeffs());
     Array<OneD, NekDouble> output(expList->GetNpoints());
 
     Timer t;
-    vComm->Block();
     t.Start();
     for (int i = 0; i < Ntest; ++i)
     {
         expList->BwdTrans(input, output);
     }
-    vComm->Block();
     t.Stop();
+    cout << "finished " << vComm->GetRank() << endl;
+
+    NekDouble elapsed = t.TimePerTest(1);
+    vComm->AllReduce(elapsed, LibUtilities::ReduceSum);
+    elapsed /= vComm->GetSize();
 
     int nElmt = expList->GetExpSize();
     int nM = order + 1;
@@ -126,7 +129,6 @@ int main(int argc, char *argv[])
     // flops: 3 matrix-matrix multiplications
     long long flop = (2*nElmt*(nM*nM*nM*nQ + nQ*nQ*nM*nM + nQ*nQ*nQ*nM));
     NekDouble gflop = Ntest * flop / 1024.0 / 1024.0 / 1024.0;
-    NekDouble elapsed = t.TimePerTest(1);
 
     vComm->AllReduce(gflop, LibUtilities::ReduceSum);
 

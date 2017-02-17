@@ -137,8 +137,8 @@ inline void Collection::ApplyOperator(
               Array<OneD,       NekDouble> &output1,
               Array<OneD,       NekDouble> &output2)
 {
-    Array<OneD, NekDouble> wsp;
-    //Array<OneD, NekDouble> wsp(m_ops[op]->GetWspSize());
+    //Array<OneD, NekDouble> wsp;
+    Array<OneD, NekDouble> wsp(m_ops[op]->GetWspSize());
     (*m_ops[op])(inarray, output0, output1, output2, wsp);
 }
 
