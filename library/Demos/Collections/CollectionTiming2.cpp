@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
     // BwdTrans operator
     Collections::ImplementationType impType = Collections::eIterPerExp;
 
-    expList = SetupExpList(order, session, graph, impType);
+    expList = SetupExpList(order+1, session, graph, impType);
     Array<OneD, NekDouble> input (expList->GetNcoeffs());
     Array<OneD, NekDouble> output(expList->GetNpoints());
 

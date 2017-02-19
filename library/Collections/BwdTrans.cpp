@@ -37,6 +37,8 @@
 #include <Collections/Operator.h>
 #include <Collections/Collection.h>
 
+#include <libxsmm.h>
+
 using namespace std;
 
 namespace Nektar {
@@ -198,11 +200,11 @@ class BwdTrans_IterPerExp_Hex : public Operator
                       Array<OneD,       NekDouble> &output2,
                       Array<OneD,       NekDouble> &wsp)
         {
-            const int nqTot = m_nquad0 * m_nquad1 * m_nquad2;
-            const int nmTot = m_nmodes0 * m_nmodes1 * m_nmodes2;
-            const int nm12 = m_nmodes1 * m_nmodes2;
+            const int nqTot  = m_nquad0 * m_nquad1 * m_nquad2;
+            const int nmTot  = m_nmodes0 * m_nmodes1 * m_nmodes2;
+            const int nm12   = m_nmodes1 * m_nmodes2;
             const int nq0nm1 = m_nquad0 * m_nmodes1;
-            const int nq01 = m_nquad0 * m_nquad1;
+            const int nq01   = m_nquad0 * m_nquad1;
 
             const NekDouble *in = &input[0];
             NekDouble *out = &output[0], *tmp1, *tmp2;
@@ -213,28 +215,18 @@ class BwdTrans_IterPerExp_Hex : public Operator
                 tmp2 = &m_wsp2[0];
 
                 // Direction 1
-                Blas::Dgemm('N', 'N', m_nquad0, nm12, m_nmodes0,
-                            1.0, m_base0.get(), m_nquad0,
-                                 in,            m_nmodes0,
-                            0.0, tmp1,          m_nquad0);
+                m_funcs[0](m_base0.get(), in, tmp1);
 
                 // Loop for direction 2
                 for (int r = 0; r < m_nmodes2; ++r)
                 {
-                    Blas::Dgemm('N', 'N', m_nquad0, m_nquad1, m_nmodes1,
-                                1.0, tmp1,           m_nquad0,
-                                     m_base1T.get(), m_nmodes1,
-                                0.0, tmp2,           m_nquad0);
-
+                    m_funcs[1](tmp1, m_base1T.get(), tmp2);
                     tmp1 += nq0nm1;
                     tmp2 += nq01;
                 }
 
                 // Third direction
-                Blas::Dgemm('N', 'N', nq01, m_nquad2, m_nmodes2,
-                            1.0, &m_wsp2[0],     nq01,
-                                 m_base2T.get(), m_nmodes2,
-                            0.0, out,            nq01);
+                m_funcs[2](&m_wsp2[0], m_base2T.get(), out);
 
                 in  += nmTot;
                 out += nqTot;
@@ -265,6 +257,7 @@ class BwdTrans_IterPerExp_Hex : public Operator
         const bool                      m_colldir2;
         std::vector<NekDouble>          m_wsp;
         std::vector<NekDouble>          m_wsp2;
+        std::vector<libxsmm_mmfunction<NekDouble> > m_funcs;
 
     private:
         BwdTrans_IterPerExp_Hex(
@@ -286,6 +279,18 @@ class BwdTrans_IterPerExp_Hex : public Operator
         {
             m_wspSize =  m_numElmt*m_nmodes0*(m_nmodes1*m_nquad2 +
                                               m_nquad1*m_nquad2);
+            // init libxsmm
+            libxsmm_init();
+
+            const int nm12   = m_nmodes1 * m_nmodes2;
+            const int nq0nm1 = m_nquad0 * m_nmodes1;
+            const int nq01   = m_nquad0 * m_nquad1;
+
+            // Query/JIT functions
+            m_funcs.resize(3);
+            m_funcs[0] = libxsmm_mmfunction<NekDouble>(m_nquad0, nm12, m_nmodes0);
+            m_funcs[1] = libxsmm_mmfunction<NekDouble>(m_nquad0, m_nquad1, m_nmodes1);
+            m_funcs[2] = libxsmm_mmfunction<NekDouble>(nq01, m_nquad2, m_nmodes2);
 
             m_wsp .resize(m_nquad0 * m_nmodes1 * m_nmodes2);
             m_wsp2.resize(m_nquad0 * m_nquad1 * m_nmodes2);

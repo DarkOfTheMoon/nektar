@@ -211,6 +211,88 @@ class IProductWRTBase_IterPerExp : public Operator
 
 };
 
+/**
+ * @brief Backward transform operator using sum-factorisation (Hex)
+ */
+class IProductWRTBase_IterPerExp_Hex : public Operator
+{
+    public:
+        OPERATOR_CREATE(IProductWRTBase_IterPerExp_Hex)
+
+        virtual ~IProductWRTBase_IterPerExp_Hex()
+        {
+        }
+
+        virtual void operator()(
+                const Array<OneD, const NekDouble> &input,
+                      Array<OneD, NekDouble> &output,
+                      Array<OneD, NekDouble> &output1,
+                      Array<OneD, NekDouble> &output2,
+                      Array<OneD, NekDouble> &wsp)
+        {
+            const int nModes = m_nmodes0 * m_nmodes1 * m_nmodes2;
+            const int nPoints = m_nquad0 * m_nquad1 * m_nquad2;
+
+            // Pre-multiply by quadrature weights
+            Vmath::Vmul(nPoints * m_numElmt, &m_jac[0], 1, &input[0], 1,
+                        &output[0], 1);
+
+            for (int i = 0; i < m_numElmt; ++i)
+            {
+                
+            }
+        }
+
+        virtual void operator()(
+                      int                           dir,
+                const Array<OneD, const NekDouble> &input,
+                      Array<OneD,       NekDouble> &output,
+                      Array<OneD,       NekDouble> &wsp)
+        {
+            ASSERTL0(false, "Not valid for this operator.");
+        }
+
+    protected:
+        const int                       m_nquad0;
+        const int                       m_nquad1;
+        const int                       m_nquad2;
+        const int                       m_nmodes0;
+        const int                       m_nmodes1;
+        const int                       m_nmodes2;
+        const bool                      m_colldir0;
+        const bool                      m_colldir1;
+        const bool                      m_colldir2;
+        Array<OneD, const NekDouble>    m_jac;
+        Array<OneD, const NekDouble>    m_base0;
+        Array<OneD, const NekDouble>    m_base1;
+        Array<OneD, const NekDouble>    m_base2;
+
+    private:
+        IProductWRTBase_IterPerExp_Hex(
+                vector<StdRegions::StdExpansionSharedPtr> pCollExp,
+                CoalescedGeomDataSharedPtr                pGeomData)
+            : Operator  (pCollExp, pGeomData),
+              m_nquad0  (m_stdExp->GetNumPoints(0)),
+              m_nquad1  (m_stdExp->GetNumPoints(1)),
+              m_nquad2  (m_stdExp->GetNumPoints(2)),
+              m_nmodes0 (m_stdExp->GetBasisNumModes(0)),
+              m_nmodes1 (m_stdExp->GetBasisNumModes(1)),
+              m_nmodes2 (m_stdExp->GetBasisNumModes(2)),
+              m_colldir0(m_stdExp->GetBasis(0)->Collocation()),
+              m_colldir1(m_stdExp->GetBasis(1)->Collocation()),
+              m_colldir2(m_stdExp->GetBasis(2)->Collocation()),
+              m_base0    (m_stdExp->GetBasis(0)->GetBdata()),
+              m_base1    (m_stdExp->GetBasis(1)->GetBdata()),
+              m_base2    (m_stdExp->GetBasis(2)->GetBdata())
+
+        {
+            m_jac = pGeomData->GetJacWithStdWeights(pCollExp);
+            m_wspSize = 3 * m_numElmt * (max(m_nquad0*m_nquad1*m_nquad2,
+                                             m_nmodes0*m_nmodes1*m_nmodes2));
+        }
+};
+
+
 /// Factory initialisation for the IProductWRTBase_IterPerExp operators
 OperatorKey IProductWRTBase_IterPerExp::m_typeArr[] = {
     GetOperatorFactory().RegisterCreatorFunction(
