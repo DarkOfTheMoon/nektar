@@ -1553,8 +1553,8 @@ namespace Nektar
                 const DNekMat& sumTildeE = *tildeEMatSumPtr[dim];
 
                 // Laplace = DmatT * invMass * Dmat;
-                //weakDGMat = sumTildeE * (invMass * sumTildeE - invMass * Dmat) - DmatT * invMass * sumTildeE;
-                weakDGMat = Dmat * invMass * sumTildeE - sumTildeE * invMass * Dmat;
+                weakDGMat = sumTildeE * (invMass * sumTildeE - invMass * Dmat) - DmatT * invMass * sumTildeE;
+                //weakDGMat = Dmat * invMass * sumTildeE - sumTildeE * invMass * Dmat;
 
                 //std::cout << "sum(tildeE) * ( inv(M) * sum(tildeE)"
 
