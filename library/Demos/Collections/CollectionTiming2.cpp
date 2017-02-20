@@ -103,12 +103,16 @@ int main(int argc, char *argv[])
     }
 
     // BwdTrans operator
-    Collections::ImplementationType impType = Collections::eIterPerExp;
+    Collections::ImplementationType impType = Collections::eStdMat;
 
-    expList = SetupExpList(order+1, session, graph, impType);
+    expList = SetupExpList(order + 1, session, graph, impType);
     Array<OneD, NekDouble> input (expList->GetNcoeffs());
     Array<OneD, NekDouble> output(expList->GetNpoints());
 
+    // Do one BwdTrans operator
+    expList->BwdTrans(input, output);
+
+    // Loop over Ntest iterations
     Timer t;
     t.Start();
     for (int i = 0; i < Ntest; ++i)
@@ -116,25 +120,46 @@ int main(int argc, char *argv[])
         expList->BwdTrans(input, output);
     }
     t.Stop();
-    cout << "finished " << vComm->GetRank() << endl;
 
-    NekDouble elapsed = t.TimePerTest(1);
-    vComm->AllReduce(elapsed, LibUtilities::ReduceSum);
-    elapsed /= vComm->GetSize();
+    // Record average time for this rank
+    NekDouble elapsed = t.TimePerTest(Ntest);
+    cout << "finished " << vComm->GetRank() << " elapsed: " << elapsed << endl;
 
+    // Calculate # flops for single operator
     int nElmt = expList->GetExpSize();
     int nM = order + 1;
     int nQ = order + 2;
 
-    // flops: 3 matrix-matrix multiplications
-    long long flop = (2*nElmt*(nM*nM*nM*nQ + nQ*nQ*nM*nM + nQ*nQ*nQ*nM));
-    NekDouble gflop = Ntest * flop / 1024.0 / 1024.0 / 1024.0;
+    NekDouble gflop;
+    if (impType == Collections::eIterPerExp ||
+        impType == Collections::eSumFac)
+    {
+        gflop = 2.0*nElmt*(nM*nM*nM*nQ + nQ*nQ*nM*nM + nQ*nQ*nQ*nM);
+    }
+    else if (impType == Collections::eStdMat)
+    {
+        gflop = 2.0 * nElmt * nM * nM * nM * nQ * nQ * nQ;
+    }
+    gflop *= 1e-9;
 
-    vComm->AllReduce(gflop, LibUtilities::ReduceSum);
+    // Calculate average time
+    vComm->AllReduce(elapsed, LibUtilities::ReduceSum);
+    elapsed /= vComm->GetSize();
 
     if (vComm->GetRank() == 0)
     {
-        cout << "Time: " << elapsed << " FLOP: " << flop << " GFLOP/s: " << gflop / elapsed << endl;
+        cout << "Average elapsed: " << elapsed << endl;
+    }
+
+    // Calculate total gflop
+    vComm->AllReduce(gflop, LibUtilities::ReduceSum);
+
+    // Calculate gflop/sec
+    NekDouble gflops = gflop / elapsed;
+
+    if (vComm->GetRank() == 0)
+    {
+        cout << "Time, GFLOP/s, GFLOP: " << elapsed << " " << gflops << " " << gflop << endl;
     }
 
     vComm->Finalise();
