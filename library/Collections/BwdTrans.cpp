@@ -55,6 +55,52 @@ using LibUtilities::ePyramid;
 /**
  * @brief Backward transform operator using standard matrix approach.
  */
+class BwdTrans_StdMat_XSMM : public Operator
+{
+    public:
+        OPERATOR_CREATE(BwdTrans_StdMat_XSMM)
+
+        virtual ~BwdTrans_StdMat_XSMM()
+        {
+        }
+
+        virtual void operator()(
+                const Array<OneD, const NekDouble> &input,
+                      Array<OneD,       NekDouble> &output,
+                      Array<OneD,       NekDouble> &output1,
+                      Array<OneD,       NekDouble> &output2,
+                      Array<OneD,       NekDouble> &wsp)
+        {
+            m_func(m_mat->GetRawPtr(), input.get(), output.get());
+        }
+
+        virtual void operator()(
+                      int                           dir,
+                const Array<OneD, const NekDouble> &input,
+                      Array<OneD,       NekDouble> &output,
+                      Array<OneD,       NekDouble> &wsp)
+        {
+            ASSERTL0(false, "Not valid for this operator.");
+        }
+
+    protected:
+        DNekMatSharedPtr m_mat;
+        libxsmm_mmfunction<NekDouble> m_func;
+
+    private:
+        BwdTrans_StdMat_XSMM(
+                vector<StdRegions::StdExpansionSharedPtr> pCollExp,
+                CoalescedGeomDataSharedPtr                pGeomData)
+            : Operator(pCollExp, pGeomData)
+        {
+            StdRegions::StdMatrixKey  key(StdRegions::eBwdTrans,
+                                          m_stdExp->DetShapeType(), *m_stdExp);
+            m_mat = m_stdExp->GetStdMatrix(key);
+            m_func = libxsmm_mmfunction<NekDouble>(
+                m_mat->GetRows(), m_numElmt, m_mat->GetColumns());
+        }
+};
+
 class BwdTrans_StdMat : public Operator
 {
     public:
@@ -279,8 +325,6 @@ class BwdTrans_IterPerExp_Hex : public Operator
         {
             m_wspSize =  m_numElmt*m_nmodes0*(m_nmodes1*m_nquad2 +
                                               m_nquad1*m_nquad2);
-            // init libxsmm
-            libxsmm_init();
 
             const int nm12   = m_nmodes1 * m_nmodes2;
             const int nq0nm1 = m_nquad0 * m_nmodes1;
@@ -319,6 +363,210 @@ class BwdTrans_IterPerExp_Hex : public Operator
         }
 };
 
+class BwdTrans_IterPerExp_Tet : public Operator
+{
+    public:
+        OPERATOR_CREATE(BwdTrans_IterPerExp_Tet)
+
+        virtual ~BwdTrans_IterPerExp_Tet()
+        {
+        }
+
+        virtual void operator()(
+                const Array<OneD, const NekDouble> &input,
+                      Array<OneD,       NekDouble> &output,
+                      Array<OneD,       NekDouble> &output1,
+                      Array<OneD,       NekDouble> &output2,
+                      Array<OneD,       NekDouble> &wsp)
+        {
+            int i, j, mode, mode1, cnt;
+
+            int nmTot = m_stdExp->GetNcoeffs();
+            int nqTot = m_stdExp->GetTotPoints();
+
+            const NekDouble *in = &input[0];
+            NekDouble *out = &output[0];
+
+            for (int n = 0; n < m_numElmt; ++n)
+            {
+                // Perform summation over '2' direction
+                mode = mode1 = cnt = 0;
+                for(i = 0; i < m_nmodes0; ++i)
+                {
+                    for(j = 0; j < m_nmodes1-i; ++j, ++cnt)
+                    {
+                        m_func0[cnt](m_base2.get()+mode*m_nquad2,
+                                     &in[0]+mode1,
+                                     &m_wsp1[0]+cnt*m_nquad2);
+                        mode  += m_nmodes2-i-j;
+                        mode1 += m_nmodes2-i-j;
+                    }
+                    //increment mode in case order1!=order2
+                    for(j = m_nmodes1-i; j < m_nmodes2-i; ++j)
+                    {
+                        mode += m_nmodes2-i-j;
+                    }
+                }
+
+                // fix for modified basis by adding split of top singular
+                // vertex mode - currently (1+c)/2 x (1-b)/2 x (1-a)/2
+                // component is evaluated
+                // top singular vertex - (1+c)/2 x (1+b)/2 x (1-a)/2 component
+                Blas::Daxpy(m_nquad2, in[1], m_base2.get()+m_nquad2, 1,
+                            &m_wsp1[0]+m_nquad2, 1);
+
+                // top singular vertex - (1+c)/2 x (1-b)/2 x (1+a)/2 component
+                Blas::Daxpy(m_nquad2, in[1], m_base2.get()+m_nquad2, 1,
+                            &m_wsp1[0]+m_nmodes1*m_nquad2, 1);
+
+                // Perform summation over '1' direction
+                mode = 0;
+                for(i = 0; i < m_nmodes0; ++i)
+                {
+                    // Transpose
+                    libxsmm_otrans(&m_wsptrans1[0], &m_wsp1[mode*m_nquad2],
+                                   sizeof(NekDouble), m_nquad2, m_nmodes1-i,
+                                   m_nquad2, m_nmodes1-i);
+                    m_func1[i](m_base1.get()+mode*m_nquad1, &m_wsptrans1[0],
+                               &m_wsp2[0]+i*m_nquad1*m_nquad2);
+                    mode  += m_nmodes1-i;
+                }
+
+                // fix for modified basis by adding additional split of top and
+                // base singular vertex modes as well as singular edge. use tmp
+                // to sort out singular vertices and singular edge components
+                // with (1+b)/2 (1+a)/2 form
+                for (i = 0; i < m_nquad2; ++i)
+                {
+                    Blas::Daxpy(m_nquad1,m_wsp1[m_nquad2+i], m_base1.get()+m_nquad1,1,
+                                &m_wsp2[m_nquad1*m_nquad2]+i*m_nquad1,1);
+                }
+
+                // Perform summation over '0' direction
+                libxsmm_otrans(&m_wsptrans2[0], &m_wsp2[0],
+                               sizeof(NekDouble), m_nquad1*m_nquad2, m_nmodes0,
+                               m_nquad1*m_nquad2, m_nmodes0);
+                m_func2(m_base0.get(), &m_wsptrans2[0], &out[0]);
+
+                in  += nmTot;
+                out += nqTot;
+            }
+        }
+
+        virtual void operator()(
+                      int                           dir,
+                const Array<OneD, const NekDouble> &input,
+                      Array<OneD,       NekDouble> &output,
+                      Array<OneD,       NekDouble> &wsp)
+        {
+            ASSERTL0(false, "Not valid for this operator.");
+        }
+
+    protected:
+        const int                       m_nquad0;
+        const int                       m_nquad1;
+        const int                       m_nquad2;
+        const int                       m_nmodes0;
+        const int                       m_nmodes1;
+        const int                       m_nmodes2;
+        Array<OneD, NekDouble>          m_base0T;
+        Array<OneD, NekDouble>          m_base1T;
+        Array<OneD, const NekDouble>    m_base0;
+        Array<OneD, const NekDouble>    m_base1;
+        Array<OneD, const NekDouble>    m_base2;
+        const bool                      m_colldir0;
+        const bool                      m_colldir1;
+        const bool                      m_colldir2;
+        bool                            m_sortTopEdge;
+        std::vector<NekDouble>          m_wsp1;
+        std::vector<NekDouble>          m_wsp2;
+        std::vector<NekDouble>          m_wsptrans1;
+        std::vector<NekDouble>          m_wsptrans2;
+        std::vector<libxsmm_mmfunction<NekDouble> > m_func0;
+        std::vector<libxsmm_mmfunction<NekDouble> > m_func1;
+        libxsmm_mmfunction<NekDouble> m_func2;
+
+    private:
+        BwdTrans_IterPerExp_Tet(
+                vector<StdRegions::StdExpansionSharedPtr> pCollExp,
+                CoalescedGeomDataSharedPtr                pGeomData)
+            : Operator  (pCollExp, pGeomData),
+              m_nquad0  (pCollExp[0]->GetNumPoints(0)),
+              m_nquad1  (pCollExp[0]->GetNumPoints(1)),
+              m_nquad2  (pCollExp[0]->GetNumPoints(2)),
+              m_nmodes0 (pCollExp[0]->GetBasisNumModes(0)),
+              m_nmodes1 (pCollExp[0]->GetBasisNumModes(1)),
+              m_nmodes2 (pCollExp[0]->GetBasisNumModes(2)),
+              m_base0   (pCollExp[0]->GetBasis(0)->GetBdata()),
+              m_base1   (pCollExp[0]->GetBasis(1)->GetBdata()),
+              m_base2   (pCollExp[0]->GetBasis(2)->GetBdata()),
+              m_colldir0(pCollExp[0]->GetBasis(0)->Collocation()),
+              m_colldir1(pCollExp[0]->GetBasis(1)->Collocation()),
+              m_colldir2(pCollExp[0]->GetBasis(2)->Collocation())
+        {
+            m_wspSize =  m_numElmt*m_nmodes0*(m_nmodes1*m_nquad2 +
+                                              m_nquad1*m_nquad2);
+
+            m_sortTopEdge = (m_stdExp->GetBasis(0)->GetBasisType() ==
+                             LibUtilities::eModified_A);
+
+            // Query/JIT functions
+            for (int i = 0; i < m_nmodes0; ++i)
+            {
+                for (int j = 0; j < m_nmodes1-i; ++j)
+                {
+                    m_func0.push_back(libxsmm_mmfunction<NekDouble>(
+                                          LIBXSMM_FLAGS, m_nquad2, 1,
+                                          m_nmodes2-i-j, 1.0, 0.0));
+                    ASSERTL0(*m_func0.back(), "Didn't compile");
+                }
+
+                m_func1.push_back(libxsmm_mmfunction<NekDouble>(
+                                      LIBXSMM_FLAGS, m_nquad1, m_nquad2,
+                                      m_nmodes1-i, 1.0, 0.0));
+                ASSERTL0(*m_func1.back(), "Didn't compile");
+            }
+
+            m_func2 = libxsmm_mmfunction<NekDouble>(
+                LIBXSMM_FLAGS, m_nquad0, m_nquad1*m_nquad2, m_nmodes0, 1.0, 0.0);
+
+            m_wsp1.resize(m_nquad2 * m_nmodes0*(2*m_nmodes1-m_nmodes0+1)/2);
+            m_wsp2.resize(m_nquad2 * m_nquad1 * m_nmodes0);
+
+            m_wsptrans1.resize(m_nquad2 * m_nmodes1);
+            m_wsptrans2.resize(m_nquad1 * m_nquad2 * m_nmodes0);
+
+            // Pre-transpose base0/base1
+            Array<OneD, const NekDouble> base0 =
+                pCollExp[0]->GetBasis(0)->GetBdata();
+            Array<OneD, const NekDouble> base1 =
+                pCollExp[0]->GetBasis(1)->GetBdata();
+
+            const int nm0 = base0.num_elements() / m_nquad0;
+            const int nm1 = base1.num_elements() / m_nquad1;
+
+            m_base0T = Array<OneD, NekDouble>(base0.num_elements());
+            m_base1T = Array<OneD, NekDouble>(base1.num_elements());
+
+            for (int j = 0; j < nm0; ++j)
+            {
+                for (int i = 0; i < m_nquad0; ++i)
+                {
+                    m_base0T[j + i * nm0] = base0[i + j * m_nquad0];
+                }
+            }
+
+            for (int j = 0; j < nm1; ++j)
+            {
+                for (int i = 0; i < m_nquad1; ++i)
+                {
+                    m_base1T[j + i * nm1] = base1[i + j * m_nquad1];
+                }
+            }
+        }
+};
+
+
 /// Factory initialisation for the BwdTrans_IterPerExp operators
 OperatorKey BwdTrans_IterPerExp::m_typeArr[] = {
     GetOperatorFactory().RegisterCreatorFunction(
@@ -335,7 +583,7 @@ OperatorKey BwdTrans_IterPerExp::m_typeArr[] = {
         BwdTrans_IterPerExp::create, "BwdTrans_IterPerExp_Quad"),
     GetOperatorFactory().RegisterCreatorFunction(
         OperatorKey(eTetrahedron,   eBwdTrans, eIterPerExp,false),
-        BwdTrans_IterPerExp::create, "BwdTrans_IterPerExp_Tet"),
+        BwdTrans_IterPerExp_Tet::create, "BwdTrans_IterPerExp_Tet"),
     GetOperatorFactory().RegisterCreatorFunction(
         OperatorKey(eTetrahedron,   eBwdTrans, eIterPerExp,true),
         BwdTrans_IterPerExp::create, "BwdTrans_IterPerExp_NodalTet"),
@@ -350,7 +598,7 @@ OperatorKey BwdTrans_IterPerExp::m_typeArr[] = {
         BwdTrans_IterPerExp::create, "BwdTrans_IterPerExp_NodalPrism"),
     GetOperatorFactory().RegisterCreatorFunction(
         OperatorKey(eHexahedron,    eBwdTrans, eIterPerExp,false),
-        BwdTrans_IterPerExp_Hex::create, "BwdTrans_IterPerExp_Hex"),
+        BwdTrans_IterPerExp::create, "BwdTrans_IterPerExp_Hex"),
 };
 
 

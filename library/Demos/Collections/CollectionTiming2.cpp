@@ -37,6 +37,7 @@
 #include <cstdlib>
 #include <iomanip>
 
+#include <libxsmm.h>
 #include <boost/timer/timer.hpp>
 
 #include <LibUtilities/Memory/NekMemoryManager.hpp>
@@ -72,6 +73,72 @@ MultiRegions::ExpListSharedPtr SetupExpList(
     return expList;
 }
 
+void HexFlops(Collections::ImplementationType  impType,
+              int                              order,
+              int                              nElmt,
+              NekDouble                       &gflop,
+              NekDouble                       &matSize)
+{
+    const int nM = order + 1;
+    const int nQ = order + 2;
+
+    if (impType == Collections::eIterPerExp ||
+        impType == Collections::eSumFac)
+    {
+        gflop = 2.0 * nElmt * (nM * nM * nM * nQ + nQ * nQ * nM * nM +
+                               nQ * nQ * nQ * nM);
+        matSize =
+            ((nQ * nM) + (nM * nM * nM) + (nQ * nM * nM)) + // m_funcs[0]
+            ((nQ * nM) + (nM * nQ) + (nQ * nQ)) * nM      + // m_funcs[1]
+            ((nQ * nQ * nM) + (nM * nQ) + (nQ * nQ * nQ));  // m_funcs[2]
+        matSize *= nElmt;
+    }
+    else if (impType == Collections::eStdMat)
+    {
+        gflop = 2.0 * nElmt * nM * nM * nM * nQ * nQ * nQ;
+        matSize = nQ*nQ*nQ * nM*nM*nM * nElmt;
+    }
+
+    gflop *= 1e-9;
+    matSize *= sizeof(NekDouble);
+    matSize /= 1024.0 * 1024.0 * 1024.0;
+}
+
+void TetFlops(Collections::ImplementationType  impType,
+              int                              order,
+              int                              nElmt,
+              NekDouble                       &gflop,
+              NekDouble                       &matSize)
+{
+    const int nM = order + 1;
+    const int nQ = order + 2;
+
+    if (impType == Collections::eIterPerExp ||
+        impType == Collections::eSumFac)
+    {
+        gflop = 2.0 * nM * nQ * nQ * nQ;
+
+        for (int i = 0; i < nM; ++i)
+        {
+            for (int j = 0; j < nM - i; ++j)
+            {
+                gflop += 2.0 * nQ * (nM - i - j);
+            }
+
+            gflop += 2.0 * (nM - i) * nQ * nQ;
+        }
+
+        gflop *= nElmt;
+    }
+    else if (impType == Collections::eStdMat)
+    {
+        gflop = 2.0 * nElmt * nQ * nQ * nQ *
+            LibUtilities::StdTetData::getNumberOfCoefficients(nM, nM, nM);
+    }
+
+    gflop *= 1e-9;
+    matSize = 0;
+}
 
 int main(int argc, char *argv[])
 {
@@ -80,6 +147,8 @@ int main(int argc, char *argv[])
     LibUtilities::SessionReaderSharedPtr session
         = LibUtilities::SessionReader::CreateInstance(argc, argv);
     LibUtilities::CommSharedPtr vComm = session->GetComm();
+
+    libxsmm_init();
 
     bool fmt = session->DefinesCmdLineArgument("data");
 
@@ -97,16 +166,11 @@ int main(int argc, char *argv[])
     SpatialDomains::MeshGraphSharedPtr graph =
         SpatialDomains::MeshGraph::Read(session);
 
-    if (vComm->GetRank() == 0)
-    {
-        cout << "Testing BwdTrans " << Ntest << " " << order << endl;
-    }
-
     // BwdTrans operator
-    Collections::ImplementationType impType = Collections::eStdMat;
+    Collections::ImplementationType impType = Collections::eIterPerExp;
 
     expList = SetupExpList(order + 1, session, graph, impType);
-    Array<OneD, NekDouble> input (expList->GetNcoeffs());
+    Array<OneD, NekDouble> input (expList->GetNcoeffs(), 0.0);
     Array<OneD, NekDouble> output(expList->GetNpoints());
 
     // Do one BwdTrans operator
@@ -123,43 +187,35 @@ int main(int argc, char *argv[])
 
     // Record average time for this rank
     NekDouble elapsed = t.TimePerTest(Ntest);
-    cout << "finished " << vComm->GetRank() << " elapsed: " << elapsed << endl;
 
-    // Calculate # flops for single operator
-    int nElmt = expList->GetExpSize();
-    int nM = order + 1;
-    int nQ = order + 2;
-
-    NekDouble gflop;
-    if (impType == Collections::eIterPerExp ||
-        impType == Collections::eSumFac)
-    {
-        gflop = 2.0*nElmt*(nM*nM*nM*nQ + nQ*nQ*nM*nM + nQ*nQ*nQ*nM);
-    }
-    else if (impType == Collections::eStdMat)
-    {
-        gflop = 2.0 * nElmt * nM * nM * nM * nQ * nQ * nQ;
-    }
-    gflop *= 1e-9;
-
-    // Calculate average time
+    // Reduce across all ranks
     vComm->AllReduce(elapsed, LibUtilities::ReduceSum);
     elapsed /= vComm->GetSize();
 
-    if (vComm->GetRank() == 0)
+    // Calculate # flops for single operator
+    int nElmt = expList->GetExpSize();
+    NekDouble gflop, matSize;
+
+    if (expList->GetExp(0)->DetShapeType() == LibUtilities::eHexahedron)
     {
-        cout << "Average elapsed: " << elapsed << endl;
+        HexFlops(impType, order, nElmt, gflop, matSize);
+    }
+    else if (expList->GetExp(0)->DetShapeType() == LibUtilities::eTetrahedron)
+    {
+        TetFlops(impType, order, nElmt, gflop, matSize);
     }
 
     // Calculate total gflop
-    vComm->AllReduce(gflop, LibUtilities::ReduceSum);
+    vComm->AllReduce(gflop,   LibUtilities::ReduceSum);
+    vComm->AllReduce(matSize, LibUtilities::ReduceSum);
 
     // Calculate gflop/sec
-    NekDouble gflops = gflop / elapsed;
+    NekDouble gflops = gflop / elapsed, bandwidth = matSize / elapsed;
 
     if (vComm->GetRank() == 0)
     {
-        cout << "Time, GFLOP/s, GFLOP: " << elapsed << " " << gflops << " " << gflop << endl;
+        cout << order << " " << elapsed << " " << gflops //<< " " << bandwidth
+             << endl;
     }
 
     vComm->Finalise();
