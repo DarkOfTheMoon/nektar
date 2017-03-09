@@ -39,6 +39,7 @@
 
 #include <StdRegions/StdNodalTriExp.h>
 //#include <LibUtilities/LinearAlgebra/Blas.hpp>
+#include <LibUtilities/BasicUtils/Equation.h>
 
 using namespace std;
 
@@ -119,6 +120,90 @@ namespace Nektar
         {
             m_nq = pField->GetTotPoints();
         }
+
+        // ----------------------------
+        // Load parameter fields from XML/files
+        //m_functions.clear();
+        
+        // Scan through CellModel section looking to see if the parameter requested has been given
+        // a value.
+        TiXmlElement* vParameters = m_session->GetElement("Nektar/CellModel/Parameters");
+        TiXmlElement* variable = vParameters->FirstChildElement();
+
+        while (variable) {
+            std::string conditionType = variable->Value();
+            std::string variableStr = variable->Attribute("VAR");
+
+            boost::to_upper(variableStr);
+
+            if (conditionType == "E") {
+                // Expression must have a VALUE.
+                ASSERTL0(variable->Attribute("VALUE"),
+                         "Attribute VALUE expected for function '"
+                         + functionStr + "'.");
+                std::string fcnStr = variable->Attribute("VALUE");
+
+                ASSERTL0(!fcnStr.empty(),
+                         (std::string("Expression for var: ")
+                         + variableStr
+                         + std::string(" must be specified.")).c_str());
+
+                WARNINGL0(m_functions.count(key) == 0, "Parameter " + variableStr 
+                + " has multiple entries. Previous entries overwritten");
+
+                m_functions[variableStr] = fcnStr;
+            }
+        }
+        /**
+        // Loop through the parameters declared in the XML.
+        while (variable) {
+            FunctionVariableDefinition funcDef;
+            FunctionVariableMap functionVarMap;
+
+            std::string conditionType = variable->Value();
+            std::string variableStr = variable->Attribute("VAR");
+
+            // Keep everything upper-case
+            boost::to_upper(variableStr);
+
+            // Parse list of variables
+            std::vector<std::string> variableList;
+            ParseUtils::GenerateOrderedStringVector(variableStr.c_str(),
+                                                    variableList);
+
+            // If declaration is an expression in the XML:
+            if (conditionType == "E") {
+                funcDef.m_type = eFunctionTypeExpression;
+
+                // Expression must have a VALUE.
+                ASSERTL0(variable->Attribute("VALUE"),
+                         "Attribute VALUE expected for function '"
+                         + functionStr + "'.");
+                std::string fcnStr = variable->Attribute("VALUE");
+
+                ASSERTL0(!fcnStr.empty(),
+                         (std::string("Expression for var: ")
+                         + variableStr
+                         + std::string(" must be specified.")).c_str());
+
+                SubstituteExpressions(fcnStr);
+
+                // set expression
+                funcDef.m_expression = MemoryManager<Equation>
+                    ::AllocateSharedPtr(GetSharedThisPtr(),fcnStr);
+            }
+
+            // Add variable to function
+            pair<std::string,int> key(variableList,0); // 0 corresponds to domain
+
+            WARNINGL0(m_functions.count(key) == 0, "Parameter " + variableStr 
+                + " has multiple entries. Previous entries ignored");
+            FunctionVarMap[key] = funcDef;
+            
+            // Add function definition to map
+            m_functions[variableStr] = FunctionVarMap;
+        }
+        */
     }
 
 
@@ -354,7 +439,7 @@ namespace Nektar
                 filelist.insert(m_session->GetFunctionFilename(fncName,
                                                                varName));
             }
-        }
+        
 
         // Read files
         typedef std::vector<LibUtilities::FieldDefinitionsSharedPtr> FDef;
@@ -494,5 +579,29 @@ namespace Nektar
                 }
             }
         }
+    }
+
+    void CellModel::LoadCellParam(std::string parameter, Array<OneD, NekDouble> &DataOutput, 
+                                  NekDouble defaultValue) 
+    {
+            const unsigned int nphys = m_field->GetNpoints();
+            ASSERTL0(DataOutput.num_elements() == nphys, "Input cell parameter field has 
+                incorrect size.")
+
+            if (m_functions.count(parameter) == 0) {
+                // Assign inputted defaultValue to the variable
+                for (int i = 0; i<nphys; ++i) {
+                    DataOutput[i] = defaultValue;
+                }
+            }
+            else {
+                Array<OneD, NekDouble> x0(nphys);
+                Array<OneD, NekDouble> x1(nphys);
+                Array<OneD, NekDouble> x2(nphys);
+                m_field[0]->GetCoords(x0,x1,x2);
+
+                Equation paramExpr(m_session, m_functions[parameter]);
+                paramExpr->Evaluate(x0, x1, x2, DataOutput);
+            }
     }
 }

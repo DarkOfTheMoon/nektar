@@ -776,7 +776,9 @@
     <CELLMODEL>
         <NAME>CourtemancheRamirezNattel98</NAME>
         <VARIANT>Original</VARIANT>
-        <E VAR='g_Na'/>
+        <PARAMETERS>
+            <E VAR="g_Na" VALUE="7.8"/>
+        </PARAMETERS>n
     </CELLMODEL>
         
     

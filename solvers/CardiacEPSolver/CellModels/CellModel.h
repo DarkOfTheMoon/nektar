@@ -61,6 +61,7 @@ namespace Nektar
                 const MultiRegions::ExpListSharedPtr&> CellModelFactory;
     CellModelFactory& GetCellModelFactory();
 
+    
     /// Cell model base class.
     class CellModel
     {
@@ -87,6 +88,9 @@ namespace Nektar
         {
             v_Update(inarray, outarray, time);
         }
+
+        /// Evaluate input expressions
+        void ReadParameters();
 
         /// Print a summary of the cell model
         void GenerateSummary(SummaryList& s)
@@ -121,6 +125,10 @@ namespace Nektar
         NekDouble m_lastTime;
         /// Number of substeps to take
         int m_substeps;
+        /// Function store
+        //FunctionMap m_functions;
+        /// Function store
+        Array<std::string, std::string> m_functions;
 
         /// Cell model solution variables
         Array<OneD, Array<OneD, NekDouble> > m_cellSol;
@@ -134,6 +142,28 @@ namespace Nektar
         StdRegions::StdNodalTetExpSharedPtr m_nodalTet;
         /// Temporary array for nodal projection
         Array<OneD, Array<OneD, NekDouble> > m_nodalTmp;
+
+        /// Parameter fields for cell model
+        enum FunctionType
+        {
+            eFunctionTypeExpression,
+            eFunctionTypeFile,
+            eFunctionTypeTransientFile,
+            eSIZE_FunctionType,
+        };
+
+        struct FunctionVariableDefinition
+        {
+            enum FunctionType m_type;
+            std::string       m_filename;
+            EquationSharedPtr m_expression;
+            std::string       m_fileVariable;
+        };
+
+        typedef std::map<std::pair<std::string,int>, FunctionVariableDefinition>
+            FunctionVariableMap;
+        typedef std::map<std::string, FunctionVariableMap >
+            FunctionMap;
 
         /// Indices of cell model variables which are concentrations
         std::vector<int> m_concentrations;

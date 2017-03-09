@@ -72,11 +72,9 @@ namespace Nektar
             : CellModel(pSession, pField)
     {
         std::map<string,Variants> VariantMap;
+        VariantMap["default"] = eOriginal;
         VariantMap["Original"] = eOriginal;
         VariantMap["AF"] = eAF;
-
-        //model_variant = pSession->GetSolverInfoAsEnum<
-        //        CourtemancheRamirezNattel98::Variants>("CellModelVariant");
 
         TiXmlElement* vCellModel = m_session->GetElement("Nektar/CellModel");
         ASSERTL0(vCellModel, "Cell Model information missing from XML.");
