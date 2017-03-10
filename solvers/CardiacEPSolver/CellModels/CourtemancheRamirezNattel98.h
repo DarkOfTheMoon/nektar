@@ -79,6 +79,8 @@ namespace Nektar
         virtual std::string v_GetCellVarName(unsigned int idx);
 
     private:
+        std::map<std::string, Array<OneD, NekDouble> > m_cellparams;
+
         NekDouble C_m;
         NekDouble g_Na; // Vector form: Array<OneD, NekDouble> g_Na;
         NekDouble g_K1;

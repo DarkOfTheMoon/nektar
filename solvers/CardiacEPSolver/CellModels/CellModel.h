@@ -44,6 +44,7 @@
 #include <StdRegions/StdNodalTriExp.h>
 #include <StdRegions/StdNodalTetExp.h>
 #include <SolverUtils/Core/Misc.h>
+#include <LibUtilities/BasicUtils/Equation.h>
 
 namespace Nektar
 {
@@ -90,7 +91,7 @@ namespace Nektar
         }
 
         /// Evaluate input expressions
-        void ReadParameters();
+        Array<OneD, NekDouble> LoadCellParam(std::string parameter, NekDouble defaultValue);
 
         /// Print a summary of the cell model
         void GenerateSummary(SummaryList& s)
@@ -128,7 +129,7 @@ namespace Nektar
         /// Function store
         //FunctionMap m_functions;
         /// Function store
-        Array<std::string, std::string> m_functions;
+        std::map<std::string, std::string> m_functions;
 
         /// Cell model solution variables
         Array<OneD, Array<OneD, NekDouble> > m_cellSol;
@@ -143,7 +144,7 @@ namespace Nektar
         /// Temporary array for nodal projection
         Array<OneD, Array<OneD, NekDouble> > m_nodalTmp;
 
-        /// Parameter fields for cell model
+        /*/// Parameter fields for cell model
         enum FunctionType
         {
             eFunctionTypeExpression,
@@ -164,6 +165,7 @@ namespace Nektar
             FunctionVariableMap;
         typedef std::map<std::string, FunctionVariableMap >
             FunctionMap;
+        */
 
         /// Indices of cell model variables which are concentrations
         std::vector<int> m_concentrations;

@@ -127,7 +127,7 @@ namespace Nektar
         
         // Scan through CellModel section looking to see if the parameter requested has been given
         // a value.
-        TiXmlElement* vParameters = m_session->GetElement("Nektar/CellModel/Parameters");
+        TiXmlElement* vParameters = m_session->GetElement("Nektar/CellModel/parameters");
         TiXmlElement* variable = vParameters->FirstChildElement();
 
         while (variable) {
@@ -139,8 +139,8 @@ namespace Nektar
             if (conditionType == "E") {
                 // Expression must have a VALUE.
                 ASSERTL0(variable->Attribute("VALUE"),
-                         "Attribute VALUE expected for function '"
-                         + functionStr + "'.");
+                         "Attribute VALUE expected for variable '"
+                         + variableStr + "'.");
                 std::string fcnStr = variable->Attribute("VALUE");
 
                 ASSERTL0(!fcnStr.empty(),
@@ -148,11 +148,13 @@ namespace Nektar
                          + variableStr
                          + std::string(" must be specified.")).c_str());
 
-                WARNINGL0(m_functions.count(key) == 0, "Parameter " + variableStr 
+                WARNINGL0(m_functions.count(variableStr) == 0, "Parameter " + variableStr 
                 + " has multiple entries. Previous entries overwritten");
 
                 m_functions[variableStr] = fcnStr;
             }
+
+            variable = variable->NextSiblingElement();
         }
         /**
         // Loop through the parameters declared in the XML.
@@ -439,7 +441,7 @@ namespace Nektar
                 filelist.insert(m_session->GetFunctionFilename(fncName,
                                                                varName));
             }
-        
+        }
 
         // Read files
         typedef std::vector<LibUtilities::FieldDefinitionsSharedPtr> FDef;
@@ -581,14 +583,33 @@ namespace Nektar
         }
     }
 
-    void CellModel::LoadCellParam(std::string parameter, Array<OneD, NekDouble> &DataOutput, 
-                                  NekDouble defaultValue) 
+    Array<OneD, NekDouble> CellModel::LoadCellParam(std::string parameter, NekDouble defaultValue) 
     {
-            const unsigned int nphys = m_field->GetNpoints();
-            ASSERTL0(DataOutput.num_elements() == nphys, "Input cell parameter field has 
-                incorrect size.")
+            boost::to_upper(parameter);
 
+            const unsigned int nphys = m_field->GetNpoints();
+            //ASSERTL0(DataOutput.num_elements() == nphys, "Input cell parameter field has incorrect size.")
+            Array<OneD, NekDouble> DataOutput(nphys, defaultValue);
+
+            if (m_functions.count(parameter) > 0) {
+                Array<OneD, NekDouble> x0(nphys);
+                Array<OneD, NekDouble> x1(nphys);
+                Array<OneD, NekDouble> x2(nphys);
+                m_field->GetCoords(x0,x1,x2);
+
+                LibUtilities::Equation paramExpr(m_session, m_functions[parameter]);
+                paramExpr.Evaluate(x0, x1, x2, DataOutput);
+            }
+            else {
+                cout << "Default value used for " << parameter << endl;
+            }
+
+            return DataOutput;
+
+            /**
             if (m_functions.count(parameter) == 0) {
+                cout << "Parameter " + parameter + " is not specified. Default value used." << endl;
+
                 // Assign inputted defaultValue to the variable
                 for (int i = 0; i<nphys; ++i) {
                     DataOutput[i] = defaultValue;
@@ -598,10 +619,11 @@ namespace Nektar
                 Array<OneD, NekDouble> x0(nphys);
                 Array<OneD, NekDouble> x1(nphys);
                 Array<OneD, NekDouble> x2(nphys);
-                m_field[0]->GetCoords(x0,x1,x2);
+                m_field->GetCoords(x0,x1,x2);
 
-                Equation paramExpr(m_session, m_functions[parameter]);
-                paramExpr->Evaluate(x0, x1, x2, DataOutput);
+                LibUtilities::Equation paramExpr(m_session, m_functions[parameter]);
+                paramExpr.Evaluate(x0, x1, x2, DataOutput);
             }
+            */
     }
 }

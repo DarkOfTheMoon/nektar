@@ -97,6 +97,14 @@ namespace Nektar
         }
         */
 
+        m_cellparams["g_Na"] = LoadCellParam("g_Na", 7.8);
+        Array<OneD, NekDouble> test_g_Kl = LoadCellParam("g_Kl", 0.09);
+
+        //const unsigned int nphys = m_field->GetNpoints();
+        //for (int i = 0; i < nphys; ++i) {
+        //    cout << test_g_Na[i] << endl;
+        //}
+
         C_m = 100;      // picoF
         g_Na = 7.8;     // nanoS_per_picoF
         g_K1 = 0.09;    // nanoS_per_picoF
@@ -239,7 +247,8 @@ namespace Nektar
         Vmath::Vmul(n, inarray[1], 1, tmp_I_Na, 1, tmp_I_Na, 1);
         Vmath::Vmul(n, inarray[2], 1, tmp_I_Na, 1, tmp_I_Na, 1);
         Vmath::Vmul(n, inarray[3], 1, tmp_I_Na, 1, tmp_I_Na, 1);
-        Vmath::Smul(n, C_m*g_Na, tmp_I_Na, 1, tmp_I_Na, 1);
+        Vmath::Vmul(n, m_cellparams["g_Na"], 1, tmp_I_Na, 1, tmp_I_Na, 1);
+        Vmath::Smul(n, C_m, tmp_I_Na, 1, tmp_I_Na, 1);
         Vmath::Vsub(n, outarray[0], 1, tmp_I_Na, 1, outarray[0], 1);
         Vmath::Smul(n, -1.0, tmp_I_Na, 1, outarray[16], 1);
 
