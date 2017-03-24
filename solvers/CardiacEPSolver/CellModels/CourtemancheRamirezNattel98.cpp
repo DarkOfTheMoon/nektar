@@ -98,7 +98,8 @@ namespace Nektar
         */
 
         m_cellparams["g_Na"] = LoadCellParam("g_Na", 7.8);
-        Array<OneD, NekDouble> test_g_Kl = LoadCellParam("g_Kl", 0.09);
+        m_cellparams["g_to"] = LoadCellParam("g_to", 0.1652);
+        m_cellparams["g_Ca_L"] = LoadCellParam("g_Ca_L", 0.12375);
 
         //const unsigned int nphys = m_field->GetNpoints();
         //for (int i = 0; i < nphys; ++i) {
@@ -283,7 +284,8 @@ namespace Nektar
         Vmath::Vmul(n, inarray[4], 1, tmp_I_to, 1, tmp_I_to, 1);
         Vmath::Vmul(n, inarray[4], 1, tmp_I_to, 1, tmp_I_to, 1);
         Vmath::Vmul(n, inarray[4], 1, tmp_I_to, 1, tmp_I_to, 1);
-        Vmath::Smul(n, C_m*g_to, tmp_I_to, 1, tmp_I_to, 1);
+        Vmath::Vmul(n, m_cellparams["g_to"], 1, tmp_I_to, 1, tmp_I_to, 1);
+        Vmath::Smul(n, C_m, tmp_I_to, 1, tmp_I_to, 1);
         Vmath::Vsub(n, outarray[0], 1, tmp_I_to, 1, outarray[0], 1);
         Vmath::Vsub(n, outarray[18], 1, tmp_I_to, 1, outarray[18], 1);
 
@@ -339,7 +341,8 @@ namespace Nektar
         Vmath::Vmul(n, inarray[10], 1, tmp_I_Ca_L, 1, tmp_I_Ca_L, 1);
         Vmath::Vmul(n, inarray[11], 1, tmp_I_Ca_L, 1, tmp_I_Ca_L, 1);
         Vmath::Vmul(n, inarray[12], 1, tmp_I_Ca_L, 1, tmp_I_Ca_L, 1);
-        Vmath::Smul(n, C_m*g_Ca_L, tmp_I_Ca_L, 1, tmp_I_Ca_L, 1);
+        Vmath::Vmul(n, m_cellparams["g_Ca_L"], 1, tmp_I_Ca_L, 1, tmp_I_Ca_L, 1);
+        Vmath::Smul(n, C_m, tmp_I_Ca_L, 1, tmp_I_Ca_L, 1);
         Vmath::Vsub(n, outarray[0], 1, tmp_I_Ca_L, 1, outarray[0], 1);
 
         // Na-K Pump Current

@@ -730,7 +730,7 @@
     <CONDITIONS>
         <PARAMETERS>
             <P> TimeStep       = 0.02  </P>
-            <P> FinTime        = 500 </P>
+            <P> FinTime        = 300 </P>
             <P> NumSteps       = FinTime/TimeStep            </P>
             <P> IO_CheckSteps  = 0.1/TimeStep      </P>
             <P> IO_InfoSteps   = 1              </P>
@@ -777,10 +777,28 @@
         <NAME>CourtemancheRamirezNattel98</NAME>
         <VARIANT>Original</VARIANT>
         <PARAMETERS>
-            <E VAR="g_Na" VALUE="7.8"/>
+            <E VAR="g_Na" VALUE="12.09"/> 
+            <E VAR="g_to" VALUE="0.05782"/> 
+            <E VAR="g_Ca_L" VALUE="0.037125"/> 
         </PARAMETERS>
     </CELLMODEL>
-        
+
+    <FILTERS>
+        <FILTER TYPE="HistoryPoints">
+            <PARAM NAME="OutputFile">strip1-1.his</PARAM>
+            <PARAM NAME="OutputFrequency">10</PARAM>
+            <PARAM NAME="Points">
+                0.5 1 0
+            </PARAM>
+        </FILTER>
+        <FILTER TYPE="HistoryPoints">
+            <PARAM NAME="OutputFile">strip1-2.his</PARAM>
+            <PARAM NAME="OutputFrequency">10</PARAM>
+            <PARAM NAME="Points">
+                2 0.5 0
+            </PARAM>
+        </FILTER>
+    </FILTERS>
     
     <STIMULI>
         <STIMULUS ID="0" TYPE = "StimulusRect">
@@ -795,7 +813,7 @@
             
             <PROTOCOL TYPE = "ProtocolSingle">
                 <START> 0.0  </START>
-                <DURATION>  1.0 </DURATION>
+                <DURATION>  2.0 </DURATION>
             </PROTOCOL>
         </STIMULUS>
     </STIMULI>
