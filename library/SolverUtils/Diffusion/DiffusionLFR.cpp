@@ -393,7 +393,7 @@ namespace Nektar
                         }
                         else if (m_diffType == "LFRcmin")
                         {
-                            c0 = -2.0 / ((2.0 * p0 + 1.0) 
+                            c0 = -1.0 / ((2.0 * p0 + 1.0)
                                         * (ap0 * boost::math::tgamma(p0 + 1))
                                         * (ap0 * boost::math::tgamma(p0 + 1)));
                         }
@@ -527,11 +527,11 @@ namespace Nektar
                         }
                         else if (m_diffType == "LFRcmin")
                         {
-                            c0 = -2.0 / ((2.0 * p0 + 1.0) 
+                            c0 = -1.0 / ((2.0 * p0 + 1.0)
                                         * (ap0 * boost::math::tgamma(p0 + 1))
                                         * (ap0 * boost::math::tgamma(p0 + 1)));
                             
-                            c1 = -2.0 / ((2.0 * p1 + 1.0) 
+                            c1 = -1.0 / ((2.0 * p1 + 1.0)
                                         * (ap1 * boost::math::tgamma(p1 + 1))
                                         * (ap1 * boost::math::tgamma(p1 + 1)));
                         }
@@ -720,15 +720,15 @@ namespace Nektar
                         }
                         else if (m_diffType == "LFRcmin")
                         {
-                            c0 = -2.0 / ((2.0 * p0 + 1.0) 
+                            c0 = -1.0 / ((2.0 * p0 + 1.0)
                                         * (ap0 * boost::math::tgamma(p0 + 1))
                                         * (ap0 * boost::math::tgamma(p0 + 1)));
                             
-                            c1 = -2.0 / ((2.0 * p1 + 1.0) 
+                            c1 = -1.0 / ((2.0 * p1 + 1.0)
                                         * (ap1 * boost::math::tgamma(p1 + 1))
                                         * (ap1 * boost::math::tgamma(p1 + 1)));
                             
-                            c2 = -2.0 / ((2.0 * p2 + 1.0) 
+                            c2 = -1.0 / ((2.0 * p2 + 1.0)
                                         * (ap2 * boost::math::tgamma(p2 + 1))
                                         * (ap2 * boost::math::tgamma(p2 + 1)));
                         }
