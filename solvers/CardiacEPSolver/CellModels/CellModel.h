@@ -45,7 +45,9 @@
 #include <StdRegions/StdNodalTetExp.h>
 #include <SolverUtils/Core/Misc.h>
 #include <LibUtilities/BasicUtils/Equation.h>
+#include <SolverUtils/UnsteadySystem.h>
 
+using namespace Nektar::SolverUtils;
 namespace Nektar
 {
     // Forward declaration
@@ -62,7 +64,6 @@ namespace Nektar
                 const MultiRegions::ExpListSharedPtr&> CellModelFactory;
     CellModelFactory& GetCellModelFactory();
 
-    
     /// Cell model base class.
     class CellModel
     {
@@ -92,6 +93,9 @@ namespace Nektar
 
         /// Evaluate input expressions
         Array<OneD, NekDouble> LoadCellParam(std::string parameter, NekDouble defaultValue);
+
+        std::string GetScarParamString(std::string strExpression, std::string parameter);
+        NekDouble GetScarParamDouble(std::string strExpression, std::string parameter);
 
         /// Print a summary of the cell model
         void GenerateSummary(SummaryList& s)
@@ -127,8 +131,36 @@ namespace Nektar
         /// Number of substeps to take
         int m_substeps;
 
-        /// Hold parameter functions
-        std::map<std::string, std::string> m_functions;
+        /// Hold scar map intensity array, if used
+        Array<OneD, NekDouble> m_scarmap;
+
+        /// Type of input of given parameter
+        enum InputType
+        {
+            eInputTypeExpression,
+            eInputTypeFile,
+            eInputTypeScarMap
+        };
+
+        /// Type of value-mapping to intensity field (scar map)
+        enum MappingType
+        {
+            ePosLinThresh,
+            eNegLinThresh,
+            ePosHeavyside,
+            eNegHeavyside,
+        };
+
+        struct VariableDefinition
+        {
+            enum InputType  m_type;
+            std::string     m_value;
+            /// Hold parameter values for scar map variables
+            std::map<std::string, std::string> m_scar_params;
+        };
+
+        /// Hold parameter functions/filenames
+        std::map<std::string, VariableDefinition> m_parameters;
 
         /// Cell model solution variables
         Array<OneD, Array<OneD, NekDouble> > m_cellSol;

@@ -123,7 +123,7 @@ namespace Nektar
 
         // ----------------------------
         // Load parameter fields from XML/files
-        //m_functions.clear();
+        //m_parameters.clear();
         
         // Scan through CellModel section looking to see if the parameter requested has been given
         // a value.
@@ -134,9 +134,16 @@ namespace Nektar
             std::string conditionType = variable->Value();
             std::string variableStr = variable->Attribute("VAR");
 
+            VariableDefinition varDef;
+
             boost::to_upper(variableStr);
 
+            WARNINGL0(m_parameters.count(variableStr) == 0, "Parameter " + variableStr 
+            + " has multiple entries. Previous entries overwritten.");
+
             if (conditionType == "E") {
+                varDef.m_type = eInputTypeExpression;
+
                 // Expression must have a VALUE.
                 ASSERTL0(variable->Attribute("VALUE"),
                          "Attribute VALUE expected for variable '"
@@ -148,10 +155,65 @@ namespace Nektar
                          + variableStr
                          + std::string(" must be specified.")).c_str());
 
-                WARNINGL0(m_functions.count(variableStr) == 0, "Parameter " + variableStr 
-                + " has multiple entries. Previous entries overwritten");
+                varDef.m_value = functionStr;
 
-                m_functions[variableStr] = functionStr;
+                m_parameters[variableStr] = varDef;
+            } 
+            else if (conditionType == "F") {
+                varDef.m_type = eInputTypeFile;
+
+                // File must have a VALUE.
+                ASSERTL0(variable->Attribute("VALUE"),
+                         "Attribute VALUE expected for variable '"
+                         + variableStr + "'.");
+                std::string filenameStr = variable->Attribute("VALUE");
+
+                ASSERTL0(!filenameStr.empty(),
+                         "A filename must be specified for the VALUE "
+                         "attribute in variable '" + variableStr
+                         + "'.");
+
+                varDef.m_value = filenameStr;
+
+                m_parameters[variableStr] = varDef;
+            }
+
+            // Here is my new parameter type, 'scarmap'
+            else if (conditionType == "S") {
+
+                varDef.m_type = eInputTypeScarMap;
+
+                // If it has not been done yet, populate m_scarmap with intensity data
+                const unsigned int nphys = m_field->GetNpoints();
+                if (m_scarmap.num_elements() < nphys) {
+                    EquationSystem::EvaluateFunction("intensity", m_scarmap, "IsotropicConductivity");
+                }
+
+                if (variable->Attribute("VALUE")) {
+                    varDef.m_value = variable->Attribute("VALUE");
+                }
+                else {
+                    varDef.m_value = "PositiveLinear";
+                }
+
+                if (variableStr == "SCARMAP") { varDef.m_scar_params["MIN"] = "0.0";
+                                                varDef.m_scar_params["MAX"] = "1.0";
+                                              }
+
+                TiXmlAttribute* pAttrib=variable->FirstAttribute();
+                while (pAttrib) {
+                    std::string pAttribName = pAttrib->Name();
+                    std::string pAttribValue = pAttrib->Value();
+
+                    if (pAttribName != "VAR" && pAttribName != "VALUE") {
+                        boost::to_upper(pAttribName);
+                        varDef.m_scar_params[pAttribName] = pAttribValue;
+                    }
+                
+                    pAttrib = pAttrib->Next();
+                }
+
+                m_parameters[variableStr] = varDef;
             }
 
             variable = variable->NextSiblingElement();
@@ -542,19 +604,145 @@ namespace Nektar
             //ASSERTL0(DataOutput.num_elements() == nphys, "Input cell parameter field has incorrect size.")
             Array<OneD, NekDouble> DataOutput(nphys, defaultValue);
 
-            if (m_functions.count(parameter) > 0) {
-                Array<OneD, NekDouble> x0(nphys);
-                Array<OneD, NekDouble> x1(nphys);
-                Array<OneD, NekDouble> x2(nphys);
-                m_field->GetCoords(x0,x1,x2);
+            if (m_parameters.count(parameter) > 0) {
+                
+                VariableDefinition vParameter = m_parameters[parameter];
+                
+                if (vParameter.m_type == eInputTypeExpression) {
+                    Array<OneD, NekDouble> x0(nphys);
+                    Array<OneD, NekDouble> x1(nphys);
+                    Array<OneD, NekDouble> x2(nphys);
+                    m_field->GetCoords(x0,x1,x2);
 
-                LibUtilities::Equation paramExpr(m_session, m_functions[parameter]);
-                paramExpr.Evaluate(x0, x1, x2, DataOutput);
+                    LibUtilities::Equation paramExpr(m_session, vParameter.m_value);
+                    paramExpr.Evaluate(x0, x1, x2, DataOutput);
+                }
+                else if (vParameter.m_type == eInputTypeFile) {
+                    std::string filenamePtr = vParameter.m_value;
+
+                    LibUtilities::FieldIOSharedPtr fileObj = LibUtilities::FieldIO::CreateForFile(m_session, 
+                            filenamePtr);
+
+                    std::vector<LibUtilities::FieldDefinitionsSharedPtr> FDef(0);
+                    std::vector<std::vector<NekDouble> > FData(0);
+                    LibUtilities::FieldMetaDataMap fieldMetaDataMap;
+
+                    fileObj->Import(filenamePtr, FDef, FData, fieldMetaDataMap);
+
+                    const unsigned int ncoeffs = m_field->GetNcoeffs();
+                    Array<OneD, NekDouble> CoeffOutput(ncoeffs);
+
+                    m_field->ExtractDataToCoeffs(FDef[0], FData[0], parameter, CoeffOutput);
+                    m_field->BwdTrans(CoeffOutput, DataOutput);
+                }
+                else if (vParameter.m_type == eInputTypeScarMap) {
+
+                    Array<OneD, NekDouble> vTemp = m_scarmap;
+                    MappingType vMapType;
+
+                    if (vParameter.m_value == "PositiveLinear") {vMapType = ePosLinThresh;}
+                    else if (vParameter.m_value == "NegativeLinear") {vMapType = eNegLinThresh;}
+                    else if (vParameter.m_value == "PositiveHeavyside") {vMapType = ePosHeavyside;}
+                    else if (vParameter.m_value == "NegativeHeavyside") {vMapType = eNegHeavyside;}
+
+                    switch (vMapType) {
+                        case ePosLinThresh:
+                            {
+                            ASSERTL0(vParameter.m_scar_params.count("MAX") > 0,
+                                 "Attribute MAX required for variable '"
+                                 + parameter + "'.");
+                            
+                            NekDouble f_min = GetScarParamDouble(parameter, "MIN");
+                            NekDouble f_max = GetScarParamDouble(parameter, "MAX");
+                            NekDouble scar_min = GetScarParamDouble("SCARMAP", "MIN");
+                            NekDouble scar_max = GetScarParamDouble("SCARMAP", "MAX");
+                            
+                            // Threshold based on d_min, d_max
+                            for (int j = 0; j < nphys; ++j)
+                            {
+                                vTemp[j] = (vTemp[j] < f_min ? f_min : vTemp[j]);
+                                vTemp[j] = (vTemp[j] > f_max ? f_max : vTemp[j]);
+                            }
+                            // Rescale to s \in [0,1] (0 maps to d_min, 1 maps to d_max)
+                            Vmath::Sadd(nphys, -f_min, vTemp, 1, vTemp, 1);
+                            Vmath::Smul(nphys, 1.0/(f_max-f_min), vTemp, 1, vTemp, 1);
+                            Vmath::Smul(nphys, scar_max - scar_min, vTemp, 1, vTemp, 1);
+                            Vmath::Sadd(nphys, scar_min, vTemp, 1, vTemp, 1);
+
+                            DataOutput = vTemp;
+                            }
+                        case eNegLinThresh:
+                            {
+                            ASSERTL0(vParameter.m_scar_params.count("MAX") > 0,
+                                 "Attribute MAX required for variable '"
+                                 + parameter + "'.");
+                            
+                            NekDouble f_min = GetScarParamDouble(parameter, "MIN");
+                            NekDouble f_max = GetScarParamDouble(parameter, "MAX");
+                            NekDouble scar_min = GetScarParamDouble("SCARMAP", "MIN");
+                            NekDouble scar_max = GetScarParamDouble("SCARMAP", "MAX");
+                            
+                            // Threshold based on d_min, d_max
+                            for (int j = 0; j < nphys; ++j)
+                            {
+                                vTemp[j] = (vTemp[j] < f_min ? f_min : vTemp[j]);
+                                vTemp[j] = (vTemp[j] > f_max ? f_max : vTemp[j]);
+                            }
+                            // Rescale to s \in [0,1] (0 maps to d_max, 1 maps to d_min)
+                            Vmath::Sadd(nphys, -f_min, vTemp, 1, vTemp, 1);
+                            Vmath::Smul(nphys, -1.0/(f_max-f_min), vTemp, 1, vTemp, 1);
+                            Vmath::Sadd(nphys, 1.0, vTemp, 1, vTemp, 1);
+                            Vmath::Smul(nphys, scar_max - scar_min, vTemp, 1, vTemp, 1);
+                            Vmath::Sadd(nphys, scar_min, vTemp, 1, vTemp, 1);
+
+                            DataOutput = vTemp;
+                            }
+                        case ePosHeavyside:
+                            DataOutput = vTemp;    
+                        case eNegHeavyside:
+                            DataOutput = vTemp;
+                        // case "MoreComplicatedInstructions":
+                    }
+                }
+    
             }
             else {
-                cout << "Default value used for " << parameter << endl;
+                cout << "Default value used for " << parameter << "." << endl;
             }
 
             return DataOutput;
     }
+
+    std::string CellModel::GetScarParamString(std::string var, std::string param) {
+        ASSERTL0(m_parameters.count(var) > 0 &&
+                 m_parameters[var].m_scar_params.count(param) > 0,
+                     "Failed to find variable '" + strExpression
+                     + "' for scar parameter: '" + param + "'");
+
+        std::string value = m_parameters[var].m_scar_params[param];
+
+        return value;
+    }
+
+    NekDouble CellModel::GetScarParamDouble(std::string var, std::string param) {
+        std::string strExpression = GetScarParamString(var, param);
+
+        NekDouble value=0.0;
+        try
+        {
+            LibUtilities::Equation expession(
+                m_session, strExpression);
+            value = expession.Evaluate();
+        }
+        catch (const std::runtime_error &)
+        {
+            ASSERTL0(false,
+                     "Error evaluating parameter expression"
+                     " '" + strExpression + "' for parameter: '"
+                     + param + "'");
+        }
+
+        return value;
+    }
+
 }
