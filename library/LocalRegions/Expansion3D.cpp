@@ -1306,6 +1306,9 @@ namespace Nektar
 
               const int iface = faceids[f];
 
+              std::cout << "**************************************************" << std::endl;
+              std::cout << "Face: " << iface << std::endl;
+
               FaceExp = GetFaceExp(iface);
 
               // const int nquad_f = FaceExp->GetNumPoints(0) * FaceExp->GetNumPoints(1);
@@ -1317,7 +1320,25 @@ namespace Nektar
 
               GetFaceToElementMap(iface, v_GetForient(iface), map, sign);
 
+              std::cout << "Face to element map:\n";
+              for(int i = 0; i < map.num_elements(); ++i)
+              {
+                  std::cout << "  [mapped value,sign] = [" << map[i] << "," << sign[i] << "]\n";
+              }
+              std::cout << std::endl;
+
               const Array<OneD, const Array<OneD, NekDouble> > & normals = GetFaceNormal(iface);
+
+              std::cout << "Face normals:" << std::endl;
+              for(int ii = 0; ii < normals.num_elements(); ++ii)
+              {
+                const Array<OneD, NekDouble>& one_normal = normals[ii];
+                for(int jj = 0; jj < one_normal.num_elements(); ++jj)
+                {
+                  std::cout << one_normal[jj] << " ";
+                }
+                std::cout <<  std::endl;
+              }
 
               for(int dir = 0; dir < coordim; ++dir)
               {
@@ -1351,6 +1372,8 @@ namespace Nektar
 
                       //AddEdgeBoundaryInt(dir, EdgeExp, edgePhys, tmp);
                    }
+
+                   std::cout << "tilde(E)[" << dir << "] = \n" << tildeE << std::endl;
 
                    sumTildeE = sumTildeE + tildeE;
               } // Loop over dimensions
@@ -1391,8 +1414,8 @@ namespace Nektar
               // Laplace = DmatT * invMass * Dmat;
               // std::cout << "Laplace matrix:" << std::endl;
               // std::cout << Laplace << std::endl;
-              //weakDGMat = sumTildeE * (invMass * sumTildeE - invMass * Dmat) - DmatT * invMass * sumTildeE;
-              weakDGMat = Dmat * invMass * sumTildeE - sumTildeE * invMass * Dmat;
+              weakDGMat = sumTildeE * (invMass * sumTildeE - invMass * Dmat) - DmatT * invMass * sumTildeE;
+              // weakDGMat = Dmat * invMass * sumTildeE - sumTildeE * invMass * Dmat;
 
               // Finally add the contributions to inoutmat
 
@@ -1471,9 +1494,6 @@ namespace Nektar
           {
               const int iface = faceids[f];
 
-              std::cout << "**************************************************" << std::endl;
-              std::cout << "Face: " << iface << std::endl;
-
               //ExpansionSharedPtr FaceExp = GetFaceExp(faceids[0]);
               ExpansionSharedPtr FaceExp = GetFaceExp(iface);
 
@@ -1487,13 +1507,6 @@ namespace Nektar
               Array<OneD, NekDouble> lambdaExpCoeffs(nFaceCoeffs);
 
               GetFaceToElementMap(iface, GetForient(iface), map, sign);
-
-              std::cout << "Face to element map:";
-              for(int i = 0; i < map.num_elements(); ++i)
-              {
-                  std::cout << " [" << map[i] << "," << sign[i] << "] ";
-              }
-              std::cout << std::endl;
 
               /*
               StdRegions::IndexMapKey ikey(
@@ -1549,7 +1562,7 @@ namespace Nektar
                       }
                    }
 
-                  std::cout << "tilde(F)[" << dir << "] = \n" << tildeFMat << std::endl;
+                  //std::cout << "tilde(F)[" << dir << "] = \n" << tildeFMat << std::endl;
 
                    // Nektar uses column-major storage, lda = number of matrix rows
                    // Multiply tilde(F) * lambda and store in work0
