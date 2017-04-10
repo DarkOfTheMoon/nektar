@@ -136,6 +136,7 @@ SET(FoundationHeaders
     ./Foundations/Interp.h
     ./Foundations/ManagerAccess.h
     ./Foundations/NodalPrismEvenlySpaced.h
+    ./Foundations/NodalPrismElec.h
     ./Foundations/NodalTetElecData.h
     ./Foundations/NodalTetElec.h
     ./Foundations/NodalTetEvenlySpaced.h
@@ -144,6 +145,13 @@ SET(FoundationHeaders
     ./Foundations/NodalTriEvenlySpaced.h
     ./Foundations/NodalTriFeketeData.h
     ./Foundations/NodalTriFekete.h
+    ./Foundations/NodalTriSPIData.h
+    ./Foundations/NodalTriSPI.h
+    ./Foundations/NodalTetSPI.h
+    ./Foundations/NodalPrismSPI.h
+    ./Foundations/NodalTetSPIData.h
+    ./Foundations/NodalQuadElec.h
+    ./Foundations/NodalHexElec.h
     ./Foundations/NodalUtil.h
     ./Foundations/PhysGalerkinProject.h
     ./Foundations/Points.h
@@ -152,7 +160,7 @@ SET(FoundationHeaders
 )
 
 SET(FoundationSources
-        ./Foundations/Basis.cpp
+    ./Foundations/Basis.cpp
     ./Foundations/BLPoints.cpp
     ./Foundations/FourierPoints.cpp
     ./Foundations/FourierSingleModePoints.cpp
@@ -161,14 +169,20 @@ SET(FoundationSources
     ./Foundations/InterpCoeff.cpp
     ./Foundations/Interp.cpp
     ./Foundations/ManagerAccess.cpp
-        ./Foundations/NodalPrismEvenlySpaced.cpp
+    ./Foundations/NodalPrismEvenlySpaced.cpp
+    ./Foundations/NodalPrismElec.cpp
     ./Foundations/NodalTetElec.cpp
-        ./Foundations/NodalTetEvenlySpaced.cpp
+    ./Foundations/NodalTetEvenlySpaced.cpp
     ./Foundations/NodalTriElec.cpp
-        ./Foundations/NodalTriEvenlySpaced.cpp
+    ./Foundations/NodalTriEvenlySpaced.cpp
     ./Foundations/NodalTriFekete.cpp
+    ./Foundations/NodalTriSPI.cpp
+    ./Foundations/NodalTetSPI.cpp
+    ./Foundations/NodalQuadElec.cpp
+    ./Foundations/NodalHexElec.cpp
+    ./Foundations/NodalPrismSPI.cpp
     ./Foundations/NodalUtil.cpp
-        ./Foundations/PhysGalerkinProject.cpp
+    ./Foundations/PhysGalerkinProject.cpp
     ./Foundations/Points.cpp
     ./Foundations/PolyEPoints.cpp
 )
@@ -436,11 +450,11 @@ ENDIF()
 IF( NEKTAR_USE_MPI )
     TARGET_LINK_LIBRARIES(LibUtilities LINK_PRIVATE ${GSMPI_LIBRARY} ${XXT_LIBRARY})
     IF (NOT MPI_BUILTIN)
-        TARGET_LINK_LIBRARIES(LibUtilities LINK_PUBLIC ${MPI_LIBRARY} ${MPI_EXTRA_LIBRARY})
+        TARGET_LINK_LIBRARIES(LibUtilities LINK_PUBLIC ${MPI_CXX_LIBRARIES})
         SET_TARGET_PROPERTIES(LibUtilities
-            PROPERTIES LINK_FLAGS "${THE_LINK_FLAGS} ${MPI_LINK_FLAGS}")
+            PROPERTIES LINK_FLAGS "${THE_LINK_FLAGS} ${MPI_CXX_LINK_FLAGS}")
         SET_TARGET_PROPERTIES(LibUtilities
-            PROPERTIES COMPILE_FLAGS "${THE_COMPILE_FLAGS} ${MPI_COMPILE_FLAGS}")
+            PROPERTIES COMPILE_FLAGS "${THE_COMPILE_FLAGS} ${MPI_CXX_COMPILE_FLAGS}")
     ENDIF()
     ADD_DEPENDENCIES(LibUtilities gsmpi-1.2)
 ENDIF( NEKTAR_USE_MPI )

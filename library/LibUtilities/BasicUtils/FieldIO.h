@@ -188,8 +188,14 @@ LIB_UTILITIES_EXPORT unsigned long Write(
     const std::string &outFile,
     std::vector<FieldDefinitionsSharedPtr> &fielddefs,
     std::vector<std::vector<NekDouble> > &fielddata,
+<<<<<<< HEAD
     const FieldMetaDataMap &fieldinfomap = NullFieldMetaDataMap);
 LIB_UTILITIES_EXPORT unsigned long Import(
+=======
+    const FieldMetaDataMap &fieldinfomap = NullFieldMetaDataMap,
+    const bool backup = false);
+LIB_UTILITIES_EXPORT void Import(
+>>>>>>> origin/master
     const std::string &infilename,
     std::vector<FieldDefinitionsSharedPtr> &fielddefs,
     std::vector<std::vector<NekDouble> > &fielddata = NullVectorNekDoubleVector,
@@ -244,7 +250,8 @@ public:
         const std::string &outFile,
         std::vector<FieldDefinitionsSharedPtr> &fielddefs,
         std::vector<std::vector<NekDouble> > &fielddata,
-        const FieldMetaDataMap &fieldinfomap = NullFieldMetaDataMap);
+        const FieldMetaDataMap &fieldinfomap = NullFieldMetaDataMap,
+        const bool backup = false);
 
     LIB_UTILITIES_EXPORT inline unsigned long Import(
         const std::string &infilename,
@@ -296,7 +303,7 @@ protected:
     }
 
     LIB_UTILITIES_EXPORT std::string SetUpOutput(
-        const std::string outname, bool perRank);
+        const std::string outname, bool perRank, bool backup = false);
 
     /// @copydoc FieldIO::Init
     LIB_UTILITIES_EXPORT virtual void v_Init(
@@ -311,7 +318,8 @@ protected:
         const std::string                      &outFile,
         std::vector<FieldDefinitionsSharedPtr> &fielddefs,
         std::vector<std::vector<NekDouble> >   &fielddata,
-        const FieldMetaDataMap                 &fieldinfomap) = 0;
+        const FieldMetaDataMap                 &fieldinfomap,
+        const bool                              backup = false) = 0;
 
     /// @copydoc FieldIO::Import
     LIB_UTILITIES_EXPORT virtual unsigned long v_Import(
@@ -369,9 +377,14 @@ inline void FieldIO::InitFromBenchmarker(const LibUtilities::IOSettingsSharedPtr
 inline unsigned long FieldIO::Write(const std::string                      &outFile,
                            std::vector<FieldDefinitionsSharedPtr> &fielddefs,
                            std::vector<std::vector<NekDouble> > &fielddata,
-                           const FieldMetaDataMap                 &fieldinfomap)
+                           const FieldMetaDataMap                 &fieldinfomap,
+                           const bool                              backup)
 {
+<<<<<<< HEAD
     return v_Write(outFile, fielddefs, fielddata, fieldinfomap);
+=======
+    v_Write(outFile, fielddefs, fielddata, fieldinfomap, backup);
+>>>>>>> origin/master
 }
 
 /**
