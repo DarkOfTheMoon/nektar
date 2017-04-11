@@ -188,14 +188,10 @@ LIB_UTILITIES_EXPORT unsigned long Write(
     const std::string &outFile,
     std::vector<FieldDefinitionsSharedPtr> &fielddefs,
     std::vector<std::vector<NekDouble> > &fielddata,
-<<<<<<< HEAD
-    const FieldMetaDataMap &fieldinfomap = NullFieldMetaDataMap);
-LIB_UTILITIES_EXPORT unsigned long Import(
-=======
     const FieldMetaDataMap &fieldinfomap = NullFieldMetaDataMap,
     const bool backup = false);
-LIB_UTILITIES_EXPORT void Import(
->>>>>>> origin/master
+
+LIB_UTILITIES_EXPORT unsigned long Import(
     const std::string &infilename,
     std::vector<FieldDefinitionsSharedPtr> &fielddefs,
     std::vector<std::vector<NekDouble> > &fielddata = NullVectorNekDoubleVector,
@@ -380,11 +376,7 @@ inline unsigned long FieldIO::Write(const std::string                      &outF
                            const FieldMetaDataMap                 &fieldinfomap,
                            const bool                              backup)
 {
-<<<<<<< HEAD
-    return v_Write(outFile, fielddefs, fielddata, fieldinfomap);
-=======
-    v_Write(outFile, fielddefs, fielddata, fieldinfomap, backup);
->>>>>>> origin/master
+    return v_Write(outFile, fielddefs, fielddata, fieldinfomap, backup);
 }
 
 /**
