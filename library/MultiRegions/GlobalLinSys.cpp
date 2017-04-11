@@ -409,11 +409,10 @@ namespace Nektar
                 }
 
                 // redeclare loc_mat to point to new_mat plus the scalar.
-                tmp_mat = MemoryManager<DNekScalMat>::AllocateSharedPtr(
-                    1.0, new_mat);
+                tmp_mat = MemoryManager<DNekScalMat>::AllocateSharedPtr(1.0, new_mat);
                 DNekScalBlkMatSharedPtr new_loc_mat;
-                unsigned int exp_size[] = {tmp_mat->GetRows(), loc_mat->GetBlock(1,1)->GetRows()};
-                unsigned int nblks = 2;
+                const unsigned int exp_size[] = {tmp_mat->GetRows(), loc_mat->GetBlock(1,1)->GetRows()};
+                const unsigned int nblks = 2;
                 new_loc_mat = MemoryManager<DNekScalBlkMat>::AllocateSharedPtr(nblks, nblks, exp_size, exp_size);
 
 

@@ -1270,6 +1270,11 @@ namespace Nektar
 
           // -------------------------------------------------
 
+          std::cout << "**************************************************" << std::endl;
+          std::cout << "Inoutmat before BC application = " << std::endl;
+          std::cout << inoutmat << std::endl;
+          std::cout << "**************************************************" << std::endl;
+
           // Ia) Edge mass matrix contribution
 
           StdRegions::VarCoeffMap faceVarCoeffs;
@@ -1280,8 +1285,14 @@ namespace Nektar
           {
               const int iface = faceids[f];
 
+              std::cout << "**************************************************" << std::endl;
+              std::cout << "Face: " << iface << std::endl;
+
               FaceExp = GetFaceExp(iface);
               const DNekScalMat &faceMass = *FaceExp->GetLocMatrix(StdRegions::eMass, StdRegions::NullConstFactorMap, faceVarCoeffs);
+
+              std::cout << "Face mass matrix = " << std::endl;
+              std::cout << faceMass << "\n" << std::endl;
 
               GetFaceToElementMap(iface, GetForient(iface), map, sign);
               //GetFaceToElementMap(iface, GetForient(iface), map, sign, GetBasisNumModes(0), GetBasisNumModes(1));
@@ -1428,6 +1439,10 @@ namespace Nektar
               }
           }
 #endif
+          std::cout << "**************************************************" << std::endl;
+          std::cout << "Inoutmat after BC application = " << std::endl;
+          std::cout << inoutmat << std::endl;
+          std::cout << "**************************************************" << std::endl;
         }
 
         /**

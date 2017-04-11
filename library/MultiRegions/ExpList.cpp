@@ -1129,8 +1129,8 @@ namespace Nektar
                     WeakDirichletBCInfoSharedPtr wdBC;
 
                     // declare local matrix from scaled matrix.
-                    int rows = loc_mat->GetRows();
-                    int cols = loc_mat->GetColumns();
+                    const int rows = loc_mat->GetRows();
+                    const int cols = loc_mat->GetColumns();
                     const NekDouble *dat = loc_mat->GetRawPtr();
                     DNekMatSharedPtr new_mat = MemoryManager<DNekMat>::AllocateSharedPtr(rows,cols,dat);
                     Blas::Dscal(rows*cols,loc_mat->Scale(),new_mat->GetRawPtr(),1);
@@ -1150,9 +1150,9 @@ namespace Nektar
 
                     (*m_exp)[n]->AddWeakDirichletElementContribution(facetIDArray, *new_mat);
 
-                    NekDouble one = 1.0;
+                    const NekDouble mat_scale = 1.0;
                     // redeclare loc_mat to point to new_mat plus the scalar.
-                    loc_mat = MemoryManager<DNekScalMat>::AllocateSharedPtr(one,new_mat);
+                    loc_mat = MemoryManager<DNekScalMat>::AllocateSharedPtr(mat_scale,new_mat);
                 }
 
 
