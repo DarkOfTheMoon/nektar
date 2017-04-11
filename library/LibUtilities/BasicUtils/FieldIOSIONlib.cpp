@@ -178,7 +178,8 @@ SIONlib::SIONFile *FieldIOSIONlib::OpenFileForWriting(const std::string &outFile
 unsigned long FieldIOSIONlib::v_Write(const std::string &outFilePrefix,
     std::vector<FieldDefinitionsSharedPtr> &fielddefs,
     std::vector<std::vector<NekDouble> > &fielddata,
-    const FieldMetaDataMap &fieldmetadatamap)
+    const FieldMetaDataMap &fieldmetadatamap,
+    const bool backup)
 {
     // We make a number of assumptions in this code:
     //   1. All element ids have the same type: unsigned int
@@ -203,6 +204,8 @@ unsigned long FieldIOSIONlib::v_Write(const std::string &outFilePrefix,
     }
 
     m_comm->AllReduce(varOrder, LibUtilities::ReduceMax);
+
+    SetUpOutput(outFilePrefix, false, backup);
 
     // Each MPI process iterates through its fields and outputs field
     // definitions and field data to the SIONlib file.

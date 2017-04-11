@@ -138,7 +138,8 @@ private:
         const std::string &outFileSuffix,
         std::vector<FieldDefinitionsSharedPtr> &fielddefs,
         std::vector<std::vector<NekDouble> > &fielddata,
-        const FieldMetaDataMap &fieldinfomap = NullFieldMetaDataMap);
+        const FieldMetaDataMap &fieldinfomap = NullFieldMetaDataMap,
+        const bool backup = false);
 
     
     SIONlib::SIONFile *OpenFileForReading(const std::string &inFilename);
